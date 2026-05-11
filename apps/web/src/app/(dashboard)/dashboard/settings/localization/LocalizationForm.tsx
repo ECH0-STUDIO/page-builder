@@ -14,18 +14,17 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
   const [region, setRegion] = useState(`${initialLanguage}-${initialCurrency}`)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { t, setDictionary } = useTranslation()
+  const { t, setDictionary, resetDictionary } = useTranslation()
   const savedRef = useRef(false)
 
   // Revert preview on unmount if not saved
   useEffect(() => {
     return () => {
       if (!savedRef.current) {
-        // We could dynamically re-fetch initial, but next router refresh or soft navigation usually preserves state or unmounts cleanly
-        // Alternatively, we let the server handle the revert on the next reload
+        resetDictionary()
       }
     }
-  }, [])
+  }, [resetDictionary])
 
   const handleRegionChange = async (val: string) => {
     setRegion(val)
