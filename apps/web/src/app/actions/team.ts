@@ -60,8 +60,9 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
   }
 
   // Create the business_members relationship
-  const { error: dbError } = await adminClient
-    .from('business_members')
+  // Note: Using 'any' here temporarily because types/database.ts hasn't been regenerated yet to include business_members
+  const { error: dbError } = await (adminClient
+    .from('business_members') as any)
     .insert({
       business_id: businessId,
       user_id: newUserId,
@@ -106,8 +107,8 @@ export async function removeTeamMemberAction(payload: { memberId: string, busine
     return { error: 'Only the business owner can remove members' }
   }
 
-  const { error } = await supabase
-    .from('business_members')
+  const { error } = await (supabase
+    .from('business_members') as any)
     .delete()
     .eq('id', memberId)
     .eq('business_id', businessId)
