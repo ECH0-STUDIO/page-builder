@@ -9,8 +9,7 @@ import { useRouter } from 'next/navigation'
 import { updateLocalizationAction } from '@/app/actions/settings'
 
 export function LocalizationForm({ initialLanguage, initialCurrency }: { initialLanguage: string, initialCurrency: string }) {
-  const [language, setLanguage] = useState(initialLanguage)
-  const [currency, setCurrency] = useState(initialCurrency)
+  const [region, setRegion] = useState(`${initialLanguage}-${initialCurrency}`)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -18,6 +17,7 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
     e.preventDefault()
     setLoading(true)
     
+    const [language, currency] = region.split('-')
     const res = await updateLocalizationAction({ language, currency })
 
     setLoading(false)
@@ -33,30 +33,17 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-sm">
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700" htmlFor="language">Interface Language</label>
+        <label className="text-sm font-medium text-gray-700" htmlFor="region">Region & Language</label>
         <select
-          id="language"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+          id="region"
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
           className="w-full h-10 px-3 bg-white rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
         >
-          <option value="en">English</option>
-          <option value="vi">Tiếng Việt</option>
+          <option value="en-USD">English - USD ($)</option>
+          <option value="vi-VND">Tiếng Việt - VND (₫)</option>
         </select>
-        <p className="text-xs text-gray-500 mt-1">Updates the dashboard and public menu defaults.</p>
-      </div>
-      
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700" htmlFor="currency">Default Currency</label>
-        <select
-          id="currency"
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-          className="w-full h-10 px-3 bg-white rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-        >
-          <option value="USD">USD ($)</option>
-          <option value="VND">VND (₫)</option>
-        </select>
+        <p className="text-xs text-gray-500 mt-1">Updates both the dashboard and public menu defaults.</p>
       </div>
 
       <button
