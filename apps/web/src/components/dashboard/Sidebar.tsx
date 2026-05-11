@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronRight,
   BellRing,
+  Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'
@@ -165,6 +166,19 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
             <p className="text-[11px] text-muted-foreground truncate">{userEmail}</p>
           </div>
         </div>
+        
+        <Link
+          href="/dashboard/settings"
+          className={cn(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors',
+            pathname.startsWith('/dashboard/settings')
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+          )}
+        >
+          <Settings className="size-4 shrink-0" />
+          <span className="text-sm font-medium">Settings</span>
+        </Link>
 
         <button
           id="sign-out-btn"

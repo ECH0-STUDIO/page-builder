@@ -118,9 +118,12 @@ export function HeroRender({ config, businessName }: { config: HeroConfig; busin
       paddingTop: padY, paddingBottom: padY, paddingLeft: 24, paddingRight: 24,
       overflow: 'hidden',
       ...(config.image_url
-        ? { backgroundImage: `url(${config.image_url})`, backgroundSize: 'cover', backgroundPosition: objectPos }
+        ? {}
         : { background: 'linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)' }),
     }}>
+      {config.image_url && (
+        <Image src={config.image_url} alt={heading} fill style={{ objectFit: 'cover', objectPosition: objectPos }} sizes="100vw" />
+      )}
       <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlayOpacity})` }} />
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '800px', width: '100%' }}>
         <h1 style={{ color: textColor, fontSize: 'clamp(30px,5vw,64px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none' }}>{heading}</h1>
