@@ -32,7 +32,12 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
     const [lang] = val.split('-')
     
     try {
-      const newDict = await import(`@/i18n/dictionaries/${lang}.json`)
+      let newDict
+      if (lang === 'vi') {
+        newDict = await import('@/i18n/dictionaries/vi.json')
+      } else {
+        newDict = await import('@/i18n/dictionaries/en.json')
+      }
       setDictionary(newDict.default)
     } catch (err) {
       console.error('Failed to load language preview', err)
