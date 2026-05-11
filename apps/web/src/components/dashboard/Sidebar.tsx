@@ -21,66 +21,67 @@ import { BusinessSwitcher } from './BusinessSwitcher'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 const NAV_ITEMS = [
   {
-    label: 'Overview',
+    labelKey: 'overview',
     href: '/dashboard',
     icon: LayoutDashboard,
     phase: 'v1',
     exact: true, // only active on exact /dashboard
   },
   {
-    label: 'Live Orders',
+    labelKey: 'liveOrders',
     href: '/dashboard/orders',
     icon: BellRing,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Business Profile',
+    labelKey: 'businessProfile',
     href: '/dashboard/business',
     icon: Store,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Menu',
+    labelKey: 'menu',
     href: '/dashboard/menu',
     icon: UtensilsCrossed,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Page Builder',
+    labelKey: 'pageBuilder',
     href: '/dashboard/pages',
     icon: Palette,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Print Menu',
+    labelKey: 'printMenu',
     href: '/dashboard/print-menu',
     icon: Printer,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'QR Codes',
+    labelKey: 'qrCodes',
     href: '/dashboard/qr',
     icon: QrCode,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Payments',
+    labelKey: 'payments',
     href: '/dashboard/payments',
     icon: CreditCard,
     phase: 'v1',
     exact: false,
   },
   {
-    label: 'Publishing',
+    labelKey: 'publishing',
     href: '/dashboard/publishing',
     icon: Globe,
     phase: 'v1',
@@ -97,6 +98,7 @@ interface SidebarProps {
 export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useTranslation()
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -135,7 +137,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              id={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+              id={`nav-${item.labelKey.toLowerCase().replace(/\s+/g, '-')}`}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
                 isActive
@@ -144,7 +146,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
               )}
             >
               <item.icon className="size-4 shrink-0" />
-              <span className="text-sm font-medium">{item.label}</span>
+              <span className="text-sm font-medium">{t(`sidebar.${item.labelKey}`)}</span>
             </Link>
           )
         })}
@@ -177,7 +179,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
           )}
         >
           <Settings className="size-4 shrink-0" />
-          <span className="text-sm font-medium">Settings</span>
+          <span className="text-sm font-medium">{t('sidebar.settings')}</span>
         </Link>
 
         <button
@@ -186,7 +188,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:bg-sidebar-accent hover:text-destructive transition-colors"
         >
           <LogOut className="size-4 shrink-0" />
-          <span className="text-sm font-medium">Sign out</span>
+          <span className="text-sm font-medium">{t('sidebar.signOut')}</span>
         </button>
       </div>
     </aside>

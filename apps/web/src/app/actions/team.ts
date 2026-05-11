@@ -45,7 +45,7 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
     // If user already exists, we can still add them to the team
     if (error.message.toLowerCase().includes('already been registered') || error.message.toLowerCase().includes('already registered')) {
       // Look up their user ID using our secure RPC
-      const { data: existingUserId, error: rpcError } = await adminClient
+      const { data: existingUserId, error: rpcError } = await (adminClient as any)
         .rpc('get_user_id_by_email', { email_address: email })
       
       if (rpcError || !existingUserId) {

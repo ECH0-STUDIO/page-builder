@@ -11,8 +11,8 @@ export default async function LocalizationPage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
+  const { data: profile } = await (supabase
+    .from('profiles') as any)
     .select('language, currency')
     .eq('id', user.id)
     .single()

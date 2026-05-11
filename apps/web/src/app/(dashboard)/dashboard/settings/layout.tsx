@@ -1,18 +1,21 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { SettingsNav } from './SettingsNav'
+import { getServerTranslation } from '@/i18n/getDictionary'
 
 export default async function SettingsLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { t } = await getServerTranslation()
+
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('settings.title')}</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your personal security, localization preferences, and team access.
+          {t('settings.description')}
         </p>
       </div>
 

@@ -1,0 +1,58 @@
+{
+  "sidebar": {
+    "overview": "Tổng quan",
+    "liveOrders": "Đơn hàng trực tiếp",
+    "businessProfile": "Hồ sơ doanh nghiệp",
+    "menu": "Thực đơn",
+    "pageBuilder": "Trình tạo trang",
+    "printMenu": "In thực đơn",
+    "qrCodes": "Mã QR",
+    "payments": "Thanh toán",
+    "publishing": "Xuất bản",
+    "settings": "Cài đặt",
+    "signOut": "Đăng xuất"
+  },
+  "settings": {
+    "title": "Cài đặt tài khoản",
+    "description": "Quản lý bảo mật, tùy chọn ngôn ngữ và quyền truy cập của nhóm.",
+    "tabs": {
+      "security": "Bảo mật",
+      "team": "Quản lý nhóm",
+      "localization": "Khu vực & Ngôn ngữ"
+    },
+    "security": {
+      "title": "Cập nhật mật khẩu",
+      "description": "Đảm bảo tài khoản của bạn sử dụng một mật khẩu dài, ngẫu nhiên để giữ an toàn.",
+      "newPassword": "Mật khẩu mới",
+      "save": "Cập nhật mật khẩu",
+      "success": "Đã cập nhật mật khẩu thành công"
+    },
+    "team": {
+      "title": "Quản lý nhóm",
+      "description": "Mời nhân viên và quản lý cấp độ truy cập của họ.",
+      "inviteNew": "Mời thành viên mới",
+      "email": "Địa chỉ Email",
+      "role": "Vai trò",
+      "roles": {
+        "staff": "Nhân viên / Phục vụ",
+        "manager": "Quản lý"
+      },
+      "sendInvite": "Gửi lời mời",
+      "currentTeam": "Đội ngũ hiện tại",
+      "owner": "Chủ sở hữu",
+      "you": "Bạn (Chủ sở hữu)",
+      "removeConfirm": "Bạn có chắc chắn muốn xóa thành viên này không?",
+      "empty": "Chưa có thành viên nào khác.",
+      "noBusiness": "Không tìm thấy doanh nghiệp. Vui lòng tạo một doanh nghiệp trước."
+    },
+    "localization": {
+      "title": "Khu vực & Ngôn ngữ",
+      "description": "Thiết lập mặc định ngôn ngữ và tiền tệ của bạn.",
+      "regionLabel": "Khu vực & Ngôn ngữ",
+      "regionSub": "Cập nhật mặc định cho cả bảng điều khiển và thực đơn công khai.",
+      "enOption": "Tiếng Anh - USD ($)",
+      "viOption": "Tiếng Việt - VND (₫)",
+      "save": "Lưu tùy chọn"
+    }
+  }
+}

@@ -17,12 +17,13 @@ export async function updateLocalizationAction(payload: { language: string, curr
 
   if (user) {
     // Save to profile if logged in
-    const { error } = await supabase
-      .from('profiles')
+    const { error } = await (supabase
+      .from('profiles') as any)
       .update({ language, currency })
       .eq('id', user.id)
       
     if (error) {
+      console.error('Database update error:', error)
       return { error: error.message }
     }
   }

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { BusinessProvider } from '@/context/BusinessContext'
 import { Sidebar } from '@/components/dashboard/Sidebar'
+import { I18nProvider } from '@/i18n/I18nProvider'
+import { getDictionary } from '@/i18n/getDictionary'
 
 export default async function DashboardLayout({
   children,
@@ -32,18 +34,23 @@ export default async function DashboardLayout({
     redirect('/onboarding/new-business')
   }
 
+  // Load the dictionary for the current session's language
+  const dictionary = await getDictionary()
+
   return (
-    <BusinessProvider initialBusinesses={businesses}>
-      <div className="flex min-h-screen bg-background">
-        <Sidebar
-          userEmail={user.email ?? ''}
-          userAvatar={profile?.avatar_url}
-          userName={profile?.full_name}
-        />
-        <main className="flex-1 min-w-0 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </BusinessProvider>
+    <I18nProvider dictionary={dictionary}>
+      <BusinessProvider initialBusinesses={businesses}>
+        <div className="flex min-h-screen bg-background">
+          <Sidebar
+            userEmail={user.email ?? ''}
+            userAvatar={profile?.avatar_url}
+            userName={profile?.full_name}
+          />
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+      </BusinessProvider>
+    </I18nProvider>
   )
 }

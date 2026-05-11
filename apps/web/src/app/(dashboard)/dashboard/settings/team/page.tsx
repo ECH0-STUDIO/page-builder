@@ -19,15 +19,15 @@ export default async function TeamPage() {
     .order('created_at', { ascending: true })
     .limit(1)
 
-  const business = businesses?.[0]
+  const business = businesses?.[0] as any
 
   if (!business) {
     return <div>No business found. Please create one first.</div>
   }
 
   // Fetch team members for this business
-  const { data: members } = await supabase
-    .from('business_members')
+  const { data: members } = await (supabase
+    .from('business_members') as any)
     .select(`
       id,
       role,
@@ -38,7 +38,7 @@ export default async function TeamPage() {
   // Fetch emails for these user_ids. Since auth.users is protected, we must use an admin client or a join.
   // Wait, we can't join auth.users directly via standard Supabase client in most setups unless a view is exposed.
   // Instead of creating a view right now, we can fetch profiles.
-  const userIds = members?.map(m => m.user_id) || []
+  const userIds = members?.map((m: any) => m.user_id) || []
   let userProfiles: any[] = []
   
   if (userIds.length > 0) {
@@ -49,7 +49,7 @@ export default async function TeamPage() {
     userProfiles = profiles || []
   }
 
-  const enrichedMembers = members?.map(m => {
+  const enrichedMembers = members?.map((m: any) => {
     const p = userProfiles.find(profile => profile.id === m.user_id)
     return {
       ...m,
@@ -58,12 +58,13 @@ export default async function TeamPage() {
   }) || []
 
   // Add the owner to the top of the list
-  const { data: ownerProfile } = await supabase
+  const { data: ownerProfileData } = await supabase
     .from('profiles')
     .select('full_name')
     .eq('id', user.id)
     .single()
 
+  const ownerProfile = ownerProfileData as any
   const fullTeam = [
     {
       id: 'owner-row',

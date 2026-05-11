@@ -1,0 +1,58 @@
+{
+  "sidebar": {
+    "overview": "Overview",
+    "liveOrders": "Live Orders",
+    "businessProfile": "Business Profile",
+    "menu": "Menu",
+    "pageBuilder": "Page Builder",
+    "printMenu": "Print Menu",
+    "qrCodes": "QR Codes",
+    "payments": "Payments",
+    "publishing": "Publishing",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "settings": {
+    "title": "Account Settings",
+    "description": "Manage your personal security, localization preferences, and team access.",
+    "tabs": {
+      "security": "Security",
+      "team": "Team Management",
+      "localization": "Localization"
+    },
+    "security": {
+      "title": "Update Password",
+      "description": "Ensure your account is using a long, random password to stay secure.",
+      "newPassword": "New Password",
+      "save": "Update Password",
+      "success": "Password updated successfully"
+    },
+    "team": {
+      "title": "Team Management",
+      "description": "Invite staff and manage their access levels.",
+      "inviteNew": "Invite New Member",
+      "email": "Email address",
+      "role": "Role",
+      "roles": {
+        "staff": "Staff / Waiter",
+        "manager": "Manager"
+      },
+      "sendInvite": "Send Invite",
+      "currentTeam": "Current Team",
+      "owner": "Owner",
+      "you": "You (Owner)",
+      "removeConfirm": "Are you sure you want to remove this member?",
+      "empty": "No additional team members yet.",
+      "noBusiness": "No business found. Please create one first."
+    },
+    "localization": {
+      "title": "Localization",
+      "description": "Set your preferred language and currency defaults.",
+      "regionLabel": "Region & Language",
+      "regionSub": "Updates both the dashboard and public menu defaults.",
+      "enOption": "English - USD ($)",
+      "viOption": "Tiếng Việt - VND (₫)",
+      "save": "Save Preferences"
+    }
+  }
+}
