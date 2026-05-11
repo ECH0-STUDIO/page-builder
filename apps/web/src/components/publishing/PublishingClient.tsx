@@ -1,0 +1,638 @@
+'use client'
+
+import { useState, useTransition, useRef, useEffect } from 'react'
+import { toast } from 'sonner'
+import {
+  Globe, Copy, ExternalLink, CheckCircle2, XCircle,
+  FileText, Image as ImageIcon, Upload, Trash2,
+  BarChart2, Eye, TrendingUp, Palette, QrCode, ChevronRight,
+  Download, Loader2, AlertCircle, Save
+} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { slugify, checkSlugAvailable } from '@/lib/business'
+import { updateBusinessAction } from '@/app/actions/business'
+import {
+  togglePublishAction, savePublishingSettingsAction, getPageViewsAction,
+} from '@/app/actions/page-builder'
+import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
+import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
+
+// ─── Supported languages ──────────────────────────────────────────────────────
+
+const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'vi', label: 'Tiếng Việt' },
+  { code: 'th', label: 'ภาษาไทย' },
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ko', label: '한국어' },
+  { code: 'fr', label: 'Français' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'es', label: 'Español' },
+  { code: 'id', label: 'Bahasa Indonesia' },
+  { code: 'ms', label: 'Bahasa Melayu' },
+]
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PublishingClientProps {
+  businessId: string
+  publishing: PublishingSettings | null
+  slug: string
+  analytics: { total: number; periodTotal: number; daily: DayViewStat[] }
+  baseUrl: string
+}
+
+// ─── Bar chart ────────────────────────────────────────────────────────────────
+
+function MiniChart({ daily, period }: { daily: DayViewStat[]; period: 7 | 30 }) {
+  const max = Math.max(...daily.map(d => d.count), 1)
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  return (
+    <div className="flex gap-1 h-32 w-full pt-6">
+      {daily.map((d) => {
+        const date = new Date(d.date + 'T00:00:00')
+        const isToday = d.date === new Date().toISOString().slice(0, 10)
+        const heightPct = Math.max((d.count / max) * 100, d.count > 0 ? 6 : 2)
+        const label = period === 7
+          ? days[date.getDay()]
+          : date.getDate().toString()
+        return (
+          <div key={d.date} className="relative flex flex-col items-center gap-1.5 flex-1 h-full group">
+            {/* Custom Tooltip */}
+            <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[10px] font-medium px-2.5 py-1 rounded-md pointer-events-none whitespace-nowrap z-10 shadow-sm flex flex-col items-center">
+              {d.count} views
+              {/* Tooltip triangle */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-[4px] border-transparent border-t-gray-900" />
+            </div>
+
+            <div className="w-full flex-1 relative">
+              <div className="absolute bottom-0 left-0 w-full rounded-t-sm transition-all group-hover:brightness-90"
+                style={{
+                  height: `${heightPct}%`,
+                  background: isToday
+                    ? 'linear-gradient(to top, #111, #555)'
+                    : d.count > 0 ? '#d1d5db' : '#f3f4f6',
+                  minHeight: 2,
+                }}
+              />
+            </div>
+            <div className="h-4 flex items-center justify-center shrink-0">
+              {(period === 7 || date.getDate() % 5 === 1 || isToday) && (
+                <span className={cn('text-[9px] font-medium', isToday ? 'text-gray-900 font-bold' : 'text-gray-400')}>
+                  {label}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Primitives ───────────────────────────────────────────────────────────────
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn('bg-white rounded-2xl border border-gray-100 shadow-sm p-6', className)}>
+      {children}
+    </div>
+  )
+}
+
+// ─── Image upload helper ──────────────────────────────────────────────────────
+
+async function uploadPublishingImage(businessId: string, file: File, pathPrefix: string): Promise<string> {
+  const supabase = createClient()
+  const ext = file.name.split('.').pop()
+  const path = `${pathPrefix}/${businessId}.${ext}`
+  const { error } = await supabase.storage.from('page-images').upload(path, file, { upsert: true })
+  if (error) throw error
+  return supabase.storage.from('page-images').getPublicUrl(path).data.publicUrl
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export function PublishingClient({ businessId, publishing, slug: initialSlug, analytics: initialAnalytics, baseUrl }: PublishingClientProps) {
+  const [isPending, startTransition] = useTransition()
+  const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
+  const [seoTitle, setSeoTitle] = useState(publishing?.seo_title ?? '')
+  const [seoDesc, setSeoDesc] = useState(publishing?.seo_description ?? '')
+  const [ogImage, setOgImage] = useState<string | null>(publishing?.og_image_url ?? null)
+  const [favicon, setFavicon] = useState<string | null>(publishing?.favicon_url ?? null)
+  const [webclip, setWebclip] = useState<string | null>(publishing?.apple_touch_icon_url ?? null)
+  const [language, setLanguage] = useState(publishing?.language ?? 'en')
+  const [gscTag, setGscTag] = useState(publishing?.gsc_verification ?? '')
+  const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? '')
+  const [savingDomain, setSavingDomain] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [period, setPeriod] = useState<7 | 30>(7)
+  const [analytics, setAnalytics] = useState(initialAnalytics)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+
+  const ogRef = useRef<HTMLInputElement>(null)
+  const faviconRef = useRef<HTMLInputElement>(null)
+  const webclipRef = useRef<HTMLInputElement>(null)
+
+  // ── Slug state ──
+  const [slug, setSlug] = useState(initialSlug)
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'same'>('same')
+  const [savingSlug, setSavingSlug] = useState(false)
+
+  // Sync state during render
+  if (slug === initialSlug && slugStatus !== 'same') setSlugStatus('same')
+  else if (slug !== initialSlug && slug.length < 2 && slugStatus !== 'idle') setSlugStatus('idle')
+
+  useEffect(() => {
+    if (slug === initialSlug || slug.length < 2) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlugStatus('checking')
+    const timer = setTimeout(async () => {
+      const available = await checkSlugAvailable(slug, businessId)
+      setSlugStatus(available ? 'available' : 'taken')
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [slug, initialSlug, businessId])
+
+  async function handleSaveSlug() {
+    if (slug !== initialSlug && slugStatus !== 'available') return
+    setSavingSlug(true)
+    try {
+      const res = await updateBusinessAction(businessId, { slug })
+      if (res.success) toast.success('Page URL updated successfully')
+      else toast.error(res.error)
+    } catch {
+      toast.error('Failed to update URL')
+    } finally {
+      setSavingSlug(false)
+    }
+  }
+
+  async function handleSaveDomain() {
+    setSavingDomain(true)
+    try {
+      const res = await savePublishingSettingsAction(businessId, { custom_domain: customDomain || null })
+      if (res.success) toast.success('Custom domain updated')
+      else toast.error(res.error)
+    } catch {
+      toast.error('Failed to save domain')
+    } finally {
+      setSavingDomain(false)
+    }
+  }
+
+  const publicUrl = `${baseUrl}/${initialSlug}`
+
+  // ── Period toggle ─────────────────────────────────────────────────────────
+
+  async function switchPeriod(p: 7 | 30) {
+    if (p === period || loadingAnalytics) return
+    setPeriod(p)
+    setLoadingAnalytics(true)
+    try {
+      const data = await getPageViewsAction(businessId, p)
+      setAnalytics(data)
+    } finally {
+      setLoadingAnalytics(false)
+    }
+  }
+
+  // ── CSV download ──────────────────────────────────────────────────────────
+
+  function handleDownloadCsv() {
+    const rows = [['date', 'views'], ...analytics.daily.map(d => [d.date, d.count.toString()])]
+    const csv = rows.map(r => r.join(',')).join('\n')
+    // UTF-8 BOM ensures correct encoding in Excel / Numbers
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `analytics-${period}d.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Publish toggle ────────────────────────────────────────────────────────
+
+  function handleToggle() {
+    const next = !isPublished
+    setIsPublished(next)
+    startTransition(async () => {
+      const res = await togglePublishAction(businessId, next)
+      if (!res.success) { setIsPublished(!next); toast.error(res.error) }
+      else toast.success(next ? 'Page is now live 🎉' : 'Page set to draft')
+    })
+  }
+
+  // ── Copy URL ──────────────────────────────────────────────────────────────
+
+  function handleCopy() {
+    navigator.clipboard.writeText(publicUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // ── Image uploads ─────────────────────────────────────────────────────────
+
+  async function handleImageUpload(
+    file: File,
+    pathPrefix: string,
+    setter: (url: string) => void,
+    field: 'og_image_url' | 'favicon_url' | 'apple_touch_icon_url'
+  ) {
+    try {
+      const url = await uploadPublishingImage(businessId, file, pathPrefix)
+      setter(url)
+      await savePublishingSettingsAction(businessId, { [field]: url })
+      toast.success('Image updated')
+    } catch { toast.error('Upload failed') }
+  }
+
+  // ── Save SEO + extras ─────────────────────────────────────────────────────
+
+  function handleSave() {
+    startTransition(async () => {
+      const res = await savePublishingSettingsAction(businessId, {
+        seo_title: seoTitle || null,
+        seo_description: seoDesc || null,
+        language,
+        gsc_verification: gscTag || null,
+      })
+      if (res.success) toast.success('Settings saved')
+      else toast.error(res.error)
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── Page URL ── */}
+      <Card>
+        <div className="flex items-center gap-2 mb-5">
+          <Globe className="size-4 text-gray-600" />
+          <h2 className="font-semibold text-gray-900">Page URL</h2>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="pub-slug">
+              Custom Slug
+              {slugStatus === 'checking' && (
+                <span className="ml-2 text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Loader2 className="size-3 animate-spin" /> Checking…
+                </span>
+              )}
+              {slugStatus === 'available' && (
+                <span className="ml-2 text-xs text-green-600 dark:text-green-400 inline-flex items-center gap-1">
+                  <CheckCircle2 className="size-3" /> Available
+                </span>
+              )}
+              {slugStatus === 'taken' && (
+                <span className="ml-2 text-xs text-destructive inline-flex items-center gap-1">
+                  <AlertCircle className="size-3" /> Taken
+                </span>
+              )}
+            </Label>
+            <div className="flex items-stretch max-w-md">
+              <span className="h-10 px-3 bg-muted border border-r-0 border-input rounded-l-md text-sm text-muted-foreground shrink-0 flex items-center whitespace-nowrap">
+                {baseUrl.replace(/^https?:\/\//, '')}/
+              </span>
+              <Input
+                id="pub-slug"
+                className="rounded-l-none"
+                value={slug}
+                onChange={e => { setSlug(slugify(e.target.value)) }}
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lowercase letters, numbers, and hyphens only.
+            </p>
+          </div>
+          <div className="flex justify-end max-w-md">
+            <Button
+              onClick={handleSaveSlug}
+              disabled={savingSlug || (slug !== initialSlug && slugStatus !== 'available') || slug === initialSlug}
+              className="w-full sm:w-auto"
+            >
+              {savingSlug ? (
+                <><Loader2 className="size-4 animate-spin mr-2" /> Saving…</>
+              ) : (
+                <><Save className="size-4 mr-2" /> Save URL</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Live Status ── */}
+      <Card>
+        <div className="flex items-start justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className={cn('size-2.5 rounded-full', isPublished ? 'bg-green-500 animate-pulse' : 'bg-gray-300')} />
+              <h2 className="font-semibold text-gray-900">
+                {isPublished ? 'Your page is live' : 'Your page is in draft'}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              {isPublished
+                ? 'Customers can visit your page using the link below.'
+                : 'Publish to make your page accessible to customers.'}
+            </p>
+          </div>
+          <button
+            type="button" onClick={handleToggle} disabled={isPending}
+            className={cn('relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-60',
+              isPublished ? 'bg-gray-900' : 'bg-gray-200')}
+          >
+            <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
+              isPublished ? 'translate-x-6' : 'translate-x-1')} />
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+          <Globe className="size-4 text-gray-400 shrink-0" />
+          <span className="flex-1 text-sm text-gray-700 truncate font-mono">{publicUrl}</span>
+          <button onClick={handleCopy} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors">
+            {copied ? <CheckCircle2 className="size-4 text-green-600" /> : <Copy className="size-4" />}
+          </button>
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors">
+            <ExternalLink className="size-4" />
+          </a>
+        </div>
+      </Card>
+
+      {/* ── Custom Domain ── */}
+      <Card>
+        <div className="flex items-center gap-2 mb-5">
+          <Globe className="size-4 text-gray-600" />
+          <h2 className="font-semibold text-gray-900">Custom Domain</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Your Domain (e.g., menu.yourrestaurant.com)</label>
+            <div className="flex gap-2">
+              <input type="text" value={customDomain} onChange={e => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
+                placeholder="Enter custom domain"
+                className="flex-1 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
+              <Button onClick={handleSaveDomain} disabled={savingDomain || customDomain === publishing?.custom_domain} className="shrink-0 h-10">
+                {savingDomain ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+              </Button>
+            </div>
+          </div>
+
+          {publishing?.custom_domain && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 space-y-3">
+              <h3 className="font-semibold text-blue-900 text-sm">Configure your DNS records</h3>
+              <p className="text-xs text-blue-800">To connect your domain, log in to your domain provider (e.g., GoDaddy, Namecheap) and add the following records:</p>
+              
+              <div className="space-y-2">
+                <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> CNAME</div>
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> {publishing.custom_domain.split('.').length > 2 ? publishing.custom_domain.split('.')[0] : '@'}</div>
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Target:</span> cname.pinit.app</div>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> TXT</div>
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> _vercel</div>
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> vc-domain-verify={businessId.split('-')[0]}</div>
+                </div>
+              </div>
+              <p className="text-xs text-blue-700/80 italic pt-1">Note: DNS changes can take up to 24 hours to propagate, though it usually happens within an hour.</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Analytics ── */}
+      <Card>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="size-4 text-gray-600" />
+            <h2 className="font-semibold text-gray-900">Page Analytics</h2>
+          </div>
+          {/* Period toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            {([7, 30] as const).map(p => (
+              <button key={p} onClick={() => switchPeriod(p)}
+                className={cn('px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                  period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+                {p}d
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+            <div className="flex items-center gap-2 text-gray-500 mb-1">
+              <Eye className="size-3.5" />
+              <span className="text-xs font-medium uppercase tracking-wide">Total Views</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{analytics.total.toLocaleString()}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+            <div className="flex items-center gap-2 text-gray-500 mb-1">
+              <TrendingUp className="size-3.5" />
+              <span className="text-xs font-medium uppercase tracking-wide">Last {period} days</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{analytics.periodTotal.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+              {loadingAnalytics ? 'Loading…' : `Last ${period} days`}
+            </p>
+            <button onClick={handleDownloadCsv}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors">
+              <Download className="size-3" /> CSV
+            </button>
+          </div>
+          <MiniChart daily={analytics.daily} period={period} />
+        </div>
+      </Card>
+
+      {/* ── SEO & Social ── */}
+      <Card>
+        <div className="flex items-center gap-2 mb-5">
+          <FileText className="size-4 text-gray-600" />
+          <h2 className="font-semibold text-gray-900">SEO & Social</h2>
+        </div>
+
+        <div className="space-y-5">
+          {/* SEO Title */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Page Title</label>
+            <input type="text" value={seoTitle} onChange={e => setSeoTitle(e.target.value)}
+              placeholder="Your Business Name (auto-filled if empty)"
+              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400" />
+            <p className="text-xs text-gray-400">Shown in browser tabs and Google search results.</p>
+          </div>
+
+          {/* Meta description */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Meta Description</label>
+              <span className={cn('text-xs', seoDesc.length > 155 ? 'text-red-500' : 'text-gray-400')}>
+                {seoDesc.length} / 160
+              </span>
+            </div>
+            <textarea value={seoDesc} onChange={e => setSeoDesc(e.target.value)} rows={3}
+              placeholder="A short description — shown in Google search results."
+              className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 resize-none" />
+          </div>
+
+          {/* OG Image */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Social Preview Image</label>
+            <p className="text-xs text-gray-400">Shown when sharing on WhatsApp, Facebook, etc. 1200×630px recommended.</p>
+            {ogImage ? (
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 aspect-[1200/630] max-h-40 bg-gray-50 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ogImage} alt="OG" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                  <button onClick={() => ogRef.current?.click()}
+                    className="bg-white rounded-lg px-3 py-1.5 text-xs font-medium text-gray-800 flex items-center gap-1.5 shadow">
+                    <Upload className="size-3" /> Replace
+                  </button>
+                  <button onClick={async () => { setOgImage(null); await savePublishingSettingsAction(businessId, { og_image_url: null }); toast.success('Removed') }}
+                    className="bg-white rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 flex items-center gap-1.5 shadow">
+                    <Trash2 className="size-3" /> Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => ogRef.current?.click()}
+                className="w-full flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 text-gray-400 hover:text-gray-600 transition-colors">
+                <ImageIcon className="size-6" /><span className="text-sm">Upload image</span>
+              </button>
+            )}
+            <input ref={ogRef} type="file" accept="image/*" className="hidden"
+              onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'og-images', setOgImage, 'og_image_url')} />
+          </div>
+
+          <button onClick={handleSave} disabled={isPending}
+            className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
+            {isPending ? 'Saving…' : 'Save SEO Settings'}
+          </button>
+        </div>
+      </Card>
+
+      {/* ── Branding & Identity ── */}
+      <Card>
+        <div className="flex items-center gap-2 mb-5">
+          <Palette className="size-4 text-gray-600" />
+          <h2 className="font-semibold text-gray-900">Branding & Identity</h2>
+        </div>
+
+        <div className="space-y-5">
+          {/* Language */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Page Language</label>
+            <select value={language} onChange={e => setLanguage(e.target.value)}
+              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 bg-white">
+              {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label} ({l.code})</option>)}
+            </select>
+            <p className="text-xs text-gray-400">Sets the HTML lang attribute and hreflang for SEO.</p>
+          </div>
+
+          {/* Favicon */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Favicon</label>
+            <p className="text-xs text-gray-400">32×32px PNG or ICO — shown in browser tabs.</p>
+            <div className="flex items-center gap-3">
+              {favicon
+                ? /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={favicon} alt="favicon" className="size-8 rounded border border-gray-200 object-contain" />
+                : <div className="size-8 rounded border-2 border-dashed border-gray-200 flex items-center justify-center"><Globe className="size-4 text-gray-300" /></div>
+              }
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
+                <Upload className="size-3" /> {favicon ? 'Replace' : 'Upload'}
+                <input ref={faviconRef} type="file" accept="image/*,.ico" className="hidden"
+                  onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicons', setFavicon, 'favicon_url')} />
+              </label>
+              {favicon && (
+                <button onClick={async () => { setFavicon(null); await savePublishingSettingsAction(businessId, { favicon_url: null }) }}
+                  className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
+              )}
+            </div>
+          </div>
+
+          {/* Apple Touch Icon */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Webclip (Apple Touch Icon)</label>
+            <p className="text-xs text-gray-400">180×180px PNG — shown when customers add your page to their iPhone home screen.</p>
+            <div className="flex items-center gap-3">
+              {webclip
+                ? /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={webclip} alt="webclip" className="size-10 rounded-xl border border-gray-200 object-cover" />
+                : <div className="size-10 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center"><ImageIcon className="size-4 text-gray-300" /></div>
+              }
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
+                <Upload className="size-3" /> {webclip ? 'Replace' : 'Upload'}
+                <input ref={webclipRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'webclips', setWebclip, 'apple_touch_icon_url')} />
+              </label>
+              {webclip && (
+                <button onClick={async () => { setWebclip(null); await savePublishingSettingsAction(businessId, { apple_touch_icon_url: null }) }}
+                  className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
+              )}
+            </div>
+          </div>
+
+          {/* GSC verification */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Google Search Console Verification</label>
+            <input type="text" value={gscTag} onChange={e => setGscTag(e.target.value)}
+              placeholder="Paste your verification code (e.g. abc123xyz...)"
+              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
+            <p className="text-xs text-gray-400">Found in GSC → Add property → HTML tag → content value only.</p>
+          </div>
+
+          <button onClick={handleSave} disabled={isPending}
+            className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
+            {isPending ? 'Saving…' : 'Save Settings'}
+          </button>
+        </div>
+      </Card>
+
+      {/* ── Quick Actions ── */}
+      <Card>
+        <h2 className="font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="space-y-2">
+          {[
+            { href: '/dashboard/pages', icon: Palette, label: 'Edit Page Builder', desc: 'Customise blocks, layout and theme' },
+            { href: '/dashboard/qr', icon: QrCode, label: 'QR Codes', desc: 'Design and print your table QR stands' },
+          ].map(item => (
+            <a key={item.href} href={item.href}
+              className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-colors group">
+              <div className="size-9 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <item.icon className="size-4 text-gray-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                <p className="text-xs text-gray-400 truncate">{item.desc}</p>
+              </div>
+              <ChevronRight className="size-4 text-gray-300 group-hover:text-gray-500 transition-colors shrink-0" />
+            </a>
+          ))}
+        </div>
+      </Card>
+
+      {/* Status footer */}
+      <div className="flex items-center justify-center gap-2 py-2">
+        {isPublished
+          ? <><CheckCircle2 className="size-4 text-green-500" /><span className="text-xs text-green-600 font-medium">Page is live</span></>
+          : <><XCircle className="size-4 text-gray-400" /><span className="text-xs text-gray-400">Page is in draft</span></>
+        }
+      </div>
+    </div>
+  )
+}

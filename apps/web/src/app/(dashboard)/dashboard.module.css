@@ -1,0 +1,14 @@
+.placeholder {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.placeholder h1 {
+  font-size: 1.5rem;
+}
+
+.placeholder p {
+  color: var(--color-text-secondary);
+}

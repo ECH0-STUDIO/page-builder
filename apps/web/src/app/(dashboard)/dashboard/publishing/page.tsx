@@ -1,0 +1,54 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { getPublishingAction, getPageViewsAction } from '@/app/actions/page-builder'
+import type { Metadata } from 'next'
+import { PublishingClient } from '@/components/publishing/PublishingClient'
+
+export const metadata: Metadata = { title: 'Publishing' }
+export const dynamic = 'force-dynamic'
+
+export default async function PublishingPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+
+  const { data: businesses } = await db
+    .from('businesses')
+    .select('id, name')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  const business = businesses?.[0]
+  if (!business) redirect('/onboarding/new-business')
+
+  const [{ publishing, slug }, analytics] = await Promise.all([
+    getPublishingAction(business.id),
+    getPageViewsAction(business.id, 7),
+  ])
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
+
+  return (
+    <div className="p-6 lg:p-8 max-w-2xl">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground">Publishing</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Control your page visibility, SEO settings, and track visitor analytics.
+        </p>
+      </div>
+
+      <PublishingClient
+        businessId={business.id}
+        publishing={publishing}
+        slug={slug ?? business.id}
+        analytics={analytics}
+        baseUrl={baseUrl}
+      />
+    </div>
+  )
+}

@@ -1,0 +1,68 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { QRManager } from '@/components/qr/QRManager'
+import Link from 'next/link'
+import type { Metadata } from 'next'
+import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+
+export const metadata: Metadata = { title: 'QR Codes' }
+export const dynamic = 'force-dynamic'
+
+export default async function QRPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+
+  const { data: businesses } = await db
+    .from('businesses')
+    .select('id, slug, name, logo_url')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  const business = businesses?.[0]
+  if (!business) redirect('/onboarding/new-business')
+
+  if (!business.slug) {
+    return (
+      <div className="p-8">
+        <p className="text-sm text-muted-foreground">
+          Set a slug for your business first in{' '}
+          <Link href="/dashboard/business" className="underline">Business Settings</Link>.
+        </p>
+      </div>
+    )
+  }
+
+  const [{ data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
+    db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order'),
+    db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),
+  ])
+
+  const categories: MenuCategory[] = categoriesRaw ?? []
+  const items: MenuItem[] = itemsRaw ?? []
+
+  return (
+    <div className="p-6 lg:p-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">QR Codes</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Design print-ready table stands or download quick QR codes for individual menu items.
+        </p>
+      </div>
+
+      <QRManager
+        businessId={business.id}
+        paymentSettings={business.payment_settings ?? {}}
+        slug={business.slug}
+        categories={categories}
+        items={items}
+        businessName={business.name}
+        businessLogoUrl={business.logo_url ?? null}
+      />
+    </div>
+  )
+}

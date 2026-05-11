@@ -1,0 +1,15 @@
+{
+  "name": "eatery-page-builder",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:pdf": "pnpm --filter pdf-service dev",
+    "build:web": "pnpm --filter web build",
+    "build:pdf": "pnpm --filter pdf-service build",
+    "lint": "pnpm --filter web lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

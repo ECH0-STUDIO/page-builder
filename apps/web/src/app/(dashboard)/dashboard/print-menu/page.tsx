@@ -1,0 +1,67 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { PrintMenuShell } from '@/components/print/PrintMenuShell'
+import Link from 'next/link'
+import type { Metadata } from 'next'
+import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+
+export const metadata: Metadata = { title: 'Print Menu' }
+export const dynamic = 'force-dynamic'
+
+export default async function PrintMenuPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+
+  const { data: businesses } = await db
+    .from('businesses')
+    .select('id, name, logo_url')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  const business = businesses?.[0]
+  if (!business) redirect('/onboarding/new-business')
+
+  const [{ data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
+    db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order'),
+    db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),
+  ])
+
+  const categories: MenuCategory[] = categoriesRaw ?? []
+  const items: MenuItem[] = itemsRaw ?? []
+
+  if (categories.length === 0) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+        <p className="text-lg font-semibold text-gray-700">No menu items yet</p>
+        <p className="text-sm text-muted-foreground">Add categories and items in the Menu builder first.</p>
+        <Link href="/dashboard/menu" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors">
+          Go to Menu Builder →
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6 lg:p-8 h-screen flex flex-col">
+      <div className="mb-5 shrink-0">
+        <h1 className="text-2xl font-bold text-foreground">Print Menu</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Design and print a formatted menu for your tables or counter.
+        </p>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <PrintMenuShell
+          business={{ name: business.name, logo_url: business.logo_url }}
+          categories={categories}
+          items={items}
+        />
+      </div>
+    </div>
+  )
+}

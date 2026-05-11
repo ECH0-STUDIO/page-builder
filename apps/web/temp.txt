@@ -1,0 +1,87 @@
+
+> web@0.1.0 lint
+> eslint
+
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/postcss.config.mjs
+  1:1  warning  Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(auth)/layout.tsx
+  44:9  error  Do not use an `<a>` element to navigate to `/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+  44:9  error  Do not use an `<a>` element to navigate to `/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(auth)/signup/page.tsx
+  12:10  warning  'Mail' is defined but never used             @typescript-eslint/no-unused-vars
+  26:9   warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(dashboard)/dashboard/page.tsx
+  3:55  warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(onboarding)/onboarding/new-business/page.tsx
+  43:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(onboarding)/onboarding/new-business/page.tsx:43:7
+  41 |   useEffect(() => {
+  42 |     if (!slugEdited && name) {
+> 43 |       setSlug(slugify(name))
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  44 |     }
+  45 |   }, [name, slugEdited])
+  46 |                                                                                                react-hooks/set-state-in-effect
+  56:18  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/app/(onboarding)/onboarding/new-business/page.tsx:56:18
+  54 |
+  55 |   useEffect(() => {
+> 56 |     if (!slug) { setSlugStatus('idle'); return }
+     |                  ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  57 |     const timer = setTimeout(() => checkSlug(slug), 400)
+  58 |     return () => clearTimeout(timer)
+  59 |   }, [slug, checkSlug])  react-hooks/set-state-in-effect
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/business/BusinessProfileForm.tsx
+   3:20  warning  'useCallback' is defined but never used          @typescript-eslint/no-unused-vars
+   5:54  warning  'X' is defined but never used                    @typescript-eslint/no-unused-vars
+   9:10  warning  'Textarea' is defined but never used             @typescript-eslint/no-unused-vars
+  11:10  warning  'Badge' is defined but never used                @typescript-eslint/no-unused-vars
+  59:10  warning  'slugEdited' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/dashboard/BusinessSwitcher.tsx
+  4:39  warning  'Store' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/dashboard/Sidebar.tsx
+  15:3  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/menu/MenuBuilder.tsx
+  346:26  warning  'categoryId' is defined but never used                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  442:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  856:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/page-builder/EditorShell.tsx
+  57:23  warning  'BlockSpacing' is defined but never used         @typescript-eslint/no-unused-vars
+  59:47  warning  'defaultQRCodeConfig' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/page-builder/blocks/ContactBlock.tsx
+  3:38  warning  'Share2' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/page-builder/blocks/CtaEditor.tsx
+  18:10  warning  'cn' is defined but never used       @typescript-eslint/no-unused-vars
+  20:10  warning  'ctaHref' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/mac/.gemini/antigravity/playground/eatery-page-builder/apps/web/src/components/page-builder/blocks/SpacingControls.tsx
+  4:10  warning  'Separator' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 24 problems (4 errors, 20 warnings)
+
