@@ -25,6 +25,25 @@ export async function proxy(request: NextRequest) {
     }
   )
 
+  // -- Localization Auto-Detection --
+  const country = request.headers.get('x-vercel-ip-country') || 'US'
+  const langCookie = request.cookies.get('NEXT_LOCALE')?.value
+  const currencyCookie = request.cookies.get('NEXT_CURRENCY')?.value
+
+  if (!langCookie) {
+    const defaultLang = country === 'VN' ? 'vi' : 'en'
+    supabaseResponse.cookies.set('NEXT_LOCALE', defaultLang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+  }
+  
+  if (!currencyCookie) {
+    const defaultCurrency = country === 'VN' ? 'VND' : 'USD'
+    supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+  }
+
+  // Pass country header to downstream components
+  supabaseResponse.headers.set('x-user-country', country)
+  // ---------------------------------
+
   // Refresh session if expired
   const {
     data: { user },
