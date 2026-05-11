@@ -3,13 +3,13 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function inviteTeamMemberAction(formData: FormData) {
-  const email = formData.get('email') as string
-  const role = formData.get('role') as string
-  const businessId = formData.get('businessId') as string
+export async function inviteTeamMemberAction(payload: { email: string, role: string, businessId: string }) {
+  const { email, role, businessId } = payload
+
+  console.log('Action called with:', { email, role, businessId })
 
   if (!email || !role || !businessId) {
-    return { error: 'Missing required fields' }
+    return { error: `Missing required fields. email=${email}, role=${role}, businessId=${businessId}` }
   }
 
   const supabase = await createClient()
@@ -34,19 +34,30 @@ export async function inviteTeamMemberAction(formData: FormData) {
   // Use the admin client to send the invite
   const adminClient = createAdminClient()
 
+  let newUserId: string | null = null
+
   // This sends the invite email and creates a user row in auth.users
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: {
-      role: 'staff',
-    },
-    // We can also pass redirectTo here if needed, but it should default to the site url
+    data: { role: 'staff' },
   })
 
   if (error) {
-    return { error: error.message }
+    // If user already exists, we can still add them to the team
+    if (error.message.toLowerCase().includes('already been registered') || error.message.toLowerCase().includes('already registered')) {
+      // Look up their user ID using our secure RPC
+      const { data: existingUserId, error: rpcError } = await adminClient
+        .rpc('get_user_id_by_email', { email_address: email })
+      
+      if (rpcError || !existingUserId) {
+        return { error: 'User exists but could not retrieve their ID.' }
+      }
+      newUserId = existingUserId
+    } else {
+      return { error: error.message }
+    }
+  } else {
+    newUserId = data.user.id
   }
-
-  const newUserId = data.user.id
 
   // Create the business_members relationship
   const { error: dbError } = await adminClient
@@ -69,9 +80,8 @@ export async function inviteTeamMemberAction(formData: FormData) {
   return { success: true }
 }
 
-export async function removeTeamMemberAction(formData: FormData) {
-  const memberId = formData.get('memberId') as string
-  const businessId = formData.get('businessId') as string
+export async function removeTeamMemberAction(payload: { memberId: string, businessId: string }) {
+  const { memberId, businessId } = payload
 
   if (!memberId || !businessId) {
     return { error: 'Missing required fields' }

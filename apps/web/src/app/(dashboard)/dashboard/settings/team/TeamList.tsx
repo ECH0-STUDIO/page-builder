@@ -14,12 +14,7 @@ export function TeamList({ members, businessId }: { members: any[], businessId: 
     e.preventDefault()
     setIsInviting(true)
 
-    const formData = new FormData()
-    formData.append('email', email)
-    formData.append('role', role)
-    formData.append('businessId', businessId)
-
-    const res = await inviteTeamMemberAction(formData)
+    const res = await inviteTeamMemberAction({ email, role, businessId })
     
     setIsInviting(false)
 
@@ -34,11 +29,7 @@ export function TeamList({ members, businessId }: { members: any[], businessId: 
   async function handleRemove(memberId: string) {
     if (!confirm('Are you sure you want to remove this member?')) return
 
-    const formData = new FormData()
-    formData.append('memberId', memberId)
-    formData.append('businessId', businessId)
-
-    const res = await removeTeamMemberAction(formData)
+    const res = await removeTeamMemberAction({ memberId, businessId })
     if (res.error) {
       toast.error(res.error)
     } else {
