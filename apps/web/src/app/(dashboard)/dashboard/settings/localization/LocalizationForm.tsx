@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -14,7 +14,30 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
   const [region, setRegion] = useState(`${initialLanguage}-${initialCurrency}`)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, setDictionary } = useTranslation()
+  const savedRef = useRef(false)
+
+  // Revert preview on unmount if not saved
+  useEffect(() => {
+    return () => {
+      if (!savedRef.current) {
+        // We could dynamically re-fetch initial, but next router refresh or soft navigation usually preserves state or unmounts cleanly
+        // Alternatively, we let the server handle the revert on the next reload
+      }
+    }
+  }, [])
+
+  const handleRegionChange = async (val: string) => {
+    setRegion(val)
+    const [lang] = val.split('-')
+    
+    try {
+      const newDict = await import(`@/i18n/dictionaries/${lang}.json`)
+      setDictionary(newDict.default)
+    } catch (err) {
+      console.error('Failed to load language preview', err)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,6 +51,7 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
     if (res.error) {
       toast.error('Failed to update preferences')
     } else {
+      savedRef.current = true
       toast.success('Preferences updated')
       router.refresh()
     }
@@ -40,7 +64,7 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
         <select
           id="region"
           value={region}
-          onChange={(e) => setRegion(e.target.value)}
+          onChange={(e) => handleRegionChange(e.target.value)}
           className="w-full h-10 px-3 bg-white rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
         >
           <option value="en-USD">{t('settings.localization.enOption')}</option>

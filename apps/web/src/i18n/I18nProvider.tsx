@@ -1,25 +1,39 @@
 'use client'
 
-import React, { createContext, useContext, ReactNode } from 'react'
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 
 type Dictionary = any // Or define a strict type based on en.json structure
 
-const I18nContext = createContext<Dictionary | null>(null)
+interface I18nContextType {
+  dictionary: Dictionary
+  setDictionary: (d: Dictionary) => void
+}
 
-export function I18nProvider({ dictionary, children }: { dictionary: Dictionary, children: ReactNode }) {
+const I18nContext = createContext<I18nContextType | null>(null)
+
+export function I18nProvider({ dictionary: initialDictionary, children }: { dictionary: Dictionary, children: ReactNode }) {
+  const [dictionary, setDictionary] = useState(initialDictionary)
+
+  // Sync state if server dictionary changes
+  useEffect(() => {
+    setDictionary(initialDictionary)
+  }, [initialDictionary])
+
   return (
-    <I18nContext.Provider value={dictionary}>
+    <I18nContext.Provider value={{ dictionary, setDictionary }}>
       {children}
     </I18nContext.Provider>
   )
 }
 
 export function useTranslation() {
-  const dictionary = useContext(I18nContext)
+  const context = useContext(I18nContext)
   
-  if (!dictionary) {
+  if (!context) {
     throw new Error('useTranslation must be used within an I18nProvider')
   }
+
+  const { dictionary, setDictionary } = context
 
   // A simple t() function to retrieve nested keys like "settings.security.title"
   const t = (key: string) => {
@@ -37,5 +51,5 @@ export function useTranslation() {
     return value
   }
 
-  return { t }
+  return { t, setDictionary }
 }
