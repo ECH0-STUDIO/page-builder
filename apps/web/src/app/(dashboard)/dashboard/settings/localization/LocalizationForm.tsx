@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
+import { updateLocalizationAction } from '@/app/actions/settings'
+
 export function LocalizationForm({ initialLanguage, initialCurrency }: { initialLanguage: string, initialCurrency: string }) {
   const [language, setLanguage] = useState(initialLanguage)
   const [currency, setCurrency] = useState(initialCurrency)
@@ -15,20 +17,13 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const supabase = createClient()
     
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ language, currency })
-      .eq('id', user.id)
+    const res = await updateLocalizationAction({ language, currency })
 
     setLoading(false)
 
-    if (error) {
-      toast.error(error.message)
+    if (res.error) {
+      toast.error('Failed to update preferences')
     } else {
       toast.success('Preferences updated')
       router.refresh()
