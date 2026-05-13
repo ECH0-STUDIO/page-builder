@@ -19,6 +19,7 @@ import {
 import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Supported languages ──────────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   const [period, setPeriod] = useState<7 | 30>(7)
   const [analytics, setAnalytics] = useState(initialAnalytics)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+  const { t } = useTranslation()
 
   const ogRef = useRef<HTMLInputElement>(null)
   const faviconRef = useRef<HTMLInputElement>(null)
@@ -164,10 +166,10 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     setSavingSlug(true)
     try {
       const res = await updateBusinessAction(businessId, { slug })
-      if (res.success) toast.success('Page URL updated successfully')
+      if (res.success) toast.success(t('publishing.toastUrlUpdated'))
       else toast.error(res.error)
     } catch {
-      toast.error('Failed to update URL')
+      toast.error(t('publishing.toastUrlFailed'))
     } finally {
       setSavingSlug(false)
     }
@@ -177,10 +179,10 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     setSavingDomain(true)
     try {
       const res = await savePublishingSettingsAction(businessId, { custom_domain: customDomain || null })
-      if (res.success) toast.success('Custom domain updated')
+      if (res.success) toast.success(t('publishing.toastDomainUpdated'))
       else toast.error(res.error)
     } catch {
-      toast.error('Failed to save domain')
+      toast.error(t('publishing.toastDomainFailed'))
     } finally {
       setSavingDomain(false)
     }
@@ -273,12 +275,12 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <Globe className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">Page URL</h2>
+          <h2 className="font-semibold text-gray-900">{t('publishing.pageUrl')}</h2>
         </div>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="pub-slug">
-              Custom Slug
+              {t('publishing.customSlug')}
               {slugStatus === 'checking' && (
                 <span className="ml-2 text-xs text-muted-foreground inline-flex items-center gap-1">
                   <Loader2 className="size-3 animate-spin" /> Checking…
@@ -308,7 +310,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Lowercase letters, numbers, and hyphens only.
+              {t('publishing.slugHint')}
             </p>
           </div>
           <div className="flex justify-end max-w-md">
@@ -318,9 +320,9 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
               className="w-full sm:w-auto"
             >
               {savingSlug ? (
-                <><Loader2 className="size-4 animate-spin mr-2" /> Saving…</>
+                <><Loader2 className="size-4 animate-spin mr-2" /> {t('publishing.saving')}</>
               ) : (
-                <><Save className="size-4 mr-2" /> Save URL</>
+                <><Save className="size-4 mr-2" /> {t('publishing.saveUrl')}</>
               )}
             </Button>
           </div>
@@ -334,12 +336,12 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
             <div className="flex items-center gap-2">
               <div className={cn('size-2.5 rounded-full', isPublished ? 'bg-green-500 animate-pulse' : 'bg-gray-300')} />
               <h2 className="font-semibold text-gray-900">
-                {isPublished ? 'Your page is live' : 'Your page is in draft'}
+                {isPublished ? t('publishing.pageIsLive') : t('publishing.pageIsDraft')}
               </h2>
             </div>
             <p className="text-sm text-gray-500">
               {isPublished
-                ? 'Customers can visit your page using the link below.'
+                ? t('publishing.visitHint')
                 : 'Publish to make your page accessible to customers.'}
             </p>
           </div>
@@ -370,26 +372,26 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <Globe className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">Custom Domain</h2>
+          <h2 className="font-semibold text-gray-900">{t('publishing.customDomain')}</h2>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Your Domain (e.g., menu.yourrestaurant.com)</label>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.domainLabel')}</label>
             <div className="flex gap-2">
               <input type="text" value={customDomain} onChange={e => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
                 placeholder="Enter custom domain"
                 className="flex-1 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
               <Button onClick={handleSaveDomain} disabled={savingDomain || customDomain === publishing?.custom_domain} className="shrink-0 h-10">
-                {savingDomain ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+                {savingDomain ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
               </Button>
             </div>
           </div>
 
           {publishing?.custom_domain && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 space-y-3">
-              <h3 className="font-semibold text-blue-900 text-sm">Configure your DNS records</h3>
-              <p className="text-xs text-blue-800">To connect your domain, log in to your domain provider (e.g., GoDaddy, Namecheap) and add the following records:</p>
+              <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
+              <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
               
               <div className="space-y-2">
                 <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
@@ -403,7 +405,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> vc-domain-verify={businessId.split('-')[0]}</div>
                 </div>
               </div>
-              <p className="text-xs text-blue-700/80 italic pt-1">Note: DNS changes can take up to 24 hours to propagate, though it usually happens within an hour.</p>
+              <p className="text-xs text-blue-700/80 italic pt-1">{t('publishing.dnsNote')}</p>
             </div>
           )}
         </div>
@@ -414,7 +416,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <BarChart2 className="size-4 text-gray-600" />
-            <h2 className="font-semibold text-gray-900">Page Analytics</h2>
+            <h2 className="font-semibold text-gray-900">{t('publishing.analytics')}</h2>
           </div>
           {/* Period toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
@@ -432,14 +434,14 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
           <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
             <div className="flex items-center gap-2 text-gray-500 mb-1">
               <Eye className="size-3.5" />
-              <span className="text-xs font-medium uppercase tracking-wide">Total Views</span>
+              <span className="text-xs font-medium uppercase tracking-wide">{t('publishing.totalViews')}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{analytics.total.toLocaleString()}</p>
           </div>
           <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
             <div className="flex items-center gap-2 text-gray-500 mb-1">
               <TrendingUp className="size-3.5" />
-              <span className="text-xs font-medium uppercase tracking-wide">Last {period} days</span>
+              <span className="text-xs font-medium uppercase tracking-wide">{t('publishing.lastNDays').replace('{{n}}', String(period))}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{analytics.periodTotal.toLocaleString()}</p>
           </div>
@@ -448,7 +450,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-              {loadingAnalytics ? 'Loading…' : `Last ${period} days`}
+              {loadingAnalytics ? t('publishing.loading') : t('publishing.lastNDays').replace('{{n}}', String(period))}
             </p>
             <button onClick={handleDownloadCsv}
               className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors">
@@ -463,36 +465,36 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <FileText className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">SEO & Social</h2>
+          <h2 className="font-semibold text-gray-900">{t('publishing.seo')}</h2>
         </div>
 
         <div className="space-y-5">
           {/* SEO Title */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Page Title</label>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.pageTitle')}</label>
             <input type="text" value={seoTitle} onChange={e => setSeoTitle(e.target.value)}
-              placeholder="Your Business Name (auto-filled if empty)"
+              placeholder={t('publishing.pageTitlePlaceholder')}
               className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400" />
-            <p className="text-xs text-gray-400">Shown in browser tabs and Google search results.</p>
+            <p className="text-xs text-gray-400">{t('publishing.pageTitleHint')}</p>
           </div>
 
           {/* Meta description */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Meta Description</label>
+              <label className="text-sm font-medium text-gray-700">{t('publishing.metaDesc')}</label>
               <span className={cn('text-xs', seoDesc.length > 155 ? 'text-red-500' : 'text-gray-400')}>
                 {seoDesc.length} / 160
               </span>
             </div>
             <textarea value={seoDesc} onChange={e => setSeoDesc(e.target.value)} rows={3}
-              placeholder="A short description — shown in Google search results."
+              placeholder={t('publishing.metaDescPlaceholder')}
               className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 resize-none" />
           </div>
 
           {/* OG Image */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Social Preview Image</label>
-            <p className="text-xs text-gray-400">Shown when sharing on WhatsApp, Facebook, etc. 1200×630px recommended.</p>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.ogImage')}</label>
+            <p className="text-xs text-gray-400">{t('publishing.ogImageHint')}</p>
             {ogImage ? (
               <div className="relative rounded-xl overflow-hidden border border-gray-200 aspect-[1200/630] max-h-40 bg-gray-50 group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -511,7 +513,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
             ) : (
               <button onClick={() => ogRef.current?.click()}
                 className="w-full flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 text-gray-400 hover:text-gray-600 transition-colors">
-                <ImageIcon className="size-6" /><span className="text-sm">Upload image</span>
+                <ImageIcon className="size-6" /><span className="text-sm">{t('publishing.uploadImage')}</span>
               </button>
             )}
             <input ref={ogRef} type="file" accept="image/*" className="hidden"
@@ -520,7 +522,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
 
           <button onClick={handleSave} disabled={isPending}
             className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
-            {isPending ? 'Saving…' : 'Save SEO Settings'}
+            {isPending ? t('publishing.saving') : t('publishing.saveSeo')}
           </button>
         </div>
       </Card>
@@ -529,24 +531,24 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <Palette className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">Branding & Identity</h2>
+          <h2 className="font-semibold text-gray-900">{t('publishing.branding')}</h2>
         </div>
 
         <div className="space-y-5">
           {/* Language */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Page Language</label>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.pageLanguage')}</label>
             <select value={language} onChange={e => setLanguage(e.target.value)}
               className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 bg-white">
               {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label} ({l.code})</option>)}
             </select>
-            <p className="text-xs text-gray-400">Sets the HTML lang attribute and hreflang for SEO.</p>
+            <p className="text-xs text-gray-400">{t('publishing.langHint')}</p>
           </div>
 
           {/* Favicon */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Favicon</label>
-            <p className="text-xs text-gray-400">32×32px PNG or ICO — shown in browser tabs.</p>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.favicon')}</label>
+            <p className="text-xs text-gray-400">{t('publishing.faviconHint')}</p>
             <div className="flex items-center gap-3">
               {favicon
                 ? /* eslint-disable-next-line @next/next/no-img-element */
@@ -554,7 +556,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                 : <div className="size-8 rounded border-2 border-dashed border-gray-200 flex items-center justify-center"><Globe className="size-4 text-gray-300" /></div>
               }
               <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                <Upload className="size-3" /> {favicon ? 'Replace' : 'Upload'}
+                <Upload className="size-3" /> {favicon ? t('publishing.replace') : t('publishing.upload')}
                 <input ref={faviconRef} type="file" accept="image/*,.ico" className="hidden"
                   onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicons', setFavicon, 'favicon_url')} />
               </label>
@@ -567,8 +569,8 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
 
           {/* Apple Touch Icon */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Webclip (Apple Touch Icon)</label>
-            <p className="text-xs text-gray-400">180×180px PNG — shown when customers add your page to their iPhone home screen.</p>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.webclip')}</label>
+            <p className="text-xs text-gray-400">{t('publishing.webclipHint')}</p>
             <div className="flex items-center gap-3">
               {webclip
                 ? /* eslint-disable-next-line @next/next/no-img-element */
@@ -576,7 +578,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                 : <div className="size-10 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center"><ImageIcon className="size-4 text-gray-300" /></div>
               }
               <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                <Upload className="size-3" /> {webclip ? 'Replace' : 'Upload'}
+                <Upload className="size-3" /> {webclip ? t('publishing.replace') : t('publishing.upload')}
                 <input ref={webclipRef} type="file" accept="image/*" className="hidden"
                   onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'webclips', setWebclip, 'apple_touch_icon_url')} />
               </label>
@@ -589,27 +591,27 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
 
           {/* GSC verification */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Google Search Console Verification</label>
+            <label className="text-sm font-medium text-gray-700">{t('publishing.gsc')}</label>
             <input type="text" value={gscTag} onChange={e => setGscTag(e.target.value)}
               placeholder="Paste your verification code (e.g. abc123xyz...)"
               className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
-            <p className="text-xs text-gray-400">Found in GSC → Add property → HTML tag → content value only.</p>
+            <p className="text-xs text-gray-400">{t('publishing.gscHint')}</p>
           </div>
 
           <button onClick={handleSave} disabled={isPending}
             className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
-            {isPending ? 'Saving…' : 'Save Settings'}
+            {isPending ? t('publishing.saving') : t('publishing.saveSettings')}
           </button>
         </div>
       </Card>
 
       {/* ── Quick Actions ── */}
       <Card>
-        <h2 className="font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="font-semibold text-gray-900 mb-4">{t('publishing.quickActions')}</h2>
         <div className="space-y-2">
           {[
-            { href: '/dashboard/pages', icon: Palette, label: 'Edit Page Builder', desc: 'Customise blocks, layout and theme' },
-            { href: '/dashboard/qr', icon: QrCode, label: 'QR Codes', desc: 'Design and print your table QR stands' },
+            { href: '/dashboard/pages', icon: Palette, label: t('publishing.editPageBuilder'), desc: t('publishing.editPageBuilderDesc') },
+            { href: '/dashboard/qr', icon: QrCode, label: t('sidebar.qrCodes'), desc: t('publishing.qrCodesDesc') },
           ].map(item => (
             <a key={item.href} href={item.href}
               className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-colors group">
@@ -629,8 +631,8 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
       {/* Status footer */}
       <div className="flex items-center justify-center gap-2 py-2">
         {isPublished
-          ? <><CheckCircle2 className="size-4 text-green-500" /><span className="text-xs text-green-600 font-medium">Page is live</span></>
-          : <><XCircle className="size-4 text-gray-400" /><span className="text-xs text-gray-400">Page is in draft</span></>
+          ? <><CheckCircle2 className="size-4 text-green-500" /><span className="text-xs text-green-600 font-medium">{t('publishing.pageIsLiveStatus')}</span></>
+          : <><XCircle className="size-4 text-gray-400" /><span className="text-xs text-gray-400">{t('publishing.pageIsDraftStatus')}</span></>
         }
       </div>
     </div>

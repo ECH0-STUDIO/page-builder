@@ -1,9 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+// import { createClient } from '@/lib/supabase/server'
 import { getPaymentSettingsAction } from '@/app/actions/payments'
 import type { Metadata } from 'next'
 import { VietQRSettings } from '@/components/payments/VietQRSettings'
 import { PaymentPrintSection } from '@/components/payments/PaymentPrintSection'
+import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Payment Settings' }
 export const dynamic = 'force-dynamic'
@@ -12,6 +15,8 @@ export default async function PaymentsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const { t } = await getServerTranslation()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
@@ -34,9 +39,9 @@ export default async function PaymentsPage() {
       {/* ── Bank Account Setup ── */}
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Payment Settings</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('payments.title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Set up your bank account so customers can pay by scanning your VietQR code.
+            {t('payments.description')}
           </p>
         </div>
         <VietQRSettings
@@ -49,9 +54,9 @@ export default async function PaymentsPage() {
       {/* ── Payment QR Print Designer ── */}
       <div>
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-foreground">Print Payment Stand</h2>
+          <h2 className="text-xl font-bold text-foreground">{t('payments.printStand')}</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Design and print a table stand card with your VietQR payment code.
+            {t('payments.printStandDesc')}
           </p>
         </div>
         <PaymentPrintSection

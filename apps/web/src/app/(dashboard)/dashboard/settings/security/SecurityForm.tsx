@@ -4,22 +4,24 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 export function SecurityForm() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const { t } = useTranslation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (password.length < 6) {
-      toast.error('Password must be at least 6 characters.')
+      toast.error(t('settings.security.minLength'))
       return
     }
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match.')
+      toast.error(t('settings.security.mismatch'))
       return
     }
 
@@ -35,7 +37,7 @@ export function SecurityForm() {
     if (error) {
       toast.error(error.message)
     } else {
-      toast.success('Password updated successfully!')
+      toast.success(t('settings.security.success'))
       setPassword('')
       setConfirmPassword('')
     }
@@ -44,7 +46,7 @@ export function SecurityForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700" htmlFor="new-password">New Password</label>
+        <label className="text-sm font-medium text-gray-700" htmlFor="new-password">{t('settings.security.newPassword')}</label>
         <input
           id="new-password"
           type="password"
@@ -56,7 +58,7 @@ export function SecurityForm() {
       </div>
       
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-gray-700" htmlFor="confirm-password">Confirm Password</label>
+        <label className="text-sm font-medium text-gray-700" htmlFor="confirm-password">{t('settings.security.confirmPassword')}</label>
         <input
           id="confirm-password"
           type="password"
@@ -72,7 +74,7 @@ export function SecurityForm() {
         disabled={loading}
         className="w-full h-10 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
       >
-        {loading ? <Loader2 className="size-4 animate-spin" /> : 'Update Password'}
+        {loading ? <Loader2 className="size-4 animate-spin" /> : t('settings.security.save')}
       </button>
     </form>
   )

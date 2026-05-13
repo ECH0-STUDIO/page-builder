@@ -1,50 +1,53 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ArrowRight, Store, Palette, UtensilsCrossed, ExternalLink } from 'lucide-react'
+import { ArrowRight, Store, Palette, UtensilsCrossed } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-
-const QUICK_ACTIONS = [
-  {
-    title: 'Business Profile',
-    description: 'Add your logo, address, hours & social links',
-    href: '/dashboard/business',
-    icon: Store,
-    cta: 'Set up profile',
-    phase: 'v1',
-  },
-  {
-    title: 'Menu',
-    description: 'Add categories, items & pricing',
-    href: '/dashboard/menu',
-    icon: UtensilsCrossed,
-    cta: 'Build menu',
-    phase: 'v1',
-  },
-  {
-    title: 'Page Builder',
-    description: 'Design your public digital page',
-    href: '/dashboard/pages',
-    icon: Palette,
-    cta: 'Build page',
-    phase: 'soon',
-  },
-]
+import { getServerTranslation } from '@/i18n/getDictionary'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { t } = await getServerTranslation()
+
+  const QUICK_ACTIONS = [
+    {
+      title: t('overview.quickActions.businessProfile.title'),
+      description: t('overview.quickActions.businessProfile.description'),
+      href: '/dashboard/business',
+      icon: Store,
+      cta: t('overview.quickActions.businessProfile.cta'),
+      phase: 'v1',
+    },
+    {
+      title: t('overview.quickActions.menu.title'),
+      description: t('overview.quickActions.menu.description'),
+      href: '/dashboard/menu',
+      icon: UtensilsCrossed,
+      cta: t('overview.quickActions.menu.cta'),
+      phase: 'v1',
+    },
+    {
+      title: t('overview.quickActions.pageBuilder.title'),
+      description: t('overview.quickActions.pageBuilder.description'),
+      href: '/dashboard/pages',
+      icon: Palette,
+      cta: t('overview.quickActions.pageBuilder.cta'),
+      phase: 'soon',
+    },
+  ]
+
   return (
     <div className="p-8 max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('overview.title')}</h1>
         <p className="text-muted-foreground mt-1">
-          Welcome to your dashboard. Let&apos;s get your page live.
+          {t('overview.description')}
         </p>
       </div>
 
@@ -64,7 +67,7 @@ export default async function DashboardPage() {
                   </div>
                   {disabled && (
                     <Badge variant="secondary" className="text-[10px]">
-                      coming soon
+                      {t('overview.comingSoon')}
                     </Badge>
                   )}
                 </div>

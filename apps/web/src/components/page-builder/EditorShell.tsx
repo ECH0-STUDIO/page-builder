@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 import { PublishBar } from './PublishBar'
 import { TemplatePicker } from './TemplatePicker'
@@ -94,6 +95,7 @@ function SidebarBlockItem({
   onDuplicate: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
   const meta = getBlockMeta(block.type)
@@ -132,7 +134,7 @@ function SidebarBlockItem({
           'shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity',
           isSelected ? 'hover:bg-white/20 text-primary-foreground/70' : 'hover:bg-accent-foreground/10 text-muted-foreground'
         )}
-        title={block.visible ? 'Hide block' : 'Show block'}
+        title={block.visible ? t('pageBuilder.hiddenFromPage') : t('pageBuilder.hiddenFromPage')}
       >
         {block.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
       </button>
@@ -151,11 +153,11 @@ function SidebarBlockItem({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuItem onClick={e => { e.stopPropagation(); onDuplicate() }}>
-            <Copy className="size-3.5 mr-2" /> Duplicate
+            <Copy className="size-3.5 mr-2" /> {t('pageBuilder.duplicate')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); onDelete() }}>
-            <Trash2 className="size-3.5 mr-2" /> Delete
+            <Trash2 className="size-3.5 mr-2" /> {t('pageBuilder.delete')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -166,14 +168,16 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick,
+  block, isSelected, business, menuGridData, onClick, isMobilePreview,
 }: {
   block: PageBlock
   isSelected: boolean
   business: Business
   menuGridData: MenuGridData
   onClick: () => void
+  isMobilePreview?: boolean
 }) {
+  const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
   const spacing = block.spacing ?? defaultSpacing
 
@@ -191,10 +195,10 @@ function LiveBlockCard({
         <span className="text-muted-foreground shrink-0">{blockIcon(block.type)}</span>
         <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate">
           <span className="font-medium">{meta.label}</span>
-          <span className="opacity-50 ml-1.5">— hidden from page</span>
+          <span className="opacity-50 ml-1.5">{t('pageBuilder.hiddenFromPage')}</span>
         </span>
         {isSelected && (
-          <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0">Editing</Badge>
+          <Badge variant="outline" className="text-[10px] text-primary border-primary/30 shrink-0">{t('pageBuilder.editing')}</Badge>
         )}
       </div>
     )
@@ -242,13 +246,14 @@ function LiveBlockCard({
           userSelect: 'none',
         }}
       >
-        {block.type === 'hero' && <HeroRender config={block.config as HeroConfig} businessName={business.name} />}
-        {block.type === 'text_image' && <TextImageRender config={block.config as TextImageConfig} />}
+        {block.type === 'hero' && <HeroRender config={block.config as HeroConfig} businessName={business.name} isMobilePreview={isMobilePreview} />}
+        {block.type === 'text_image' && <TextImageRender config={block.config as TextImageConfig} isMobilePreview={isMobilePreview} />}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
           <MenuGridRender
             config={block.config as MenuGridConfig}
             data={menuGridData}
+            isMobilePreview={isMobilePreview}
           />
         )}
         {block.type === 'qr_code' && (
@@ -274,6 +279,7 @@ function BlockSettingsPanel({
   items: MenuItem[]
   onChange: (b: PageBlock) => void
 }) {
+  const { t } = useTranslation()
   const anchorId = block.block_anchor_id ?? ''
 
   return (
@@ -282,7 +288,7 @@ function BlockSettingsPanel({
       {!block.visible && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
           <EyeOff className="size-3.5 text-amber-600 shrink-0" />
-          <p className="text-xs text-amber-700 dark:text-amber-400">This block is hidden from the live page.</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400">{t('pageBuilder.hiddenNotice')}</p>
         </div>
       )}
 
@@ -321,9 +327,9 @@ function BlockSettingsPanel({
 
       {/* Section anchor ID — used by scroll-to links */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Section ID (anchor)</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('pageBuilder.sectionAnchor')}</Label>
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Give this section a short ID so buttons can scroll to it. E.g. <code className="font-mono bg-muted px-1 rounded">menu</code> → linked as <code className="font-mono bg-muted px-1 rounded">#menu</code>.
+          {t('pageBuilder.sectionAnchorHint')} E.g. <code className="font-mono bg-muted px-1 rounded">menu</code> → linked as <code className="font-mono bg-muted px-1 rounded">#menu</code>.
         </p>
         <div className="flex items-center overflow-hidden rounded-lg border border-border h-8">
           <span className="px-2 text-sm text-muted-foreground bg-muted border-r border-border h-full flex items-center select-none">#</span>
@@ -331,7 +337,7 @@ function BlockSettingsPanel({
             type="text"
             value={anchorId}
             onChange={e => onChange({ ...block, block_anchor_id: e.target.value.replace(/[^a-z0-9-_]/gi, '') })}
-            placeholder="e.g. menu, about, contact"
+            placeholder={t('pageBuilder.sectionAnchorPlaceholder')}
             className="flex-1 h-full px-2 text-sm bg-transparent outline-none font-mono"
           />
         </div>
@@ -363,10 +369,11 @@ function BlockSettingsPanel({
 function AddBlockModal({ open, onClose, onAdd }: {
   open: boolean; onClose: () => void; onAdd: (type: BlockType) => void
 }) {
+  const { t } = useTranslation()
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Add a block</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t('pageBuilder.addBlockTitle')}</DialogTitle></DialogHeader>
         <div className="space-y-1 py-2">
           {BLOCK_REGISTRY.map(b => (
             <button
@@ -419,7 +426,6 @@ export function EditorShell({
 }: EditorShellProps) {
   const [blocks, setBlocks] = useState<PageBlock[]>(() =>
     initialBlocks
-      // Filter out any legacy navbar blocks that were saved as blocks
       .filter(b => (b.type as string) !== 'navbar')
       .map(b => ({
         ...b,
@@ -428,6 +434,7 @@ export function EditorShell({
         block_anchor_id: b.block_anchor_id ?? null,
       }))
   )
+  const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(
     initialBlocks.filter(b => (b.type as string) !== 'navbar')[0]?.id ?? null
   )
@@ -681,18 +688,18 @@ export function EditorShell({
       <Dialog open={!!pendingTemplate} onOpenChange={o => !o && setPendingTemplate(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Apply Template?</DialogTitle>
+            <DialogTitle>{t('pageBuilder.applyTemplate')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground mt-2">
-            This will completely replace all your current sections. Are you sure you want to proceed?
+            {t('pageBuilder.applyTemplateConfirm')}
           </p>
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setPendingTemplate(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPendingTemplate(null)}>{t('pageBuilder.cancel')}</Button>
             <Button variant="destructive" onClick={() => {
               if (pendingTemplate) applyTemplate(pendingTemplate)
               setPendingTemplate(null)
             }}>
-              Replace Layout
+              {t('pageBuilder.replaceLayout')}
             </Button>
           </div>
         </DialogContent>
@@ -704,12 +711,12 @@ export function EditorShell({
         {/* ── Block list sidebar ──────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 border-r border-border flex flex-col bg-muted/20">
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sections</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
             <button
               onClick={() => setShowTemplatePicker(true)}
               className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
             >
-              Templates
+              {t('pageBuilder.templates')}
             </button>
           </div>
 
@@ -737,7 +744,7 @@ export function EditorShell({
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="p-1.5 space-y-0.5 min-h-[100px]">
                     {blocks.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">No sections.</p>
+                      <p className="text-xs text-muted-foreground text-center py-4">{t('pageBuilder.noSections')}</p>
                     )}
                     {blocks.map(block => (
                       <SidebarBlockItem
@@ -756,7 +763,7 @@ export function EditorShell({
 
               <div className="px-3 pb-3">
                 <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => setAddModalOpen(true)}>
-                  <Plus className="size-3 mr-1" /> Add section
+                  <Plus className="size-3 mr-1" /> {t('pageBuilder.addSection')}
                 </Button>
               </div>
             </div>
@@ -811,7 +818,7 @@ export function EditorShell({
                   viewMode === 'desktop' ? 'bg-gray-100 dark:bg-gray-800 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Monitor className="size-3.5" /> Desktop
+                <Monitor className="size-3.5" /> {t('pageBuilder.desktop')}
               </button>
               <button
                 type="button"
@@ -821,7 +828,7 @@ export function EditorShell({
                   viewMode === 'mobile' ? 'bg-gray-100 dark:bg-gray-800 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Smartphone className="size-3.5" /> Mobile
+                <Smartphone className="size-3.5" /> {t('pageBuilder.mobile')}
               </button>
             </div>
           </div>
@@ -861,12 +868,12 @@ export function EditorShell({
                   <div className="flex flex-col items-center justify-center min-h-[300px] text-center gap-4 p-8">
                     <div className="text-5xl">🎨</div>
                     <div>
-                      <p className="font-semibold text-lg">Canvas is empty</p>
-                      <p className="text-sm text-muted-foreground mt-1">Add a block or pick a template to start.</p>
+                      <p className="font-semibold text-lg">{t('pageBuilder.canvasEmpty')}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{t('pageBuilder.canvasEmptyHint')}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)}>✦ Templates</Button>
-                      <Button size="sm" onClick={() => setAddModalOpen(true)}><Plus className="size-4 mr-1.5" /> Add block</Button>
+                      <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)}>✦ {t('pageBuilder.templates')}</Button>
+                      <Button size="sm" onClick={() => setAddModalOpen(true)}><Plus className="size-4 mr-1.5" /> {t('pageBuilder.addBlock')}</Button>
                     </div>
                   </div>
                 )}
@@ -878,6 +885,7 @@ export function EditorShell({
                       isSelected={block.id === selectedId}
                       business={business}
                       menuGridData={menuGridData}
+                      isMobilePreview={viewMode === 'mobile'}
                       onClick={() => { setSelectedId(block.id); setRightPanel('block') }}
                     />
                   </div>
@@ -905,7 +913,7 @@ export function EditorShell({
                 <span className="text-muted-foreground">{blockIcon(selectedBlock.type)}</span>
                 <span className="font-semibold text-sm flex-1">{getBlockMeta(selectedBlock.type).label}</span>
                 {!selectedBlock.visible && (
-                  <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">Hidden</Badge>
+                  <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">{t('pageBuilder.hidden')}</Badge>
                 )}
               </div>
               <div className="flex-1 overflow-y-auto p-4">
@@ -916,7 +924,7 @@ export function EditorShell({
             <>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
                 <Menu className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">Navbar</span>
+                <span className="font-semibold text-sm">{t('pageBuilder.navbar')}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <NavbarSettings
@@ -931,7 +939,7 @@ export function EditorShell({
             <>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
                 <PanelBottom className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">Footer</span>
+                <span className="font-semibold text-sm">{t('pageBuilder.footer')}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <FooterSettings
@@ -944,7 +952,7 @@ export function EditorShell({
             <>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
                 <Palette className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">Theme</span>
+                <span className="font-semibold text-sm">{t('pageBuilder.theme')}</span>
               </div>
               <div className="flex-1 overflow-y-auto">
                 <GlobalSettingsPanel

@@ -12,10 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useBusiness } from '@/context/BusinessContext'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 export function BusinessSwitcher() {
   const router = useRouter()
   const { businesses, currentBusiness, switchBusiness } = useBusiness()
+  const { t } = useTranslation()
 
   const initials = currentBusiness?.name
     ?.split(' ')
@@ -39,7 +41,7 @@ export function BusinessSwitcher() {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate text-sidebar-foreground">
-              {currentBusiness?.name ?? 'Select business'}
+              {currentBusiness?.name ?? t('sidebar.selectBusiness')}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               {currentBusiness ? `/${currentBusiness.slug}` : ''}
@@ -55,7 +57,7 @@ export function BusinessSwitcher() {
         sideOffset={6}
       >
         <DropdownMenuLabel className="text-xs text-muted-foreground font-medium">
-          Your businesses
+          {t('sidebar.yourBusinesses')}
         </DropdownMenuLabel>
 
         {businesses.map(biz => (
@@ -88,7 +90,7 @@ export function BusinessSwitcher() {
           <div className="size-6 rounded-md border-2 border-dashed border-border flex items-center justify-center shrink-0">
             <Plus className="size-3" />
           </div>
-          <span className="text-sm">Add new business</span>
+          <span className="text-sm">{t('sidebar.addNewBusiness')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -8,6 +8,7 @@ import {
   SAMPLE_CSV, type CsvValidationError,
 } from '@/lib/menu-csv'
 import { createClient } from '@/lib/supabase/client'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { ParsedVariantGroup } from '@/lib/menu-csv'
@@ -62,6 +63,7 @@ function clearSnapshot(businessId: string) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MenuCsvActions({ businessId, categories, items, onRefresh }: MenuCsvActionsProps) {
+  const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importState, setImportState] = useState<ImportState>({ status: 'idle' })
   const [pendingRows, setPendingRows] = useState<ReturnType<typeof parseMenuCsv>['rows']>([])
@@ -258,7 +260,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
   function handleRevert() {
     startTransition(async () => {
       const snapshot = loadSnapshot(businessId)
-      if (!snapshot) { toast.error('Snapshot expired'); setHasSnapshot(false); return }
+      if (!snapshot) { toast.error(t('menuBuilder.snapshotExpired')); setHasSnapshot(false); return }
 
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,7 +284,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
       clearSnapshot(businessId)
       setHasSnapshot(false)
       setImportState({ status: 'idle' })
-      toast.success('Menu reverted to previous state')
+      toast.success(t('menuBuilder.menuReverted'))
       onRefresh()
     })
   }
@@ -298,14 +300,14 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={handleDownload}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <Download className="size-3.5" /> Export CSV
+          <Download className="size-3.5" /> {t('menuBuilder.exportCsv')}
         </button>
 
         <label className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer',
           'border-gray-900 bg-gray-900 text-white hover:bg-gray-800'
         )}>
-          <Upload className="size-3.5" /> Import CSV
+          <Upload className="size-3.5" /> {t('menuBuilder.importCsv')}
           <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
             onChange={e => e.target.files?.[0] && handleFilePick(e.target.files[0])} />
         </label>
@@ -313,7 +315,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         {hasSnapshot && (
           <button onClick={handleRevert} disabled={isPending}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors disabled:opacity-50">
-            <Undo2 className="size-3.5" /> Undo last import
+            <Undo2 className="size-3.5" /> {t('menuBuilder.undoImport')}
           </button>
         )}
 
@@ -328,7 +330,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-red-700 font-medium text-sm">
-              <AlertCircle className="size-4" /> CSV format error
+              <AlertCircle className="size-4" /> {t('menuBuilder.csvFormatError')}
             </div>
             <button onClick={dismiss} className="text-red-400 hover:text-red-600"><X className="size-4" /></button>
           </div>
@@ -351,13 +353,13 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900">Ready to import</p>
+              <p className="text-sm font-medium text-blue-900">{t('menuBuilder.readyToImport')}</p>
               <p className="text-xs text-blue-700">
-                {importState.summary.added > 0 && <span>{importState.summary.added} new items · </span>}
-                {importState.summary.updated > 0 && <span>{importState.summary.updated} updated · </span>}
-                {importState.summary.unchanged > 0 && <span>{importState.summary.unchanged} unchanged</span>}
+                {importState.summary.added > 0 && <span>{importState.summary.added} {t('menuBuilder.newItems')} · </span>}
+                {importState.summary.updated > 0 && <span>{importState.summary.updated} {t('menuBuilder.updated')} · </span>}
+                {importState.summary.unchanged > 0 && <span>{importState.summary.unchanged} {t('menuBuilder.unchanged')}</span>}
               </p>
-              <p className="text-xs text-blue-600">Existing items not in the CSV will not be deleted.</p>
+              <p className="text-xs text-blue-600">{t('menuBuilder.existingItemsNote')}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button onClick={dismiss}
@@ -366,7 +368,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
               </button>
               <button onClick={handleApply} disabled={isPending}
                 className="px-3 py-1.5 rounded-lg bg-blue-700 text-white text-xs font-medium hover:bg-blue-800 transition-colors disabled:opacity-50">
-                {isPending ? 'Importing…' : 'Apply Import'}
+                {isPending ? t('menuBuilder.importing') : t('menuBuilder.applyImport')}
               </button>
             </div>
           </div>
@@ -378,7 +380,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         <div className="rounded-xl border border-green-200 bg-green-50 p-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-green-800 text-sm">
             <CheckCircle2 className="size-4 text-green-600" />
-            Import applied successfully. You can undo within 10 minutes.
+            {t('menuBuilder.importAppliedUndo')}
           </div>
           <button onClick={dismiss} className="text-green-500 hover:text-green-700"><X className="size-4" /></button>
         </div>

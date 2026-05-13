@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+// import { createClient } from '@/lib/supabase/server'
 import { EditorShell } from '@/components/page-builder/EditorShell'
 import { getPageDataAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'

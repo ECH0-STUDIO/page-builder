@@ -5,9 +5,10 @@
  */
 
 import { useRef } from 'react'
-import { Printer, Download } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { getFontStack, getGoogleFontLinkTag } from '@/lib/fonts'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -194,6 +195,7 @@ export function MenuContent({ business, categories, items, settings }: MenuConte
 
 export function PrintMenuPreview({ business, categories, items, settings, onSave, isSaving }: MenuContentProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
   const paper = PAPER_PX[settings.paper]
 
   // Build background CSS for paper
@@ -305,13 +307,13 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         {onSave && (
           <button onClick={onSave} disabled={isSaving}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
-            {isSaving ? 'Saved!' : 'Save changes'}
+            {isSaving ? t('printMenu.saved') : t('printMenu.saveChanges')}
           </button>
         )}
         <button onClick={handlePrint}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
           <Printer className="size-4" />
-          Print PDF
+          {t('printMenu.printPdf')}
         </button>
       </div>
 

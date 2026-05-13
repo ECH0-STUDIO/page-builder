@@ -36,6 +36,7 @@ import {
   SOCIAL_LINKS_CONFIG,
 } from '@/lib/constants'
 import { useBusiness } from '@/context/BusinessContext'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 type OpeningHoursEntry = {
   day: string
@@ -60,6 +61,7 @@ function CopyHoursMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
+  const { t } = useTranslation()
 
   return (
     <DropdownMenu open={open} onOpenChange={o => { setOpen(o); if (!o) setSelected([]) }}>
@@ -69,7 +71,7 @@ function CopyHoursMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <div className="px-2 py-1.5 text-sm font-semibold">Copy to...</div>
+        <div className="px-2 py-1.5 text-sm font-semibold">{t('businessProfile.copyTo')}</div>
         {DAYS_OF_WEEK.filter(d => d.key !== sourceDay).map(d => (
           <DropdownMenuCheckboxItem
             key={d.key}
@@ -80,7 +82,7 @@ function CopyHoursMenu({
               else setSelected(prev => prev.filter(k => k !== d.key))
             }}
           >
-            {d.label}
+            {t(`businessProfile.days.${d.key}`)}
           </DropdownMenuCheckboxItem>
         ))}
         <div className="p-2 mt-1 border-t border-border">
@@ -93,7 +95,7 @@ function CopyHoursMenu({
               setOpen(false)
             }}
           >
-            Apply
+            {t('businessProfile.apply')}
           </Button>
         </div>
       </DropdownMenuContent>
@@ -103,6 +105,7 @@ function CopyHoursMenu({
 
 export function BusinessProfileForm({ business }: { business: Business }) {
   const { refreshBusinesses } = useBusiness()
+  const { t } = useTranslation()
 
   // General fields
   const [name, setName] = useState(business.name)
@@ -174,7 +177,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
       }
       return h
     }))
-    toast.success(`Hours copied to ${targetDays.length} day(s)`)
+    toast.success(`${t('businessProfile.toastHoursCopied').replace('{{count}}', String(targetDays.length))}`)
   }
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -186,9 +189,9 @@ export function BusinessProfileForm({ business }: { business: Business }) {
       setLogoUrl(url)
       await updateBusiness(business.id, { logo_url: url })
       await refreshBusinesses()
-      toast.success('Logo updated')
+      toast.success(t('businessProfile.toastLogoUpdated'))
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed')
+      toast.error(err instanceof Error ? err.message : t('businessProfile.toastUploadFailed'))
     } finally {
       setLogoUploading(false)
     }
@@ -202,23 +205,23 @@ export function BusinessProfileForm({ business }: { business: Business }) {
       if (!value) continue
       const url = value.toLowerCase()
       if (key === 'facebook' && !url.includes('facebook.com') && !url.includes('fb.com') && !url.includes('fb.me')) {
-        toast.error('Please enter a valid Facebook URL')
+        toast.error(t('businessProfile.toastInvalidFacebook'))
         return
       }
       if (key === 'instagram' && !url.includes('instagram.com')) {
-        toast.error('Please enter a valid Instagram URL')
+        toast.error(t('businessProfile.toastInvalidInstagram'))
         return
       }
       if (key === 'zalo' && !url.includes('zalo.me') && !url.includes('zalo.app')) {
-        toast.error('Please enter a valid Zalo URL')
+        toast.error(t('businessProfile.toastInvalidZalo'))
         return
       }
       if (key === 'tiktok' && !url.includes('tiktok.com')) {
-        toast.error('Please enter a valid TikTok URL')
+        toast.error(t('businessProfile.toastInvalidTikTok'))
         return
       }
       if (key === 'youtube' && !url.includes('youtube.com') && !url.includes('youtu.be')) {
-        toast.error('Please enter a valid YouTube URL')
+        toast.error(t('businessProfile.toastInvalidYoutube'))
         return
       }
     }
@@ -238,19 +241,27 @@ export function BusinessProfileForm({ business }: { business: Business }) {
         social_links: socials,
       })
       await refreshBusinesses()
-      toast.success('Profile saved')
+      toast.success(t('businessProfile.toastSaved'))
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
+      toast.error(err instanceof Error ? err.message : t('businessProfile.toastSaveFailed'))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-10">
-      {/* ── Logo ── */}
+    <>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">{t('sidebar.businessProfile')}</h1>
+        <p className="text-muted-foreground mt-1">
+          {t('businessProfile.headerDesc')}
+        </p>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-10">
+        {/* ── Logo ── */}
       <section className="space-y-4">
-        <h2 className="text-base font-semibold">Logo</h2>
+        <h2 className="text-base font-semibold">{t('businessProfile.logo')}</h2>
         <div className="flex items-center gap-5">
           <Avatar className="size-20 rounded-xl border border-border">
             <AvatarImage src={logoUrl || undefined} className="object-cover" />
@@ -275,12 +286,12 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               onClick={() => fileInputRef.current?.click()}
             >
               {logoUploading ? (
-                <><Loader2 className="size-4 animate-spin mr-2" /> Uploading…</>
+                <><Loader2 className="size-4 animate-spin mr-2" /> {t('businessProfile.uploading')}</>
               ) : (
-                <><Upload className="size-4 mr-2" /> Upload logo</>
+                <><Upload className="size-4 mr-2" /> {t('businessProfile.uploadLogo')}</>
               )}
             </Button>
-            <p className="text-xs text-muted-foreground">JPEG, PNG, WebP · max 200KB</p>
+            <p className="text-xs text-muted-foreground">{t('businessProfile.logoHint')}</p>
           </div>
         </div>
       </section>
@@ -289,10 +300,10 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
       {/* ── General ── */}
       <section className="space-y-4">
-        <h2 className="text-base font-semibold">General</h2>
+        <h2 className="text-base font-semibold">{t('businessProfile.general')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="prof-name">Business name</Label>
+            <Label htmlFor="prof-name">{t('businessProfile.businessName')}</Label>
             <Input
               id="prof-name"
               value={name}
@@ -302,10 +313,10 @@ export function BusinessProfileForm({ business }: { business: Business }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="prof-category">Category</Label>
+            <Label htmlFor="prof-category">{t('businessProfile.category')}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger id="prof-category">
-                <SelectValue placeholder="Select category…" />
+                <SelectValue placeholder={t('businessProfile.selectCategory')} />
               </SelectTrigger>
               <SelectContent>
                 {BUSINESS_CATEGORIES.map(c => (
@@ -318,7 +329,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
         {/* Tags */}
         <div className="space-y-3">
-          <Label>Tags</Label>
+          <Label>{t('businessProfile.tags')}</Label>
           <div className="flex flex-wrap gap-2">
             {BUSINESS_TAGS.map(tag => (
               <button
@@ -332,7 +343,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
                     : 'bg-background border-border text-muted-foreground hover:border-foreground hover:text-foreground'
                 )}
               >
-                {tag}
+                {BUSINESS_TAGS.includes(tag as any) ? t(`businessProfile.tagsList.${tag}`) : tag}
               </button>
             ))}
             {customTagsList.map(tag => (
@@ -365,7 +376,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Add custom tag..."
+              placeholder={t('businessProfile.addCustomTag')}
               value={customTagInput}
               onChange={e => setCustomTagInput(e.target.value)}
               onKeyDown={e => {
@@ -377,7 +388,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               className="max-w-xs"
             />
             <Button type="button" variant="secondary" onClick={() => handleAddCustomTag()}>
-              Add
+              {t('businessProfile.add')}
             </Button>
           </div>
         </div>
@@ -387,10 +398,10 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
       {/* ── Contact ── */}
       <section className="space-y-4">
-        <h2 className="text-base font-semibold">Contact & Location</h2>
+        <h2 className="text-base font-semibold">{t('businessProfile.contact')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="prof-address">Address</Label>
+            <Label htmlFor="prof-address">{t('businessProfile.address')}</Label>
             <Input
               id="prof-address"
               placeholder="123 Nguyen Hue, District 1"
@@ -399,7 +410,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="prof-city">City</Label>
+            <Label htmlFor="prof-city">{t('businessProfile.city')}</Label>
             <Input
               id="prof-city"
               placeholder="Ho Chi Minh City"
@@ -408,7 +419,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="prof-phone">Phone</Label>
+            <Label htmlFor="prof-phone">{t('businessProfile.phone')}</Label>
             <Input
               id="prof-phone"
               placeholder="+84 9xx xxx xxx"
@@ -417,7 +428,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="prof-email">Email (public)</Label>
+            <Label htmlFor="prof-email">{t('businessProfile.email')}</Label>
             <Input
               id="prof-email"
               type="email"
@@ -433,7 +444,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
       {/* ── Opening Hours ── */}
       <section className="space-y-4">
-        <h2 className="text-base font-semibold">Opening Hours</h2>
+        <h2 className="text-base font-semibold">{t('businessProfile.openingHours')}</h2>
         <div className="space-y-2">
           {DAYS_OF_WEEK.map(d => {
             const entry = hours.find(h => h.day === d.key) ?? { day: d.key, open: false, from: '08:00', to: '22:00' }
@@ -454,7 +465,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
                   htmlFor={`hours-${d.key}`}
                   className={cn('w-24 cursor-pointer text-sm font-medium', !entry.open && 'text-muted-foreground')}
                 >
-                  {d.label}
+                  {t(`businessProfile.days.${d.key}`)}
                 </Label>
 
                 {entry.open ? (
@@ -493,7 +504,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
                     <CopyHoursMenu sourceDay={d.key} onApply={targets => handleCopyHours(entry, targets)} />
                   </div>
                 ) : (
-                  <span className="ml-auto text-sm text-muted-foreground">Closed</span>
+                  <span className="ml-auto text-sm text-muted-foreground">{t('businessProfile.closed')}</span>
                 )}
               </div>
             )
@@ -505,7 +516,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
       {/* ── Social Links ── */}
       <section className="space-y-4">
-        <h2 className="text-base font-semibold">Social Links</h2>
+        <h2 className="text-base font-semibold">{t('businessProfile.socialLinks')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {SOCIAL_LINKS_CONFIG.map(s => (
             <div key={s.key} className="space-y-2">
@@ -530,10 +541,11 @@ export function BusinessProfileForm({ business }: { business: Business }) {
           className="min-w-32"
         >
           {saving ? (
-            <><Loader2 className="size-4 animate-spin mr-2" /> Saving…</>
-          ) : 'Save profile'}
+            <><Loader2 className="size-4 animate-spin mr-2" /> {t('businessProfile.saving')}</>
+          ) : t('businessProfile.saveProfile')}
         </Button>
       </div>
-    </form>
+      </form>
+    </>
   )
 }

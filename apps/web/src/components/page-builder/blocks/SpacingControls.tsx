@@ -3,6 +3,7 @@
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import type { BlockSpacing } from '../types'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 interface SpacingControlsProps {
   spacing: BlockSpacing
@@ -33,6 +34,8 @@ function NumInput({
 }
 
 export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
+  const { t } = useTranslation()
+
   function set<K extends keyof BlockSpacing>(key: K, value: number) {
     onChange({ ...spacing, [key]: value })
   }
@@ -43,28 +46,21 @@ export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
       {/* Padding — box model visualiser */}
       <div>
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Outer Padding
+          {t('pageBuilder.outerPadding')}
         </Label>
-        <p className="text-[11px] text-muted-foreground mt-0.5">Space inside the block wrapper, outside the block&apos;s own background.</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">{t('pageBuilder.paddingHint')}</p>
 
-        {/* Outer box = margin reference; inner dashed = padding */}
         <div className="mt-2 rounded-xl border-2 border-dashed border-blue-200 dark:border-blue-900 bg-blue-50/30 dark:bg-blue-950/10 p-3 space-y-2">
-
-          {/* Top */}
           <div className="flex justify-center">
             <NumInput value={spacing.padding_top} onChange={v => set('padding_top', v)} />
           </div>
-
-          {/* Left — centre block — Right */}
           <div className="flex items-center gap-2">
             <NumInput value={spacing.padding_left} onChange={v => set('padding_left', v)} />
             <div className="flex-1 min-h-[36px] rounded-lg border border-dashed border-blue-300 dark:border-blue-800 bg-white/60 dark:bg-black/10 flex items-center justify-center">
-              <span className="text-[10px] text-muted-foreground/50 select-none">content</span>
+              <span className="text-[10px] text-muted-foreground/50 select-none">{t('pageBuilder.content')}</span>
             </div>
             <NumInput value={spacing.padding_right} onChange={v => set('padding_right', v)} />
           </div>
-
-          {/* Bottom */}
           <div className="flex justify-center">
             <NumInput value={spacing.padding_bottom} onChange={v => set('padding_bottom', v)} />
           </div>
@@ -74,16 +70,16 @@ export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
       {/* Margin — top + bottom only */}
       <div>
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Margin (space between blocks)
+          {t('pageBuilder.marginTitle')}
         </Label>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <div className="flex flex-col items-center gap-1">
             <NumInput value={spacing.margin_top} onChange={v => set('margin_top', v)} />
-            <span className="text-[10px] text-muted-foreground">Top</span>
+            <span className="text-[10px] text-muted-foreground">{t('pageBuilder.marginTop')}</span>
           </div>
           <div className="flex flex-col items-center gap-1">
             <NumInput value={spacing.margin_bottom} onChange={v => set('margin_bottom', v)} />
-            <span className="text-[10px] text-muted-foreground">Bottom</span>
+            <span className="text-[10px] text-muted-foreground">{t('pageBuilder.marginBottom')}</span>
           </div>
         </div>
       </div>

@@ -12,24 +12,26 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { saveNavbarAction } from '@/app/actions/page-builder'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
 
 // ─── Canvas preview ────────────────────────────────────────────────────────────
 
 export function NavbarPreview({ config }: { config: NavbarConfig }) {
+  const { t } = useTranslation()
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-bold truncate text-muted-foreground">
-          Logo
+          {t('navbarBlock.logo')}
         </div>
         <div className="flex gap-2">
           {config.links.slice(0, 3).map((l, i) => (
             <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{l.label}</span>
           ))}
           {config.links.length > 3 && <span className="text-[10px] text-muted-foreground">+{config.links.length - 3}</span>}
-          {config.links.length === 0 && <span className="text-[10px] text-muted-foreground/40 italic">No links</span>}
+          {config.links.length === 0 && <span className="text-[10px] text-muted-foreground/40 italic">{t('navbarBlock.noLinks')}</span>}
         </div>
       </div>
     </div>
@@ -60,6 +62,7 @@ export function NavbarSettings({
   blocks: PageBlock[]
   onChange: (c: NavbarConfig) => void
 }) {
+  const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
 
   function set<K extends keyof NavbarConfig>(key: K, value: NavbarConfig[K]) {
@@ -91,9 +94,9 @@ export function NavbarSettings({
     setSaving(true)
     const result = await saveNavbarAction(businessId, config)
     if (result.success) {
-      toast.success('Navbar saved')
+      toast.success(t('navbarBlock.navbarSaved'))
     } else {
-      toast.error('Save failed: ' + result.error)
+      toast.error(t('navbarBlock.saveFailed') + ' ' + result.error)
     }
     setSaving(false)
   }
@@ -112,16 +115,16 @@ export function NavbarSettings({
         disabled={saving}
       >
         {saving ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Check className="size-3.5 mr-1.5" />}
-        {saving ? 'Saving…' : 'Save navbar'}
+        {saving ? t('navbarBlock.saving') : t('navbarBlock.saveNavbar')}
       </Button>
 
       {/* Logo / Brand */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Logo / Brand</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('navbarBlock.logoBrand')}</Label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
-            { value: 'business_name', label: 'Name' },
-            { value: 'logo_image', label: 'Image' },
+            { value: 'business_name', label: t('navbarBlock.name') },
+            { value: 'logo_image', label: t('navbarBlock.image') },
           ] as { value: NavbarConfig['logo_type']; label: string }[]).map(o => (
             <button
               key={o.value}
@@ -145,12 +148,12 @@ export function NavbarSettings({
       {/* Nav links */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Navigation Links</Label>
-          <span className="text-[11px] text-muted-foreground">{config.links.length} link{config.links.length !== 1 ? 's' : ''}</span>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('navbarBlock.navLinks')}</Label>
+          <span className="text-[11px] text-muted-foreground">{config.links.length} {config.links.length !== 1 ? t('navbarBlock.linksCount') : t('navbarBlock.linkCount')}</span>
         </div>
 
         {config.links.length === 0 && (
-          <p className="text-xs text-muted-foreground italic py-2 text-center">No links yet.</p>
+          <p className="text-xs text-muted-foreground italic py-2 text-center">{t('navbarBlock.noLinks')} yet.</p>
         )}
 
         <div className="space-y-2">
@@ -171,7 +174,7 @@ export function NavbarSettings({
                 <Input
                   value={link.label}
                   onChange={e => updateLink(i, { label: e.target.value })}
-                  placeholder="Link label"
+                  placeholder={t('navbarBlock.linkLabel')}
                   className="h-7 text-xs flex-1"
                 />
                 <button type="button" onClick={() => removeLink(i)}
@@ -196,13 +199,13 @@ export function NavbarSettings({
               {link.anchor ? (
                 anchorOptions.length > 0 ? (
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Scroll to block</Label>
+                    <Label className="text-[11px] text-muted-foreground">{t('navbarBlock.scrollToBlock')}</Label>
                     <Select
                       value={link.href}
                       onValueChange={v => updateLink(i, { href: v })}
                     >
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select a section…" />
+                        <SelectValue placeholder={t('navbarBlock.selectSection')} />
                       </SelectTrigger>
                       <SelectContent>
                         {anchorOptions.map(opt => (
@@ -212,18 +215,18 @@ export function NavbarSettings({
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-[11px] text-muted-foreground">Will scroll to that section when clicked.</p>
+                    <p className="text-[11px] text-muted-foreground">{t('navbarBlock.scrollHelp')}</p>
                   </div>
                 ) : (
                   <p className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1.5">
-                    Add more blocks to the page first, then you can scroll-link to them.
+                    {t('navbarBlock.addBlocksFirst')}
                   </p>
                 )
               ) : (
                 <Input
                   value={link.href}
                   onChange={e => updateLink(i, { href: e.target.value })}
-                  placeholder="https://… or /page-path"
+                  placeholder={t('navbarBlock.urlPlaceholder')}
                   className="h-7 text-xs font-mono"
                 />
               )}
@@ -232,7 +235,7 @@ export function NavbarSettings({
         </div>
 
         <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8" onClick={addLink}>
-          <Plus className="size-3.5 mr-1.5" /> Add link
+          <Plus className="size-3.5 mr-1.5" /> {t('navbarBlock.addLink')}
         </Button>
       </div>
 
@@ -240,11 +243,11 @@ export function NavbarSettings({
 
       {/* Appearance */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appearance</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('navbarBlock.appearance')}</Label>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Background</Label>
+            <Label className="text-xs">{t('navbarBlock.background')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -256,7 +259,7 @@ export function NavbarSettings({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Link colour</Label>
+            <Label className="text-xs">{t('navbarBlock.linkColour')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -272,17 +275,17 @@ export function NavbarSettings({
         {/* Presets */}
         <div className="flex gap-1.5">
           <button type="button" onClick={() => onChange({ ...config, background_color: '#ffffff', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">White</button>
+            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.white')}</button>
           <button type="button" onClick={() => onChange({ ...config, background_color: '#111111', text_color: '#ffffff' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">Dark</button>
+            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">{t('navbarBlock.dark')}</button>
           <button type="button" onClick={() => onChange({ ...config, background_color: 'transparent', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">Glass</button>
+            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.glass')}</button>
         </div>
 
         <div className="flex items-center justify-between pt-1">
           <div>
-            <Label htmlFor="nav-sticky" className="text-xs cursor-pointer">Sticky navbar</Label>
-            <p className="text-[11px] text-muted-foreground">Sticks to top while scrolling</p>
+            <Label htmlFor="nav-sticky" className="text-xs cursor-pointer">{t('navbarBlock.stickyNavbar')}</Label>
+            <p className="text-[11px] text-muted-foreground">{t('navbarBlock.stickyHelp')}</p>
           </div>
           <Switch id="nav-sticky" checked={config.sticky} onCheckedChange={v => set('sticky', v)} />
         </div>

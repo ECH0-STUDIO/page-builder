@@ -16,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
 import { ctaHref } from '../cta-utils'
 // Re-export so existing client-side imports from CtaEditor still resolve
@@ -42,18 +43,9 @@ const ACTION_ICONS: Record<CtaAction, React.ReactNode> = {
   email: <Mail className="size-3" />,
   anchor: <Anchor className="size-3" />,
 }
-const ACTION_LABELS: Record<CtaAction, string> = {
-  url: 'URL',
-  tel: 'Phone',
-  email: 'Email',
-  anchor: 'Scroll to',
-}
 
-const STYLE_OPTIONS: { value: CtaStyle; label: string }[] = [
-  { value: 'filled', label: 'Filled' },
-  { value: 'outlined', label: 'Outlined' },
-  { value: 'text', label: 'Text link' },
-]
+
+
 
 export function CtaEditor({
   value,
@@ -69,6 +61,18 @@ export function CtaEditor({
   onChange: (v: CtaButton) => void
   onRemove: () => void
 }) {
+  const { t } = useTranslation()
+  const ACTION_LABELS: Record<CtaAction, string> = {
+    url: t('ctaEditor.url'),
+    tel: t('ctaEditor.phone'),
+    email: t('ctaEditor.email'),
+    anchor: t('ctaEditor.scrollTo'),
+  }
+  const STYLE_OPTIONS: { value: CtaStyle; label: string }[] = [
+    { value: 'filled', label: t('ctaEditor.filled') },
+    { value: 'outlined', label: t('ctaEditor.outlined') },
+    { value: 'text', label: t('ctaEditor.textLink') },
+  ]
   const anchorOptions = getAnchorOptions(blocks)
   const isAnchor = value.action === 'anchor'
 
@@ -84,7 +88,7 @@ export function CtaEditor({
 
       {/* Label */}
       <Input
-        placeholder="Button label"
+        placeholder={t('ctaEditor.buttonLabel')}
         value={value.label}
         onChange={e => onChange({ ...value, label: e.target.value })}
         className="h-8 text-sm"
@@ -121,13 +125,13 @@ export function CtaEditor({
       {isAnchor ? (
         anchorOptions.length > 0 ? (
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Scroll to section</Label>
+            <Label className="text-[11px] text-muted-foreground">{t('ctaEditor.scrollToSection')}</Label>
             <Select
               value={value.value}
               onValueChange={v => onChange({ ...value, value: v })}
             >
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Select a section…" />
+                <SelectValue placeholder={t('ctaEditor.selectSection')} />
               </SelectTrigger>
               <SelectContent>
                 {anchorOptions.map(opt => (
@@ -141,7 +145,7 @@ export function CtaEditor({
         ) : (
           <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
             <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
-              No sections with an anchor ID yet. Set a <strong>Section ID</strong> on any block using the input below the block settings.
+              <span dangerouslySetInnerHTML={{ __html: t('ctaEditor.noAnchorIds') }} />
             </p>
           </div>
         )

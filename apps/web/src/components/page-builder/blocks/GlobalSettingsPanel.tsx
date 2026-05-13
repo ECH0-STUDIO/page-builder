@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,6 +10,7 @@ import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import type { ThemeSettings, PublishingSettings } from '../types'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 interface GlobalSettingsPanelProps {
   theme: ThemeSettings | null
@@ -24,7 +27,8 @@ export function GlobalSettingsPanel({
   onThemeChange,
   onPublishingChange,
 }: GlobalSettingsPanelProps) {
-  const t = theme || {} as ThemeSettings
+  const { t } = useTranslation()
+  const thm = theme || {} as ThemeSettings
   const p = publishing || {} as PublishingSettings
 
   const faviconRef = useRef<HTMLInputElement>(null)
@@ -72,29 +76,29 @@ export function GlobalSettingsPanel({
     <div className="space-y-8 p-4">
       {/* ── SEO & Meta ── */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-sm">SEO & Search</h3>
+        <h3 className="font-semibold text-sm">{t('pageBuilder.globalSeo')}</h3>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Page Title</Label>
+            <Label className="text-xs">{t('pageBuilder.pageTitle')}</Label>
             <Input 
               value={p.seo_title || ''} 
               onChange={e => onPublishingChange({ seo_title: e.target.value })}
-              placeholder="e.g. My Awesome Restaurant"
+              placeholder={t('pageBuilder.pageTitlePlaceholder')}
               className="text-xs"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Meta Description</Label>
+            <Label className="text-xs">{t('pageBuilder.metaDesc')}</Label>
             <Textarea 
               value={p.seo_description || ''} 
               onChange={e => onPublishingChange({ seo_description: e.target.value })}
-              placeholder="Brief description for Google search results..."
+              placeholder={t('pageBuilder.metaDescPlaceholder')}
               className="text-xs min-h-[80px]"
             />
           </div>
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Favicon (48x48)</Label>
+              <Label className="text-xs">{t('pageBuilder.favicon')}</Label>
               <div className="flex flex-col gap-2">
                 {p.favicon_url ? (
                   <div className="relative size-12 border border-border rounded overflow-hidden bg-muted flex items-center justify-center shrink-0">
@@ -119,13 +123,13 @@ export function GlobalSettingsPanel({
                   disabled={uploadingFavicon}
                   className="text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/80 px-2 py-1 rounded w-fit"
                 >
-                  {uploadingFavicon ? 'Uploading...' : p.favicon_url ? 'Replace' : 'Upload PNG'}
+                  {uploadingFavicon ? t('pageBuilder.uploading') : p.favicon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
                 </button>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">Webclip (256x256)</Label>
+              <Label className="text-xs">{t('pageBuilder.webclip')}</Label>
               <div className="flex flex-col gap-2">
                 {p.apple_touch_icon_url ? (
                   <div className="relative size-16 border border-border rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
@@ -150,7 +154,7 @@ export function GlobalSettingsPanel({
                   disabled={uploadingWebclip}
                   className="text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/80 px-2 py-1 rounded w-fit"
                 >
-                  {uploadingWebclip ? 'Uploading...' : p.apple_touch_icon_url ? 'Replace' : 'Upload PNG'}
+                  {uploadingWebclip ? t('pageBuilder.uploading') : p.apple_touch_icon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
                 </button>
               </div>
             </div>
@@ -162,10 +166,10 @@ export function GlobalSettingsPanel({
 
       {/* ── Analytics ── */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-sm">Analytics & Tracking</h3>
+        <h3 className="font-semibold text-sm">{t('pageBuilder.analytics')}</h3>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Google Analytics ID</Label>
+            <Label className="text-xs">{t('pageBuilder.gaId')}</Label>
             <Input 
               value={(p as any).google_analytics_id || ''} 
               onChange={e => onPublishingChange({ google_analytics_id: e.target.value } as any)}
@@ -174,7 +178,7 @@ export function GlobalSettingsPanel({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Facebook Pixel ID</Label>
+            <Label className="text-xs">{t('pageBuilder.fbPixel')}</Label>
             <Input 
               value={(p as any).facebook_pixel_id || ''} 
               onChange={e => onPublishingChange({ facebook_pixel_id: e.target.value } as any)}
@@ -183,11 +187,11 @@ export function GlobalSettingsPanel({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Google Search Console Tag</Label>
+            <Label className="text-xs">{t('pageBuilder.gscTag')}</Label>
             <Input 
               value={p.gsc_verification || ''} 
               onChange={e => onPublishingChange({ gsc_verification: e.target.value })}
-              placeholder="HTML tag content..."
+              placeholder={t('pageBuilder.gscPlaceholder')}
               className="text-xs"
             />
           </div>
@@ -198,38 +202,38 @@ export function GlobalSettingsPanel({
 
       {/* ── Theme (Colors & Typography) ── */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-sm">Design Theme</h3>
+        <h3 className="font-semibold text-sm">{t('pageBuilder.designTheme')}</h3>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Brand Color</Label>
+              <Label className="text-xs">{t('pageBuilder.brandColor')}</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={t.primary_color || '#E85D26'}
+                  value={thm.primary_color || '#E85D26'}
                   onChange={e => onThemeChange({ primary_color: e.target.value })}
                   className="size-8 rounded border border-border cursor-pointer"
                 />
-                <span className="text-[11px] font-mono text-muted-foreground truncate">{t.primary_color}</span>
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.primary_color}</span>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Background</Label>
+              <Label className="text-xs">{t('pageBuilder.background')}</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={t.background_color || '#FFFFFF'}
+                  value={thm.background_color || '#FFFFFF'}
                   onChange={e => onThemeChange({ background_color: e.target.value })}
                   className="size-8 rounded border border-border cursor-pointer"
                 />
-                <span className="text-[11px] font-mono text-muted-foreground truncate">{t.background_color}</span>
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.background_color}</span>
               </div>
             </div>
           </div>
           
           <div className="space-y-1.5">
-            <Label className="text-xs">Heading Font</Label>
-            <Select value={t.heading_font_family || 'Inter'} onValueChange={v => onThemeChange({ heading_font_family: v })}>
+            <Label className="text-xs">{t('pageBuilder.headingFont')}</Label>
+            <Select value={thm.heading_font_family || 'Inter'} onValueChange={v => onThemeChange({ heading_font_family: v })}>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -239,8 +243,8 @@ export function GlobalSettingsPanel({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Body Font</Label>
-            <Select value={t.font_family || 'Inter'} onValueChange={v => onThemeChange({ font_family: v })}>
+            <Label className="text-xs">{t('pageBuilder.bodyFont')}</Label>
+            <Select value={thm.font_family || 'Inter'} onValueChange={v => onThemeChange({ font_family: v })}>
               <SelectTrigger className="text-xs h-8">
                 <SelectValue />
               </SelectTrigger>

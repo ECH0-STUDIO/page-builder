@@ -26,18 +26,14 @@ const STORAGE_KEY = 'eatery_current_business_id'
 export function BusinessProvider({
   children,
   initialBusinesses,
+  initialActiveBusinessId,
 }: {
   children: ReactNode
   initialBusinesses: Business[]
+  initialActiveBusinessId: string
 }) {
   const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses)
-  const [currentId, setCurrentId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return initialBusinesses[0]?.id ?? null
-    const stored = localStorage.getItem(STORAGE_KEY)
-    // Validate stored ID is still in the list
-    if (stored && initialBusinesses.some(b => b.id === stored)) return stored
-    return initialBusinesses[0]?.id ?? null
-  })
+  const [currentId, setCurrentId] = useState<string | null>(initialActiveBusinessId)
   const [isLoading, setIsLoading] = useState(false)
 
   const currentBusiness = businesses.find(b => b.id === currentId) ?? null
@@ -45,6 +41,8 @@ export function BusinessProvider({
   const switchBusiness = useCallback((id: string) => {
     setCurrentId(id)
     localStorage.setItem(STORAGE_KEY, id)
+    document.cookie = `${STORAGE_KEY}=${id}; path=/; max-age=31536000`
+    window.location.reload()
   }, [])
 
   const refreshBusinesses = useCallback(async () => {
@@ -66,7 +64,10 @@ export function BusinessProvider({
 
   // Persist when currentId changes
   useEffect(() => {
-    if (currentId) localStorage.setItem(STORAGE_KEY, currentId)
+    if (currentId) {
+      localStorage.setItem(STORAGE_KEY, currentId)
+      document.cookie = `${STORAGE_KEY}=${currentId}; path=/; max-age=31536000`
+    }
   }, [currentId])
 
   return (

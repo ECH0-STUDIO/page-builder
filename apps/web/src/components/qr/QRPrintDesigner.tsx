@@ -12,6 +12,7 @@ import type { QRDesign, QRStyle, SizePreset } from './QRCardPreview'
 import { FontPicker } from '@/components/shared/FontPicker'
 import { getGoogleFontLinkTag } from '@/lib/fonts'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -79,6 +80,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
   const [downloading, setDownloading] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [design, setDesign] = useState<QRDesign>({ ...DEFAULT_DESIGN, headline: businessName ?? '' })
+  const { t } = useTranslation()
 
   function set<K extends keyof QRDesign>(key: K, val: QRDesign[K]) {
     setDesign(prev => ({ ...prev, [key]: val }))
@@ -254,12 +256,12 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
           <button onClick={handlePrint} disabled={printing}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
             <Printer className="size-4" />
-            {printing ? 'Preparing…' : 'Print'}
+            {printing ? t('qr.designer.exporting') : t('qr.designer.print')}
           </button>
           <button onClick={handleDownload} disabled={downloading}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
             <Download className="size-4" />
-            {downloading ? 'Exporting…' : 'Download PNG'}
+            {downloading ? t('qr.designer.exporting') : t('qr.designer.download')}
           </button>
         </div>
       </div>
@@ -269,33 +271,35 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
 
         {/* Background */}
         <div>
-          <SectionHeader>Background</SectionHeader>
+          <SectionHeader>{t('qr.designer.background')}</SectionHeader>
           <div className="space-y-3">
             <div className="flex gap-1">
               {(['solid', 'gradient'] as const).map(v => (
                 <button key={v} type="button" onClick={() => set('bg_type', v)}
                   className={cn('flex-1 py-1.5 text-xs rounded-lg border transition-colors capitalize',
                     design.bg_type === v ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                  )}>{v}</button>
+                  )}>
+                  {v === 'solid' ? t('qr.designer.solid') : t('qr.designer.gradient')}
+                </button>
               ))}
             </div>
             {design.bg_image_data ? (
               <div className="flex items-center gap-2">
-                <div className="flex-1 text-xs text-gray-500">Image set</div>
+                <div className="flex-1 text-xs text-gray-500">{t('qr.designer.imageSet')}</div>
                 <button onClick={() => set('bg_image_data', null)} className="text-gray-400 hover:text-red-500 transition-colors">
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
             ) : (
               <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                <ImageIcon className="size-3.5" />Upload background image
+                <ImageIcon className="size-3.5" />{t('qr.designer.uploadBg')}
                 <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('bg', e.target.files[0])} />
               </label>
             )}
-            <ColorRow label="Color" value={design.bg_color} onChange={v => set('bg_color', v)} />
+            <ColorRow label={t('qr.designer.color')} value={design.bg_color} onChange={v => set('bg_color', v)} />
             {design.bg_type === 'gradient' && (
               <>
-                <ColorRow label="Color 2" value={design.bg_color2} onChange={v => set('bg_color2', v)} />
+                <ColorRow label={t('qr.designer.color2')} value={design.bg_color2} onChange={v => set('bg_color2', v)} />
                 <div className="flex gap-1">
                   {BG_DIRECTIONS.map(d => (
                     <button key={d.value} type="button" onClick={() => set('bg_direction', d.value)}
@@ -313,19 +317,19 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
 
         {/* Logo */}
         <div>
-          <SectionHeader>Logo</SectionHeader>
+          <SectionHeader>{t('qr.designer.logo')}</SectionHeader>
           {design.logo_data ? (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={design.logo_data} alt="" className="size-10 rounded-lg object-contain border border-gray-200 shrink-0" />
-              <span className="flex-1 text-xs text-gray-400">64 × 64 px (fixed)</span>
+              <span className="flex-1 text-xs text-gray-400">{t('qr.designer.logoSize')}</span>
               <button onClick={() => set('logo_data', null)} className="text-gray-400 hover:text-red-500 transition-colors shrink-0">
                 <Trash2 className="size-3.5" />
               </button>
             </div>
           ) : (
             <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 border border-dashed border-gray-300 rounded-xl py-3 px-4 hover:border-gray-400 transition-colors">
-              <Upload className="size-3.5" />Upload logo
+              <Upload className="size-3.5" />{t('qr.designer.uploadLogo')}
               <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('logo', e.target.files[0])} />
             </label>
           )}
@@ -337,7 +341,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
         {qrUrl && (
           <>
             <div>
-              <SectionHeader>QR Style</SectionHeader>
+              <SectionHeader>{t('qr.designer.qrStyle')}</SectionHeader>
               <div className="space-y-3">
                 <div className="grid grid-cols-4 gap-1.5">
                   {QR_STYLES.map(s => (
@@ -350,7 +354,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
                     </button>
                   ))}
                 </div>
-                <ColorRow label="QR color" value={design.qr_color} onChange={v => set('qr_color', v)} />
+                <ColorRow label={t('qr.designer.qrColor')} value={design.qr_color} onChange={v => set('qr_color', v)} />
               </div>
             </div>
             <Divider />
@@ -359,28 +363,28 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
 
         {/* Text */}
         <div>
-          <SectionHeader>Text</SectionHeader>
+          <SectionHeader>{t('qr.designer.text')}</SectionHeader>
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs text-gray-600">Headline</label>
+              <label className="text-xs text-gray-600">{t('qr.designer.headline')}</label>
               <input type="text" value={design.headline} onChange={e => set('headline', e.target.value)}
                 placeholder="e.g. The Best Café"
                 className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
             </div>
             {!isCompact && (
               <div className="space-y-1">
-                <label className="text-xs text-gray-600">Subtext</label>
+                <label className="text-xs text-gray-600">{t('qr.designer.subtext')}</label>
                 <input type="text" value={design.subtext} onChange={e => set('subtext', e.target.value)}
                   placeholder="Scan to view our menu"
                   className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
               </div>
             )}
             {isCompact && (
-              <p className="text-[11px] text-gray-400 italic">Subtext hidden on Square — switch to A7/A6/A4 to enable.</p>
+              <p className="text-[11px] text-gray-400 italic">{t('qr.designer.subtextHidden')}</p>
             )}
-            <ColorRow label="Text color" value={design.text_color} onChange={v => set('text_color', v)} />
-            <FontPicker label="Heading font" value={design.heading_font} onChange={v => set('heading_font', v)} />
-            <FontPicker label="Body font" value={design.body_font} onChange={v => set('body_font', v)} />
+            <ColorRow label={t('qr.designer.textColor')} value={design.text_color} onChange={v => set('text_color', v)} />
+            <FontPicker label={t('qr.designer.headingFont')} value={design.heading_font} onChange={v => set('heading_font', v)} />
+            <FontPicker label={t('qr.designer.bodyFont')} value={design.body_font} onChange={v => set('body_font', v)} />
           </div>
         </div>
 
@@ -388,11 +392,11 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
 
         {/* Layout */}
         <div>
-          <SectionHeader>Layout</SectionHeader>
+          <SectionHeader>{t('qr.designer.layout')}</SectionHeader>
           <div className="space-y-3">
             <div>
               <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-600">Padding <span className="text-gray-400">(controls QR size)</span></span>
+                <span className="text-xs text-gray-600">{t('qr.designer.padding')} <span className="text-gray-400">({t('qr.designer.paddingHint')})</span></span>
                 <span className="text-xs text-gray-400">{design.padding}px</span>
               </div>
               <input type="range" min={20} max={80} step={4} value={design.padding}
@@ -400,7 +404,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
             </div>
             <div>
               <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-600">Corner radius</span>
+                <span className="text-xs text-gray-600">{t('qr.designer.cornerRadius')}</span>
                 <span className="text-xs text-gray-400">{design.corner_radius}px</span>
               </div>
               <input type="range" min={0} max={40} step={4} value={design.corner_radius}
@@ -413,7 +417,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
 
         <button type="button" onClick={() => setDesign({ ...DEFAULT_DESIGN, headline: businessName ?? '' })}
           className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <RefreshCw className="size-3.5" />Reset to defaults
+          <RefreshCw className="size-3.5" />{t('qr.designer.resetDefaults')}
         </button>
 
       </div>

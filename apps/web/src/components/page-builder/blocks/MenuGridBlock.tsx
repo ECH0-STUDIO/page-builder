@@ -16,20 +16,22 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
 export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
-  const colMap: Record<string, string> = { '2col': '2 col', '3col': '3 col', '4col': '4 col', list: 'List' }
+  const { t } = useTranslation()
+  const colMap: Record<string, string> = { '2col': t('menuGridBlock.col2'), '3col': t('menuGridBlock.col3'), '4col': t('menuGridBlock.col4'), list: t('menuGridBlock.list') }
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <div className="size-8 rounded bg-muted flex items-center justify-center text-base">🍽️</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold">{config.heading || 'Menu'}</p>
-          <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? 'Tabs on' : 'No tabs'}</p>
+          <p className="text-xs font-semibold">{config.heading || t('menuGridBlock.menu')}</p>
+          <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? t('menuGridBlock.tabsOn') : t('menuGridBlock.noTabs')}</p>
         </div>
       </div>
       <div className={cn('grid gap-1', config.layout === '2col' ? 'grid-cols-2' : config.layout === 'list' ? 'grid-cols-1' : 'grid-cols-3')}>
@@ -43,12 +45,7 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
 
 // ─── Settings Form ─────────────────────────────────────────────────────────────
 
-const LAYOUTS: { value: MenuGridConfig['layout']; label: string }[] = [
-  { value: '2col', label: '2 Col' },
-  { value: '3col', label: '3 Col' },
-  { value: '4col', label: '4 Col' },
-  { value: 'list', label: 'List' },
-]
+
 
 interface MenuGridSettingsProps {
   config: MenuGridConfig
@@ -59,6 +56,13 @@ interface MenuGridSettingsProps {
 }
 
 export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
+  const { t } = useTranslation()
+  const LAYOUTS: { value: MenuGridConfig['layout']; label: string }[] = [
+    { value: '2col', label: t('menuGridBlock.col2') },
+    { value: '3col', label: t('menuGridBlock.col3') },
+    { value: '4col', label: t('menuGridBlock.col4') },
+    { value: 'list', label: t('menuGridBlock.list') },
+  ]
   function set<K extends keyof MenuGridConfig>(key: K, value: MenuGridConfig[K]) {
     onChange({ ...config, [key]: value })
   }
@@ -84,22 +88,22 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {/* Heading */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Section heading</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
         <Input
           value={config.heading}
           onChange={e => set('heading', e.target.value)}
-          placeholder="Our Menu"
+          placeholder={t('menuGridBlock.headingPlaceholder')}
           className="h-8 text-sm"
         />
-        <p className="text-[11px] text-muted-foreground">Optional title shown above the menu grid.</p>
+        <p className="text-[11px] text-muted-foreground">{t('menuGridBlock.headingHelp')}</p>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
         <Textarea
           value={config.description ?? ''}
           onChange={e => set('description', e.target.value)}
-          placeholder="A short description about this menu section..."
+          placeholder={t('menuGridBlock.descPlaceholder')}
           className="text-sm min-h-[60px]"
         />
       </div>
@@ -108,7 +112,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {/* Layout */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layout</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.layout')}</Label>
         <div className="flex gap-1.5">
           {LAYOUTS.map(l => (
             <button
@@ -132,7 +136,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {/* Selection Mode */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selection Mode</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.selectionMode')}</Label>
         <div className="flex gap-1.5">
           <button
             type="button"
@@ -165,9 +169,9 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {(!config.selection_mode || config.selection_mode === 'category') ? (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Categories to show</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.categoriesToShow')}</Label>
           {categories.length === 0 ? (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">No menu categories yet. Add them in the Menu builder first.</p>
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">{t('menuGridBlock.noCategories')}</p>
           ) : (
             <div className="space-y-1">
               {/* "All" toggle */}
@@ -219,7 +223,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
                       {isOn && <span className="text-white text-[8px] leading-none font-bold">✓</span>}
                     </span>
                     <span className="flex-1">{cat.name}</span>
-                    {!cat.visible && <span className="text-[10px] text-muted-foreground">(hidden)</span>}
+                    {!cat.visible && <span className="text-[10px] text-muted-foreground">{t('menuGridBlock.hidden')}</span>}
                   </button>
                 )
               })}
@@ -228,9 +232,9 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
         </div>
       ) : (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Items to show</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.itemsToShow')}</Label>
           {items.length === 0 ? (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">No menu items yet. Add them in the Menu builder first.</p>
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">{t('menuGridBlock.noItems')}</p>
           ) : (
             <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
               {items.map(item => {
@@ -261,7 +265,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
                       {isOn && <span className="text-white text-[8px] leading-none font-bold">✓</span>}
                     </span>
                     <span className="flex-1 truncate">{item.name}</span>
-                    {!item.available && <span className="text-[10px] text-muted-foreground shrink-0">(sold out)</span>}
+                    {!item.available && <span className="text-[10px] text-muted-foreground shrink-0">{t('menuGridBlock.soldOut')}</span>}
                   </button>
                 )
               })}
@@ -274,17 +278,17 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {/* Display toggles */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display options</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.displayOptions')}</Label>
         <div className="space-y-3">
           {/* Category tabs — auto-forced when 2+ categories active */}
           {tabsAutoForced ? (
             <div className="flex items-center justify-between gap-3">
-              <Label className="text-xs">Category filter tabs</Label>
-              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Auto (2+ cats)</span>
+              <Label className="text-xs">{t('menuGridBlock.categoryFilterTabs')}</Label>
+              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t('menuGridBlock.autoCats')}</span>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="menu-toggle-show_category_tabs" className="text-xs cursor-pointer">Category filter tabs</Label>
+              <Label htmlFor="menu-toggle-show_category_tabs" className="text-xs cursor-pointer">{t('menuGridBlock.categoryFilterTabs')}</Label>
               <Switch
                 id="menu-toggle-show_category_tabs"
                 checked={config.show_category_tabs}
@@ -295,10 +299,10 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
           {/* Other toggles */}
           {([
-            { key: 'show_image', label: 'Item images' },
-            { key: 'show_description', label: 'Item descriptions' },
-            { key: 'show_price', label: 'Prices' },
-            { key: 'show_unavailable_badge', label: '"Sold Out" badge' },
+            { key: 'show_image', label: t('menuGridBlock.itemImages') },
+            { key: 'show_description', label: t('menuGridBlock.itemDescriptions') },
+            { key: 'show_price', label: t('menuGridBlock.prices') },
+            { key: 'show_unavailable_badge', label: t('menuGridBlock.soldOutBadge') },
           ] as { key: keyof MenuGridConfig; label: string }[]).map(({ key, label }) => (
             <div key={String(key)} className="flex items-center justify-between gap-3">
               <Label htmlFor={`menu-toggle-${String(key)}`} className="text-xs cursor-pointer">{label}</Label>
@@ -316,10 +320,10 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       {/* Colours */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colours</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Background</Label>
+            <Label className="text-xs">{t('menuGridBlock.background')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -331,7 +335,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Text</Label>
+            <Label className="text-xs">{t('menuGridBlock.text')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"

@@ -103,7 +103,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    toast.success('Signed out')
+    toast.success(t('sidebar.signOut'))
     router.push('/login')
     router.refresh()
   }
@@ -163,7 +163,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-sidebar-foreground truncate">
-              {userName ?? 'Account'}
+              {userName ?? t('sidebar.account')}
             </p>
             <p className="text-[11px] text-muted-foreground truncate">{userEmail}</p>
           </div>

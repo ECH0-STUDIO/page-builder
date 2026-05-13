@@ -1,7 +1,8 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendTeamInvite } from '@/lib/email'
 
 export async function inviteTeamMemberAction(payload: { email: string, role: string, businessId: string }) {
   const { email, role, businessId } = payload
@@ -20,61 +21,80 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
   }
 
   // Verify the current user is an owner of this business
-  const { data: business } = await supabase
+  const { data: businessData } = await supabase
     .from('businesses')
-    .select('id')
+    .select('id, name')
     .eq('id', businessId)
     .eq('owner_id', user.id)
     .single()
+
+  const business = businessData as any
 
   if (!business) {
     return { error: 'Only the business owner can invite members' }
   }
 
-  // Use the admin client to send the invite
-  const adminClient = createAdminClient()
-
-  let newUserId: string | null = null
-
-  // This sends the invite email and creates a user row in auth.users
-  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { role: 'staff' },
-  })
-
-  if (error) {
-    // If user already exists, we can still add them to the team
-    if (error.message.toLowerCase().includes('already been registered') || error.message.toLowerCase().includes('already registered')) {
-      // Look up their user ID using our secure RPC
-      const { data: existingUserId, error: rpcError } = await (adminClient as any)
-        .rpc('get_user_id_by_email', { email_address: email })
-      
-      if (rpcError || !existingUserId) {
-        return { error: 'User exists but could not retrieve their ID.' }
-      }
-      newUserId = existingUserId
-    } else {
-      return { error: error.message }
+  // Find any existing pending invites for this user
+  const { data: existingInvites } = await (supabase.from('team_invitations') as any)
+    .select('id, created_at')
+    .eq('business_id', businessId)
+    .eq('email', email)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    
+  if (existingInvites && existingInvites.length > 0) {
+    const mostRecent = existingInvites[0]
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000)
+    const createdAt = new Date(mostRecent.created_at)
+    
+    if (createdAt > oneMinuteAgo) {
+      return { error: 'Please wait at least 1 minute before resending an invite to this email.' }
     }
-  } else {
-    newUserId = data.user.id
+    
+    // Delete old pending invites to avoid duplicates
+    await (supabase.from('team_invitations') as any)
+      .delete()
+      .eq('business_id', businessId)
+      .eq('email', email)
+      .eq('status', 'pending')
   }
 
-  // Create the business_members relationship
-  // Note: Using 'any' here temporarily because types/database.ts hasn't been regenerated yet to include business_members
-  const { error: dbError } = await (adminClient
-    .from('business_members') as any)
+  // Insert a new pending invitation
+  const { data: inviteRow, error: inviteError } = await (supabase.from('team_invitations') as any)
     .insert({
       business_id: businessId,
-      user_id: newUserId,
+      email: email,
       role: role,
+      status: 'pending'
     })
+    .select('id, token')
+    .single()
 
-  if (dbError) {
-    // If they were already a member, it might fail unique constraint
-    if (dbError.code === '23505') {
-      return { error: 'This user is already a member of this business' }
-    }
-    return { error: dbError.message }
+  if (inviteError || !inviteRow) {
+    return { error: inviteError?.message || 'Failed to create invitation' }
+  }
+
+  // Generate the acceptance link
+  // Use headers to get the host if possible, or fallback
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const inviteLink = `${appUrl}/invite/${inviteRow.token}`
+
+  // Send the email via Resend
+  const emailRes = await sendTeamInvite({
+    toEmail: email,
+    businessName: business.name,
+    invitedByEmail: user.email || 'The Owner',
+    role: role,
+    inviteLink: inviteLink
+  })
+
+  if (emailRes.error) {
+    // Delete the pending invite so the user isn't stuck with a 1-minute timeout for a broken invite
+    await (supabase.from('team_invitations') as any).delete().eq('id', inviteRow.id || inviteRow.token)
+    
+    // Attempt deletion using token if ID isn't returned for some reason, though single() usually returns what was selected.
+    // Wait, the select('token') only returns { token }. We need ID.
+    return { error: 'Invitation created but failed to send email: ' + emailRes.error }
   }
 
   revalidatePath('/dashboard/settings/team')

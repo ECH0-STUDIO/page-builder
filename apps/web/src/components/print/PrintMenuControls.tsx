@@ -5,6 +5,7 @@ import { FontPicker } from '@/components/shared/FontPicker'
 import { ImageIcon, Trash2, Upload, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MenuCategory } from '@/app/actions/menu'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Design presets ────────────────────────────────────────────────────────────
 
@@ -85,6 +86,8 @@ interface PrintMenuControlsProps {
 }
 
 export function PrintMenuControls({ settings, onChange, categories }: PrintMenuControlsProps) {
+  const { t } = useTranslation()
+
   function set<K extends keyof PrintSettings>(key: K, val: PrintSettings[K]) {
     onChange({ ...settings, [key]: val })
   }
@@ -128,18 +131,18 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
       {/* ── Heading ── */}
       <div>
-        <SectionHeader>Heading</SectionHeader>
+        <SectionHeader>{t('printMenu.heading')}</SectionHeader>
         <div className="space-y-2">
           <div className="space-y-1">
-            <label className="text-xs text-gray-600">Title</label>
+            <label className="text-xs text-gray-600">{t('printMenu.title_')}</label>
             <input type="text" value={settings.heading_text} onChange={e => set('heading_text', e.target.value)}
               placeholder="Business name (auto-filled)"
               className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-gray-600">Tagline <span className="text-gray-400">(optional)</span></label>
+            <label className="text-xs text-gray-600">{t('printMenu.tagline')} <span className="text-gray-400">({t('printMenu.taglineOptional')})</span></label>
             <input type="text" value={settings.heading_subtext} onChange={e => set('heading_subtext', e.target.value)}
-              placeholder="e.g. Fresh food, good vibes"
+              placeholder={t('printMenu.taglinePlaceholder')}
               className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
           </div>
         </div>
@@ -149,10 +152,10 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
       {/* ── Layout ── */}
       <div>
-        <SectionHeader>Layout</SectionHeader>
+        <SectionHeader>{t('printMenu.layout')}</SectionHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <p className="text-xs text-gray-600">Paper</p>
+            <p className="text-xs text-gray-600">{t('printMenu.paper')}</p>
             <div className="flex gap-1">
               {(['a4', 'a5'] as const).map(p => (
                 <button key={p} type="button" onClick={() => set('paper', p)}
@@ -163,7 +166,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
             </div>
           </div>
           <div className="space-y-1.5">
-            <p className="text-xs text-gray-600">Columns</p>
+            <p className="text-xs text-gray-600">{t('printMenu.columns')}</p>
             <div className="flex gap-1">
               {([1, 2] as const).map(c => (
                 <button key={c} type="button" onClick={() => set('columns', c)}
@@ -180,7 +183,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
       {/* ── Categories ── */}
       <div>
-        <SectionHeader>Categories</SectionHeader>
+        <SectionHeader>{t('printMenu.categories')}</SectionHeader>
         <div className="space-y-1">
           {settings.selectedCategories.map((catId, idx) => {
             const cat = categories.find(c => c.id === catId)
@@ -219,7 +222,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
       {/* ── Design ── */}
       <div>
-        <SectionHeader>Design Theme</SectionHeader>
+        <SectionHeader>{t('printMenu.designTheme')}</SectionHeader>
 
         {/* Quick presets */}
         <div className="grid grid-cols-5 gap-1.5 mb-4">
@@ -235,8 +238,8 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
         <div className="space-y-4">
           {/* Background */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-600">Background</p>
-            <ColorRow label="Page color" value={settings.page_bg_color} onChange={v => set('page_bg_color', v)} />
+            <p className="text-xs font-medium text-gray-600">{t('printMenu.background')}</p>
+            <ColorRow label={t('printMenu.pageColor')} value={settings.page_bg_color} onChange={v => set('page_bg_color', v)} />
             {settings.page_bg_image ? (
               <div className="space-y-2">
                 {/* Thumbnail + actions */}
@@ -247,7 +250,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
                   <div className="flex items-center gap-1.5">
                     <label className="flex items-center gap-1 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors whitespace-nowrap">
                       <Upload className="size-3" />
-                      Replace
+                      {t('printMenu.replace')}
                       <input type="file" accept="image/*" className="hidden"
                         onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
                     </label>
@@ -259,11 +262,11 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
                 </div>
                 {/* Overlay */}
                 <div className="space-y-2 pt-1">
-                  <p className="text-xs text-gray-500">Overlay</p>
-                  <ColorRow label="Color" value={settings.page_bg_overlay_color} onChange={v => set('page_bg_overlay_color', v)} />
+                  <p className="text-xs text-gray-500">{t('printMenu.overlay')}</p>
+                  <ColorRow label={t('printMenu.overlayColor')} value={settings.page_bg_overlay_color} onChange={v => set('page_bg_overlay_color', v)} />
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-xs text-gray-600">Opacity</span>
+                      <span className="text-xs text-gray-600">{t('printMenu.overlayOpacity')}</span>
                       <span className="text-xs text-gray-400">{settings.page_bg_overlay_opacity}%</span>
                     </div>
                     <input type="range" min={0} max={85} step={5} value={settings.page_bg_overlay_opacity}
@@ -275,7 +278,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
             ) : (
               <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors">
                 <ImageIcon className="size-3.5" />
-                Upload background image
+                {t('printMenu.uploadBg')}
                 <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
               </label>
             )}
@@ -283,25 +286,25 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
           {/* Colors */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-600">Colors</p>
-            <ColorRow label="Heading" value={settings.header_text_color} onChange={v => set('header_text_color', v)} />
-            <ColorRow label="Body text" value={settings.body_text_color} onChange={v => set('body_text_color', v)} />
-            <ColorRow label="Accent / prices" value={settings.accent_color} onChange={v => set('accent_color', v)} />
+            <p className="text-xs font-medium text-gray-600">{t('printMenu.colors')}</p>
+            <ColorRow label={t('printMenu.colorHeading')} value={settings.header_text_color} onChange={v => set('header_text_color', v)} />
+            <ColorRow label={t('printMenu.colorBody')} value={settings.body_text_color} onChange={v => set('body_text_color', v)} />
+            <ColorRow label={t('printMenu.colorAccent')} value={settings.accent_color} onChange={v => set('accent_color', v)} />
           </div>
 
           {/* Item cards toggle */}
           <div className="space-y-2">
             <Toggle
-              label="Item card backgrounds"
+              label={t('printMenu.itemCards')}
               checked={hasItemCard}
               onChange={v => set('item_card_bg', v ? '#f5f5f5' : 'transparent')}
             />
             {hasItemCard && (
               <div className="pl-0 space-y-2">
-                <ColorRow label="Card color" value={settings.item_card_bg} onChange={v => set('item_card_bg', v)} />
+                <ColorRow label={t('printMenu.cardColor')} value={settings.item_card_bg} onChange={v => set('item_card_bg', v)} />
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-xs text-gray-600">Card radius</span>
+                    <span className="text-xs text-gray-600">{t('printMenu.cardRadius')}</span>
                     <span className="text-xs text-gray-400">{settings.item_card_radius}px</span>
                   </div>
                   <input type="range" min={0} max={16} step={2} value={settings.item_card_radius}
@@ -314,9 +317,9 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
           {/* Fonts */}
           <div className="space-y-3">
-            <p className="text-xs font-medium text-gray-600">Fonts</p>
-            <FontPicker label="Heading font" value={settings.heading_font} onChange={v => set('heading_font', v)} />
-            <FontPicker label="Body font" value={settings.body_font} onChange={v => set('body_font', v)} />
+            <p className="text-xs font-medium text-gray-600">{t('printMenu.fonts')}</p>
+            <FontPicker label={t('printMenu.headingFont')} value={settings.heading_font} onChange={v => set('heading_font', v)} />
+            <FontPicker label={t('printMenu.bodyFont')} value={settings.body_font} onChange={v => set('body_font', v)} />
           </div>
         </div>
       </div>
@@ -325,13 +328,13 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
 
       {/* ── Content toggles ── */}
       <div>
-        <SectionHeader>Content</SectionHeader>
+        <SectionHeader>{t('printMenu.content')}</SectionHeader>
         <div className="divide-y divide-gray-50">
-          <Toggle label="Show header" checked={settings.show_header} onChange={v => set('show_header', v)} />
-          <Toggle label="Category dividers" checked={settings.show_category_dividers} onChange={v => set('show_category_dividers', v)} />
-          <Toggle label="Item images" checked={settings.show_images} onChange={v => set('show_images', v)} />
-          <Toggle label="Descriptions" checked={settings.show_description} onChange={v => set('show_description', v)} />
-          <Toggle label="Prices" checked={settings.show_prices} onChange={v => set('show_prices', v)} />
+          <Toggle label={t('printMenu.showHeader')} checked={settings.show_header} onChange={v => set('show_header', v)} />
+          <Toggle label={t('printMenu.showDividers')} checked={settings.show_category_dividers} onChange={v => set('show_category_dividers', v)} />
+          <Toggle label={t('printMenu.showImages')} checked={settings.show_images} onChange={v => set('show_images', v)} />
+          <Toggle label={t('printMenu.showDescriptions')} checked={settings.show_description} onChange={v => set('show_description', v)} />
+          <Toggle label={t('printMenu.showPrices')} checked={settings.show_prices} onChange={v => set('show_prices', v)} />
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 import type { ContactConfig, MapHeight } from '../types'
 import type { Business } from '@/lib/business'
 import { SOCIAL_LINKS_CONFIG } from '@/lib/constants'
@@ -12,12 +13,13 @@ import { SOCIAL_LINKS_CONFIG } from '@/lib/constants'
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
 export function ContactPreview({ config }: { config: ContactConfig }) {
+  const { t } = useTranslation()
   const items = [
-    config.show_map && 'Map',
-    config.show_phone && 'Phone',
-    config.show_email && 'Email',
-    config.show_address && 'Address',
-    config.show_hours && 'Hours',
+    config.show_map && t('contactBlock.map'),
+    config.show_phone && t('contactBlock.phoneNumber'),
+    config.show_email && t('contactBlock.emailAddress'),
+    config.show_address && t('contactBlock.physicalAddress'),
+    config.show_hours && t('contactBlock.openingHours'),
   ].filter(Boolean)
 
   return (
@@ -35,7 +37,7 @@ export function ContactPreview({ config }: { config: ContactConfig }) {
         ))}
       </div>
       <p className="text-[10px] text-muted-foreground/60">
-        Socials: {config.socials_shown.length > 0 ? config.socials_shown.join(', ') : 'none'}
+        {t('contactBlock.socialsPreview')} {config.socials_shown.length > 0 ? config.socials_shown.join(', ') : 'none'}
       </p>
     </div>
   )
@@ -43,11 +45,7 @@ export function ContactPreview({ config }: { config: ContactConfig }) {
 
 // ─── Settings Form ─────────────────────────────────────────────────────────────
 
-const MAP_HEIGHTS: { value: MapHeight; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
-]
+
 
 function ToggleRow({
   id, label, checked, onCheckedChange,
@@ -79,6 +77,12 @@ export function ContactSettings({
   business: Business
   onChange: (c: ContactConfig) => void
 }) {
+  const { t } = useTranslation()
+  const MAP_HEIGHTS: { value: MapHeight; label: string }[] = [
+    { value: 'small', label: t('contactBlock.small') },
+    { value: 'medium', label: t('contactBlock.medium') },
+    { value: 'large', label: t('contactBlock.large') },
+  ]
   function set<K extends keyof ContactConfig>(key: K, value: ContactConfig[K]) {
     onChange({ ...config, [key]: value })
   }
@@ -101,7 +105,7 @@ export function ContactSettings({
 
       {/* Layout */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layout</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.layout')}</Label>
         <div className="flex gap-1.5">
           <button
             type="button"
@@ -134,10 +138,10 @@ export function ContactSettings({
 
       {/* Appearance */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appearance</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.appearance')}</Label>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Background</Label>
+            <Label className="text-xs">{t('contactBlock.background')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -150,7 +154,7 @@ export function ContactSettings({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Text colour</Label>
+            <Label className="text-xs">{t('contactBlock.textColour')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -165,9 +169,9 @@ export function ContactSettings({
         </div>
         <div className="flex gap-1.5">
           <button type="button" onClick={() => onChange({ ...config, background_color: '#f8f8f8', text_color: '#111111' })}
-            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">Light</button>
+            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('contactBlock.light')}</button>
           <button type="button" onClick={() => onChange({ ...config, background_color: '#1a1a2e', text_color: '#ffffff' })}
-            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">Dark</button>
+            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">{t('contactBlock.dark')}</button>
         </div>
       </div>
 
@@ -175,17 +179,17 @@ export function ContactSettings({
 
       {/* Map */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Map</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.map')}</Label>
         <ToggleRow
           id="contact-map"
-          label="Show map"
+          label={t('contactBlock.showMap')}
           checked={config.show_map}
           onCheckedChange={v => set('show_map', v)}
           icon={<MapPin className="size-3.5 text-muted-foreground" />}
         />
         {config.show_map && (
           <div className="space-y-1.5 pl-6">
-            <Label className="text-xs">Map height</Label>
+            <Label className="text-xs">{t('contactBlock.mapHeight')}</Label>
             <div className="flex gap-1.5">
               {MAP_HEIGHTS.map(h => (
                 <button
@@ -205,7 +209,7 @@ export function ContactSettings({
             </div>
             {!business.address && (
               <p className="text-xs text-amber-600">
-                No address set in business profile — map will not display.
+                {t('contactBlock.noAddressSet')}
               </p>
             )}
           </div>
@@ -216,37 +220,37 @@ export function ContactSettings({
 
       {/* Contact info toggles */}
       <div className="space-y-1">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact info</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.contactInfo')}</Label>
         <ToggleRow
           id="contact-phone"
-          label="Phone number"
+          label={t('contactBlock.phoneNumber')}
           checked={config.show_phone}
           onCheckedChange={v => set('show_phone', v)}
           icon={<Phone className="size-3.5 text-muted-foreground" />}
         />
         {config.show_phone && !business.phone && (
-          <p className="text-xs text-amber-600 pl-6">No phone in business profile.</p>
+          <p className="text-xs text-amber-600 pl-6">{t('contactBlock.noPhoneSet')}</p>
         )}
         <ToggleRow
           id="contact-email"
-          label="Email address"
+          label={t('contactBlock.emailAddress')}
           checked={config.show_email}
           onCheckedChange={v => set('show_email', v)}
           icon={<Mail className="size-3.5 text-muted-foreground" />}
         />
         {config.show_email && !business.email && (
-          <p className="text-xs text-amber-600 pl-6">No email in business profile.</p>
+          <p className="text-xs text-amber-600 pl-6">{t('contactBlock.noEmailSet')}</p>
         )}
         <ToggleRow
           id="contact-address"
-          label="Physical address"
+          label={t('contactBlock.physicalAddress')}
           checked={config.show_address}
           onCheckedChange={v => set('show_address', v)}
           icon={<MapPin className="size-3.5 text-muted-foreground" />}
         />
         <ToggleRow
           id="contact-hours"
-          label="Opening hours"
+          label={t('contactBlock.openingHours')}
           checked={config.show_hours}
           onCheckedChange={v => set('show_hours', v)}
           icon={<Clock className="size-3.5 text-muted-foreground" />}
@@ -257,11 +261,11 @@ export function ContactSettings({
 
       {/* Social icons */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Social Icons</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.socialIcons')}</Label>
 
         {availableSocials.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No social links set on the business profile yet. Add them in the Business settings.
+            {t('contactBlock.noSocialsSet')}
           </p>
         ) : (
             <div className="space-y-1">

@@ -27,6 +27,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -60,11 +61,12 @@ const ITEM_TAG_SUGGESTIONS = [
 // ─── Variant Option Row ───────────────────────────────────────────────────────
 
 function VariantOptionRow({ option, onDelete }: { option: VariantOption; onDelete: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-2 px-3 py-2 group/opt">
       <span className="flex-1 text-sm">{option.label}</span>
       <span className="text-sm text-muted-foreground tabular-nums shrink-0">
-        {formatPriceDelta(option.price_delta)}
+        {formatPriceDelta(option.price_delta, 'VND', t('menuBuilder.included'))}
       </span>
       <button
         type="button"
@@ -89,6 +91,7 @@ function VariantGroupCard({
   onAddOption: (label: string, priceDelta: number) => Promise<void>
   onDeleteOption: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const [newLabel, setNewLabel] = useState('')
   const [newPrice, setNewPrice] = useState('0')
   const [adding, setAdding] = useState(false)
@@ -120,7 +123,7 @@ function VariantGroupCard({
               : 'border-border text-muted-foreground hover:border-foreground/50'
           )}
         >
-          {group.required ? 'Required' : 'Optional'}
+          {group.required ? t('menuBuilder.required') : t('menuBuilder.optional')}
         </button>
         <button
           type="button"
@@ -145,7 +148,7 @@ function VariantGroupCard({
               value={newLabel}
               onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-              placeholder="Option name (e.g. Large)"
+              placeholder={t('menuBuilder.optionName')}
               className="h-7 text-xs flex-1"
             />
             <Input
@@ -153,7 +156,7 @@ function VariantGroupCard({
               onChange={e => setNewPrice(e.target.value)}
               type="number"
               step={1000}
-              placeholder="Price Δ"
+              placeholder={t('menuBuilder.priceDelta')}
               className="h-7 text-xs w-24"
               title="+10000 = +10k₫, -5000 = -5k₫"
             />
@@ -164,7 +167,7 @@ function VariantGroupCard({
               onClick={handleAdd}
               disabled={!newLabel.trim() || adding}
             >
-              {adding ? <Loader2 className="size-3 animate-spin" /> : 'Add'}
+              {adding ? <Loader2 className="size-3 animate-spin" /> : t('menuBuilder.add')}
             </Button>
           </div>
         </>
@@ -176,6 +179,7 @@ function VariantGroupCard({
 // ─── Variants Panel (auto-saves) ──────────────────────────────────────────────
 
 function VariantsPanel({ itemId }: { itemId: string }) {
+  const { t } = useTranslation()
   const [groups, setGroups] = useState<VariantGroup[]>([])
   const [options, setOptions] = useState<VariantOption[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -239,7 +243,7 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   if (loading) {
     return (
       <div className="py-12 flex items-center justify-center text-muted-foreground gap-2">
-        <Loader2 className="size-4 animate-spin" /> Loading…
+        <Loader2 className="size-4 animate-spin" /> {t('menuBuilder.loading')}
       </div>
     )
   }
@@ -259,19 +263,19 @@ function VariantsPanel({ itemId }: { itemId: string }) {
       ))}
 
       <div className="border border-dashed border-border rounded-lg p-3 space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">New option group</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('menuBuilder.newOptionGroup')}</p>
         <div className="flex gap-2 items-center">
           <Input
             value={newGroupName}
             onChange={e => setNewGroupName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddGroup() } }}
-            placeholder="e.g. Size, Temperature, Add-ons…"
+            placeholder={t('menuBuilder.optionNamePlaceholder')}
             className="h-8 text-sm flex-1"
           />
           <div className="flex items-center gap-1.5 shrink-0">
             <Switch id="grp-required" checked={newGroupRequired} onCheckedChange={setNewGroupRequired} />
             <Label htmlFor="grp-required" className="text-xs whitespace-nowrap">
-              {newGroupRequired ? 'Required' : 'Optional'}
+              {newGroupRequired ? t('menuBuilder.required') : t('menuBuilder.optional')}
             </Label>
           </div>
           <Button
@@ -299,6 +303,7 @@ function CategoryDialog({
   onSave: (name: string) => Promise<void>
   initial?: MenuCategory
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? '')
   const [loading, setLoading] = useState(false)
 
@@ -314,24 +319,24 @@ function CategoryDialog({
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Rename category' : 'Add category'}</DialogTitle>
+          <DialogTitle>{initial ? t('menuBuilder.renameCategory') : t('menuBuilder.addCategory')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="cat-name">Name</Label>
+            <Label htmlFor="cat-name">{t('menuBuilder.categoryName')}</Label>
             <Input
               id="cat-name"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Appetizers, Mains, Drinks…"
+              placeholder={t('menuBuilder.categoryPlaceholder')}
               required
               autoFocus
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{t('menuBuilder.cancel')}</Button>
             <Button type="submit" disabled={!name.trim() || loading}>
-              {loading ? <Loader2 className="size-4 animate-spin" /> : initial ? 'Save' : 'Add'}
+              {loading ? <Loader2 className="size-4 animate-spin" /> : initial ? t('menuBuilder.save') : t('menuBuilder.add')}
             </Button>
           </DialogFooter>
         </form>
@@ -355,6 +360,7 @@ function ItemDialog({
   businessId: string
   initial?: MenuItem
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
@@ -408,7 +414,7 @@ function ItemDialog({
       {/* p-0 so we can control padding per zone and pin the footer */}
       <DialogContent className="sm:max-w-lg p-0 flex flex-col" style={{ maxHeight: 'min(90vh, 700px)' }}>
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
-          <DialogTitle>{isEditing ? 'Edit item' : 'Add item'}</DialogTitle>
+          <DialogTitle>{isEditing ? t('menuBuilder.editItem') : t('menuBuilder.addItem')}</DialogTitle>
         </DialogHeader>
 
         {/* Scrollable body */}
@@ -419,10 +425,10 @@ function ItemDialog({
           className="pb-2"
         >
           <TabsList className="w-full">
-            <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+            <TabsTrigger value="details" className="flex-1">{t('menuBuilder.details')}</TabsTrigger>
             <TabsTrigger value="variants" className="flex-1" disabled={!isEditing}>
-              Options & Variants
-              {!isEditing && <span className="ml-1.5 text-[10px] opacity-60">(save first)</span>}
+              {t('menuBuilder.optionsVariants')}
+              {!isEditing && <span className="ml-1.5 text-[10px] opacity-60">({t('menuBuilder.saveItemFirst')})</span>}
             </TabsTrigger>
           </TabsList>
 
@@ -444,34 +450,40 @@ function ItemDialog({
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium">Photo</p>
-                  <p className="text-xs text-muted-foreground">Auto-compressed. JPEG, PNG, WebP.</p>
+                  <p className="text-sm font-medium">{t('menuBuilder.photo')}</p>
+                  <p className="text-xs text-muted-foreground">{t('menuBuilder.photoHint')}</p>
                   {imageUrl && (
                     <Button type="button" variant="secondary" size="sm" onClick={() => setImageUrl('')}>
-                      <X className="size-3 mr-1" /> Remove
+                      <X className="size-3 mr-1" /> {t('menuBuilder.remove')}
                     </Button>
                   )}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="item-name">Name *</Label>
-                <Input id="item-name" value={name} onChange={e => setName(e.target.value)} placeholder="Pho Bo, Ca Phe Sua Da…" required autoFocus />
+                <Label htmlFor="item-name">{t('menuBuilder.itemName')}</Label>
+                <Input id="item-name" value={name} onChange={e => setName(e.target.value)} placeholder={t('menuBuilder.itemNamePlaceholder')} required autoFocus />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="item-desc">Description</Label>
-                <Textarea id="item-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description (optional)" rows={2} className="resize-none" />
+                <Label htmlFor="item-desc">{t('menuBuilder.description')}</Label>
+                <Textarea id="item-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder={t('menuBuilder.descriptionPlaceholder')} rows={2} className="resize-none" />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="item-price">Price (VND) *</Label>
-                <Input id="item-price" type="number" min={0} step={1000} value={price} onChange={e => setPrice(e.target.value)} placeholder="45000" required />
+                <Label htmlFor="item-price">{t('menuBuilder.price')}</Label>
+                <Input id="item-price" type="number" min={0} step={1000} value={price} onChange={e => setPrice(e.target.value)} placeholder={t('menuBuilder.pricePlaceholder')} required />
               </div>
 
               <div className="space-y-1.5">
-                <Label>Tags</Label>
-                <TagInput value={tags} onChange={setTags} suggestions={ITEM_TAG_SUGGESTIONS} placeholder="Add custom tag…" />
+                <Label>{t('menuBuilder.tags')}</Label>
+                <TagInput
+                  value={tags}
+                  onChange={setTags}
+                  suggestions={ITEM_TAG_SUGGESTIONS}
+                  formatTag={(tag) => ITEM_TAG_SUGGESTIONS.includes(tag) ? t(`menuBuilder.tagsList.${tag}`) : tag}
+                  placeholder={t('menuBuilder.addCustomTag')}
+                />
               </div>
             </form>
           </TabsContent>
@@ -480,7 +492,7 @@ function ItemDialog({
           <TabsContent value="variants" className="mt-4">
             {isEditing
               ? <VariantsPanel itemId={initial.id} />
-              : <p className="text-sm text-muted-foreground py-8 text-center">Save the item first to add options.</p>
+              : <p className="text-sm text-muted-foreground py-8 text-center">{t('menuBuilder.saveItemFirst')}</p>
             }
           </TabsContent>
         </Tabs>
@@ -490,19 +502,19 @@ function ItemDialog({
         <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background">
           {activeTab === 'details' ? (
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{t('menuBuilder.cancel')}</Button>
               <Button
                 type="submit"
                 form="item-detail-form"
                 disabled={!name.trim() || !price || saving}
               >
-                {saving ? <Loader2 className="size-4 animate-spin" /> : isEditing ? 'Save changes' : 'Add item'}
+                {saving ? <Loader2 className="size-4 animate-spin" /> : isEditing ? t('menuBuilder.saveChanges') : t('menuBuilder.addItem')}
               </Button>
             </div>
           ) : (
             <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Changes here save automatically</span>
-              <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+              <span className="text-xs text-muted-foreground">{t('menuBuilder.changesSaveAuto')}</span>
+              <Button type="button" variant="secondary" onClick={onClose}>{t('menuBuilder.close')}</Button>
             </div>
           )}
         </div>
@@ -520,6 +532,7 @@ interface MenuBuilderProps {
 }
 
 export function MenuBuilder({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
+  const { t } = useTranslation()
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories)
   const [items, setItems] = useState<MenuItem[]>(initialItems)
   const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategories[0]?.id ?? null)
@@ -567,25 +580,25 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       const result = await updateCategoryAction(catDialog.editing.id, { name })
       if (!result.success) { toast.error(result.error); return }
       setCategories(prev => prev.map(c => c.id === catDialog.editing!.id ? { ...c, name } : c))
-      toast.success('Category updated')
+      toast.success(t('menuBuilder.categoryUpdated'))
     } else {
       const result = await addCategoryAction(businessId, name)
       if (!result.success) { toast.error(result.error); return }
       setCategories(prev => [...prev, result.data])
       setSelectedCatId(result.data.id)
-      toast.success('Category added')
+      toast.success(t('menuBuilder.categoryAdded'))
     }
   }
 
   async function handleDeleteCategory(id: string) {
-    if (!confirm('Delete this category and ALL its items?')) return
+    if (!confirm(t('menuBuilder.deleteCategoryConfirm'))) return
     const result = await deleteCategoryAction(id)
     if (!result.success) { toast.error(result.error); return }
     setCategories(prev => prev.filter(c => c.id !== id))
     setItems(prev => prev.filter(i => i.category_id !== id))
     if (selectedCatId === id) setSelectedCatId(categories.find(c => c.id !== id)?.id ?? null)
     clearSelection()
-    toast.success('Category deleted')
+    toast.success(t('menuBuilder.categoryDeleted'))
   }
 
   async function handleToggleCategoryVisible(cat: MenuCategory) {
@@ -612,23 +625,23 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           ? { ...i, name: itemData.name, description: itemData.description || null, price: itemData.price, image_url: itemData.image_url || null, tags: itemData.tags }
           : i
       ))
-      toast.success('Item saved')
+      toast.success(t('menuBuilder.itemSaved'))
     } else {
       const catId = itemDialog.catId ?? selectedCatId!
       const result = await addItemAction(businessId, catId, itemData)
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => [...prev, result.data])
-      toast.success('Item added')
+      toast.success(t('menuBuilder.itemAdded'))
     }
   }
 
   async function handleDeleteItem(id: string) {
-    if (!confirm('Delete this item?')) return
+    if (!confirm(t('menuBuilder.deleteItemConfirm'))) return
     const result = await deleteItemAction(id)
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => prev.filter(i => i.id !== id))
     setSelectedItems(prev => { const s = new Set(prev); s.delete(id); return s })
-    toast.success('Item deleted')
+    toast.success(t('menuBuilder.itemDeleted'))
   }
 
   async function handleDuplicateItem(item: MenuItem) {
@@ -641,7 +654,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
     })
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => [...prev, result.data])
-    toast.success('Item duplicated')
+    toast.success(t('menuBuilder.itemDuplicated'))
   }
 
   async function handleToggleAvailable(item: MenuItem) {
@@ -653,12 +666,12 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
   // ── Bulk handlers ──
   async function handleBulkDelete() {
     const ids = Array.from(selectedItems)
-    if (!confirm(`Delete ${ids.length} item${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+    if (!confirm(t('menuBuilder.bulkDeleteConfirm'))) return
     const result = await bulkDeleteItemsAction(ids)
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => prev.filter(i => !selectedItems.has(i.id)))
     clearSelection()
-    toast.success(`${ids.length} item${ids.length > 1 ? 's' : ''} deleted`)
+    toast.success(`${ids.length} ${t('menuBuilder.itemsDeleted')}`)
   }
 
   async function handleBulkSetAvailable(available: boolean) {
@@ -667,7 +680,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => prev.map(i => selectedItems.has(i.id) ? { ...i, available } : i))
     clearSelection()
-    toast.success(`${ids.length} item${ids.length > 1 ? 's' : ''} ${available ? 'marked available' : 'marked unavailable'}`)
+    toast.success(`${ids.length} ${available ? t('menuBuilder.markedAvailable') : t('menuBuilder.markedUnavailable')}`)
   }
 
   const anySelected = selectedItems.size > 0
@@ -679,15 +692,15 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       {/* ── Category Sidebar ── */}
       <aside className="w-56 shrink-0 border-r border-border flex flex-col bg-muted/30">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Categories</span>
-          <Button id="add-category-btn" size="icon" variant="ghost" className="size-6" onClick={() => setCatDialog({ open: true })} title="Add category">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('menuBuilder.categories')}</span>
+          <Button id="add-category-btn" size="icon" variant="ghost" className="size-6" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
             <Plus className="size-4" />
           </Button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {categories.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-8 px-2">No categories yet.</p>
+            <p className="text-xs text-muted-foreground text-center py-8 px-2">{t('menuBuilder.noCategoriesYet')}</p>
           )}
           {[...categories].sort((a, b) => a.sort_order - b.sort_order).map(cat => {
             const count = items.filter(i => i.category_id === cat.id).length
@@ -721,14 +734,14 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem onClick={() => setCatDialog({ open: true, editing: cat })}>
-                      <Pencil className="size-3.5 mr-2" /> Rename
+                      <Pencil className="size-3.5 mr-2" /> {t('menuBuilder.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleToggleCategoryVisible(cat)}>
-                      {cat.visible ? <><EyeOff className="size-3.5 mr-2" /> Hide</> : <><Eye className="size-3.5 mr-2" /> Show</>}
+                      {cat.visible ? <><EyeOff className="size-3.5 mr-2" /> {t('menuBuilder.hide')}</> : <><Eye className="size-3.5 mr-2" /> {t('menuBuilder.show')}</>}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCategory(cat.id)}>
-                      <Trash2 className="size-3.5 mr-2" /> Delete
+                      <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -753,8 +766,8 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         {!selectedCat ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
-              <p className="text-lg font-semibold mb-2">No category selected</p>
-              <p className="text-sm mb-4">Add a category on the left to get started.</p>
+              <p className="text-lg font-semibold mb-2">{t('menuBuilder.noCategorySelected')}</p>
+              <p className="text-sm mb-4">{t('menuBuilder.addCategoryToStart')}</p>
               <Button onClick={() => setCatDialog({ open: true })}>
                 <Plus className="size-4 mr-2" /> Add category
               </Button>
@@ -767,8 +780,8 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
               <div className="min-w-0">
                 <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {visibleItems.length} item{visibleItems.length !== 1 ? 's' : ''}
-                  {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} selected</span>}
+                  {visibleItems.length} {t('menuBuilder.items')}
+                  {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} {t('menuBuilder.selected')}</span>}
                 </p>
               </div>
 
@@ -787,7 +800,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                       className="text-destructive hover:text-destructive"
                       onClick={handleBulkDelete}
                     >
-                      <Trash2 className="size-3.5 mr-1.5" /> Delete
+                      <Trash2 className="size-3.5 mr-1.5" /> {t('menuBuilder.delete')}
                     </Button>
                     <button
                       onClick={clearSelection}
@@ -799,7 +812,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                   </>
                 )}
                 <Button id="add-item-btn" size="sm" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
-                  <Plus className="size-4 mr-2" /> Add item
+                  <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
                 </Button>
               </div>
             </div>
@@ -811,7 +824,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                   <p className="text-base font-medium mb-1">No items yet</p>
                   <p className="text-sm mb-4">Add your first item to this category.</p>
                   <Button variant="secondary" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
-                    <Plus className="size-4 mr-2" /> Add item
+                    <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
                   </Button>
                 </div>
               ) : (
@@ -881,7 +894,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                                   <Pencil className="size-3.5 mr-2" /> Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDuplicateItem(item)}>
-                                  <Copy className="size-3.5 mr-2" /> Duplicate
+                                  <Copy className="size-3.5 mr-2" /> {t('menuBuilder.duplicate')}
                                 </DropdownMenuItem>
                                  <DropdownMenuItem onClick={() => handleToggleAvailable(item)}>
                                   {item.available
@@ -893,7 +906,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteItem(item.id)}>
-                                  <Trash2 className="size-3.5 mr-2" /> Delete
+                                  <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

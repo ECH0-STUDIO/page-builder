@@ -26,14 +26,26 @@ export async function checkSlugAvailable(slug: string, excludeId?: string): Prom
 
 /** Fetch all businesses for the current user */
 export async function getUserBusinesses(): Promise<Business[]> {
-  const supabase = createClient()
-  const { data, error } = await (supabase as any)
-    .from('businesses')
-    .select('*')
-    .order('created_at', { ascending: true })
-
-  if (error) throw new Error(error.message ?? 'Failed to fetch businesses')
-  return (data ?? []) as Business[]
+  try {
+    const res = await fetch('/api/user-businesses', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Ensure we don't aggressively cache if the user switches teams
+      cache: 'no-store'
+    })
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch user businesses')
+    }
+    
+    const data = await res.json()
+    return (data.businesses ?? []) as Business[]
+  } catch (error) {
+    console.error('Error fetching businesses:', error)
+    return []
+  }
 }
 
 /** Fetch a single business by ID */

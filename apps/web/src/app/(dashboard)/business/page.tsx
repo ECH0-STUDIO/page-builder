@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+// import { createClient } from '@/lib/supabase/server'
 import { BusinessProfileForm } from '@/components/business/BusinessProfileForm'
 import type { Metadata } from 'next'
 
@@ -12,14 +14,7 @@ export default async function BusinessProfilePage() {
 
   // Get current business — we read from the first one for now
   // (context switching happens client-side, SSR always gets the first)
-  const { data: businesses } = await supabase
-    .from('businesses')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-
-  const business = businesses?.[0]
+  const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
 
   return (

@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
@@ -22,12 +23,13 @@ import { CtaEditor } from './CtaEditor'
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
 export function TextImagePreview({ config }: { config: TextImageConfig }) {
+  const { t } = useTranslation()
   const layoutLabels: Record<TextImageLayout, string> = {
-    img_left: 'Image Left',
-    img_right: 'Image Right',
-    stacked: 'Stacked',
-    text_only: 'Text Only',
-    img_only: 'Image Only',
+    img_left: t('textImageBlock.imgLeft'),
+    img_right: t('textImageBlock.imgRight'),
+    stacked: t('textImageBlock.stacked'),
+    text_only: t('textImageBlock.textOnly'),
+    img_only: t('textImageBlock.imgOnly'),
   }
 
   return (
@@ -59,7 +61,7 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
               <p className="text-[10px] text-muted-foreground line-clamp-2">{config.body}</p>
             )}
             {!config.heading && !config.body && (
-              <p className="text-[10px] text-muted-foreground/50 italic">Text content…</p>
+              <p className="text-[10px] text-muted-foreground/50 italic">{t('textImageBlock.textContentPlaceholder')}…</p>
             )}
           </div>
         )}
@@ -73,32 +75,13 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
 
 // ─── Settings Form ─────────────────────────────────────────────────────────────
 
-const LAYOUTS: { value: TextImageLayout; label: string }[] = [
-  { value: 'img_left', label: 'Image Left' },
-  { value: 'img_right', label: 'Image Right' },
-  { value: 'stacked', label: 'Stacked' },
-  { value: 'text_only', label: 'Text Only' },
-  { value: 'img_only', label: 'Image Only' },
-]
 
-const ASPECT_RATIOS: { value: AspectRatio; label: string }[] = [
-  { value: 'square', label: 'Square (1:1)' },
-  { value: '4_3', label: '4:3' },
-  { value: '16_9', label: '16:9' },
-  { value: 'free', label: 'Free' },
-]
 
-const PADDINGS: { value: PaddingSize; label: string }[] = [
-  { value: 'compact', label: 'Compact' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'spacious', label: 'Spacious' },
-]
 
-const BACKGROUNDS: { value: BlockBackground; label: string }[] = [
-  { value: 'transparent', label: 'Transparent' },
-  { value: 'solid', label: 'Solid colour' },
-  { value: 'gradient', label: 'Subtle gradient' },
-]
+
+
+
+
 
 export function TextImageSettings({
   config,
@@ -112,8 +95,37 @@ export function TextImageSettings({
   blocks: PageBlock[]
   onChange: (c: TextImageConfig) => void
 }) {
+  const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+
+  const LAYOUTS: { value: TextImageLayout; label: string }[] = [
+    { value: 'img_left', label: t('textImageBlock.imgLeft') },
+    { value: 'img_right', label: t('textImageBlock.imgRight') },
+    { value: 'stacked', label: t('textImageBlock.stacked') },
+    { value: 'text_only', label: t('textImageBlock.textOnly') },
+    { value: 'img_only', label: t('textImageBlock.imgOnly') },
+  ]
+
+  const ASPECT_RATIOS: { value: AspectRatio; label: string }[] = [
+    { value: 'square', label: t('textImageBlock.square') },
+    { value: '4_3', label: t('textImageBlock.4_3') },
+    { value: '16_9', label: t('textImageBlock.16_9') },
+    { value: 'free', label: t('textImageBlock.free') },
+  ]
+
+  const PADDINGS: { value: PaddingSize; label: string }[] = [
+    { value: 'compact', label: t('textImageBlock.compact') },
+    { value: 'normal', label: t('textImageBlock.normal') },
+    { value: 'spacious', label: t('textImageBlock.spacious') },
+  ]
+
+  const BACKGROUNDS: { value: BlockBackground; label: string }[] = [
+    { value: 'transparent', label: t('textImageBlock.transparent') },
+    { value: 'solid', label: t('textImageBlock.solidColour') },
+    { value: 'gradient', label: t('textImageBlock.gradient') },
+  ]
+
 
   function set<K extends keyof TextImageConfig>(key: K, value: TextImageConfig[K]) {
     onChange({ ...config, [key]: value })
@@ -144,7 +156,7 @@ export function TextImageSettings({
 
       {/* Layout */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layout</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.layout')}</Label>
         <div className="grid grid-cols-2 gap-1.5">
           {LAYOUTS.map(l => (
             <button
@@ -169,7 +181,7 @@ export function TextImageSettings({
       {/* Image */}
       {config.layout !== 'text_only' && (
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Image</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.image')}</Label>
           <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={handleImage} />
           {config.image_url ? (
             <div className="relative rounded-lg overflow-hidden border border-border">
@@ -192,13 +204,13 @@ export function TextImageSettings({
             >
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <>
                 <ImageIcon className="size-4" />
-                <span className="text-xs">Click to upload</span>
+                <span className="text-xs">{t('textImageBlock.clickToUpload')}</span>
               </>}
             </button>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Aspect ratio</Label>
+              <Label className="text-xs">{t('textImageBlock.aspectRatio')}</Label>
               <Select value={config.aspect_ratio} onValueChange={v => set('aspect_ratio', v as AspectRatio)}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -207,12 +219,12 @@ export function TextImageSettings({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Image fit</Label>
+              <Label className="text-xs">{t('textImageBlock.imageFit')}</Label>
               <Select value={config.image_fit} onValueChange={v => set('image_fit', v as ImageFit)}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cover" className="text-xs">Cover</SelectItem>
-                  <SelectItem value="contain" className="text-xs">Contain</SelectItem>
+                  <SelectItem value="cover" className="text-xs">{t('textImageBlock.cover')}</SelectItem>
+                  <SelectItem value="contain" className="text-xs">{t('textImageBlock.contain')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -225,13 +237,13 @@ export function TextImageSettings({
       {/* Content */}
       {config.layout !== 'img_only' && (
         <div className="space-y-3">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
           <div className="space-y-1.5">
-            <Label htmlFor="ti-heading" className="text-xs">Heading (optional)</Label>
-            <Input id="ti-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder="Section title…" className="h-8 text-sm" />
+            <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
+            <Input id="ti-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ti-body" className="text-xs">Body text</Label>
+            <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
             <Textarea
               id="ti-body"
               value={config.body}
@@ -245,7 +257,7 @@ export function TextImageSettings({
           {/* CTA */}
           {config.cta ? (
             <CtaEditor
-              label="CTA Button"
+              label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
               onChange={v => set('cta', v)}
@@ -254,7 +266,7 @@ export function TextImageSettings({
           ) : (
             <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8"
               onClick={() => set('cta', emptyCtaDefaults)}>
-              + Add CTA button
+              {t('textImageBlock.addCta')}
             </Button>
           )}
         </div>
@@ -264,11 +276,11 @@ export function TextImageSettings({
 
       {/* Styling */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Styling</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.styling')}</Label>
 
         {/* Background */}
         <div className="space-y-1.5">
-          <Label className="text-xs">Background</Label>
+          <Label className="text-xs">{t('textImageBlock.background')}</Label>
           <div className="grid grid-cols-3 gap-1.5">
             {BACKGROUNDS.map(b => (
               <button
@@ -322,14 +334,14 @@ export function TextImageSettings({
                   style={{ background: `linear-gradient(to right, ${config.gradient_from ?? '#f8f8f8'}, ${config.gradient_to ?? '#e8e8e8'})` }}
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">Gradient goes top-left → bottom-right</p>
+              <p className="text-[11px] text-muted-foreground">{t('textImageBlock.gradientHelp')}</p>
             </div>
           )}
         </div>
 
         {/* Padding */}
         <div className="space-y-1.5">
-          <Label className="text-xs">Padding</Label>
+          <Label className="text-xs">{t('textImageBlock.padding')}</Label>
           <div className="flex gap-1.5">
             {PADDINGS.map(p => (
               <button key={p.value} type="button" onClick={() => set('padding', p.value)}
@@ -346,15 +358,15 @@ export function TextImageSettings({
         {/* Roundness */}
         {config.layout !== 'text_only' && config.layout !== 'img_only' && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Image roundness</Label>
+            <Label className="text-xs">{t('textImageBlock.imageRoundness')}</Label>
             <div className="grid grid-cols-3 gap-1.5">
               {([
-                { value: 'none', label: 'None' },
-                { value: 'sm', label: 'Small' },
-                { value: 'md', label: 'Medium' },
-                { value: 'lg', label: 'Large' },
-                { value: 'xl', label: 'X-Large' },
-                { value: 'full', label: 'Pill' },
+                { value: 'none', label: t('textImageBlock.none') },
+                { value: 'sm', label: t('textImageBlock.small') },
+                { value: 'md', label: t('textImageBlock.medium') },
+                { value: 'lg', label: t('textImageBlock.large') },
+                { value: 'xl', label: t('textImageBlock.xlarge') },
+                { value: 'full', label: t('textImageBlock.pill') },
               ] as { value: BorderRadius; label: string }[]).map(r => (
                 <button
                   key={r.value}

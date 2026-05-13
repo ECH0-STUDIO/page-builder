@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 const EMPTY: VietQRSettings = {
   bank_code: '',
@@ -39,6 +40,7 @@ export function VietQRSettings({
   )
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const { t } = useTranslation()
 
   const isComplete = form.bank_code && form.account_number && form.account_name
   const previewUrl = isComplete ? buildVietQRUrl(form) : null
@@ -49,14 +51,14 @@ export function VietQRSettings({
 
   async function save() {
     if (!isComplete) {
-      toast.error('Please fill in all required fields.')
+      toast.error(t('payments.toastFillRequired'))
       return
     }
     setSaving(true)
     const result = await upsertPaymentSettingsAction(businessId, { vietqr: form })
     setSaving(false)
     if (result.error) { toast.error(result.error) }
-    else { toast.success('Payment settings saved!') }
+    else { toast.success(t('payments.toastSaved')) }
   }
 
   async function remove() {
@@ -66,7 +68,7 @@ export function VietQRSettings({
     if (result.error) { toast.error(result.error) }
     else {
       setForm({ ...EMPTY, note_template: `Thanh toán tại ${businessName}` })
-      toast.success('VietQR removed.')
+      toast.success(t('payments.toastRemoved'))
     }
   }
 
@@ -76,18 +78,18 @@ export function VietQRSettings({
       {/* Form */}
       <div className="space-y-5">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">VietQR Configuration</h2>
+          <h2 className="text-base font-semibold text-gray-900">{t('payments.vietqrTitle')}</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Customers will see this QR on your live page to pay via bank transfer.
+            {t('payments.vietqrDesc')}
           </p>
         </div>
 
         {/* Bank */}
         <div className="space-y-1.5">
-          <Label>Bank <span className="text-red-500">*</span></Label>
+          <Label>{t('payments.bank')} <span className="text-red-500">*</span></Label>
           <Select value={form.bank_code} onValueChange={v => set('bank_code', v)}>
             <SelectTrigger>
-              <SelectValue placeholder="Select your bank…" />
+              <SelectValue placeholder={t('payments.selectBank')} />
             </SelectTrigger>
             <SelectContent>
               {VIET_BANKS.map(b => (
@@ -99,7 +101,7 @@ export function VietQRSettings({
 
         {/* Account number */}
         <div className="space-y-1.5">
-          <Label>Account Number <span className="text-red-500">*</span></Label>
+          <Label>{t('payments.accountNumber')} <span className="text-red-500">*</span></Label>
           <Input
             value={form.account_number}
             onChange={e => set('account_number', e.target.value.trim())}
@@ -110,36 +112,36 @@ export function VietQRSettings({
 
         {/* Account name */}
         <div className="space-y-1.5">
-          <Label>Account Holder Name <span className="text-red-500">*</span></Label>
+          <Label>{t('payments.accountName')} <span className="text-red-500">*</span></Label>
           <Input
             value={form.account_name}
             onChange={e => set('account_name', e.target.value.toUpperCase())}
             placeholder="NGUYEN VAN A"
           />
-          <p className="text-[11px] text-gray-400">Enter the name exactly as it is on your bank account (all caps).</p>
+          <p className="text-[11px] text-gray-400">{t('payments.accountNameHint')}</p>
         </div>
 
         {/* Transfer note */}
         <div className="space-y-1.5">
-          <Label>Default Transfer Note</Label>
+          <Label>{t('payments.transferNote')}</Label>
           <Input
             value={form.note_template}
             onChange={e => set('note_template', e.target.value)}
             placeholder={`Thanh toán tại ${businessName}`}
           />
-          <p className="text-[11px] text-gray-400">Pre-filled note shown when customers scan. Optional.</p>
+          <p className="text-[11px] text-gray-400">{t('payments.transferNoteHint')}</p>
         </div>
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
           <Button onClick={save} disabled={saving || !isComplete} className="gap-2">
             <Save className="size-4" />
-            {saving ? 'Saving…' : 'Save settings'}
+            {saving ? t('payments.saving') : t('payments.save')}
           </Button>
           {initialSettings.vietqr && (
             <Button variant="outline" onClick={remove} disabled={removing} className="gap-2 text-red-500 hover:text-red-600 hover:border-red-300">
               <Trash2 className="size-4" />
-              Remove
+              {t('payments.remove')}
             </Button>
           )}
         </div>
@@ -147,7 +149,7 @@ export function VietQRSettings({
 
       {/* Live QR preview */}
       <div className="flex flex-col items-center justify-start gap-4 pt-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 self-start">Live Preview</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 self-start">{t('payments.livePreview')}</p>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center gap-4 w-64">
           <div className="size-48 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
             {previewUrl ? (
@@ -163,7 +165,7 @@ export function VietQRSettings({
                 <div className="size-16 rounded-xl bg-gray-100 mx-auto mb-2 flex items-center justify-center">
                   <span className="text-2xl">🏦</span>
                 </div>
-                <p className="text-xs text-gray-400">Fill in the form to preview your QR</p>
+                <p className="text-xs text-gray-400">{t('payments.previewHint')}</p>
               </div>
             )}
           </div>
@@ -175,7 +177,7 @@ export function VietQRSettings({
                 <p className="text-xs text-gray-400">{VIET_BANKS.find(b => b.code === form.bank_code)?.name} · {form.account_number}</p>
               </div>
               <div className="w-full text-center py-2 rounded-lg bg-gray-50 text-xs text-gray-500 font-medium">
-                Scan to pay
+                {t('payments.scanToPay')}
               </div>
             </>
           )}

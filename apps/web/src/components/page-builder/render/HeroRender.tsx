@@ -15,6 +15,7 @@
 
 import type { HeroConfig, CtaButton } from '../types'
 import { ctaHref } from '../cta-utils'
+import { getTypography } from './typography'
 import Image from 'next/image'
 
 function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
@@ -29,10 +30,11 @@ function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
   return <a href={href} className={base} style={styles[cta.style]}>{cta.label}</a>
 }
 
-export function HeroRender({ config, businessName }: { config: HeroConfig; businessName?: string }) {
+export function HeroRender({ config, businessName, isMobilePreview }: { config: HeroConfig; businessName?: string; isMobilePreview?: boolean }) {
   const heading   = config.heading || businessName || 'Welcome'
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const padY      = config.section_padding_y ?? 80
+  const typography = getTypography(isMobilePreview)
 
   const objectPos =
     config.image_position === 'top'    ? 'top'
@@ -53,11 +55,11 @@ export function HeroRender({ config, businessName }: { config: HeroConfig; busin
       : `linear-gradient(135deg, ${fromColor} 0%, ${toColor} 100%)`
 
     return (
-      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY, paddingLeft: 24, paddingRight: 24 }}>
+      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY, paddingLeft: 16, paddingRight: 16 }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
-          <h1 style={{ color: textColor, fontSize: 'clamp(30px,5vw,64px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0 }}>{heading}</h1>
-          {config.tagline && <p style={{ color: textColor, fontSize: '20px', opacity: 0.85, marginTop: '20px', lineHeight: 1.5 }}>{config.tagline}</p>}
-          {config.body && <p style={{ color: textColor, fontSize: '16px', opacity: 0.7, marginTop: '12px', whiteSpace: 'pre-wrap', lineHeight: 1.6, maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
+          <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
+          {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
+          {config.body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
               {config.cta && <CtaLink cta={config.cta} textColor={textColor} />}
@@ -76,11 +78,11 @@ export function HeroRender({ config, businessName }: { config: HeroConfig; busin
     const imageOnRight = (config.split_image_side ?? 'right') === 'right'
 
     const contentPane = (
-      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', padding: `${padY}px 48px`, ...heightBase }}>
+      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', padding: isMobilePreview ? `${padY}px 16px` : `${padY}px 48px`, ...heightBase }}>
         <div>
-          <h1 style={{ color: panelTxt, fontSize: 'clamp(26px,4vw,52px)', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0 }}>{heading}</h1>
-          {config.tagline && <p style={{ color: panelTxt, fontSize: '18px', opacity: 0.8, marginTop: '16px', lineHeight: 1.5 }}>{config.tagline}</p>}
-          {config.body && <p style={{ color: panelTxt, fontSize: '15px', opacity: 0.65, marginTop: '12px', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{config.body}</p>}
+          <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
+          {config.tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{config.tagline}</p>}
+          {config.body && <p style={{ color: panelTxt, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap' }}>{config.body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '32px' }}>
               {config.cta && <CtaLink cta={config.cta} textColor={panelTxt} />}
@@ -115,7 +117,7 @@ export function HeroRender({ config, businessName }: { config: HeroConfig; busin
       position: 'relative',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       ...heightBase,
-      paddingTop: padY, paddingBottom: padY, paddingLeft: 24, paddingRight: 24,
+      paddingTop: padY, paddingBottom: padY, paddingLeft: 16, paddingRight: 16,
       overflow: 'hidden',
       ...(config.image_url
         ? {}
@@ -126,9 +128,9 @@ export function HeroRender({ config, businessName }: { config: HeroConfig; busin
       )}
       <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlayOpacity})` }} />
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '800px', width: '100%' }}>
-        <h1 style={{ color: textColor, fontSize: 'clamp(30px,5vw,64px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none' }}>{heading}</h1>
-        {config.tagline && <p style={{ color: textColor, fontSize: '20px', opacity: 0.9, marginTop: '20px', lineHeight: 1.5 }}>{config.tagline}</p>}
-        {config.body && <p style={{ color: textColor, fontSize: '15px', opacity: 0.75, marginTop: '12px', whiteSpace: 'pre-wrap', lineHeight: 1.6, maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
+        <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
+        {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
+        {config.body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
         {(config.cta || config.cta_secondary) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
             {config.cta && <CtaLink cta={config.cta} textColor={textColor} />}

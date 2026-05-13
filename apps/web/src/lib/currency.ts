@@ -54,9 +54,10 @@ export function formatCurrency(
  */
 export function formatPriceDelta(
   delta: number,
-  currency: CurrencyCode = DEFAULT_CURRENCY
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  includedText: string = 'Included'
 ): string {
-  if (delta === 0) return 'Included'
+  if (delta === 0) return includedText
   const formatted = formatCurrency(Math.abs(delta), currency)
   return delta > 0 ? `+${formatted}` : `-${formatted}`
 }

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+// import { createClient } from '@/lib/supabase/server'
 import { OrdersClient } from '@/components/orders/OrdersClient'
 import type { Metadata } from 'next'
 

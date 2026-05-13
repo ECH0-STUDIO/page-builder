@@ -1,6 +1,7 @@
 'use client'
 
 import { Label } from '@/components/ui/label'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 interface CustomCssEditorProps {
   value: string
@@ -8,15 +9,16 @@ interface CustomCssEditorProps {
 }
 
 export function CustomCssEditor({ value, onChange }: CustomCssEditorProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="space-y-2">
       <div>
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Custom CSS
+          {t('pageBuilder.customCss')}
         </Label>
         <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-          Write CSS with normal selectors — they are automatically scoped to this block.
-          Inspect the live page to find class names, then target them here.
+          {t('pageBuilder.customCssHint')}
         </p>
       </div>
       <textarea

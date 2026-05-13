@@ -10,6 +10,7 @@
 
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
 import { ctaHref } from '../cta-utils'
+import { getTypography } from './typography'
 import Image from 'next/image'
 
 function CtaLink({ cta }: { cta: CtaButton }) {
@@ -47,11 +48,13 @@ const RADIUS: Record<BorderRadius, string> = {
 
 interface TextImageRenderProps {
   config: TextImageConfig
+  isMobilePreview?: boolean
 }
 
-export function TextImageRender({ config }: TextImageRenderProps) {
+export function TextImageRender({ config, isMobilePreview }: TextImageRenderProps) {
   const padStyle = PADDING[config.padding] ?? PADDING.normal
   const radius   = RADIUS[config.border_radius ?? 'md']
+  const typography = getTypography(isMobilePreview)
 
   // ── Background ─────────────────────────────────────────────────────────────
   const bgStyle: React.CSSProperties =
@@ -106,10 +109,7 @@ export function TextImageRender({ config }: TextImageRenderProps) {
     }}>
       {config.heading && (
         <h2 style={{
-          fontSize: 'clamp(22px, 3vw, 36px)',
-          fontWeight: 700,
-          lineHeight: 1.2,
-          letterSpacing: '-0.015em',
+          ...typography.h2,
           color: '#111',
           margin: 0,
         }}>
@@ -118,8 +118,7 @@ export function TextImageRender({ config }: TextImageRenderProps) {
       )}
       {config.body && (
         <p style={{
-          fontSize: '16px',
-          lineHeight: 1.75,
+          ...typography.bodyMd,
           color: '#555',
           marginTop: config.heading ? '16px' : 0,
           whiteSpace: 'pre-wrap',

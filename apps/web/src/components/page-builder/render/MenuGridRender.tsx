@@ -21,6 +21,7 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { useCart, type CartVariantSelection } from './CartContext'
+import { getTypography } from './typography'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -380,7 +381,7 @@ function ItemRowList({
 
 // ─── Inner render (needs CartProvider as ancestor) ────────────────────────────
 
-function MenuGridInner({ config, data }: MenuGridRenderProps) {
+function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & { isMobilePreview?: boolean }) {
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
@@ -388,6 +389,8 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
 
   const bgColor = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
+
+  const typography = getTypography(isMobilePreview)
 
   const isCustomMode = config.selection_mode === 'custom_items'
 
@@ -408,12 +411,12 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
       })
 
   const gridCols: Record<string, string> = {
-    '2col': 'grid-cols-2',
-    '3col': 'grid-cols-2 sm:grid-cols-3',
-    '4col': 'grid-cols-2 sm:grid-cols-4',
+    '2col': 'grid-cols-1 sm:grid-cols-2',
+    '3col': 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
+    '4col': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
     list: 'grid-cols-1',
   }
-  const colClass = gridCols[config.layout] ?? 'grid-cols-2 sm:grid-cols-3'
+  const colClass = isMobilePreview ? 'grid-cols-1' : (gridCols[config.layout] ?? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')
   const isList = config.layout === 'list'
 
   if (!isCustomMode && visibleCats.length === 0) {
@@ -426,7 +429,7 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
 
   return (
     <>
-      <section style={{ backgroundColor: bgColor, padding: '64px 24px' }}>
+      <section style={{ backgroundColor: bgColor, padding: '64px 16px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
@@ -435,11 +438,9 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
               {config.heading && (
                 <h2 style={{
                   color: textColor,
-                  fontSize: 'clamp(22px, 3vw, 36px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.015em',
-                  lineHeight: 1.2,
+                  ...typography.h2,
                   marginBottom: config.description ? '12px' : 0,
+                  wordBreak: 'break-word'
                 }}>
                   {config.heading}
                 </h2>
@@ -447,9 +448,7 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
               {config.description && (
                 <p style={{
                   color: textColor,
-                  opacity: 0.7,
-                  fontSize: '16px',
-                  lineHeight: 1.5,
+                  ...typography.bodyMd,
                   maxWidth: '700px',
                   whiteSpace: 'pre-wrap'
                 }}>
@@ -461,7 +460,7 @@ function MenuGridInner({ config, data }: MenuGridRenderProps) {
 
           {/* Category tabs — auto-enabled when 2+ categories */}
           {visibleCats.length > 1 && (
-            <div className="flex gap-2 flex-wrap mb-8 border-b border-gray-100 pb-3">
+            <div className="flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar mb-8 border-b border-gray-100 pb-3" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
               {visibleCats.map(cat => (
                 <button
                   key={cat.id}
@@ -524,6 +523,6 @@ interface MenuGridRenderProps {
   data: MenuGridData
 }
 
-export function MenuGridRender({ config, data }: MenuGridRenderProps) {
-  return <MenuGridInner config={config} data={data} />
+export function MenuGridRender({ config, data, isMobilePreview }: MenuGridRenderProps & { isMobilePreview?: boolean }) {
+  return <MenuGridInner config={config} data={data} isMobilePreview={isMobilePreview} />
 }

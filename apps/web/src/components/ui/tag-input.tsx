@@ -13,6 +13,7 @@ interface TagInputProps {
   placeholder?: string
   className?: string
   maxTags?: number
+  formatTag?: (tag: string) => string
 }
 
 export function TagInput({
@@ -22,6 +23,7 @@ export function TagInput({
   placeholder = 'Type and press Enter…',
   className,
   maxTags,
+  formatTag = (t) => t,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -59,7 +61,7 @@ export function TagInput({
               key={tag}
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium"
             >
-              {tag}
+              {formatTag(tag)}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
@@ -83,7 +85,7 @@ export function TagInput({
               onClick={() => addTag(tag)}
               className="px-2.5 py-0.5 rounded-full text-xs border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
             >
-              + {tag}
+              + {formatTag(tag)}
             </button>
           ))}
         </div>

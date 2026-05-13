@@ -29,7 +29,7 @@ export default function RootLayout({
     // Forcing light class on html directly causes hydration mismatch with next-themes.
     // Instead we let next-themes handle it at the root level, but we set defaultTheme to light.
     <html lang="en" suppressHydrationWarning>
-      <body className={plusJakartaSans.variable}>
+      <body className={plusJakartaSans.variable} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

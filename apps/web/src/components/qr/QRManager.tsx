@@ -9,6 +9,7 @@ import { updateBusinessAction } from '@/app/actions/business'
 import { QRPrintDesigner } from './QRPrintDesigner'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,14 +87,15 @@ function ItemQRTab({ slug, categories, items }: {
   const [activeItemId, setActiveItemId] = useState<string | null>(items[0]?.id ?? null)
   const activeItem = items.find(i => i.id === activeItemId)
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const { t } = useTranslation()
 
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
         <QrCode className="size-12 text-gray-200 mx-auto mb-3" />
-        <p className="text-sm text-gray-500">No menu items yet.</p>
+        <p className="text-sm text-gray-500">{t('qr.noItems')}</p>
         <Link href="/dashboard/menu" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-          Add items in the Menu builder →
+          {t('qr.noItemsLink')}
         </Link>
       </div>
     )
@@ -133,11 +135,11 @@ function ItemQRTab({ slug, categories, items }: {
           <SimpleQRCard
             url={`${origin}/${slug}#item-${activeItem.id}`}
             label={activeItem.name}
-            sublabel="Deep link to this item"
+            sublabel={t('qr.deepLink')}
             filename={`${activeItem.name.replace(/\s+/g, '-').toLowerCase()}-qr.png`}
           />
         ) : (
-          <p className="text-sm text-gray-400 mt-8">Select an item to see its QR</p>
+          <p className="text-sm text-gray-400 mt-8">{t('qr.selectItem')}</p>
         )}
       </div>
     </div>
@@ -150,16 +152,17 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
   const [tableCount, setTableCount] = useState(10)
   const [kdsEnabled, setKdsEnabled] = useState(paymentSettings?.kds_enabled ?? true)
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const { t } = useTranslation()
 
   const handleToggle = async (checked: boolean) => {
     setKdsEnabled(checked)
     const newSettings = { ...paymentSettings, kds_enabled: checked }
     const res = await updateBusinessAction(businessId, { payment_settings: newSettings })
     if (!res.success) {
-      toast.error('Failed to update settings')
+      toast.error(t('qr.kdsUpdateFailed'))
       setKdsEnabled(!checked)
     } else {
-      toast.success(checked ? 'Automated ordering enabled' : 'Automated ordering disabled')
+      toast.success(checked ? t('qr.kdsEnabled') : t('qr.kdsDisabled'))
     }
   }
 
@@ -168,11 +171,11 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-xl">
         <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-100">
           <div className="pr-8">
-            <h3 className="font-bold text-gray-900 mb-1">Enable Automated Ordering (KDS)</h3>
+            <h3 className="font-bold text-gray-900 mb-1">{t('qr.kdsTitle')}</h3>
             <p className="text-sm text-gray-500">
-              This feature allows customers to place orders directly from their phones. 
+              {t('qr.kdsDesc')} 
               <br/>
-              <strong>Note:</strong> This is a management tool to track orders and is NOT connected to your POS or receipt printers.
+              <strong>Note:</strong> {t('qr.kdsNote')}
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
@@ -182,8 +185,8 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
         </div>
 
         <div className={kdsEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
-          <h3 className="font-bold text-gray-900 mb-1">Batch Generate Table QRs</h3>
-          <p className="text-sm text-gray-500 mb-4">Enter the number of tables in your restaurant. We will automatically generate distinct QR codes that lock customers into the correct table number.</p>
+          <h3 className="font-bold text-gray-900 mb-1">{t('qr.batchTitle')}</h3>
+          <p className="text-sm text-gray-500 mb-4">{t('qr.batchDesc')}</p>
           <div className="flex items-center gap-3">
             <input 
               type="number" 
@@ -192,7 +195,7 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
               onChange={e => setTableCount(parseInt(e.target.value) || 1)}
               className="w-24 h-10 px-3 rounded-lg border border-gray-200 font-bold"
             />
-            <span className="text-gray-500 font-medium">Tables</span>
+            <span className="text-gray-500 font-medium">{t('qr.tables')}</span>
           </div>
         </div>
       </div>
@@ -205,8 +208,8 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
               <SimpleQRCard
                 key={num}
                 url={`${origin}/${slug}?table=${num}`}
-                label={`Table ${num}`}
-                sublabel="Auto-assigns table number"
+                label={`${t('qr.tableLabel')} ${num}`}
+                sublabel={t('qr.autoAssigns')}
                 filename={`table-${num}-qr.png`}
               />
             )
@@ -233,11 +236,12 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
   const [tab, setTab] = useState<Tab>('design')
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'
   const pageUrl = `${origin}/${slug}`
+  const { t } = useTranslation()
 
   const tabs = [
-    { id: 'design' as Tab, label: 'Business QR', icon: <Palette className="size-3.5" /> },
-    { id: 'tables' as Tab, label: 'Table QRs',   icon: <Check className="size-3.5" /> },
-    { id: 'items'  as Tab, label: 'Item QRs',    icon: <QrCode  className="size-3.5" /> },
+    { id: 'design' as Tab, label: t('qr.tabBusiness'), icon: <Palette className="size-3.5" /> },
+    { id: 'tables' as Tab, label: t('qr.tabTables'),  icon: <Check className="size-3.5" /> },
+    { id: 'items'  as Tab, label: t('qr.tabItems'),   icon: <QrCode  className="size-3.5" /> },
   ]
 
   return (
@@ -255,7 +259,7 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
         ))}
         <a href={`/${slug}`} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-600 transition-colors ml-2">
-          <ExternalLink className="size-3.5" />Live page
+          <ExternalLink className="size-3.5" />{t('qr.tabLive')}
         </a>
       </div>
 

@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+// import { createClient } from '@/lib/supabase/server'
 import { getPublishingAction, getPageViewsAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
+import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Publishing' }
 export const dynamic = 'force-dynamic'
@@ -11,6 +14,8 @@ export default async function PublishingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const { t } = await getServerTranslation()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
@@ -36,9 +41,9 @@ export default async function PublishingPage() {
   return (
     <div className="p-6 lg:p-8 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Publishing</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('publishing.title')}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Control your page visibility, SEO settings, and track visitor analytics.
+          {t('publishing.description')}
         </p>
       </div>
 

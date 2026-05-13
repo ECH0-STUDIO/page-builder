@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 export function FooterSettings({
   config,
@@ -11,18 +12,19 @@ export function FooterSettings({
   config: FooterConfig
   onChange: (config: FooterConfig) => void
 }) {
+  const { t } = useTranslation()
   const set = (k: keyof FooterConfig, v: any) => onChange({ ...config, [k]: v })
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold mb-1">Footer Settings</h3>
-        <p className="text-xs text-muted-foreground">Appears at the bottom of your page.</p>
+        <h3 className="text-sm font-semibold mb-1">{t('footerBlock.footerSettings')}</h3>
+        <p className="text-xs text-muted-foreground">{t('footerBlock.appearsBottom')}</p>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <Label htmlFor="footer-show-business-name" className="text-xs cursor-pointer">Show business name</Label>
+          <Label htmlFor="footer-show-business-name" className="text-xs cursor-pointer">{t('footerBlock.showBusinessName')}</Label>
           <Switch
             id="footer-show-business-name"
             checked={config.show_business_name}
@@ -31,7 +33,7 @@ export function FooterSettings({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Copyright Text</Label>
+          <Label className="text-xs">{t('footerBlock.copyrightText')}</Label>
           <Input 
             value={config.copyright_text} 
             onChange={e => set('copyright_text', e.target.value)}
@@ -43,10 +45,10 @@ export function FooterSettings({
       <Separator />
 
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colours</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('footerBlock.colours')}</Label>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Background</Label>
+            <Label className="text-xs">{t('footerBlock.background')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -58,7 +60,7 @@ export function FooterSettings({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Text</Label>
+            <Label className="text-xs">{t('footerBlock.text')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
