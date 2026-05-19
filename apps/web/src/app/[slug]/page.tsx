@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: business } = await db
     .from('businesses')
@@ -66,7 +66,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: business } = await db
     .from('businesses')
@@ -133,14 +133,20 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)
-      const [{ data: vGroups }] = await Promise.all([
-        db.from('menu_item_variant_groups').select('*').in('item_id', itemIds).order('sort_order'),
-      ])
-      variantGroups = vGroups ?? []
+      variantGroups = []
+      for (let i = 0; i < itemIds.length; i += 50) {
+        const chunk = itemIds.slice(i, i + 50)
+        const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
+        if (vGroups) variantGroups.push(...vGroups)
+      }
       if (variantGroups.length > 0) {
         const groupIds = variantGroups.map((g: VariantGroup) => g.id)
-        const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', groupIds).order('sort_order')
-        variantOptions = vOpts ?? []
+        variantOptions = []
+        for (let i = 0; i < groupIds.length; i += 50) {
+          const chunk = groupIds.slice(i, i + 50)
+          const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
+          if (vOpts) variantOptions.push(...vOpts)
+        }
       }
     }
   }
@@ -170,9 +176,10 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   return (
     <CartProvider>
+    <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={pageLanguage}
-      className="min-h-screen bg-white"
+      className="min-h-screen bg-white w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
       style={{ fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined }}
     >
       {/* Silent visit tracker */}
@@ -312,7 +319,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? qrConfig.custom_url
                       : `${baseUrl}/${slug}`
-                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} />
+                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
                 </div>
               </div>
@@ -327,6 +334,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       />
 
       <CartDrawer businessId={business.id} paymentSettings={paymentSettings} />
+    </div>
     </div>
     </CartProvider>
   )

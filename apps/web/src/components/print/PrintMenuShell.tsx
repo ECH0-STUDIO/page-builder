@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Eye } from 'lucide-react'
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { PrintMenuPreview, DEFAULT_PRINT_SETTINGS } from '@/components/print/PrintMenuPreview'
 import { PrintMenuControls } from '@/components/print/PrintMenuControls'
 import type { PrintSettings } from '@/components/print/PrintMenuPreview'
@@ -42,9 +45,32 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
   if (!isLoaded) return null // prevent hydration mismatch
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-180px)] min-h-[600px]">
-      {/* Preview — takes remaining width */}
-      <div className="flex-1 min-w-0 flex flex-col">
+    <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-180px)] lg:min-h-[600px]">
+      
+      {/* Mobile Preview Trigger */}
+      <div className="lg:hidden sticky top-0 z-10 bg-background/95 backdrop-blur pb-4 pt-2 -mx-4 px-4 border-b">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="w-full" size="lg">
+              <Eye className="size-4 mr-2" /> View Preview
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="w-[95vw] max-w-3xl h-[90vh] p-4 flex flex-col gap-0 sm:rounded-xl">
+            <DialogTitle className="sr-only">Menu Preview</DialogTitle>
+            <PrintMenuPreview 
+              business={business} 
+              categories={categories} 
+              items={items} 
+              settings={settings}
+              onSave={handleSave}
+              isSaving={isSaving}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Desktop Preview — hidden on mobile */}
+      <div className="hidden lg:flex flex-1 min-w-0 flex-col">
         <PrintMenuPreview 
           business={business} 
           categories={categories} 
@@ -55,8 +81,8 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
         />
       </div>
 
-      {/* Controls — fixed width right panel */}
-      <div className="w-64 shrink-0">
+      {/* Controls — fixed width right panel on desktop, full width on mobile */}
+      <div className="w-full lg:w-80 shrink-0 overflow-y-auto pb-8">
         <PrintMenuControls settings={settings} onChange={setSettings} categories={categories} />
       </div>
     </div>

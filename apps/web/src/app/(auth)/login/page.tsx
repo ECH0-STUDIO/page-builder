@@ -30,7 +30,12 @@ function LoginContent() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    // Show a friendly message if redirected back from a failed OAuth callback
+    const callbackError = searchParams.get('error')
+    if (callbackError === 'auth_callback_failed') return 'Sign-in failed. Please try again or use a different method.'
+    return ''
+  })
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()

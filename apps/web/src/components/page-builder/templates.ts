@@ -28,8 +28,8 @@ export interface PageTemplate {
 export const PAGE_TEMPLATES: PageTemplate[] = [
   {
     id: 'full_experience',
-    label: 'The Full Experience',
-    description: 'Recommended for SEO. A complete website with your story, signature dishes, full menu, and contact details.',
+    label: 'pageBuilder.templatesData.full_experience.label',
+    description: 'pageBuilder.templatesData.full_experience.description',
     emoji: '🌟',
     blocks: [
       { type: 'hero', config: { layout: 'overlay', height: 'fullscreen', heading: 'Experience the Extraordinary', tagline: 'Authentic flavours, crafted with passion.', overlay_opacity: 50 } },
@@ -41,8 +41,8 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   },
   {
     id: 'visual_menu',
-    label: 'The Visual Menu',
-    description: 'Focus entirely on the food. Clean, simple, and straight to the point.',
+    label: 'pageBuilder.templatesData.visual_menu.label',
+    description: 'pageBuilder.templatesData.visual_menu.description',
     emoji: '🍕',
     blocks: [
       { type: 'hero', config: { layout: 'centered', height: 'medium', heading: 'Our Menu', tagline: 'Order directly from our kitchen to your table.' } },
@@ -52,8 +52,8 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   },
   {
     id: 'link_in_bio',
-    label: 'Link-in-Bio',
-    description: 'Mobile-first design. Perfect for Instagram or TikTok bio links.',
+    label: 'pageBuilder.templatesData.link_in_bio.label',
+    description: 'pageBuilder.templatesData.link_in_bio.description',
     emoji: '📱',
     blocks: [
       { type: 'hero', config: { layout: 'centered', height: 'custom', section_padding_y: 40, heading: 'Quick Links', tagline: 'Find us online or order for pickup.' } },
@@ -63,8 +63,8 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   },
   {
     id: 'blank',
-    label: 'Start from Scratch',
-    description: 'An empty canvas. Build exactly what you need.',
+    label: 'pageBuilder.templatesData.blank.label',
+    description: 'pageBuilder.templatesData.blank.description',
     emoji: '🗒️',
     blocks: [],
   },

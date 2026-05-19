@@ -21,7 +21,7 @@ export async function getActiveBusiness(supabase: SupabaseClient, userId: string
     }
 
     // 2. Check if user is member of this specific business
-    const { data: memberships } = await (adminClient.from('business_members') as any)
+    const { data: memberships } = await adminClient.from('business_members')
       .select('role, business_id, businesses:business_id (*)')
       .eq('business_id', currentId)
       .eq('user_id', userId)
@@ -54,7 +54,7 @@ export async function getActiveBusiness(supabase: SupabaseClient, userId: string
   }
 
   // 2. If not an owner, check if they are a team member
-  const { data: fallbackMemberships } = await (adminClient.from('business_members') as any)
+  const { data: fallbackMemberships } = await adminClient.from('business_members')
     .select(`
       role,
       business_id,
@@ -87,7 +87,7 @@ export async function getAllUserBusinessesServer(userId: string) {
     .eq('owner_id', userId)
 
   // Fetch businesses where user is a member
-  const { data: memberRows } = await (adminClient.from('business_members') as any)
+  const { data: memberRows } = await adminClient.from('business_members')
     .select('businesses(*)')
     .eq('user_id', userId)
 

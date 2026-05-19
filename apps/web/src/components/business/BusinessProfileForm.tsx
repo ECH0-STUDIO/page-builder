@@ -452,29 +452,35 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               <div
                 key={d.key}
                 className={cn(
-                  'flex items-center gap-4 px-4 py-3 rounded-lg border transition-colors',
+                  'flex flex-col md:flex-row md:items-center gap-3 md:gap-4 px-4 py-3 rounded-lg border transition-colors',
                   entry.open ? 'bg-background border-border' : 'bg-muted/40 border-border/60'
                 )}
               >
-                <Switch
-                  id={`hours-${d.key}`}
-                  checked={entry.open}
-                  onCheckedChange={v => setHourField(d.key, 'open', v)}
-                />
-                <Label
-                  htmlFor={`hours-${d.key}`}
-                  className={cn('w-24 cursor-pointer text-sm font-medium', !entry.open && 'text-muted-foreground')}
-                >
-                  {t(`businessProfile.days.${d.key}`)}
-                </Label>
+                <div className="flex items-center justify-between w-full md:w-auto">
+                  <div className="flex items-center gap-4">
+                    <Switch
+                      id={`hours-${d.key}`}
+                      checked={entry.open}
+                      onCheckedChange={v => setHourField(d.key, 'open', v)}
+                    />
+                    <Label
+                      htmlFor={`hours-${d.key}`}
+                      className={cn('w-24 cursor-pointer text-sm font-medium', !entry.open && 'text-muted-foreground')}
+                    >
+                      {t(`businessProfile.days.${d.key}`)}
+                    </Label>
+                  </div>
+                  {entry.open && <div className="md:hidden"><CopyHoursMenu sourceDay={d.key} onApply={targets => handleCopyHours(entry, targets)} /></div>}
+                  {!entry.open && <span className="md:hidden text-sm text-muted-foreground">{t('businessProfile.closed')}</span>}
+                </div>
 
                 {entry.open ? (
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center justify-between md:justify-start gap-2 md:ml-auto">
                     <Select
                       value={entry.from}
                       onValueChange={v => setHourField(d.key, 'from', v)}
                     >
-                      <SelectTrigger className="w-24 h-8 text-xs">
+                      <SelectTrigger className="flex-1 md:w-24 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-48">
@@ -485,12 +491,12 @@ export function BusinessProfileForm({ business }: { business: Business }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-muted-foreground text-sm">—</span>
+                    <span className="text-muted-foreground text-sm px-1">—</span>
                     <Select
                       value={entry.to}
                       onValueChange={v => setHourField(d.key, 'to', v)}
                     >
-                      <SelectTrigger className="w-24 h-8 text-xs">
+                      <SelectTrigger className="flex-1 md:w-24 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-48">
@@ -501,10 +507,10 @@ export function BusinessProfileForm({ business }: { business: Business }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <CopyHoursMenu sourceDay={d.key} onApply={targets => handleCopyHours(entry, targets)} />
+                    <div className="hidden md:block"><CopyHoursMenu sourceDay={d.key} onApply={targets => handleCopyHours(entry, targets)} /></div>
                   </div>
                 ) : (
-                  <span className="ml-auto text-sm text-muted-foreground">{t('businessProfile.closed')}</span>
+                  <span className="hidden md:block ml-auto text-sm text-muted-foreground">{t('businessProfile.closed')}</span>
                 )}
               </div>
             )

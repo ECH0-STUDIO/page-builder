@@ -11,7 +11,7 @@ import { QRCardPreview, DEFAULT_DESIGN, SIZE_PRESETS } from './QRCardPreview'
 import type { QRDesign, QRStyle, SizePreset } from './QRCardPreview'
 import { FontPicker } from '@/components/shared/FontPicker'
 import { getGoogleFontLinkTag } from '@/lib/fonts'
-import { cn } from '@/lib/utils'
+import { cn, safeToPng } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
     if (!previewAreaRef.current) return
     const el = previewAreaRef.current
     const availW = el.clientWidth - 48
-    const availH = el.clientHeight - 140
+    const availH = el.clientHeight - 160
     const preset = SIZE_PRESETS[design.size]
     const s = Math.min(availW / preset.w, availH / preset.h, 1)
     setScale(Math.max(0.28, parseFloat(s.toFixed(3))))
@@ -134,18 +134,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
     setDownloading(true)
     try {
       await loadFonts()
-      const { toPng } = await import('html-to-image')
-      
-      // html-to-image internally logs a SecurityError when it hits cross-origin stylesheets,
-      // which Next.js intercepts and shows as a fatal error. We suppress it here.
-      const origError = console.error
-      console.error = (...args) => {
-        if (args.some(a => a?.toString().includes('cssRules') || a?.message?.includes('cssRules'))) return
-        origError(...args)
-      }
-      
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true })
-      console.error = origError
+      const dataUrl = await safeToPng(cardRef.current, { pixelRatio: 3, cacheBust: true })
       
       const a = document.createElement('a')
       a.download = `qr-stand-${design.size}.png`
@@ -163,16 +152,7 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
     setPrinting(true)
     try {
       await loadFonts()
-      const { toPng } = await import('html-to-image')
-
-      const origError = console.error
-      console.error = (...args) => {
-        if (args.some(a => a?.toString().includes('cssRules') || a?.message?.includes('cssRules'))) return
-        origError(...args)
-      }
-      
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true })
-      console.error = origError
+      const dataUrl = await safeToPng(cardRef.current, { pixelRatio: 3, cacheBust: true })
 
       const iframe = document.createElement('iframe')
       iframe.style.position = 'fixed'
@@ -225,25 +205,28 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
   const isCompact = design.size === 'square'
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-200px)] min-h-[620px]">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-200px)] lg:min-h-[620px]">
 
-      {/* ── LEFT: Preview ── */}
-      <div ref={previewAreaRef}
-        className="flex-1 flex flex-col items-center bg-[#f4f4f4] rounded-2xl border border-gray-200 overflow-hidden p-5">
+      {/* ── PREVIEW (Top on mobile, Left on desktop) ── */}
+      <div className="sticky top-4 z-10 w-full lg:flex-1 lg:static">
+        <div ref={previewAreaRef}
+          className="w-full flex flex-col items-center bg-[#f4f4f4] rounded-2xl border border-gray-200 overflow-hidden p-4 lg:p-5 h-[50vh] min-h-[380px] lg:h-full shrink-0">
         {/* Size tabs */}
-        <div className="flex flex-wrap gap-1 mb-5 bg-white rounded-xl p-1 border border-gray-100 shadow-sm">
-          {(Object.entries(SIZE_PRESETS) as [SizePreset, typeof SIZE_PRESETS[SizePreset]][]).map(([key, p]) => (
-            <button key={key} type="button" onClick={() => set('size', key)}
-              className={cn('px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
-                design.size === key ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700'
-              )}>
-              {p.label} <span className="opacity-50">{p.desc}</span>
-            </button>
-          ))}
+        <div className="w-full overflow-x-auto no-scrollbar mb-4 -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="flex flex-nowrap gap-1 w-max mx-auto bg-white rounded-xl p-1 border border-gray-100 shadow-sm">
+            {(Object.entries(SIZE_PRESETS) as [SizePreset, typeof SIZE_PRESETS[SizePreset]][]).map(([key, p]) => (
+              <button key={key} type="button" onClick={() => set('size', key)}
+                className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
+                  design.size === key ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                )}>
+                {p.label} <span className="opacity-50 ml-1">{p.desc}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Scaled card preview */}
-        <div className="flex-1 flex items-center justify-center w-full">
+        <div className="flex-1 flex items-center justify-center w-full min-h-0">
           <div style={{ width: preset.w * scale, height: preset.h * scale, position: 'relative', flexShrink: 0 }}>
             <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}>
               <QRCardPreview ref={cardRef} design={design} qrUrl={qrUrl} qrImageSrc={qrImageSrc} />
@@ -265,9 +248,10 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
           </button>
         </div>
       </div>
+      </div>
 
-      {/* ── RIGHT: Controls ── */}
-      <div className="shrink-0 overflow-y-auto space-y-5 pb-8" style={{ width: 268 }}>
+      {/* ── CONTROLS (Bottom on mobile, Right on desktop) ── */}
+      <div className="w-full lg:w-[268px] lg:shrink-0 lg:overflow-y-auto space-y-5 pb-8 px-1">
 
         {/* Background */}
         <div>

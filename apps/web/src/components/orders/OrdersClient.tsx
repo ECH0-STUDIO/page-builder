@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
+import { useOrders } from '@/lib/react-query/hooks/useOrders'
 import { CheckCircle2, ChefHat, Clock, XCircle, Table2, RefreshCcw, DollarSign } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { toast } from 'sonner'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 export type OrderStatus = 'pending' | 'completed' | 'paid' | 'cancelled'
 export type PaymentStatus = 'unpaid' | 'paid'
@@ -43,39 +46,20 @@ function formatTimeAgo(dateString: string) {
 }
 
 export function OrdersClient({ businessId }: OrdersClientProps) {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { t } = useTranslation()
+  const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useOrders(businessId)
+
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [dayFilter, setDayFilter] = useState<'today' | 'yesterday'>('today')
-  const supabase = createClient()
+  // Memoize supabase client — do not create on every render
+  const supabase = useMemo(() => createClient(), [])
 
-  const fetchOrders = useCallback(async () => {
-    // Fetch last 48 hours
-    const twoDaysAgo = new Date()
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 1)
-    twoDaysAgo.setHours(0, 0, 0, 0)
-
-    const db = supabase as any
-    const { data, error } = await db
-      .from('orders')
-      .select(`
-        *,
-        order_items (*)
-      `)
-      .eq('business_id', businessId)
-      .gte('created_at', twoDaysAgo.toISOString())
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      toast.error('Failed to load orders: ' + error.message)
-    } else {
-      setOrders(data as Order[])
-    }
-    setLoading(false)
-  }, [businessId, supabase])
+  const setOrders = useCallback((updater: (prev: Order[]) => Order[]) => {
+    queryClient.setQueryData(['orders', businessId], (old: Order[] = []) => updater(old))
+  }, [businessId, queryClient])
 
   useEffect(() => {
-    fetchOrders()
 
     // Realtime subscription
     const channel = supabase
@@ -113,7 +97,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
       return prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
     })
 
-    const db = supabase as any
+    const db = supabase
     const { error } = await db.from('orders').update({ status: newStatus }).eq('id', orderId)
     
     if (error) {
@@ -136,7 +120,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
   const updatePaymentStatus = async (orderId: string, newStatus: PaymentStatus) => {
     // Optimistic update
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: newStatus } : o))
-    const db = supabase as any
+    const db = supabase
     const { error } = await db.from('orders').update({ payment_status: newStatus }).eq('id', orderId)
     if (error) {
       toast.error('Failed to update payment')
@@ -156,7 +140,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))
     setEditingOrder(null)
 
-    const db = supabase as any
+    const db = supabase
 
     // 1. Update main order (Table Number & Total Amount)
     const { error: orderError } = await db.from('orders').update({
@@ -192,7 +176,14 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
   }
 
-  const filteredOrders = orders.filter(o => dayFilter === 'today' ? isToday(o.created_at) : !isToday(o.created_at))
+  const isYesterday = (dateString: string) => {
+    const d = new Date(dateString)
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    return d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()
+  }
+
+  const filteredOrders = orders.filter(o => dayFilter === 'today' ? isToday(o.created_at) : isYesterday(o.created_at))
   const activeOrders = filteredOrders.filter(o => ['pending', 'completed', 'paid'].includes(o.status))
 
   const pending = activeOrders.filter(o => o.status === 'pending')
@@ -212,7 +203,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
       <div className="flex flex-col gap-3 overflow-y-auto">
         {list.length === 0 ? (
           <div className="text-center py-12 text-sm text-gray-400 font-medium border-2 border-dashed border-gray-200 rounded-xl">
-            No orders here
+            {t('orders.noOrders')}
           </div>
         ) : (
           list.map(order => {
@@ -289,39 +280,53 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     return <div className="p-8 flex items-center justify-center text-gray-400"><RefreshCcw className="size-6 animate-spin" /></div>
   }
 
+  const DateSwitch = ({ className = "" }) => (
+    <div className={`flex bg-gray-100 p-1 rounded-lg ${className}`}>
+      <button 
+        onClick={() => setDayFilter('today')} 
+        className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'today' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+      >
+        Today
+      </button>
+      <button 
+        onClick={() => setDayFilter('yesterday')} 
+        className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'yesterday' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+      >
+        Yesterday
+      </button>
+    </div>
+  )
+
   return (
-    <div className="p-6 h-[calc(100vh-4rem)] flex flex-col">
-      <div className="mb-6 flex items-center justify-between shrink-0">
-        <div>
+    <div className="p-4 md:p-6 h-[calc(100vh-4rem)] flex flex-col">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-6">
+        
+        {/* 1. Title & 2. Description */}
+        <div className="flex flex-col order-1 md:order-none">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
             Live Orders
-            <div className="flex bg-gray-100 p-1 rounded-lg">
-              <button 
-                onClick={() => setDayFilter('today')} 
-                className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'today' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Today
-              </button>
-              <button 
-                onClick={() => setDayFilter('yesterday')} 
-                className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'yesterday' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Yesterday
-              </button>
-            </div>
+            <DateSwitch className="hidden md:flex" />
           </h1>
           <p className="text-sm text-gray-500 mt-1">Orders are automatically cleared after 48 hours.</p>
         </div>
-        <div className="flex gap-4">
-          <div className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-center shadow-sm">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Today's Orders</p>
-            <p className="text-xl font-bold text-gray-900">{activeOrders.length}</p>
+
+        {/* 3. Stats */}
+        <div className="flex gap-3 md:gap-4 order-3 md:order-2 w-full md:w-auto">
+          <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
+            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Today's Orders</p>
+            <p className="text-lg md:text-xl font-bold text-gray-900">{activeOrders.length}</p>
           </div>
-          <div className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-center shadow-sm">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Expected Rev.</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
+          <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
+            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Expected Rev.</p>
+            <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
           </div>
         </div>
+
+        {/* 4. Switch (Mobile only) */}
+        <div className="flex md:hidden order-4 w-full">
+          <DateSwitch className="w-full" />
+        </div>
+        
       </div>
 
       <div className="flex gap-4 flex-1 overflow-x-auto pb-4">

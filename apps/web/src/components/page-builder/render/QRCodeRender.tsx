@@ -9,11 +9,16 @@ import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { Download } from 'lucide-react'
 import type { QRCodeConfig } from '../types'
+import { buildVietQRUrl, type PaymentSettings } from '@/lib/vietqr-utils'
 
 interface QRCodeRenderProps {
   config: QRCodeConfig
-  /** Resolved target URL — passed from the server (slug is known server-side) */
+  /** Resolved target URL (for custom links or fallback) */
   targetUrl: string
+  /** Passed down to generate VietQR if target is payment */
+  paymentSettings?: PaymentSettings | null
+  /** Optional translated label for download button */
+  downloadLabel?: string
 }
 
 const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
@@ -22,30 +27,50 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
   lg: 280,
 }
 
-export function QRCodeRender({ config, targetUrl }: QRCodeRenderProps) {
+export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code' }: QRCodeRenderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
   const px = SIZE_MAP[config.size] ?? 200
 
+  const paddingMap: Record<string, number> = {
+    'none': 0, 'sm': 4, 'md': 8, 'lg': 12, 'xl': 16, '2xl': 20, '3xl': 24, 'full': px * 0.16
+  }
+  const pad = paddingMap[config.border_radius || '2xl'] ?? 20
+  const innerPx = px - pad * 2
+
+  const isPayment = config.target === 'payment'
+  const vietQrUrl = isPayment && paymentSettings?.vietqr ? buildVietQRUrl(paymentSettings.vietqr) : ''
+  const finalTargetUrl = isPayment && !vietQrUrl ? targetUrl : targetUrl // fallback if payment isn't setup
+
   useEffect(() => {
-    if (!canvasRef.current || !targetUrl) return
-    QRCode.toCanvas(canvasRef.current, targetUrl, {
-      width: px,
-      margin: 2,
+    // If it's a VietQR image, we don't draw canvas
+    if (isPayment && vietQrUrl) return
+    if (!canvasRef.current || !finalTargetUrl) return
+    QRCode.toCanvas(canvasRef.current, finalTargetUrl, {
+      width: innerPx,
+      margin: 1,
       color: { dark: textColor, light: bgColor },
       errorCorrectionLevel: 'H',
     }, () => setRendered(true))
-  }, [targetUrl, px, textColor, bgColor])
+  }, [finalTargetUrl, innerPx, textColor, bgColor, isPayment, vietQrUrl])
 
   async function download() {
-    const dataUrl = await QRCode.toDataURL(targetUrl, {
-      width: 1000,
-      margin: 2,
-      color: { dark: textColor, light: '#ffffff' },
-      errorCorrectionLevel: 'H',
-    })
+    let dataUrl = ''
+    if (isPayment && vietQrUrl) {
+      // Just download the VietQR image
+      const res = await fetch(vietQrUrl)
+      const blob = await res.blob()
+      dataUrl = URL.createObjectURL(blob)
+    } else {
+      dataUrl = await QRCode.toDataURL(finalTargetUrl, {
+        width: 1000,
+        margin: 2,
+        color: { dark: textColor, light: '#ffffff' },
+        errorCorrectionLevel: 'H',
+      })
+    }
     const a = document.createElement('a')
     a.download = 'page-qr.png'
     a.href = dataUrl
@@ -53,21 +78,34 @@ export function QRCodeRender({ config, targetUrl }: QRCodeRenderProps) {
   }
 
   const alignClass = config.alignment === 'left' ? 'items-start' : config.alignment === 'right' ? 'items-end' : 'items-center'
+  
+  const bgStyle: React.CSSProperties = {
+    backgroundColor: bgColor,
+    padding: '48px 24px',
+    ...(config.background_image ? {
+      backgroundImage: `url(${config.background_image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    } : {})
+  }
 
   return (
-    <section
-      style={{ backgroundColor: bgColor, padding: '48px 24px' }}
-    >
+    <section style={bgStyle}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }} className={`flex flex-col ${alignClass} gap-4`}>
         {/* Canvas */}
         <div
-          className="rounded-2xl overflow-hidden shadow-md"
-          style={{ width: px, height: px, backgroundColor: bgColor }}
+          className={`overflow-hidden shadow-md rounded-${config.border_radius || '2xl'} flex items-center justify-center`}
+          style={{ width: px, height: px, backgroundColor: bgColor, padding: pad }}
         >
-          <canvas
-            ref={canvasRef}
-            className={`transition-opacity duration-300 ${rendered ? 'opacity-100' : 'opacity-0'}`}
-          />
+          {isPayment && vietQrUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={vietQrUrl} alt="Payment QR" style={{ width: innerPx, height: innerPx, objectFit: 'contain' }} />
+          ) : (
+            <canvas
+              ref={canvasRef}
+              className={`transition-opacity duration-300 ${rendered ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
         </div>
 
         {/* Label */}
@@ -85,7 +123,7 @@ export function QRCodeRender({ config, targetUrl }: QRCodeRenderProps) {
             style={{ color: textColor, borderColor: `${textColor}40` }}
           >
             <Download className="size-3.5" />
-            Save QR Code
+            {downloadLabel}
           </button>
         )}
       </div>

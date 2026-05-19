@@ -40,7 +40,7 @@ export default async function DashboardLayout({
   return (
     <I18nProvider dictionary={dictionary}>
       <BusinessProvider initialBusinesses={businesses} initialActiveBusinessId={business.id}>
-        <div className="flex min-h-screen bg-background">
+        <div className="flex flex-col md:flex-row min-h-screen bg-background">
           <Sidebar
             userEmail={user.email ?? ''}
             userAvatar={profile?.avatar_url}

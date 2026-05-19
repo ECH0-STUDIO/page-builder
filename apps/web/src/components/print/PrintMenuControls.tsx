@@ -191,7 +191,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
             return (
               <div key={cat.id} className="flex items-center gap-2 py-1 bg-gray-50/50 px-2 rounded group">
                 <span className="flex-1 text-xs text-gray-900 font-medium truncate">{cat.name}</span>
-                <div className="flex items-center gap-0.5 shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-0.5 shrink-0 text-gray-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => moveCategory(cat.id, -1)} disabled={idx === 0} className="p-1 hover:text-gray-900 disabled:opacity-30">
                     <ArrowUp className="size-3" />
                   </button>
@@ -208,7 +208,7 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
           {unselectedCats.map(cat => (
             <div key={cat.id} className="flex items-center gap-2 py-1 px-2 group">
               <span className="flex-1 text-xs text-gray-400 truncate">{cat.name}</span>
-              <div className="flex items-center gap-0.5 shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 shrink-0 text-gray-400 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                 <button type="button" onClick={() => toggleCategory(cat.id)} className="p-1 hover:text-gray-900">
                   <EyeOff className="size-3" />
                 </button>

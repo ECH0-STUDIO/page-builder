@@ -70,13 +70,14 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
   const [isPending, startTransition] = useTransition()
   const [hasSnapshot, setHasSnapshot] = useState(() => !!loadSnapshot(businessId))
   const [existingVariants, setExistingVariants] = useState<{ groups: VariantGroup[], options: VariantOption[] }>({ groups: [], options: [] })
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
 
   // ── Download current menu as CSV ──────────────────────────────────────────
 
   async function handleDownload() {
     const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = supabase as any
+    const db = supabase
 
     // Fetch all variant groups and options for these items
     const itemIds = items.map(i => i.id)
@@ -126,7 +127,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
 
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const db = supabase as any
+      const db = supabase
       const itemIds = items.map(i => i.id)
       let variantGroups: VariantGroup[] = []
       let variantOptions: VariantOption[] = []
@@ -158,7 +159,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
     startTransition(async () => {
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const db = supabase as any
+      const db = supabase
 
       // Save snapshot BEFORE making any changes
       saveSnapshot(businessId, categories, items)
@@ -206,6 +207,10 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         if (data) newCatMap[catName.toLowerCase()] = data.id
       }
 
+      const totalItems = merge.toUpdate.length + merge.toCreate.length
+      let processedItems = 0
+      setProgress({ current: 0, total: totalItems })
+
       // Build full category map (existing + newly created)
       const catMap = new Map([
         ...categories.map(c => [c.name.toLowerCase(), c.id] as [string, string]),
@@ -223,6 +228,8 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
         if (upd.parsedOptions !== undefined) {
           await syncItemVariants(db, upd.id, upd.parsedOptions)
         }
+        processedItems++
+        setProgress({ current: processedItems, total: totalItems })
       }
 
       // 3. Insert new items
@@ -247,9 +254,12 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
             await syncItemVariants(db, data.id, newItem.parsedOptions)
           }
         }
+        processedItems++
+        setProgress({ current: processedItems, total: totalItems })
       }
 
       setImportState({ status: 'success', canRevert: true })
+      setProgress(null)
       toast.success(`Import complete: ${merge.stats.added} added, ${merge.stats.updated} updated`)
       onRefresh()
     })
@@ -264,7 +274,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
 
       const supabase = createClient()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const db = supabase as any
+      const db = supabase
 
       // Delete all current items & categories and restore snapshot
       await db.from('menu_items').delete().eq('business_id', businessId)
@@ -292,6 +302,7 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
   function dismiss() {
     setImportState({ status: 'idle' })
     setPendingRows([])
+    setProgress(null)
   }
 
   return (
@@ -368,7 +379,9 @@ export function MenuCsvActions({ businessId, categories, items, onRefresh }: Men
               </button>
               <button onClick={handleApply} disabled={isPending}
                 className="px-3 py-1.5 rounded-lg bg-blue-700 text-white text-xs font-medium hover:bg-blue-800 transition-colors disabled:opacity-50">
-                {isPending ? t('menuBuilder.importing') : t('menuBuilder.applyImport')}
+                {isPending 
+                  ? (progress ? `${t('menuBuilder.importing')} (${progress.current}/${progress.total})` : t('menuBuilder.importing')) 
+                  : t('menuBuilder.applyImport')}
               </button>
             </div>
           </div>

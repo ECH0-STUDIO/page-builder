@@ -20,7 +20,7 @@ export async function createBusinessAction(input: {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: business, error: bizError } = await db
     .from('businesses')
@@ -70,11 +70,11 @@ export async function updateBusinessAction(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { error } = await db
     .from('businesses')
-    .update(update)
+    .update(update as any)
     .eq('id', id)
     .eq('owner_id', user.id) // safety: only update own businesses
 

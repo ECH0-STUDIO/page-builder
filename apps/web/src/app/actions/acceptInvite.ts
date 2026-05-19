@@ -17,7 +17,7 @@ export async function acceptInviteAction(token: string) {
   const adminClient = createAdminClient()
 
   // 1. Fetch the invitation
-  const { data: invite } = await (adminClient.from('team_invitations') as any)
+  const { data: invite } = await adminClient.from('team_invitations')
     .select('*')
     .eq('token', token)
     .single()
@@ -27,7 +27,7 @@ export async function acceptInviteAction(token: string) {
   if (invite.email !== user.email) return { error: 'This invitation belongs to a different email address.' }
 
   // 2. Add user to business_members
-  const { error: insertError } = await (adminClient.from('business_members') as any)
+  const { error: insertError } = await adminClient.from('business_members')
     .insert({
       business_id: invite.business_id,
       user_id: user.id,
@@ -43,7 +43,7 @@ export async function acceptInviteAction(token: string) {
   }
 
   // 3. Mark invite as accepted
-  await (adminClient.from('team_invitations') as any)
+  await adminClient.from('team_invitations')
     .update({ status: 'accepted' })
     .eq('id', invite.id)
 

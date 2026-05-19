@@ -36,7 +36,43 @@
         "cta": "Tạo trang"
       }
     },
-    "comingSoon": "sắp ra mắt"
+    "comingSoon": "sắp ra mắt",
+    "steps": {
+      "title": "Bắt đầu",
+      "businessProfile": {
+        "title": "Hồ sơ doanh nghiệp",
+        "desc": "Thêm logo, địa chỉ & giờ mở cửa"
+      },
+      "menu": {
+        "title": "Thực đơn",
+        "desc": "Thêm danh mục & món ăn"
+      },
+      "pageBuilder": {
+        "title": "Trình tạo trang",
+        "desc": "Thiết kế trang của bạn"
+      },
+      "publish": {
+        "title": "Xuất bản",
+        "desc": "Đưa trang của bạn lên mạng"
+      },
+      "goTo": "Đi tới"
+    },
+    "niceToHave": {
+      "title": "Có thể bổ sung",
+      "qr": {
+        "title": "Mã QR",
+        "desc": "In mã QR cho bàn"
+      },
+      "payment": {
+        "title": "Thanh toán",
+        "desc": "Thiết lập thanh toán VietQR"
+      }
+    },
+    "analytics": {
+      "title": "Phân tích trang",
+      "totalViews": "Tổng lượt xem",
+      "last7Days": "7 ngày qua"
+    }
   },
   "publishing": {
     "title": "Xuất bản",
@@ -284,7 +320,47 @@
     "marginTop": "Trên",
     "marginBottom": "Dưới",
     "customCss": "CSS tùy chỉnh",
-    "customCssHint": "Viết CSS với selector thông thường — chúng sẽ tự động được giới hạn trong khối này. Dùng Inspect để tìm class, rồi nhắm vào chúng tại đây."
+    "customCssHint": "Viết CSS với selector thông thường — chúng sẽ tự động được giới hạn trong khối này. Dùng Inspect để tìm class, rồi nhắm vào chúng tại đây.",
+    "templatesData": {
+      "full_experience": {
+        "label": "Trải nghiệm Toàn diện",
+        "description": "Tốt nhất cho SEO. Một trang web hoàn chỉnh với câu chuyện của bạn, các món ăn đặc trưng, thực đơn đầy đủ và chi tiết liên hệ."
+      },
+      "visual_menu": {
+        "label": "Thực đơn Trực quan",
+        "description": "Tập trung hoàn toàn vào món ăn. Giao diện sạch sẽ, đơn giản và đi thẳng vào vấn đề."
+      },
+      "link_in_bio": {
+        "label": "Liên kết Bio",
+        "description": "Thiết kế ưu tiên di động. Hoàn hảo để đặt liên kết trên tiểu sử Instagram hoặc TikTok."
+      },
+      "blank": {
+        "label": "Bắt đầu từ trang trắng",
+        "description": "Một khung vẽ trống. Xây dựng chính xác những gì bạn cần."
+      }
+    },
+    "blocks": {
+      "hero": {
+        "label": "Anh bia (Hero)",
+        "description": "Ảnh bìa, tiêu đề, khẩu hiệu và nút kêu gọi hành động."
+      },
+      "text_image": {
+        "label": "Văn bản + Hình ảnh",
+        "description": "Giới thiệu, khuyến mãi, hoặc bất kỳ câu chuyện nào."
+      },
+      "contact": {
+        "label": "Liên hệ & Thông tin",
+        "description": "Bản đồ, giờ làm việc, điện thoại, email và các mạng xã hội."
+      },
+      "menu_grid": {
+        "label": "Thực đơn / Sản phẩm",
+        "description": "Tự động hiển thị món ăn dạng lưới hoặc danh sách."
+      },
+      "qr_code": {
+        "label": "Mã QR",
+        "description": "Mã QR để quét liên kết tới trang hoặc URL tùy chỉnh."
+      }
+    }
   },
   "businessProfile": {
     "logo": "Logo",
@@ -557,7 +633,10 @@
     "text": "Chữ",
     "tabsOn": "Bật thẻ lọc",
     "noTabs": "Tắt thẻ lọc",
-    "menu": "Thực đơn"
+    "menu": "Thực đơn",
+    "tabsLayout": "Bố cục Tabs (Desktop)",
+    "horizontalScroll": "Cuộn ngang",
+    "sidebar": "Thanh bên (Sidebar)"
   },
   "navbarBlock": {
     "logo": "Logo",
@@ -618,7 +697,8 @@
     "showDownload": "Hiện nút tải xuống",
     "colours": "Màu sắc",
     "background": "Nền",
-    "qrColour": "Màu QR"
+    "qrColour": "Màu QR",
+    "saveQrCode": "Lưu mã QR"
   },
   "ctaEditor": {
     "url": "URL",
@@ -700,7 +780,7 @@
     "newItems": "món mới",
     "updated": "đã cập nhật",
     "unchanged": "không đổi",
-    "existingItemsNote": "Các món hiện có không nằm trong CSV sẽ không bị xóa.",
+    "existingItemsNote": "Bất kỳ món nào hiện có mà không nằm trong file CSV sẽ vẫn được giữ nguyên an toàn trong thực đơn của bạn.",
     "applyImport": "Áp dụng nhập",
     "importing": "Đang nhập…",
     "importComplete": "Nhập hoàn tất",
@@ -726,5 +806,8 @@
       "Halal": "Halal"
     },
     "included": "Bao gồm"
+  },
+  "orders": {
+    "noOrders": "Không có đơn hàng"
   }
 }

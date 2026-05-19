@@ -29,7 +29,7 @@ export function SettingsNav() {
   ]
 
   return (
-    <nav className="flex space-x-2 md:flex-col md:space-x-0 md:space-y-1">
+    <nav className="flex space-x-2 overflow-x-auto no-scrollbar md:overflow-visible md:flex-col md:space-x-0 md:space-y-1">
       {items.map((item) => {
         const isActive = pathname === item.href || (item.href === '/dashboard/settings/security' && pathname === '/dashboard/settings')
         return (
@@ -37,7 +37,7 @@ export function SettingsNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors shrink-0',
               isActive
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'

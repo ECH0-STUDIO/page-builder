@@ -10,6 +10,7 @@
  *  - Set heading, background and text colour
  */
 
+import { useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -24,7 +25,7 @@ import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
 export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
   const { t } = useTranslation()
-  const colMap: Record<string, string> = { '2col': t('menuGridBlock.col2'), '3col': t('menuGridBlock.col3'), '4col': t('menuGridBlock.col4'), list: t('menuGridBlock.list') }
+  const colMap: Record<string, string> = { '2col': t('menuGridBlock.col2'), '3col': t('menuGridBlock.col3'), list: t('menuGridBlock.list') }
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3 space-y-2">
       <div className="flex items-center gap-2">
@@ -57,10 +58,12 @@ interface MenuGridSettingsProps {
 
 export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
   const { t } = useTranslation()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCatId, setFilterCatId] = useState('all')
+
   const LAYOUTS: { value: MenuGridConfig['layout']; label: string }[] = [
     { value: '2col', label: t('menuGridBlock.col2') },
     { value: '3col', label: t('menuGridBlock.col3') },
-    { value: '4col', label: t('menuGridBlock.col4') },
     { value: 'list', label: t('menuGridBlock.list') },
   ]
   function set<K extends keyof MenuGridConfig>(key: K, value: MenuGridConfig[K]) {
@@ -129,6 +132,39 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
               {l.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Tabs Layout */}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.tabsLayout')}</Label>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => set('tabs_layout', 'horizontal')}
+            className={cn(
+              'flex-1 py-1.5 rounded border text-xs transition-colors',
+              config.tabs_layout === 'horizontal'
+                ? 'border-primary bg-primary/5 text-primary font-medium'
+                : 'border-border hover:border-foreground/30'
+            )}
+          >
+            {t('menuGridBlock.horizontalScroll')}
+          </button>
+          <button
+            type="button"
+            onClick={() => set('tabs_layout', 'sidebar')}
+            className={cn(
+              'flex-1 py-1.5 rounded border text-xs transition-colors',
+              (!config.tabs_layout || config.tabs_layout === 'sidebar')
+                ? 'border-primary bg-primary/5 text-primary font-medium'
+                : 'border-border hover:border-foreground/30'
+            )}
+          >
+            {t('menuGridBlock.sidebar')}
+          </button>
         </div>
       </div>
 
@@ -236,8 +272,29 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
           {items.length === 0 ? (
             <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">{t('menuGridBlock.noItems')}</p>
           ) : (
-            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
-              {items.map(item => {
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2">
+                <Input 
+                  placeholder="Search dishes..." 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                  className="h-8 text-xs" 
+                />
+                <select 
+                  value={filterCatId}
+                  onChange={e => setFilterCatId(e.target.value)}
+                  className="h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+                {items.filter(item => {
+                  if (filterCatId !== 'all' && item.category_id !== filterCatId) return false
+                  if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) return false
+                  return true
+                }).map(item => {
                 const selectedItems = config.item_ids || []
                 const isOn = selectedItems.includes(item.id)
                 return (
@@ -269,6 +326,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
                   </button>
                 )
               })}
+              </div>
             </div>
           )}
         </div>

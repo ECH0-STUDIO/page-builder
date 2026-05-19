@@ -72,7 +72,7 @@ export function TeamList({ members, pendingInvites = [], businessId }: { members
       <div className="bg-white border rounded-xl p-6">
         <h4 className="text-sm font-semibold text-gray-900 mb-4">{t('settings.team.inviteNew')}</h4>
         <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3 items-end">
-          <div className="space-y-1.5 flex-1">
+          <div className="space-y-1.5 w-full sm:flex-1">
             <label className="text-sm font-medium text-gray-700" htmlFor="email">{t('settings.team.email')}</label>
             <input
               id="email"

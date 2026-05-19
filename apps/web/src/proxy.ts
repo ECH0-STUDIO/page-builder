@@ -31,12 +31,30 @@ export async function proxy(request: NextRequest) {
   const currencyCookie = request.cookies.get('NEXT_CURRENCY')?.value
 
   if (!langCookie) {
-    const defaultLang = country === 'VN' ? 'vi' : 'en'
+    const countryLangMap: Record<string, string> = {
+      VN: 'vi', // Vietnam → Vietnamese
+      TH: 'th', // Thailand → Thai
+      CN: 'zh', HK: 'zh', TW: 'zh', MO: 'zh', // Chinese-speaking
+      JP: 'ja', // Japan → Japanese
+      KR: 'ko', // Korea → Korean
+      FR: 'fr', BE: 'fr', CH: 'fr', // French-speaking
+      DE: 'de', AT: 'de', // German-speaking
+      ES: 'es', MX: 'es', AR: 'es', CO: 'es', // Spanish-speaking
+      ID: 'id', // Indonesia → Bahasa Indonesia
+      MY: 'ms', SG: 'ms', BN: 'ms', // Malay-speaking
+    }
+    const defaultLang = countryLangMap[country] ?? 'en'
     supabaseResponse.cookies.set('NEXT_LOCALE', defaultLang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
   }
   
   if (!currencyCookie) {
-    const defaultCurrency = country === 'VN' ? 'VND' : 'USD'
+    const countryCurrencyMap: Record<string, string> = {
+      VN: 'VND', TH: 'THB', JP: 'JPY', KR: 'KRW',
+      ID: 'IDR', MY: 'MYR', SG: 'SGD',
+      CN: 'CNY', HK: 'HKD', TW: 'TWD',
+      FR: 'EUR', DE: 'EUR', ES: 'EUR', AT: 'EUR', BE: 'EUR',
+    }
+    const defaultCurrency = countryCurrencyMap[country] ?? 'USD'
     supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, { path: '/', maxAge: 60 * 60 * 24 * 365 })
   }
 

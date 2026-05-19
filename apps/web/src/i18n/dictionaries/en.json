@@ -36,7 +36,43 @@
         "cta": "Build page"
       }
     },
-    "comingSoon": "coming soon"
+    "comingSoon": "coming soon",
+    "steps": {
+      "title": "Getting Started",
+      "businessProfile": {
+        "title": "Business Profile",
+        "desc": "Add your logo, address & hours"
+      },
+      "menu": {
+        "title": "Menu",
+        "desc": "Add categories & items"
+      },
+      "pageBuilder": {
+        "title": "Page Builder",
+        "desc": "Design your public page"
+      },
+      "publish": {
+        "title": "Publish",
+        "desc": "Make your page live"
+      },
+      "goTo": "Go to"
+    },
+    "niceToHave": {
+      "title": "Nice to Have",
+      "qr": {
+        "title": "QR Code",
+        "desc": "Print QR for tables"
+      },
+      "payment": {
+        "title": "Payment",
+        "desc": "Setup VietQR payments"
+      }
+    },
+    "analytics": {
+      "title": "Page Analytics",
+      "totalViews": "Total Views",
+      "last7Days": "Last 7 Days"
+    }
   },
   "publishing": {
     "title": "Publishing",
@@ -284,7 +320,47 @@
     "marginTop": "Top",
     "marginBottom": "Bottom",
     "customCss": "Custom CSS",
-    "customCssHint": "Write CSS with normal selectors — they are automatically scoped to this block. Inspect the live page to find class names, then target them here."
+    "customCssHint": "Write CSS with normal selectors — they are automatically scoped to this block. Inspect the live page to find class names, then target them here.",
+    "templatesData": {
+      "full_experience": {
+        "label": "The Full Experience",
+        "description": "Recommended for SEO. A complete website with your story, signature dishes, full menu, and contact details."
+      },
+      "visual_menu": {
+        "label": "The Visual Menu",
+        "description": "Focus entirely on the food. Clean, simple, and straight to the point."
+      },
+      "link_in_bio": {
+        "label": "Link-in-Bio",
+        "description": "Mobile-first design. Perfect for Instagram or TikTok bio links."
+      },
+      "blank": {
+        "label": "Start from Scratch",
+        "description": "An empty canvas. Build exactly what you need."
+      }
+    },
+    "blocks": {
+      "hero": {
+        "label": "Hero",
+        "description": "Cover image, headline, tagline, and call to action."
+      },
+      "text_image": {
+        "label": "Text + Image",
+        "description": "About us, promotions, or any story block."
+      },
+      "contact": {
+        "label": "Contact & Info",
+        "description": "Map, hours, phone, email and social icons."
+      },
+      "menu_grid": {
+        "label": "Menu / Products",
+        "description": "Auto-pulls your menu items into a grid or list."
+      },
+      "qr_code": {
+        "label": "QR Code",
+        "description": "Scannable QR linking to your page or a custom URL."
+      }
+    }
   },
   "businessProfile": {
     "logo": "Logo",
@@ -557,7 +633,10 @@
     "text": "Text",
     "tabsOn": "Tabs on",
     "noTabs": "No tabs",
-    "menu": "Menu"
+    "menu": "Menu",
+    "tabsLayout": "Tabs Layout (Desktop)",
+    "horizontalScroll": "Horizontal Scroll",
+    "sidebar": "Sidebar"
   },
   "navbarBlock": {
     "logo": "Logo",
@@ -618,7 +697,8 @@
     "showDownload": "Show download button",
     "colours": "Colours",
     "background": "Background",
-    "qrColour": "QR colour"
+    "qrColour": "QR colour",
+    "saveQrCode": "Save QR Code"
   },
   "ctaEditor": {
     "url": "URL",
@@ -700,7 +780,7 @@
     "newItems": "new items",
     "updated": "updated",
     "unchanged": "unchanged",
-    "existingItemsNote": "Existing items not in the CSV will not be deleted.",
+    "existingItemsNote": "Any existing items that are not in the CSV will remain safely in your menu.",
     "applyImport": "Apply Import",
     "importing": "Importing…",
     "importComplete": "Import complete",
@@ -726,5 +806,8 @@
       "Halal": "Halal"
     },
     "included": "Included"
+  },
+  "orders": {
+    "noOrders": "No orders here"
   }
 }

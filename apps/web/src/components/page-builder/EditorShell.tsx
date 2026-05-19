@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useId } from 'react'
+import { useState, useEffect, useCallback, useRef, useId, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings,
+  PanelBottom, Settings, Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +22,8 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle } from '@/components/ui/drawer'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
@@ -38,6 +40,8 @@ import { TextImageSettings } from './blocks/TextImageBlock'
 import { ContactSettings } from './blocks/ContactBlock'
 import { NavbarSettings } from './blocks/NavbarBlock'
 import { FooterSettings } from './blocks/FooterBlock'
+import { usePageData } from '@/lib/react-query/hooks/usePageBuilder'
+import { useQueryClient } from '@tanstack/react-query'
 import { MenuGridSettings } from './blocks/MenuGridBlock'
 import { QRCodeSettings } from './blocks/QRCodeBlock'
 import { SpacingControls } from './blocks/SpacingControls'
@@ -125,7 +129,7 @@ function SidebarBlockItem({
         {!block.visible ? <EyeOff className="size-3.5" /> : blockIcon(block.type)}
       </span>
       <span className={cn('flex-1 text-sm font-medium truncate', !block.visible && 'opacity-50 line-through')}>
-        {meta.label}
+        {t(`pageBuilder.blocks.${block.type}.label`)}
       </span>
       <button
         type="button"
@@ -194,7 +198,7 @@ function LiveBlockCard({
         <EyeOff className="size-3.5 text-muted-foreground/50 shrink-0" />
         <span className="text-muted-foreground shrink-0">{blockIcon(block.type)}</span>
         <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate">
-          <span className="font-medium">{meta.label}</span>
+          <span className="font-medium">{t(`pageBuilder.blocks.${block.type}.label`)}</span>
           <span className="opacity-50 ml-1.5">{t('pageBuilder.hiddenFromPage')}</span>
         </span>
         {isSelected && (
@@ -229,7 +233,7 @@ function LiveBlockCard({
       {isSelected && (
         <div className="absolute top-2 left-2 z-20 pointer-events-none">
           <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-semibold px-2 py-0.5 rounded shadow-md">
-            {blockIcon(block.type)} {meta.label}
+            {blockIcon(block.type)} {t(`pageBuilder.blocks.${block.type}.label`)}
           </span>
         </div>
       )}
@@ -260,6 +264,8 @@ function LiveBlockCard({
           <QRCodeRender
             config={block.config as QRCodeConfig}
             targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
+            paymentSettings={business.payment_settings}
+            downloadLabel={t('qrCodeBlock.saveQrCode')}
           />
         )}
       </div>
@@ -319,6 +325,7 @@ function BlockSettingsPanel({
         <QRCodeSettings
           config={block.config as QRCodeConfig}
           businessSlug={business.slug ?? undefined}
+          businessId={business.id}
           onChange={c => onChange({ ...block, config: c })}
         />
       )}
@@ -385,10 +392,10 @@ function AddBlockModal({ open, onClose, onAdd }: {
               <span className="mt-0.5 text-muted-foreground group-hover:text-foreground">{blockIcon(b.type)}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{b.label}</span>
+                  <span className="font-medium text-sm">{t(`pageBuilder.blocks.${b.type}.label`)}</span>
                   {b.phase === 5 && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Phase 5</Badge>}
                 </div>
-                <p className="text-xs text-muted-foreground">{b.description}</p>
+                <p className="text-xs text-muted-foreground">{t(`pageBuilder.blocks.${b.type}.description`)}</p>
               </div>
             </button>
           ))}
@@ -435,6 +442,14 @@ export function EditorShell({
       }))
   )
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const initialData = useMemo(() => ({
+    blocks: initialBlocks,
+    publishing: initialPublishing,
+    theme: initialTheme,
+  }), [initialBlocks, initialPublishing, initialTheme])
+  const { data } = usePageData(business.id, initialData)
+
   const [selectedId, setSelectedId] = useState<string | null>(
     initialBlocks.filter(b => (b.type as string) !== 'navbar')[0]?.id ?? null
   )
@@ -448,6 +463,24 @@ export function EditorShell({
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
+  const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    if (data) {
+      setBlocks(prev => {
+        return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => ({
+          ...b,
+          spacing: b.spacing ?? { ...defaultSpacing },
+          custom_css: b.custom_css ?? '',
+          block_anchor_id: b.block_anchor_id ?? null,
+        }))
+      })
+      setPublished(data.publishing?.published ?? false)
+      setTheme(data.theme)
+      setPublishingSettings(data.publishing)
+    }
+  }, [data])
   const [categories] = useState<MenuCategory[]>(initialCategories)
 
   const dndId = useId()
@@ -497,7 +530,7 @@ export function EditorShell({
           primary_color: next.primary_color,
           background_color: next.background_color,
           font_family: next.font_family,
-          heading_font_family: next.heading_font_family,
+          heading_font_family: next.heading_font_family || 'Inter',
         }).catch(err => toast.error('Failed to save theme: ' + String(err)))
       }, 1000)
       return next
@@ -658,6 +691,165 @@ export function EditorShell({
     setPublishing(false)
   }
 
+  const LeftSidebarContent = () => (
+    <>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
+        <button
+          onClick={() => { setShowTemplatePicker(true); setMobileBlocksOpen(false); }}
+          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          {t('pageBuilder.templates')}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        {/* Header / Navbar */}
+        <div className="p-1.5 border-b border-border/50">
+          <button
+            type="button"
+            onClick={() => { openNavbarPanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+            className={cn(
+              'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
+              activeRightPanel === 'navbar' && !selectedId
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            <Menu className="size-4 opacity-70" />
+            Header
+          </button>
+        </div>
+
+        {/* Draggable Blocks */}
+        <div className="flex-1">
+          <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+              <div className="p-1.5 space-y-0.5 min-h-[100px]">
+                {blocks.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('pageBuilder.noSections')}</p>
+                )}
+                {blocks.map(block => (
+                  <SidebarBlockItem
+                    key={block.id}
+                    block={block}
+                    isSelected={block.id === selectedId}
+                    onSelect={() => { setSelectedId(block.id); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+                    onToggleVisible={() => toggleVisible(block.id)}
+                    onDuplicate={() => duplicateBlock(block.id)}
+                    onDelete={() => deleteBlock(block.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          <div className="px-3 pb-3">
+            <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => { setAddModalOpen(true); setMobileBlocksOpen(false); }}>
+              <Plus className="size-3 mr-1" /> {t('pageBuilder.addSection')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-1.5 border-y border-border/50">
+          <button
+            type="button"
+            onClick={() => { openFooterPanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+            className={cn(
+              'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
+              activeRightPanel === 'footer' && !selectedId
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            <PanelBottom className="size-4 opacity-70" />
+            Footer
+          </button>
+        </div>
+      </div>
+
+      {/* Page Settings */}
+      <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0">
+        <button
+          type="button"
+          onClick={() => { openThemePanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+          className={cn(
+            'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
+            activeRightPanel === 'theme' && !selectedId
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+          )}
+        >
+          <Settings className="size-4" />
+          Global Settings
+        </button>
+      </div>
+    </>
+  )
+
+  const RightSidebarContent = () => (
+    <>
+      {activeRightPanel === 'block' && selectedBlock ? (
+        <>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+            <span className="text-muted-foreground">{blockIcon(selectedBlock.type)}</span>
+            <span className="font-semibold text-sm flex-1">{t(`pageBuilder.blocks.${selectedBlock.type}.label`)}</span>
+            {!selectedBlock.visible && (
+              <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">{t('pageBuilder.hidden')}</Badge>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
+          </div>
+        </>
+      ) : activeRightPanel === 'navbar' ? (
+        <>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+            <Menu className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold text-sm">{t('pageBuilder.navbar')}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <NavbarSettings
+              config={navbarConfig}
+              businessId={business.id}
+              blocks={blocks}
+              onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
+            />
+          </div>
+        </>
+      ) : activeRightPanel === 'footer' ? (
+        <>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+            <PanelBottom className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold text-sm">{t('pageBuilder.footer')}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <FooterSettings
+              config={footerConfig}
+              onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+            <Palette className="size-3.5 text-muted-foreground" />
+            <span className="font-semibold text-sm">{t('pageBuilder.theme')}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <GlobalSettingsPanel
+              theme={theme}
+              publishing={publishingSettings}
+              onThemeChange={handleThemeChange}
+              onPublishingChange={handlePublishingChange}
+            />
+          </div>
+        </>
+      )}
+    </>
+  )
+
   return (
     // Fix-position overlay covers the full viewport including the dashboard sidebar
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -706,106 +898,15 @@ export function EditorShell({
       </Dialog>
 
       {/* 3-column body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
 
         {/* ── Block list sidebar ──────────────────────────────────────────── */}
-        <aside className="w-64 shrink-0 border-r border-border flex flex-col bg-muted/20">
-          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
-            <button
-              onClick={() => setShowTemplatePicker(true)}
-              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              {t('pageBuilder.templates')}
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto flex flex-col">
-            {/* Header / Navbar */}
-            <div className="p-1.5 border-b border-border/50">
-              <button
-                type="button"
-                onClick={openNavbarPanel}
-                className={cn(
-                  'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
-                  activeRightPanel === 'navbar' && !selectedId
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                <Menu className="size-4 opacity-70" />
-                Header
-              </button>
-            </div>
-
-            {/* Draggable Blocks */}
-            <div className="flex-1">
-              <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className="p-1.5 space-y-0.5 min-h-[100px]">
-                    {blocks.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">{t('pageBuilder.noSections')}</p>
-                    )}
-                    {blocks.map(block => (
-                      <SidebarBlockItem
-                        key={block.id}
-                        block={block}
-                        isSelected={block.id === selectedId}
-                        onSelect={() => setSelectedId(block.id)}
-                        onToggleVisible={() => toggleVisible(block.id)}
-                        onDuplicate={() => duplicateBlock(block.id)}
-                        onDelete={() => deleteBlock(block.id)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-
-              <div className="px-3 pb-3">
-                <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => setAddModalOpen(true)}>
-                  <Plus className="size-3 mr-1" /> {t('pageBuilder.addSection')}
-                </Button>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-1.5 border-y border-border/50">
-              <button
-                type="button"
-                onClick={openFooterPanel}
-                className={cn(
-                  'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
-                  activeRightPanel === 'footer' && !selectedId
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                <PanelBottom className="size-4 opacity-70" />
-                Footer
-              </button>
-            </div>
-          </div>
-
-          {/* Page Settings */}
-          <div className="p-1.5 bg-background border-t border-border">
-            <button
-              type="button"
-              onClick={openThemePanel}
-              className={cn(
-                'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
-                activeRightPanel === 'theme' && !selectedId
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              )}
-            >
-              <Settings className="size-4" />
-              Global Settings
-            </button>
-          </div>
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-muted/20">
+          <LeftSidebarContent />
         </aside>
 
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f]">
+        <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
 
           {/* Viewport toggle */}
           <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80">
@@ -834,14 +935,14 @@ export function EditorShell({
           </div>
 
           {/* Canvas scroll — overflow-y-auto (NOT hidden) so sticky navbar works */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
             <div className="py-6 px-4 min-h-full">
               <CartProvider>
               <div
                 className={cn(
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
                   // No overflow-hidden here — it breaks position:sticky
-                  viewMode === 'mobile' ? 'w-[375px] rounded-[32px] overflow-hidden' : 'w-full rounded-xl',
+                  viewMode === 'mobile' ? 'w-[375px] rounded-[32px] overflow-hidden' : 'w-full max-w-[1440px] rounded-xl',
                 )}
                 style={{ fontFamily: `'${fontFamily}', sans-serif` }}
               >
@@ -886,7 +987,7 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       isMobilePreview={viewMode === 'mobile'}
-                      onClick={() => { setSelectedId(block.id); setRightPanel('block') }}
+                      onClick={() => { setSelectedId(block.id); setRightPanel('block'); setMobileSettingsOpen(true); }}
                     />
                   </div>
                 ))}
@@ -906,65 +1007,40 @@ export function EditorShell({
         </main>
 
         {/* ── Settings panel ──────────────────────────────────────────────── */}
-        <aside className="w-80 shrink-0 border-l border-border flex flex-col bg-background">
-          {activeRightPanel === 'block' && selectedBlock ? (
-            <>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-                <span className="text-muted-foreground">{blockIcon(selectedBlock.type)}</span>
-                <span className="font-semibold text-sm flex-1">{getBlockMeta(selectedBlock.type).label}</span>
-                {!selectedBlock.visible && (
-                  <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">{t('pageBuilder.hidden')}</Badge>
-                )}
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                  <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
-              </div>
-            </>
-          ) : activeRightPanel === 'navbar' ? (
-            <>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-                <Menu className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">{t('pageBuilder.navbar')}</span>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <NavbarSettings
-                  config={navbarConfig}
-                  businessId={business.id}
-                  blocks={blocks}
-                  onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
-                />
-              </div>
-            </>
-          ) : activeRightPanel === 'footer' ? (
-            <>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-                <PanelBottom className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">{t('pageBuilder.footer')}</span>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <FooterSettings
-                  config={footerConfig}
-                  onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-                <Palette className="size-3.5 text-muted-foreground" />
-                <span className="font-semibold text-sm">{t('pageBuilder.theme')}</span>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <GlobalSettingsPanel
-                  theme={theme}
-                  publishing={publishingSettings}
-                  onThemeChange={handleThemeChange}
-                  onPublishingChange={handlePublishingChange}
-                />
-              </div>
-            </>
-          )}
+        <aside className="hidden lg:flex flex-col w-80 shrink-0 border-l border-border bg-background">
+          <RightSidebarContent />
         </aside>
+
+        {/* ── Mobile Action Bar ────────────────────────────────────────────── */}
+        <div className="lg:hidden absolute bottom-0 left-0 right-0 h-14 bg-background border-t border-border flex items-center justify-around z-20 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
+          <Drawer open={mobileBlocksOpen} onOpenChange={setMobileBlocksOpen}>
+            <DrawerTrigger asChild>
+              <button className="flex flex-col items-center justify-center gap-1 w-full h-full text-muted-foreground hover:text-foreground">
+                <Layers className="size-5" />
+                <span className="text-[10px] font-medium uppercase tracking-wider">{t('pageBuilder.sections')}</span>
+              </button>
+            </DrawerTrigger>
+            <DrawerContent className="h-[80vh] flex flex-col p-0">
+              <VisuallyHidden><DrawerTitle>Sections</DrawerTitle></VisuallyHidden>
+              <LeftSidebarContent />
+            </DrawerContent>
+          </Drawer>
+
+          <div className="w-px h-8 bg-border" />
+
+          <Drawer open={mobileSettingsOpen} onOpenChange={setMobileSettingsOpen}>
+            <DrawerTrigger asChild>
+              <button className="flex flex-col items-center justify-center gap-1 w-full h-full text-muted-foreground hover:text-foreground" onClick={() => { if (!selectedId) setRightPanel('theme') }}>
+                <Settings className="size-5" />
+                <span className="text-[10px] font-medium uppercase tracking-wider">Settings</span>
+              </button>
+            </DrawerTrigger>
+            <DrawerContent className="h-[80vh] flex flex-col p-0">
+              <VisuallyHidden><DrawerTitle>Settings</DrawerTitle></VisuallyHidden>
+              <RightSidebarContent />
+            </DrawerContent>
+          </Drawer>
+        </div>
       </div>
 
       {/* Add block modal */}

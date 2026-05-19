@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, MoreHorizontal,
@@ -22,6 +22,9 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { TagInput } from '@/components/ui/tag-input'
+import {
+  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger,
+} from '@/components/ui/drawer'
 import { cn } from '@/lib/utils'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
@@ -38,6 +41,8 @@ import {
   addVariantOptionAction, deleteVariantOptionAction,
   bulkDeleteItemsAction, bulkUpdateAvailabilityAction,
 } from '@/app/actions/menu'
+import { useMenu } from '@/lib/react-query/hooks/useMenu'
+import { useQueryClient } from '@tanstack/react-query'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -317,7 +322,7 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm w-[95vw] rounded-xl sm:w-full">
         <DialogHeader>
           <DialogTitle>{initial ? t('menuBuilder.renameCategory') : t('menuBuilder.addCategory')}</DialogTitle>
         </DialogHeader>
@@ -333,12 +338,12 @@ function CategoryDialog({
               autoFocus
             />
           </div>
-          <DialogFooter>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{t('menuBuilder.cancel')}</Button>
             <Button type="submit" disabled={!name.trim() || loading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : initial ? t('menuBuilder.save') : t('menuBuilder.add')}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -412,13 +417,13 @@ function ItemDialog({
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       {/* p-0 so we can control padding per zone and pin the footer */}
-      <DialogContent className="sm:max-w-lg p-0 flex flex-col" style={{ maxHeight: 'min(90vh, 700px)' }}>
-        <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
+      <DialogContent className="sm:max-w-lg p-0 flex flex-col w-[95vw] md:w-full" style={{ maxHeight: 'min(90vh, 700px)' }}>
+        <DialogHeader className="px-4 md:px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>{isEditing ? t('menuBuilder.editItem') : t('menuBuilder.addItem')}</DialogTitle>
         </DialogHeader>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-6">
+        <div className="flex-1 overflow-y-auto min-h-0 px-4 md:px-6">
         <Tabs
           value={activeTab}
           onValueChange={v => setActiveTab(v as 'details' | 'variants')}
@@ -499,9 +504,9 @@ function ItemDialog({
         </div>{/* end scrollable body */}
 
         {/* ── Pinned footer ── */}
-        <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background">
+        <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background rounded-b-xl sm:rounded-b-2xl">
           {activeTab === 'details' ? (
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{t('menuBuilder.cancel')}</Button>
               <Button
                 type="submit"
@@ -510,7 +515,7 @@ function ItemDialog({
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : isEditing ? t('menuBuilder.saveChanges') : t('menuBuilder.addItem')}
               </Button>
-            </div>
+            </DialogFooter>
           ) : (
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">{t('menuBuilder.changesSaveAuto')}</span>
@@ -533,27 +538,33 @@ interface MenuBuilderProps {
 
 export function MenuBuilder({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const initialData = useMemo(() => ({ categories: initialCategories, items: initialItems }), [initialCategories, initialItems])
+  const { data } = useMenu(businessId, initialData)
+  
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories)
   const [items, setItems] = useState<MenuItem[]>(initialItems)
   const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategories[0]?.id ?? null)
 
+  useEffect(() => {
+    if (data) {
+      setCategories(data.categories)
+      setItems(data.items)
+      if (!selectedCatId && data.categories.length > 0) {
+        setSelectedCatId(data.categories[0].id)
+      }
+    }
+  }, [data]) // Sync with global cache
+
   // Re-fetch from DB after CSV import
   async function handleCsvRefresh() {
-    const db = createClient() as unknown as ReturnType<typeof createClient>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supa = db as any
-    const [{ data: cats }, { data: itms }] = await Promise.all([
-      supa.from('menu_categories').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
-      supa.from('menu_items').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
-    ])
-    setCategories(cats ?? [])
-    setItems(itms ?? [])
-    if (!selectedCatId && (cats ?? []).length > 0) setSelectedCatId(cats[0].id)
+    await queryClient.invalidateQueries({ queryKey: ['menu', businessId] })
   }
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   const [catDialog, setCatDialog] = useState<{ open: boolean; editing?: MenuCategory }>({ open: false })
   const [itemDialog, setItemDialog] = useState<{ open: boolean; editing?: MenuItem; catId?: string }>({ open: false })
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const selectedCat = categories.find(c => c.id === selectedCatId)
   const visibleItems = items
@@ -650,7 +661,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       description: item.description ?? undefined,
       price: item.price,
       image_url: item.image_url ?? undefined,
-      tags: item.tags,
+      tags: item.tags || [],
     })
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => [...prev, result.data])
@@ -685,12 +696,88 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
 
   const anySelected = selectedItems.size > 0
 
+  const renderCategoryItem = (cat: MenuCategory) => {
+    const count = items.filter(i => i.category_id === cat.id).length
+    const isSelected = cat.id === selectedCatId
+    return (
+      <div
+        key={cat.id}
+        className={cn(
+          'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-colors shrink-0',
+          isSelected ? 'bg-primary text-primary-foreground' : 'bg-background md:bg-transparent hover:bg-accent'
+        )}
+        onClick={() => { setSelectedCatId(cat.id); clearSelection(); setDrawerOpen(false) }}
+      >
+        <span className={cn('flex-1 text-sm font-medium truncate', !cat.visible && !isSelected && 'opacity-40')}>
+          {cat.name}
+        </span>
+        {!cat.visible && (
+          <EyeOff className={cn('size-3 shrink-0 mr-0.5', isSelected ? 'text-primary-foreground/50' : 'text-muted-foreground/50')} />
+        )}
+        <span className={cn('text-xs shrink-0', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+          {count}
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn('size-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity', isSelected ? 'hover:bg-white/20' : 'hover:bg-accent-foreground/10')}
+              onClick={e => e.stopPropagation()}
+            >
+              <MoreHorizontal className="size-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => setCatDialog({ open: true, editing: cat })}>
+              <Pencil className="size-3.5 mr-2" /> {t('menuBuilder.rename')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleToggleCategoryVisible(cat)}>
+              {cat.visible ? <><EyeOff className="size-3.5 mr-2" /> {t('menuBuilder.hide')}</> : <><Eye className="size-3.5 mr-2" /> {t('menuBuilder.show')}</>}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCategory(cat.id)}>
+              <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
   // ── Render ──
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-[3.5rem])] md:h-[calc(100vh-4rem)] overflow-hidden">
 
-      {/* ── Category Sidebar ── */}
-      <aside className="w-56 shrink-0 border-r border-border flex flex-col bg-muted/30">
+      {/* ── Category Drawer (Mobile) ── */}
+      <div className="md:hidden border-b border-border bg-muted/30 p-3 flex gap-2 shrink-0">
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="flex-1 justify-between font-normal bg-background">
+              <span className="truncate">{selectedCat ? selectedCat.name : t('menuBuilder.categories')}</span>
+              <ChevronDown className="size-4 opacity-50 shrink-0" />
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader className="text-left pb-2">
+              <DrawerTitle>{t('menuBuilder.categories')}</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 pt-0 max-h-[60vh] overflow-y-auto flex flex-col gap-1">
+              {categories.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">{t('menuBuilder.noCategoriesYet')}</p>
+              )}
+              {[...categories].sort((a, b) => a.sort_order - b.sort_order).map(renderCategoryItem)}
+              <Button variant="ghost" className="w-full justify-start mt-2 border border-dashed" onClick={() => setCatDialog({ open: true })}>
+                <Plus className="size-4 mr-2" /> {t('menuBuilder.addCategory')}
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+        <Button size="icon" variant="outline" className="shrink-0 bg-background" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
+          <Plus className="size-4" />
+        </Button>
+      </div>
+
+      {/* ── Category Sidebar (Desktop) ── */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-border flex-col bg-muted/30">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('menuBuilder.categories')}</span>
           <Button id="add-category-btn" size="icon" variant="ghost" className="size-6" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
@@ -698,86 +785,31 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           </Button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 space-y-0">
           {categories.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-8 px-2">{t('menuBuilder.noCategoriesYet')}</p>
           )}
-          {[...categories].sort((a, b) => a.sort_order - b.sort_order).map(cat => {
-            const count = items.filter(i => i.category_id === cat.id).length
-            const isSelected = cat.id === selectedCatId
-            return (
-              <div
-                key={cat.id}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-colors',
-                  isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-                )}
-                onClick={() => { setSelectedCatId(cat.id); clearSelection() }}
-              >
-                <span className={cn('flex-1 text-sm font-medium truncate', !cat.visible && !isSelected && 'opacity-40')}>
-                  {cat.name}
-                </span>
-                {!cat.visible && (
-                  <EyeOff className={cn('size-3 shrink-0 mr-0.5', isSelected ? 'text-primary-foreground/50' : 'text-muted-foreground/50')} />
-                )}
-                <span className={cn('text-xs shrink-0', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                  {count}
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className={cn('size-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity', isSelected ? 'hover:bg-white/20' : 'hover:bg-accent-foreground/10')}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <MoreHorizontal className="size-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem onClick={() => setCatDialog({ open: true, editing: cat })}>
-                      <Pencil className="size-3.5 mr-2" /> {t('menuBuilder.rename')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleToggleCategoryVisible(cat)}>
-                      {cat.visible ? <><EyeOff className="size-3.5 mr-2" /> {t('menuBuilder.hide')}</> : <><Eye className="size-3.5 mr-2" /> {t('menuBuilder.show')}</>}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCategory(cat.id)}>
-                      <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )
-          })}
+          {[...categories].sort((a, b) => a.sort_order - b.sort_order).map(renderCategoryItem)}
         </nav>
       </aside>
 
       {/* ── Items Area ── */}
-      <main className="flex-1 overflow-y-auto">
-        {/* CSV import/export bar */}
-        <div className="px-6 py-3 border-b border-border bg-muted/20">
-          <MenuCsvActions
-            businessId={businessId}
-            categories={categories}
-            items={items}
-            onRefresh={handleCsvRefresh}
-          />
-        </div>
-
-        {!selectedCat ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <p className="text-lg font-semibold mb-2">{t('menuBuilder.noCategorySelected')}</p>
-              <p className="text-sm mb-4">{t('menuBuilder.addCategoryToStart')}</p>
-              <Button onClick={() => setCatDialog({ open: true })}>
-                <Plus className="size-4 mr-2" /> Add category
-              </Button>
-            </div>
+      <main className="flex-1 overflow-y-auto relative flex flex-col">
+        {/* Sticky Headers Wrapper */}
+        <div className="sticky top-0 z-20 flex flex-col bg-background/95 backdrop-blur shadow-sm">
+          {/* CSV import/export bar */}
+          <div className="px-6 py-3 border-b border-border bg-muted/20">
+            <MenuCsvActions
+              businessId={businessId}
+              categories={categories}
+              items={items}
+              onRefresh={handleCsvRefresh}
+            />
           </div>
-        ) : (
-          <div>
-            {/* Sticky header with bulk actions */}
-            <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-4 flex items-center justify-between gap-3">
-              <div className="min-w-0">
+
+          {selectedCat && (
+            <div className="border-b border-border px-6 py-4 flex items-center justify-between gap-3 bg-background">
+              <div className="min-w-0 shrink">
                 <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
                 <p className="text-xs text-muted-foreground">
                   {visibleItems.length} {t('menuBuilder.items')}
@@ -785,7 +817,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {anySelected && (
                   <>
                     <Button variant="secondary" size="sm" onClick={() => handleBulkSetAvailable(false)}>
@@ -808,7 +840,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                     >
                       Clear
                     </button>
-                    <div className="h-4 w-px bg-border" />
+                    <div className="hidden md:block h-4 w-px bg-border" />
                   </>
                 )}
                 <Button id="add-item-btn" size="sm" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
@@ -816,8 +848,20 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                 </Button>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Item grid */}
+        {!selectedCat ? (
+          <div className="flex items-center justify-center flex-1 text-muted-foreground">
+            <div className="text-center">
+              <p className="text-lg font-semibold mb-2">{t('menuBuilder.noCategorySelected')}</p>
+              <p className="text-sm mb-4">{t('menuBuilder.addCategoryToStart')}</p>
+              <Button onClick={() => setCatDialog({ open: true })}>
+                <Plus className="size-4 mr-2" /> Add category
+              </Button>
+            </div>
+          </div>
+        ) : (
             <div className="p-6">
               {visibleItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -918,13 +962,13 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
 
                           <div className="flex items-center justify-between mt-2 gap-2">
                             <span className="text-sm font-bold">{formatCurrency(item.price)}</span>
-                            {item.tags.length > 0 && (
+                            {(item.tags || []).length > 0 && (
                               <div className="flex flex-wrap gap-1 justify-end">
-                                {item.tags.slice(0, 2).map(tag => (
+                                {(item.tags || []).slice(0, 2).map(tag => (
                                   <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
                                 ))}
-                                {item.tags.length > 2 && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{item.tags.length - 2}</Badge>
+                                {(item.tags || []).length > 2 && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{(item.tags || []).length - 2}</Badge>
                                 )}
                               </div>
                             )}
@@ -936,7 +980,6 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                 </div>
               )}
             </div>
-          </div>
         )}
       </main>
 

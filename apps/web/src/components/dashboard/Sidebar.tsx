@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   BellRing,
   Settings,
+  Menu,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'
@@ -22,6 +24,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 const NAV_ITEMS = [
   {
@@ -29,7 +33,7 @@ const NAV_ITEMS = [
     href: '/dashboard',
     icon: LayoutDashboard,
     phase: 'v1',
-    exact: true, // only active on exact /dashboard
+    exact: true,
   },
   {
     labelKey: 'liveOrders',
@@ -99,6 +103,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -116,8 +121,8 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
     .toUpperCase()
     .slice(0, 2)
 
-  return (
-    <aside className="flex flex-col w-[240px] shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-y-auto">
+  const SidebarContent = () => (
+    <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
         <span className="text-xl">🍽</span>
@@ -130,13 +135,14 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5">
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map(item => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMobileOpen(false)}
               id={`nav-${item.labelKey.toLowerCase().replace(/\s+/g, '-')}`}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
@@ -153,7 +159,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
       </nav>
 
       {/* User + Sign out */}
-      <div className="px-2 py-3 border-t border-sidebar-border space-y-0.5">
+      <div className="px-2 py-3 border-t border-sidebar-border space-y-0.5 shrink-0">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2">
           <Avatar className="size-7 shrink-0">
             <AvatarImage src={userAvatar ?? undefined} />
@@ -171,6 +177,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
         
         <Link
           href="/dashboard/settings"
+          onClick={() => setMobileOpen(false)}
           className={cn(
             'flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors',
             pathname.startsWith('/dashboard/settings')
@@ -191,6 +198,36 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
           <span className="text-sm font-medium">{t('sidebar.signOut')}</span>
         </button>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Mobile Top Navigation */}
+      <div className="md:hidden flex items-center px-4 h-14 border-b bg-background sticky top-0 z-40 relative">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <button className="p-2 -ml-2 text-muted-foreground hover:text-foreground z-10">
+              <Menu className="size-6" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-[280px] flex flex-col bg-sidebar border-r-sidebar-border text-sidebar-foreground">
+            <VisuallyHidden><SheetTitle>Navigation Menu</SheetTitle></VisuallyHidden>
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🍽</span>
+            <span className="font-extrabold tracking-tight text-foreground">Eatery</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Permanent Sidebar */}
+      <aside className="hidden md:flex flex-col w-[240px] shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0">
+        <SidebarContent />
+      </aside>
+    </>
   )
 }

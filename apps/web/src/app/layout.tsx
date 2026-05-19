@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import QueryProvider from '@/lib/react-query/QueryProvider'
 import './globals.css'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -30,15 +31,17 @@ export default function RootLayout({
     // Instead we let next-themes handle it at the root level, but we set defaultTheme to light.
     <html lang="en" suppressHydrationWarning>
       <body className={plusJakartaSans.variable} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster richColors position="top-right" />
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   )

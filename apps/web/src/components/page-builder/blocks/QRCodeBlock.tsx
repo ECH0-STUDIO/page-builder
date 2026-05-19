@@ -14,6 +14,9 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { QRCodeConfig } from '../types'
+import { uploadImageToStorage } from '@/lib/image-utils'
+import { Loader2, ImageIcon, X } from 'lucide-react'
+import { toast } from 'sonner'
 
 // ─── Canvas Preview (mini) ────────────────────────────────────────────────────
 
@@ -67,11 +70,14 @@ interface QRCodeSettingsProps {
   config: QRCodeConfig
   /** Business page slug — to preview "page" target URL */
   businessSlug?: string
+  businessId: string
   onChange: (c: QRCodeConfig) => void
 }
 
-export function QRCodeSettings({ config, businessSlug, onChange }: QRCodeSettingsProps) {
+export function QRCodeSettings({ config, businessSlug, businessId, onChange }: QRCodeSettingsProps) {
   const { t } = useTranslation()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
   const SIZES: { value: QRCodeConfig['size']; label: string }[] = [
     { value: 'sm', label: t('qrCodeBlock.small') },
     { value: 'md', label: t('qrCodeBlock.medium') },
@@ -86,7 +92,25 @@ export function QRCodeSettings({ config, businessSlug, onChange }: QRCodeSetting
     onChange({ ...config, [key]: value })
   }
 
-  const previewUrl = config.target === 'page'
+  async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const path = `${businessId}/qrbg-${Date.now()}.jpg`
+      const url = await uploadImageToStorage('page-images', path, file, {
+        maxWidth: 1920, maxHeight: 1080, quality: 0.85, targetSizeKB: 500,
+      })
+      set('background_image', url)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  const previewUrl = config.target === 'payment'
     ? (businessSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${businessSlug}` : '')
     : config.custom_url
 
@@ -101,7 +125,7 @@ export function QRCodeSettings({ config, businessSlug, onChange }: QRCodeSetting
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.qrTarget')}</Label>
         <div className="flex gap-1.5">
           {([
-            { value: 'page' as const, label: t('qrCodeBlock.myPage') },
+            { value: 'payment' as const, label: 'Payment QR' },
             { value: 'custom' as const, label: t('qrCodeBlock.customUrl') },
           ]).map(o => (
             <button
@@ -183,6 +207,33 @@ export function QRCodeSettings({ config, businessSlug, onChange }: QRCodeSetting
         </div>
       </div>
 
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Radius</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            { value: 'none', label: '0' },
+            { value: 'md', label: 'MD' },
+            { value: 'lg', label: 'LG' },
+            { value: 'xl', label: 'XL' },
+            { value: '2xl', label: '2XL' },
+            { value: '3xl', label: '3XL' },
+            { value: 'full', label: 'Round' },
+          ] as const).map(r => (
+            <button
+              key={r.value}
+              type="button"
+              onClick={() => set('border_radius', r.value)}
+              className={cn(
+                'px-3 py-1 rounded border text-[11px] transition-colors',
+                (config.border_radius || '2xl') === r.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border text-muted-foreground hover:border-foreground/30'
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Separator />
 
       {/* Toggles */}
@@ -226,6 +277,39 @@ export function QRCodeSettings({ config, businessSlug, onChange }: QRCodeSetting
             </div>
           </div>
         </div>
+      </div>
+
+      <Separator />
+
+      {/* Background Image */}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Background Image</Label>
+        <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={handleImage} />
+        {config.background_image ? (
+          <div className="relative rounded-lg overflow-hidden border border-border aspect-video">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={config.background_image} alt="" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => set('background_image', '')}
+              className="absolute top-2 right-2 size-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-foreground/30 flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
+          >
+            {uploading
+              ? <Loader2 className="size-5 animate-spin" />
+              : <><ImageIcon className="size-5" /><span className="text-xs">Click to upload</span></>
+            }
+          </button>
+        )}
       </div>
     </div>
   )

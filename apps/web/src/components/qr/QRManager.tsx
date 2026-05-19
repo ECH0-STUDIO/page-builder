@@ -102,8 +102,8 @@ function ItemQRTab({ slug, categories, items }: {
   }
 
   return (
-    <div className="flex gap-6 py-6 min-h-96">
-      <div className="w-64 shrink-0 space-y-1 overflow-y-auto max-h-[600px] pr-2">
+    <div className="flex flex-col-reverse lg:flex-row gap-6 py-6 min-h-96">
+      <div className="w-full lg:w-64 shrink-0 space-y-1 overflow-y-auto max-h-[50vh] lg:max-h-[600px] pr-2">
         {categories.map(cat => {
           const catItems = items.filter(i => i.category_id === cat.id)
           if (catItems.length === 0) return null
@@ -130,7 +130,7 @@ function ItemQRTab({ slug, categories, items }: {
           )
         })}
       </div>
-      <div className="flex-1 flex items-start justify-center pt-4">
+      <div className="w-full lg:flex-1 flex items-start justify-center sticky top-0 lg:static z-10 bg-white/95 lg:bg-transparent backdrop-blur lg:backdrop-blur-none py-4 lg:py-0 rounded-2xl lg:rounded-none shadow-sm lg:shadow-none border border-gray-100 lg:border-transparent">
         {activeItem ? (
           <SimpleQRCard
             url={`${origin}/${slug}#item-${activeItem.id}`}
@@ -246,7 +246,8 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="w-full overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-max">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={cn(
@@ -261,6 +262,7 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-600 transition-colors ml-2">
           <ExternalLink className="size-3.5" />{t('qr.tabLive')}
         </a>
+      </div>
       </div>
 
       {tab === 'design' && (

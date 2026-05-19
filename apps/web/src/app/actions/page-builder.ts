@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import dns from 'dns/promises'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig } from '@/components/page-builder/types'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
@@ -20,7 +21,7 @@ export async function getPageDataAction(businessId: string): Promise<{
 }> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const [blocksRes, pubRes, themeRes] = await Promise.all([
     db.from('page_blocks')
@@ -38,7 +39,7 @@ export async function getPageDataAction(businessId: string): Promise<{
   ])
 
   return {
-    blocks: blocksRes.data ?? [],
+    blocks: (blocksRes.data as any) ?? [],
     publishing: pubRes.data ?? null,
     theme: themeRes.data ?? null,
   }
@@ -56,7 +57,7 @@ export async function savePageBlocksAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   // Delete existing + insert fresh in a single round-trip using RPC would be ideal,
   // but since Supabase JS doesn't expose transactions, we do two sequential calls.
@@ -74,7 +75,8 @@ export async function savePageBlocksAction(
 
   const rows = blocks.map((b, i) => {
     const isTemp = b.id.startsWith('temp-')
-    const row: Record<string, unknown> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row: any = {
       business_id: businessId,
       type: b.type,
       sort_order: i,
@@ -87,7 +89,11 @@ export async function savePageBlocksAction(
       custom_css: b.custom_css ?? '',
       block_anchor_id: b.block_anchor_id ?? null,
     }
-    if (!isTemp) row.id = b.id
+    if (!isTemp) {
+      row.id = b.id
+    } else {
+      row.id = crypto.randomUUID()
+    }
     return row
   })
 
@@ -110,7 +116,7 @@ export async function togglePublishAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
       { business_id: businessId, published },
@@ -136,7 +142,7 @@ export async function saveThemeAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('theme_settings')
     .upsert(
       { business_id: businessId, ...theme },
@@ -162,7 +168,7 @@ export async function saveNavbarAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('theme_settings')
     .upsert(
       { business_id: businessId, navbar_config: navbarConfig },
@@ -185,7 +191,7 @@ export async function getPublishingAction(businessId: string): Promise<{
 }> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const [pubRes, bizRes] = await Promise.all([
     db.from('publishing_settings').select('*').eq('business_id', businessId).single(),
@@ -219,7 +225,7 @@ export async function savePublishingSettingsAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
       { business_id: businessId, ...fields },
@@ -248,7 +254,7 @@ export async function getPageViewsAction(
 }> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const since = new Date()
   since.setDate(since.getDate() - (period - 1))
@@ -284,4 +290,31 @@ export async function getPageViewsAction(
   const periodTotal = daily.reduce((s, d) => s + d.count, 0)
 
   return { total, periodTotal, daily }
+}
+
+// ─── DNS Verification ────────────────────────────────────────────────────────
+
+export async function verifyDnsAction(domain: string, businessId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  try {
+    const isApex = domain.split('.').length === 2
+    let isConnected = false
+    
+    if (isApex) {
+      const txts = await dns.resolveTxt(`_vercel.${domain}`).catch(() => [])
+      const hasTxt = txts.some(t => t.join('').includes(`vc-domain-verify=${businessId.split('-')[0]}`))
+      isConnected = hasTxt
+    } else {
+      const cnames = await dns.resolveCname(domain).catch(() => [])
+      isConnected = cnames.includes('cname.pinit.app') || cnames.includes('cname.vercel-dns.com')
+    }
+    
+    if (isConnected) return { success: true, data: undefined }
+    return { success: false, error: 'DNS not propagated yet' }
+  } catch (e) {
+    return { success: false, error: 'DNS not propagated yet' }
+  }
 }

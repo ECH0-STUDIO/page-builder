@@ -18,7 +18,7 @@ export async function GET() {
     .eq('owner_id', user.id)
 
   // Fetch businesses where user is a member
-  const { data: memberRows } = await (adminClient.from('business_members') as any)
+  const { data: memberRows } = await adminClient.from('business_members')
     .select('businesses(*)')
     .eq('user_id', user.id)
 

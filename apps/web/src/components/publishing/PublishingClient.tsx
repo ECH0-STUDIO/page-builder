@@ -14,10 +14,11 @@ import { Button } from '@/components/ui/button'
 import { slugify, checkSlugAvailable } from '@/lib/business'
 import { updateBusinessAction } from '@/app/actions/business'
 import {
-  togglePublishAction, savePublishingSettingsAction, getPageViewsAction,
+  togglePublishAction, savePublishingSettingsAction, getPageViewsAction, verifyDnsAction
 } from '@/app/actions/page-builder'
 import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
 import { createClient } from '@/lib/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -120,6 +121,7 @@ async function uploadPublishingImage(businessId: string, file: File, pathPrefix:
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function PublishingClient({ businessId, publishing, slug: initialSlug, analytics: initialAnalytics, baseUrl }: PublishingClientProps) {
+  const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
   const [seoTitle, setSeoTitle] = useState(publishing?.seo_title ?? '')
@@ -131,6 +133,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   const [gscTag, setGscTag] = useState(publishing?.gsc_verification ?? '')
   const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? '')
   const [savingDomain, setSavingDomain] = useState(false)
+  const [verifyingDns, setVerifyingDns] = useState(false)
   const [copied, setCopied] = useState(false)
   const [period, setPeriod] = useState<7 | 30>(7)
   const [analytics, setAnalytics] = useState(initialAnalytics)
@@ -188,6 +191,18 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     }
   }
 
+  async function handleVerifyDns() {
+    if (!publishing?.custom_domain) return
+    setVerifyingDns(true)
+    const res = await verifyDnsAction(publishing.custom_domain, businessId)
+    setVerifyingDns(false)
+    if (res.success) {
+      toast.success('DNS is correctly configured and connected!')
+    } else {
+      toast.error(res.error)
+    }
+  }
+
   const publicUrl = `${baseUrl}/${initialSlug}`
 
   // ── Period toggle ─────────────────────────────────────────────────────────
@@ -225,7 +240,10 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     startTransition(async () => {
       const res = await togglePublishAction(businessId, next)
       if (!res.success) { setIsPublished(!next); toast.error(res.error) }
-      else toast.success(next ? 'Page is now live 🎉' : 'Page set to draft')
+      else {
+        toast.success(next ? 'Page is now live 🎉' : 'Page set to draft')
+        queryClient.invalidateQueries({ queryKey: ['pageData', businessId] })
+      }
     })
   }
 
@@ -263,8 +281,12 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         language,
         gsc_verification: gscTag || null,
       })
-      if (res.success) toast.success('Settings saved')
-      else toast.error(res.error)
+      if (res.success) {
+        toast.success('Settings saved')
+        queryClient.invalidateQueries({ queryKey: ['pageData', businessId] })
+      } else {
+        toast.error(res.error)
+      }
     })
   }
 
@@ -405,7 +427,13 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> vc-domain-verify={businessId.split('-')[0]}</div>
                 </div>
               </div>
-              <p className="text-xs text-blue-700/80 italic pt-1">{t('publishing.dnsNote')}</p>
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <p className="text-xs text-blue-700/80 italic">{t('publishing.dnsNote')}</p>
+                <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 shrink-0 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
+                  {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
+                  Verify connection
+                </Button>
+              </div>
             </div>
           )}
         </div>

@@ -19,7 +19,7 @@ export default async function QRPage() {
   const { t } = await getServerTranslation()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: businesses } = await db
     .from('businesses')
@@ -51,9 +51,9 @@ export default async function QRPage() {
   const items: MenuItem[] = itemsRaw ?? []
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t('qr.title')}</h1>
+    <div className="p-4 md:p-8 max-w-3xl">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">{t('sidebar.qrCodes')}</h1>
         <p className="text-muted-foreground text-sm mt-1">
           {t('qr.description')}
         </p>
@@ -61,7 +61,7 @@ export default async function QRPage() {
 
       <QRManager
         businessId={business.id}
-        paymentSettings={business.payment_settings ?? {}}
+        paymentSettings={(business as any).payment_settings ?? {}}
         slug={business.slug}
         categories={categories}
         items={items}

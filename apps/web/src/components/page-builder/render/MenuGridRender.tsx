@@ -22,6 +22,7 @@ import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { useCart, type CartVariantSelection } from './CartContext'
 import { getTypography } from './typography'
+import { cn } from '@/lib/utils'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -118,10 +119,10 @@ function ItemModal({
             </div>
           )}
 
-          <div className="p-5 space-y-5">
+          <div className={cn("p-5 space-y-5", !(config.show_image && item.image_url) && "pt-10")}>
             {/* Title + availability */}
             <div>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 pr-8">
                 <h3 className="text-xl font-bold leading-tight text-gray-900">{item.name}</h3>
                 {!item.available && (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium mt-1">
@@ -133,9 +134,9 @@ function ItemModal({
                 <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{item.description}</p>
               )}
               {/* Tags */}
-              {item.tags.length > 0 && (
+              {(item.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {item.tags.map(tag => (
+                  {(item.tags || []).map(tag => (
                     <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{tag}</span>
                   ))}
                 </div>
@@ -280,7 +281,7 @@ function ItemCardGrid({
               Sold Out
             </span>
           )}
-          {item.tags.includes('Bestseller') && (
+          {(item.tags || []).includes('Bestseller') && (
             <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-900 font-semibold shadow-sm">
               ⭐ Bestseller
             </span>
@@ -412,8 +413,7 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
 
   const gridCols: Record<string, string> = {
     '2col': 'grid-cols-1 sm:grid-cols-2',
-    '3col': 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
-    '4col': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    '3col': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
     list: 'grid-cols-1',
   }
   const colClass = isMobilePreview ? 'grid-cols-1' : (gridCols[config.layout] ?? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')
@@ -429,7 +429,7 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
 
   return (
     <>
-      <section style={{ backgroundColor: bgColor, padding: '64px 16px' }}>
+      <section className="px-4 md:px-6" style={{ backgroundColor: bgColor, paddingTop: 64, paddingBottom: 64 }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
@@ -458,46 +458,62 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
             </div>
           )}
 
-          {/* Category tabs — auto-enabled when 2+ categories */}
-          {visibleCats.length > 1 && (
-            <div className="flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar mb-8 border-b border-gray-100 pb-3" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-              {visibleCats.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCatId(cat.id)}
-                  className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-                  style={
-                    activeCat === cat.id
-                      ? { backgroundColor: textColor, color: bgColor }
-                      : { backgroundColor: 'transparent', color: textColor, border: `1.5px solid ${textColor}22`, opacity: 0.6 }
-                  }
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Main Layout Container */}
+          <div className={visibleCats.length > 1 && config.tabs_layout !== 'horizontal' && !isMobilePreview ? "flex flex-col md:flex-row gap-6 md:gap-10 md:items-start" : ""}>
+            {/* Category tabs */}
+            {visibleCats.length > 1 && (
+              <div 
+                className={cn(
+                  "flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full",
+                  config.tabs_layout !== 'horizontal' && !isMobilePreview
+                    ? "mb-2 md:mb-0 md:border-b-0 md:pb-0 md:flex-col md:w-56 md:shrink-0 md:sticky md:top-[100px]"
+                    : "mb-8 md:mb-8"
+                )}
+                style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+              >
+                {visibleCats.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCatId(cat.id)}
+                    className={cn(
+                      "px-4 py-1.5 shrink-0 rounded-full text-sm font-medium transition-all",
+                      config.tabs_layout !== 'horizontal' && !isMobilePreview ? "md:w-full md:text-left md:px-4 md:py-2.5 md:rounded-xl" : ""
+                    )}
+                    style={
+                      activeCat === cat.id
+                        ? { backgroundColor: textColor, color: bgColor, border: `1.5px solid ${textColor}` }
+                        : { backgroundColor: 'transparent', color: textColor, border: `1.5px solid ${textColor}22`, opacity: 0.7 }
+                    }
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Items */}
-          {displayItems.length === 0 ? (
-            <p style={{ color: textColor, opacity: 0.4, fontSize: '14px', padding: '32px 0' }}>
-              {isCustomMode ? 'No items selected.' : 'No items in this category.'}
-            </p>
-          ) : (
-            <div className={`grid gap-4 ${colClass}`}>
-              {displayItems.map(item => {
-                const itemGroups = variantGroups.filter(g => g.item_id === item.id)
-                const hasVariants = itemGroups.length > 0
-                const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
-                
-                return isList ? (
-                  <ItemRowList key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
-                ) : (
-                  <ItemCardGrid key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
-                )
-              })}
+            {/* Items */}
+            <div className="flex-1 min-w-0">
+              {displayItems.length === 0 ? (
+                <p style={{ color: textColor, opacity: 0.4, fontSize: '14px', padding: '32px 0' }}>
+                  {isCustomMode ? 'No items selected.' : 'No items in this category.'}
+                </p>
+              ) : (
+                <div className={`grid gap-4 ${colClass}`}>
+                  {displayItems.map(item => {
+                    const itemGroups = variantGroups.filter(g => g.item_id === item.id)
+                    const hasVariants = itemGroups.length > 0
+                    const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
+                    
+                    return isList ? (
+                      <ItemRowList key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                    ) : (
+                      <ItemCardGrid key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
 

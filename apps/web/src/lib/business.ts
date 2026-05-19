@@ -51,7 +51,7 @@ export async function getUserBusinesses(): Promise<Business[]> {
 /** Fetch a single business by ID */
 export async function getBusinessById(id: string): Promise<Business | null> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('businesses')
     .select('*')
     .eq('id', id)
@@ -67,7 +67,7 @@ export async function createBusiness(input: { name: string; slug: string; catego
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const db = supabase as any
+  const db = supabase
 
   const { data: business, error } = await db
     .from('businesses')
@@ -93,7 +93,7 @@ export async function createBusiness(input: { name: string; slug: string; catego
 /** Update business profile fields */
 export async function updateBusiness(id: string, update: BusinessUpdate): Promise<void> {
   const supabase = createClient()
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('businesses')
     .update(update)
     .eq('id', id)

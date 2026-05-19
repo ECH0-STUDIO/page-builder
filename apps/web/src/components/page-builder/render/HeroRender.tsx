@@ -17,6 +17,7 @@ import type { HeroConfig, CtaButton } from '../types'
 import { ctaHref } from '../cta-utils'
 import { getTypography } from './typography'
 import Image from 'next/image'
+import { cn } from '@/lib/utils'
 
 function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
   const href = ctaHref(cta)
@@ -55,7 +56,7 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
       : `linear-gradient(135deg, ${fromColor} 0%, ${toColor} 100%)`
 
     return (
-      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY, paddingLeft: 16, paddingRight: 16 }}>
+      <section className="px-4 md:px-6" style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
@@ -78,7 +79,7 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
     const imageOnRight = (config.split_image_side ?? 'right') === 'right'
 
     const contentPane = (
-      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', padding: isMobilePreview ? `${padY}px 16px` : `${padY}px 48px`, ...heightBase }}>
+      <div className={cn(isMobilePreview ? 'px-4' : 'px-4 md:px-12')} style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', paddingTop: padY, paddingBottom: padY, ...heightBase }}>
         <div>
           <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {config.tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{config.tagline}</p>}
@@ -113,12 +114,13 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
   const overlayOpacity = config.layout === 'overlay' ? config.overlay_opacity / 100 : 0.4
 
   return (
-    <section style={{
+    <section 
+      className="px-4 md:px-6 overflow-hidden"
+      style={{
       position: 'relative',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       ...heightBase,
-      paddingTop: padY, paddingBottom: padY, paddingLeft: 16, paddingRight: 16,
-      overflow: 'hidden',
+      paddingTop: padY, paddingBottom: padY,
       ...(config.image_url
         ? {}
         : { background: 'linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)' }),

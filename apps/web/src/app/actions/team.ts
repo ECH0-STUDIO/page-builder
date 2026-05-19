@@ -7,10 +7,8 @@ import { sendTeamInvite } from '@/lib/email'
 export async function inviteTeamMemberAction(payload: { email: string, role: string, businessId: string }) {
   const { email, role, businessId } = payload
 
-  console.log('Action called with:', { email, role, businessId })
-
   if (!email || !role || !businessId) {
-    return { error: `Missing required fields. email=${email}, role=${role}, businessId=${businessId}` }
+    return { error: `Missing required fields` }
   }
 
   const supabase = await createClient()
@@ -35,7 +33,7 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
   }
 
   // Find any existing pending invites for this user
-  const { data: existingInvites } = await (supabase.from('team_invitations') as any)
+  const { data: existingInvites } = await supabase.from('team_invitations')
     .select('id, created_at')
     .eq('business_id', businessId)
     .eq('email', email)
@@ -52,7 +50,7 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
     }
     
     // Delete old pending invites to avoid duplicates
-    await (supabase.from('team_invitations') as any)
+    await supabase.from('team_invitations')
       .delete()
       .eq('business_id', businessId)
       .eq('email', email)
@@ -60,7 +58,7 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
   }
 
   // Insert a new pending invitation
-  const { data: inviteRow, error: inviteError } = await (supabase.from('team_invitations') as any)
+  const { data: inviteRow, error: inviteError } = await supabase.from('team_invitations')
     .insert({
       business_id: businessId,
       email: email,
@@ -90,11 +88,8 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
 
   if (emailRes.error) {
     // Delete the pending invite so the user isn't stuck with a 1-minute timeout for a broken invite
-    await (supabase.from('team_invitations') as any).delete().eq('id', inviteRow.id || inviteRow.token)
-    
-    // Attempt deletion using token if ID isn't returned for some reason, though single() usually returns what was selected.
-    // Wait, the select('token') only returns { token }. We need ID.
-    return { error: 'Invitation created but failed to send email: ' + emailRes.error }
+    await supabase.from('team_invitations').delete().eq('id', inviteRow.id)
+    return { error: 'Failed to send invitation email — please try again.' }
   }
 
   revalidatePath('/dashboard/settings/team')

@@ -8,7 +8,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const adminClient = createAdminClient()
 
   // 1. Validate the token (requires admin client because RLS restricts to business owners)
-  const { data: invite } = await (adminClient.from('team_invitations') as any)
+  const { data: invite } = await adminClient.from('team_invitations')
     .select(`
       id,
       email,

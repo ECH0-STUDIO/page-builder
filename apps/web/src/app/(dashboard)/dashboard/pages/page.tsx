@@ -18,7 +18,7 @@ export default async function PagesPage() {
   if (!user) redirect('/login')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   // Get the active business (first-created, same as menu)
   // TODO: wire to BusinessContext / cookie-based switcher in Phase 9

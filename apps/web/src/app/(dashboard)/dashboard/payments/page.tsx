@@ -19,7 +19,7 @@ export default async function PaymentsPage() {
   const { t } = await getServerTranslation()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: businesses } = await db
     .from('businesses')
@@ -34,7 +34,7 @@ export default async function PaymentsPage() {
   const paymentSettings = await getPaymentSettingsAction(business.id)
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl space-y-12">
+    <div className="p-4 md:p-8 max-w-3xl space-y-12">
 
       {/* ── Bank Account Setup ── */}
       <div>

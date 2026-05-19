@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react'
 import type { Business } from '@/lib/business'
-import { getUserBusinesses } from '@/lib/business'
+import { useBusinesses } from '@/lib/react-query/hooks/useBusiness'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface BusinessContextValue {
   businesses: Business[]
@@ -32,11 +33,12 @@ export function BusinessProvider({
   initialBusinesses: Business[]
   initialActiveBusinessId: string
 }) {
-  const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses)
+  const queryClient = useQueryClient()
+  const { data: businesses, isLoading, refetch } = useBusinesses(initialBusinesses)
   const [currentId, setCurrentId] = useState<string | null>(initialActiveBusinessId)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const currentBusiness = businesses.find(b => b.id === currentId) ?? null
+  // Fallback to empty array if businesses is undefined (e.g., during refetch)
+  const currentBusiness = (businesses ?? initialBusinesses).find((b: Business) => b.id === currentId) ?? null
 
   const switchBusiness = useCallback((id: string) => {
     setCurrentId(id)
@@ -46,21 +48,9 @@ export function BusinessProvider({
   }, [])
 
   const refreshBusinesses = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const fresh = await getUserBusinesses()
-      setBusinesses(fresh)
-      // If current ID no longer exists, switch to first
-      setCurrentId(prev => {
-        if (fresh.some(b => b.id === prev)) return prev
-        const first = fresh[0]?.id ?? null
-        if (first) localStorage.setItem(STORAGE_KEY, first)
-        return first
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    await queryClient.invalidateQueries({ queryKey: ['businesses'] })
+    await refetch()
+  }, [queryClient, refetch])
 
   // Persist when currentId changes
   useEffect(() => {
@@ -72,7 +62,7 @@ export function BusinessProvider({
 
   return (
     <BusinessContext.Provider
-      value={{ businesses, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
+      value={{ businesses: businesses ?? initialBusinesses, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
     >
       {children}
     </BusinessContext.Provider>

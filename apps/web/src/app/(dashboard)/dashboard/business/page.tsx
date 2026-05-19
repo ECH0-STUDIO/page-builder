@@ -18,7 +18,7 @@ export default async function BusinessProfilePage() {
   if (!business) redirect('/onboarding/new-business')
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 md:p-8 pb-12 md:pb-16 max-w-3xl">
       <BusinessProfileForm business={business} />
     </div>
   )

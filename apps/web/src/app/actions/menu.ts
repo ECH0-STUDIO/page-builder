@@ -25,7 +25,7 @@ export type MenuItem = {
   image_url: string | null
   available: boolean
   sort_order: number
-  tags: string[]
+  tags: string[] | null
   created_at: string
   updated_at: string
 }
@@ -50,6 +50,50 @@ type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+// ─── Ownership guard ─────────────────────────────────────────────────────────
+// Verify that `user` owns the business that a given category belongs to.
+async function userOwnsCategoryBusiness(supabase: Awaited<ReturnType<typeof createClient>>, categoryId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('menu_categories')
+    .select('businesses!inner(owner_id)')
+    .eq('id', categoryId)
+    .single()
+  const ownerRecord = (data as any)?.businesses
+  return Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id === userId : ownerRecord?.owner_id === userId
+}
+
+async function userOwnsItemBusiness(supabase: Awaited<ReturnType<typeof createClient>>, itemId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('menu_items')
+    .select('businesses!inner(owner_id)')
+    .eq('id', itemId)
+    .single()
+  const ownerRecord = (data as any)?.businesses
+  return Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id === userId : ownerRecord?.owner_id === userId
+}
+
+async function userOwnsVariantGroupBusiness(supabase: Awaited<ReturnType<typeof createClient>>, groupId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('menu_item_variant_groups')
+    .select('menu_items!inner(businesses!inner(owner_id))')
+    .eq('id', groupId)
+    .single()
+  const businesses = (data as any)?.menu_items?.businesses
+  const ownerRecord = Array.isArray(businesses) ? businesses[0] : businesses
+  return ownerRecord?.owner_id === userId
+}
+
+async function userOwnsVariantOptionBusiness(supabase: Awaited<ReturnType<typeof createClient>>, optionId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('menu_item_variant_options')
+    .select('menu_item_variant_groups!inner(menu_items!inner(businesses!inner(owner_id)))')
+    .eq('id', optionId)
+    .single()
+  const businesses = (data as any)?.menu_item_variant_groups?.menu_items?.businesses
+  const ownerRecord = Array.isArray(businesses) ? businesses[0] : businesses
+  return ownerRecord?.owner_id === userId
+}
+
 // ─── Categories ──────────────────────────────────────────────────────────────
 
 export async function addCategoryAction(
@@ -61,7 +105,7 @@ export async function addCategoryAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: existing } = await db
     .from('menu_categories')
@@ -91,8 +135,12 @@ export async function updateCategoryAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if (!await userOwnsCategoryBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_categories')
     .update(update)
     .eq('id', id)
@@ -107,8 +155,12 @@ export async function deleteCategoryAction(id: string): Promise<ActionResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if (!await userOwnsCategoryBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_categories')
     .delete()
     .eq('id', id)
@@ -136,7 +188,7 @@ export async function addItemAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: existing } = await db
     .from('menu_items')
@@ -185,8 +237,12 @@ export async function updateItemAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if (!await userOwnsItemBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_items')
     .update(update)
     .eq('id', id)
@@ -201,8 +257,12 @@ export async function deleteItemAction(id: string): Promise<ActionResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if (!await userOwnsItemBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_items')
     .delete()
     .eq('id', id)
@@ -220,7 +280,7 @@ export async function getItemVariantsAction(itemId: string): Promise<{
 }> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: groups } = await db
     .from('menu_item_variant_groups')
@@ -250,7 +310,7 @@ export async function addVariantGroupAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: existing } = await db
     .from('menu_item_variant_groups')
@@ -276,8 +336,15 @@ export async function updateVariantGroupAction(
   update: { name?: string; required?: boolean }
 ): Promise<ActionResult> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  if (!await userOwnsVariantGroupBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_item_variant_groups')
     .update(update)
     .eq('id', id)
@@ -287,8 +354,15 @@ export async function updateVariantGroupAction(
 
 export async function deleteVariantGroupAction(id: string): Promise<ActionResult> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  if (!await userOwnsVariantGroupBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_item_variant_groups')
     .delete()
     .eq('id', id)
@@ -308,7 +382,7 @@ export async function addVariantOptionAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: existing } = await db
     .from('menu_item_variant_options')
@@ -331,8 +405,15 @@ export async function addVariantOptionAction(
 
 export async function deleteVariantOptionAction(id: string): Promise<ActionResult> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  if (!await userOwnsVariantOptionBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_item_variant_options')
     .delete()
     .eq('id', id)
@@ -349,7 +430,7 @@ export async function bulkDeleteItemsAction(ids: string[]): Promise<ActionResult
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_items')
     .delete()
     .in('id', ids)
@@ -369,7 +450,7 @@ export async function bulkUpdateAvailabilityAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('menu_items')
     .update({ available })
     .in('id', ids)

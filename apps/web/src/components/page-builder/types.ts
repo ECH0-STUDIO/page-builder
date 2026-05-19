@@ -242,7 +242,7 @@ export const defaultContactConfig: ContactConfig = {
 
 export interface MenuGridConfig {
   category_ids: string[]         // empty = all categories
-  layout: '2col' | '3col' | '4col' | 'list'
+  layout: '2col' | '3col' | 'list'
   show_image: boolean
   show_description: boolean
   show_price: boolean
@@ -261,6 +261,8 @@ export interface MenuGridConfig {
   selection_mode?: 'category' | 'custom_items'
   /** Array of item IDs to show when selection_mode is 'custom_items' */
   item_ids?: string[]
+  /** Layout for tabs on desktop (horizontal scroll vs sidebar) */
+  tabs_layout?: 'horizontal' | 'sidebar'
 }
 
 export const defaultMenuGridConfig: MenuGridConfig = {
@@ -277,31 +279,35 @@ export const defaultMenuGridConfig: MenuGridConfig = {
   description: '',
   selection_mode: 'category',
   item_ids: [],
+  tabs_layout: 'sidebar',
 }
 
 // ─── QR Code Block ────────────────────────────────────────────────────────────
 
 export interface QRCodeConfig {
-  /** 'page' = links to /{slug}, 'custom' = user-defined URL */
-  target: 'page' | 'custom'
+  /** 'payment' = generates VietQR, 'custom' = user-defined URL */
+  target: 'payment' | 'custom'
   custom_url: string
   size: 'sm' | 'md' | 'lg'
   label: string
   show_download: boolean
   background_color: string
+  background_image?: string
   text_color: string
   alignment: 'left' | 'center' | 'right'
+  border_radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
 }
 
 export const defaultQRCodeConfig: QRCodeConfig = {
-  target: 'page',
+  target: 'payment',
   custom_url: '',
   size: 'md',
-  label: 'Scan to view our menu',
-  show_download: false,
+  label: 'Scan to pay',
+  show_download: true,
   background_color: '#ffffff',
   text_color: '#111111',
   alignment: 'center',
+  border_radius: '2xl',
 }
 
 
@@ -371,7 +377,7 @@ export interface ThemeSettings {
   primary_color: string
   background_color: string
   font_family: string            // body / paragraph font
-  heading_font_family: string    // h1, h2, h3 font
+  heading_font_family: string | null    // h1, h2, h3 font
   navbar_config?: NavbarConfig | null
   footer_config?: FooterConfig | null
 }

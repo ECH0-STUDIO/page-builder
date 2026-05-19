@@ -9,7 +9,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 export async function getPaymentSettingsAction(businessId: string): Promise<PaymentSettings> {
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
   const { data } = await db
     .from('businesses')
     .select('payment_settings')
@@ -28,7 +28,7 @@ export async function upsertPaymentSettingsAction(
   if (!user) return { error: 'Not authenticated' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
   const { error } = await db
     .from('businesses')
     .update({ payment_settings: settings })

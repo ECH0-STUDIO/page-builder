@@ -15,7 +15,7 @@ export function TemplatePicker({ onSelect, onClose, canClose }: TemplatePickerPr
   const { t } = useTranslation()
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[99999] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative bg-card border border-border rounded-2xl shadow-xl max-w-2xl w-full p-8 space-y-6">
         {canClose && onClose && (
           <button
@@ -45,8 +45,8 @@ export function TemplatePicker({ onSelect, onClose, canClose }: TemplatePickerPr
               )}
             >
               <div className="text-2xl mb-2">{tmpl.emoji}</div>
-              <p className="font-semibold text-sm">{tmpl.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{tmpl.description}</p>
+              <p className="font-semibold text-sm">{t(tmpl.label)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t(tmpl.description)}</p>
               {tmpl.blocks.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {tmpl.blocks.map((b, i) => (

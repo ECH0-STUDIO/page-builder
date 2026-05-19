@@ -13,7 +13,7 @@ export default async function MenuPage() {
   if (!user) redirect('/login')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
+  const db = supabase
 
   const { data: businesses } = await db
     .from('businesses')

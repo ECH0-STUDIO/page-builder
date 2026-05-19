@@ -4,11 +4,12 @@
  * PrintMenuPreview — live paper preview + print popup.
  */
 
-import { useRef } from 'react'
-import { Printer } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Printer, Minus, Plus, Search } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { getFontStack, getGoogleFontLinkTag } from '@/lib/fonts'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { safeToPng } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,7 @@ export function MenuContent({ business, categories, items, settings }: MenuConte
 
 export function PrintMenuPreview({ business, categories, items, settings, onSave, isSaving }: MenuContentProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useState(1)
   const { t } = useTranslation()
   const paper = PAPER_PX[settings.paper]
 
@@ -289,8 +291,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         }
       }
       const paperEl = contentRef.current.parentElement!
-      const { toPng } = await import('html-to-image')
-      const dataUrl = await toPng(paperEl, { pixelRatio: 3, cacheBust: true })
+      const dataUrl = await safeToPng(paperEl, { pixelRatio: 3, cacheBust: true })
       const a = document.createElement('a')
       a.download = `menu-${settings.paper}.png`
       a.href = dataUrl
@@ -304,22 +305,27 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
     <div className="flex flex-col gap-4 h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 shrink-0">
-        {onSave && (
-          <button onClick={onSave} disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
-            {isSaving ? t('printMenu.saved') : t('printMenu.saveChanges')}
+        <div className="flex items-center gap-2">
+          {onSave && (
+            <button onClick={onSave} disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+              {isSaving ? t('printMenu.saved') : t('printMenu.saveChanges')}
+            </button>
+          )}
+          <button onClick={handlePrint}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+            <Printer className="size-4" />
+            {t('printMenu.printPdf')}
           </button>
-        )}
-        <button onClick={handlePrint}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-          <Printer className="size-4" />
-          {t('printMenu.printPdf')}
-        </button>
+        </div>
       </div>
 
-      {/* Scrollable paper preview */}
-      <div className="flex-1 overflow-auto flex justify-center bg-neutral-300 rounded-2xl p-6 min-h-0">
-        <div style={{
+      {/* Preview Area */}
+      <div className="flex-1 relative min-h-0">
+        {/* Scrollable paper preview */}
+        <div className="absolute inset-0 overflow-auto bg-neutral-300 rounded-2xl p-6">
+          <div className="mx-auto" style={{
+          zoom: zoom,
           width: paper.w,
           minHeight: paper.h,
           background: pageBg,
@@ -343,6 +349,28 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
           <div ref={contentRef} style={{ position: 'relative', zIndex: 1 }}>
             <MenuContent business={business} categories={categories} items={items} settings={settings} />
           </div>
+        </div>
+        </div>
+        
+        {/* Floating Zoom Controls */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-full border border-gray-200 shadow-xl p-1.5 z-20">
+          <button 
+            onClick={() => setZoom(z => Math.max(0.25, z - 0.25))} 
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 hover:text-gray-900"
+            title="Zoom Out"
+          >
+            <Minus className="size-4" />
+          </button>
+          <div className="flex items-center justify-center w-14 gap-1 text-sm font-semibold text-gray-700">
+            {Math.round(zoom * 100)}%
+          </div>
+          <button 
+            onClick={() => setZoom(z => Math.min(2, z + 0.25))} 
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 hover:text-gray-900"
+            title="Zoom In"
+          >
+            <Plus className="size-4" />
+          </button>
         </div>
       </div>
     </div>

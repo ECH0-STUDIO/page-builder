@@ -11,7 +11,7 @@ export async function createOrderAction(
   notes: string = ''
 ) {
   const supabase = await createClient()
-  const db = supabase as any
+  const db = supabase
 
   // 1. Create the order
   const { data: order, error: orderError } = await db

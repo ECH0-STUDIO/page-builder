@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   // Use a security definer RPC so slug uniqueness is checked
   // across ALL businesses regardless of RLS policies.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: available, error } = await (supabase as any).rpc('check_slug_available', {
+  const { data: available, error } = await supabase.rpc('check_slug_available', {
     p_slug: slug,
     p_exclude_id: exclude,
   })
