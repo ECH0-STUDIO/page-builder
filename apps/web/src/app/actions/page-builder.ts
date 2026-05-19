@@ -308,7 +308,7 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
       const hasTxt = txts.some(t => t.join('').includes(`vc-domain-verify=${businessId.split('-')[0]}`))
       isConnected = hasTxt
     } else {
-      const cnames = await dns.resolveCname(domain).catch(() => [])
+      const cnames = await dns.resolveCname(domain).catch((): string[] => [])
       isConnected = cnames.includes('cname.pinit.app') || cnames.includes('cname.vercel-dns.com')
     }
     
