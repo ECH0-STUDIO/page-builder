@@ -1,4 +1,4 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm ci"
+  "installCommand": "rm -rf node_modules package-lock.json && npm install"
 }
