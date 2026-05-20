@@ -466,6 +466,12 @@ export function EditorShell({
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
 
+  const openMobileSettingsIfNeed = useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileSettingsOpen(true)
+    }
+  }, [])
+
   useEffect(() => {
     if (data) {
       setBlocks(prev => {
@@ -708,7 +714,7 @@ export function EditorShell({
         <div className="p-1.5 border-b border-border/50">
           <button
             type="button"
-            onClick={() => { openNavbarPanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+            onClick={() => { openNavbarPanel(); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
             className={cn(
               'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
               activeRightPanel === 'navbar' && !selectedId
@@ -734,7 +740,7 @@ export function EditorShell({
                     key={block.id}
                     block={block}
                     isSelected={block.id === selectedId}
-                    onSelect={() => { setSelectedId(block.id); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+                    onSelect={() => { setSelectedId(block.id); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
                     onToggleVisible={() => toggleVisible(block.id)}
                     onDuplicate={() => duplicateBlock(block.id)}
                     onDelete={() => deleteBlock(block.id)}
@@ -755,7 +761,7 @@ export function EditorShell({
         <div className="p-1.5 border-y border-border/50">
           <button
             type="button"
-            onClick={() => { openFooterPanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+            onClick={() => { openFooterPanel(); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
             className={cn(
               'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
               activeRightPanel === 'footer' && !selectedId
@@ -773,7 +779,7 @@ export function EditorShell({
       <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0">
         <button
           type="button"
-          onClick={() => { openThemePanel(); setMobileBlocksOpen(false); setMobileSettingsOpen(true); }}
+          onClick={() => { openThemePanel(); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
           className={cn(
             'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
             activeRightPanel === 'theme' && !selectedId
@@ -987,7 +993,7 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       isMobilePreview={viewMode === 'mobile'}
-                      onClick={() => { setSelectedId(block.id); setRightPanel('block'); setMobileSettingsOpen(true); }}
+                      onClick={() => { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); }}
                     />
                   </div>
                 ))}

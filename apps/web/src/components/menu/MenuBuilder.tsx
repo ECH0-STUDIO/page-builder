@@ -935,18 +935,18 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem onClick={() => setItemDialog({ open: true, editing: item })}>
-                                  <Pencil className="size-3.5 mr-2" /> Edit
+                                  <Pencil className="size-3.5 mr-2" /> {t('menuBuilder.edit')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDuplicateItem(item)}>
                                   <Copy className="size-3.5 mr-2" /> {t('menuBuilder.duplicate')}
                                 </DropdownMenuItem>
                                  <DropdownMenuItem onClick={() => handleToggleAvailable(item)}>
                                   {item.available
-                                    ? <><EyeOff className="size-3.5 mr-2" /> Mark unavailable</>
-                                    : <><Eye className="size-3.5 mr-2" /> Mark available</>}
+                                    ? <><EyeOff className="size-3.5 mr-2" /> {t('menuBuilder.markUnavailable')}</>
+                                    : <><Eye className="size-3.5 mr-2" /> {t('menuBuilder.markAvailable')}</>}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => downloadItemQR(item, '').catch(() => {})}>
-                                  <QrCode className="size-3.5 mr-2" /> Download QR
+                                  <QrCode className="size-3.5 mr-2" /> {t('menuBuilder.downloadQR')}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteItem(item.id)}>
