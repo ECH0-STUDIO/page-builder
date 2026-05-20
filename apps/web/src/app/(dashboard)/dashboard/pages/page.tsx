@@ -20,18 +20,8 @@ export default async function PagesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  // Get the active business (first-created, same as menu)
-  // TODO: wire to BusinessContext / cookie-based switcher in Phase 9
-  const { data: businesses } = await db
-    .from('businesses')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-
-  const business = businesses?.[0]
+  const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-
   const [{ blocks, publishing, theme }, { data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
     getPageDataAction(business.id),
     db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),

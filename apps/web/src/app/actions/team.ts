@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
 import { revalidatePath } from 'next/cache'
 import { sendTeamInvite } from '@/lib/email'
 
@@ -18,18 +19,15 @@ export async function inviteTeamMemberAction(payload: { email: string, role: str
     return { error: 'Unauthorized' }
   }
 
-  // Verify the current user is an owner of this business
-  const { data: businessData } = await supabase
-    .from('businesses')
-    .select('id, name')
-    .eq('id', businessId)
-    .eq('owner_id', user.id)
-    .single()
+  // Verify the current user is an owner or manager of this business
+  const { business, role: userRole } = await getActiveBusiness(supabase, user.id)
+  
+  if (!business || business.id !== businessId) {
+    return { error: 'Invalid business context' }
+  }
 
-  const business = businessData as any
-
-  if (!business) {
-    return { error: 'Only the business owner can invite members' }
+  if (userRole !== 'owner' && userRole !== 'manager') {
+    return { error: 'Only business owners and managers can invite members' }
   }
 
   // Find any existing pending invites for this user
@@ -110,16 +108,15 @@ export async function removeTeamMemberAction(payload: { memberId: string, busine
     return { error: 'Unauthorized' }
   }
 
-  // Verify the current user is an owner of this business
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id')
-    .eq('id', businessId)
-    .eq('owner_id', user.id)
-    .single()
+  // Verify the current user is an owner or manager of this business
+  const { business, role: userRole } = await getActiveBusiness(supabase, user.id)
 
-  if (!business) {
-    return { error: 'Only the business owner can remove members' }
+  if (!business || business.id !== businessId) {
+    return { error: 'Invalid business context' }
+  }
+
+  if (userRole !== 'owner' && userRole !== 'manager') {
+    return { error: 'Only business owners and managers can remove members' }
   }
 
   const { error } = await (supabase

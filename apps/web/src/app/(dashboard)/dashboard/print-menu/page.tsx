@@ -21,16 +21,8 @@ export default async function PrintMenuPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { data: businesses } = await db
-    .from('businesses')
-    .select('id, name, logo_url')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-
-  const business = businesses?.[0]
+  const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-
   const [{ data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
     db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order'),
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),

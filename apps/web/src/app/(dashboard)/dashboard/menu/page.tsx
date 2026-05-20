@@ -15,16 +15,8 @@ export default async function MenuPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { data: businesses } = await db
-    .from('businesses')
-    .select('id')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-
-  const business = businesses?.[0]
+  const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-
   const [{ data: categories }, { data: items }] = await Promise.all([
     db.from('menu_categories')
       .select('*')

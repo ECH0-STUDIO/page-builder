@@ -20,16 +20,8 @@ export default async function PublishingPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { data: businesses } = await db
-    .from('businesses')
-    .select('id, name')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-
-  const business = businesses?.[0]
+  const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-
   const [{ publishing, slug }, analytics] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),
