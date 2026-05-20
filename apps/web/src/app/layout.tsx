@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import QueryProvider from '@/lib/react-query/QueryProvider'
+import { GlobalNavLoader } from '@/components/GlobalNavLoader'
 import './globals.css'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -39,6 +41,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <Suspense fallback={null}>
+              <GlobalNavLoader />
+            </Suspense>
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </QueryProvider>
