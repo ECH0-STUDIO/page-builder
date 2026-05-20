@@ -545,6 +545,17 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories)
   const [items, setItems] = useState<MenuItem[]>(initialItems)
   const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategories[0]?.id ?? null)
+  
+  const [isLoading, setIsLoading] = useState(false)
+  const loadingTimer = useRef<NodeJS.Timeout | null>(null)
+  const renderTimer = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (loadingTimer.current) clearTimeout(loadingTimer.current)
+      if (renderTimer.current) clearTimeout(renderTimer.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (data) {
@@ -706,7 +717,22 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-colors shrink-0',
           isSelected ? 'bg-primary text-primary-foreground' : 'bg-background md:bg-transparent hover:bg-accent'
         )}
-        onClick={() => { setSelectedCatId(cat.id); clearSelection(); setDrawerOpen(false) }}
+        onClick={() => { 
+          if (selectedCatId === cat.id) return
+          setIsLoading(true)
+          
+          if (renderTimer.current) clearTimeout(renderTimer.current)
+          renderTimer.current = setTimeout(() => {
+            setSelectedCatId(cat.id)
+            clearSelection()
+            setDrawerOpen(false)
+            
+            if (loadingTimer.current) clearTimeout(loadingTimer.current)
+            loadingTimer.current = setTimeout(() => {
+              setIsLoading(false)
+            }, 400)
+          }, 10)
+        }}
       >
         <span className={cn('flex-1 text-sm font-medium truncate', !cat.visible && !isSelected && 'opacity-40')}>
           {cat.name}
@@ -1004,6 +1030,19 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           onClose={() => setItemDialog({ open: false })}
           onSave={handleSaveItem}
         />
+      )}
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-black/90 text-white text-[13px] font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-sm">
+            <svg className="animate-spin size-3.5 text-white/70" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading...
+          </div>
+        </div>
       )}
     </div>
   )
