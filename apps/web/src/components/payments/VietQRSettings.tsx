@@ -18,6 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useBusiness } from '@/context/BusinessContext'
 
 const EMPTY: VietQRSettings = {
   bank_code: '',
@@ -41,6 +42,9 @@ export function VietQRSettings({
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
   const { t } = useTranslation()
+  const { currentBusiness } = useBusiness()
+  
+  const isOwner = currentBusiness?.role === 'owner'
 
   const isComplete = form.bank_code && form.account_number && form.account_name
   const previewUrl = isComplete ? buildVietQRUrl(form) : null
@@ -87,7 +91,7 @@ export function VietQRSettings({
         {/* Bank */}
         <div className="space-y-1.5">
           <Label>{t('payments.bank')} <span className="text-red-500">*</span></Label>
-          <Select value={form.bank_code} onValueChange={v => set('bank_code', v)}>
+          <Select value={form.bank_code} onValueChange={v => set('bank_code', v)} disabled={!isOwner}>
             <SelectTrigger>
               <SelectValue placeholder={t('payments.selectBank')} />
             </SelectTrigger>
@@ -107,6 +111,7 @@ export function VietQRSettings({
             onChange={e => set('account_number', e.target.value.trim())}
             placeholder="0123456789"
             inputMode="numeric"
+            disabled={!isOwner}
           />
         </div>
 
@@ -117,6 +122,7 @@ export function VietQRSettings({
             value={form.account_name}
             onChange={e => set('account_name', e.target.value.toUpperCase())}
             placeholder="NGUYEN VAN A"
+            disabled={!isOwner}
           />
           <p className="text-[11px] text-gray-400">{t('payments.accountNameHint')}</p>
         </div>
@@ -128,23 +134,26 @@ export function VietQRSettings({
             value={form.note_template}
             onChange={e => set('note_template', e.target.value)}
             placeholder={`Thanh toán tại ${businessName}`}
+            disabled={!isOwner}
           />
           <p className="text-[11px] text-gray-400">{t('payments.transferNoteHint')}</p>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-2">
-          <Button onClick={save} disabled={saving || !isComplete} className="gap-2">
-            <Save className="size-4" />
-            {saving ? t('payments.saving') : t('payments.save')}
-          </Button>
-          {initialSettings.vietqr && (
-            <Button variant="outline" onClick={remove} disabled={removing} className="gap-2 text-red-500 hover:text-red-600 hover:border-red-300">
-              <Trash2 className="size-4" />
-              {t('payments.remove')}
+        {isOwner && (
+          <div className="flex gap-3 pt-2">
+            <Button onClick={save} disabled={saving || !isComplete} className="gap-2">
+              <Save className="size-4" />
+              {saving ? t('payments.saving') : t('payments.save')}
             </Button>
-          )}
-        </div>
+            {initialSettings.vietqr && (
+              <Button variant="outline" onClick={remove} disabled={removing} className="gap-2 text-red-500 hover:text-red-600 hover:border-red-300">
+                <Trash2 className="size-4" />
+                {t('payments.remove')}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Live QR preview */}

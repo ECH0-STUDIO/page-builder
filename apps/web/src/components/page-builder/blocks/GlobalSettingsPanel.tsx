@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -8,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { uploadImageToStorage } from '@/lib/image-utils'
+import { uploadImageToStorage, validateImageDimensions } from '@/lib/image-utils'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 import type { ThemeSettings, PublishingSettings } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -39,6 +41,12 @@ export function GlobalSettingsPanel({
   async function handleUploadFavicon(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const isValid = await validateImageDimensions(file, { exactWidth: 32, exactHeight: 32 })
+    if (!isValid) {
+      toast.error('Favicon image must be exactly 32x32 pixels')
+      if (faviconRef.current) faviconRef.current.value = ''
+      return
+    }
     setUploadingFavicon(true)
     try {
       const path = `${p.business_id}/favicon-${Date.now()}.png`
@@ -57,6 +65,12 @@ export function GlobalSettingsPanel({
   async function handleUploadWebclip(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const isValid = await validateImageDimensions(file, { exactWidth: 180, exactHeight: 180 })
+    if (!isValid) {
+      toast.error('Webclip image must be exactly 180x180 pixels')
+      if (webclipRef.current) webclipRef.current.value = ''
+      return
+    }
     setUploadingWebclip(true)
     try {
       const path = `${p.business_id}/webclip-${Date.now()}.png`
@@ -100,62 +114,100 @@ export function GlobalSettingsPanel({
             <div className="space-y-1.5">
               <Label className="text-xs">{t('pageBuilder.favicon')}</Label>
               <div className="flex flex-col gap-2">
-                {p.favicon_url ? (
-                  <div className="relative size-12 border border-border rounded overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                    <img src={p.favicon_url} alt="Favicon" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => onPublishingChange({ favicon_url: null })}
-                      className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/80 text-white rounded-full p-0.5"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="size-12 border border-border border-dashed rounded bg-muted/50 flex items-center justify-center shrink-0">
-                    {uploadingFavicon ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : <ImageIcon className="size-4 text-muted-foreground/50" />}
-                  </div>
-                )}
-                <input type="file" accept="image/*" className="hidden" ref={faviconRef} onChange={handleUploadFavicon} />
-                <button
-                  type="button"
-                  onClick={() => faviconRef.current?.click()}
-                  disabled={uploadingFavicon}
-                  className="text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/80 px-2 py-1 rounded w-fit"
-                >
-                  {uploadingFavicon ? t('pageBuilder.uploading') : p.favicon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
-                </button>
+                <div className="flex gap-2 w-full">
+                  {p.favicon_url && (
+                    <div className="size-10 rounded-md border border-border overflow-hidden shrink-0 bg-white relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.favicon_url} alt="" className="w-full h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => onPublishingChange({ favicon_url: null })}
+                        className="absolute inset-0 bg-black/50 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  )}
+                  <ImageUploader businessId={p.business_id} onImageSelect={async (url) => {
+                    const isValid = await validateImageDimensions(url, { exactWidth: 32, exactHeight: 32 })
+                    if (!isValid) {
+                      toast.error('Favicon image must be exactly 32x32 pixels')
+                      return
+                    }
+                    onPublishingChange({ favicon_url: url })
+                  }}>
+                    {(openGallery) => (
+                      <div className="flex-1 flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => faviconRef.current?.click()}
+                          disabled={uploadingFavicon}
+                          className="flex-1 justify-start gap-2 h-10 px-3"
+                        >
+                          {uploadingFavicon ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : <ImageIcon className="size-4 text-muted-foreground/50" />}
+                          <span className="text-xs font-normal truncate">
+                            {uploadingFavicon ? t('pageBuilder.uploading') : p.favicon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
+                          </span>
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={openGallery} className="h-10 px-3">
+                          <ImageIcon className="size-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </ImageUploader>
+                  <input type="file" accept="image/*" className="hidden" ref={faviconRef} onChange={handleUploadFavicon} />
+                </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs">{t('pageBuilder.webclip')}</Label>
-              <div className="flex flex-col gap-2">
-                {p.apple_touch_icon_url ? (
-                  <div className="relative size-16 border border-border rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                    <img src={p.apple_touch_icon_url} alt="Webclip" className="w-full h-full object-cover" />
+              <div className="flex gap-2 w-full">
+                {p.apple_touch_icon_url && (
+                  <div className="size-10 rounded-md border border-border overflow-hidden shrink-0 bg-white relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.apple_touch_icon_url} alt="" className="w-full h-full object-contain" />
                     <button
                       type="button"
                       onClick={() => onPublishingChange({ apple_touch_icon_url: null })}
-                      className="absolute top-1 right-1 bg-black/50 hover:bg-black/80 text-white rounded-full p-1"
+                      className="absolute inset-0 bg-black/50 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </button>
                   </div>
-                ) : (
-                  <div className="size-16 border border-border border-dashed rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
-                    {uploadingWebclip ? <Loader2 className="size-5 animate-spin text-muted-foreground" /> : <ImageIcon className="size-5 text-muted-foreground/50" />}
-                  </div>
                 )}
+                <ImageUploader businessId={p.business_id} onImageSelect={async (url) => {
+                  const isValid = await validateImageDimensions(url, { exactWidth: 180, exactHeight: 180 })
+                  if (!isValid) {
+                    toast.error('Webclip image must be exactly 180x180 pixels')
+                    return
+                  }
+                  onPublishingChange({ apple_touch_icon_url: url })
+                }}>
+                  {(openGallery) => (
+                    <div className="flex-1 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => webclipRef.current?.click()}
+                        disabled={uploadingWebclip}
+                        className="flex-1 justify-start gap-2 h-10 px-3"
+                      >
+                        {uploadingWebclip ? <Loader2 className="size-5 animate-spin text-muted-foreground" /> : <ImageIcon className="size-5 text-muted-foreground/50" />}
+                        <span className="text-xs font-normal truncate">
+                          {uploadingWebclip ? t('pageBuilder.uploading') : p.apple_touch_icon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
+                        </span>
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={openGallery} className="h-10 px-3">
+                        <ImageIcon className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </ImageUploader>
                 <input type="file" accept="image/*" className="hidden" ref={webclipRef} onChange={handleUploadWebclip} />
-                <button
-                  type="button"
-                  onClick={() => webclipRef.current?.click()}
-                  disabled={uploadingWebclip}
-                  className="text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/80 px-2 py-1 rounded w-fit"
-                >
-                  {uploadingWebclip ? t('pageBuilder.uploading') : p.apple_touch_icon_url ? t('pageBuilder.replace') : t('pageBuilder.uploadPng')}
-                </button>
               </div>
             </div>
           </div>

@@ -132,3 +132,116 @@ export async function removeTeamMemberAction(payload: { memberId: string, busine
   revalidatePath('/dashboard/settings/team')
   return { success: true }
 }
+
+export async function updateTeamMemberRoleAction(payload: { memberId: string, businessId: string, newRole: string }) {
+  const { memberId, businessId, newRole } = payload
+
+  if (!memberId || !businessId || !newRole) {
+    return { error: 'Missing required fields' }
+  }
+
+  if (newRole !== 'staff' && newRole !== 'manager') {
+    return { error: 'Invalid role' }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Unauthorized' }
+  }
+
+  const { business, role: userRole } = await getActiveBusiness(supabase, user.id)
+
+  if (!business || business.id !== businessId) {
+    return { error: 'Invalid business context' }
+  }
+
+  if (userRole !== 'owner' && userRole !== 'manager') {
+    return { error: 'Only business owners and managers can change roles' }
+  }
+
+  // Prevent managers from modifying other managers or owners
+  const { data: targetMember } = await supabase
+    .from('business_members')
+    .select('role')
+    .eq('id', memberId)
+    .eq('business_id', businessId)
+    .single()
+
+  if (!targetMember) {
+    return { error: 'Member not found' }
+  }
+
+  if (targetMember.role === 'owner') {
+    return { error: 'Cannot change the role of the owner' }
+  }
+
+  if (userRole === 'manager' && targetMember.role === 'manager') {
+    return { error: 'Managers cannot modify other managers' }
+  }
+
+  const { error } = await supabase
+    .from('business_members')
+    .update({ role: newRole })
+    .eq('id', memberId)
+    .eq('business_id', businessId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/dashboard/settings/team')
+  return { success: true }
+}
+
+export async function updateTeamMemberRolesAction(payload: { updates: { memberId: string, newRole: string }[], businessId: string }) {
+  const { updates, businessId } = payload
+
+  if (!updates || !Array.isArray(updates) || !businessId) {
+    return { error: 'Invalid payload' }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Unauthorized' }
+
+  const { business, role: userRole } = await getActiveBusiness(supabase, user.id)
+
+  if (!business || business.id !== businessId) {
+    return { error: 'Invalid business context' }
+  }
+
+  if (userRole !== 'owner' && userRole !== 'manager') {
+    return { error: 'Only business owners and managers can change roles' }
+  }
+
+  // Iterate and apply updates
+  let hasErrors = false
+  for (const update of updates) {
+    if (update.newRole !== 'staff' && update.newRole !== 'manager') continue
+
+    const { data: targetMember } = await supabase
+      .from('business_members')
+      .select('role')
+      .eq('id', update.memberId)
+      .eq('business_id', businessId)
+      .single()
+
+    if (!targetMember) continue
+    if (targetMember.role === 'owner') continue
+    if (userRole === 'manager' && targetMember.role === 'manager') continue
+
+    const { error } = await supabase
+      .from('business_members')
+      .update({ role: update.newRole })
+      .eq('id', update.memberId)
+      .eq('business_id', businessId)
+      
+    if (error) hasErrors = true
+  }
+
+  revalidatePath('/dashboard/settings/team')
+  return { success: true, hasErrors }
+}

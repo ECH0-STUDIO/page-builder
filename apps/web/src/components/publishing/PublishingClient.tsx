@@ -19,6 +19,8 @@ import {
 import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
+import { ImageUploader } from '@/components/shared/ImageUploader'
+import { validateImageDimensions } from '@/lib/image-utils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -191,6 +193,22 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     }
   }
 
+  async function handleRemoveDomain() {
+    setSavingDomain(true)
+    try {
+      const res = await savePublishingSettingsAction(businessId, { custom_domain: null })
+      if (res.success) {
+        setCustomDomain('')
+        toast.success(t('publishing.toastDomainUpdated'))
+      }
+      else toast.error(res.error)
+    } catch {
+      toast.error(t('publishing.toastDomainFailed'))
+    } finally {
+      setSavingDomain(false)
+    }
+  }
+
   async function handleVerifyDns() {
     if (!publishing?.custom_domain) return
     setVerifyingDns(true)
@@ -263,6 +281,15 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     setter: (url: string) => void,
     field: 'og_image_url' | 'favicon_url' | 'apple_touch_icon_url'
   ) {
+    if (field === 'favicon_url') {
+      const isValid = await validateImageDimensions(file, { exactWidth: 32, exactHeight: 32 })
+      if (!isValid) return toast.error(t('publishing.faviconMustBeSquare') || 'Favicon must be exactly 32x32 pixels')
+    }
+    if (field === 'apple_touch_icon_url') {
+      const isValid = await validateImageDimensions(file, { exactWidth: 180, exactHeight: 180 })
+      if (!isValid) return toast.error(t('publishing.webclipMustBeSquare') || 'Webclip must be exactly 180x180 pixels')
+    }
+
     try {
       const url = await uploadPublishingImage(businessId, file, pathPrefix)
       setter(url)
@@ -395,6 +422,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         <div className="flex items-center gap-2 mb-5">
           <Globe className="size-4 text-gray-600" />
           <h2 className="font-semibold text-gray-900">{t('publishing.customDomain')}</h2>
+          <span className="text-[10px] font-bold tracking-widest text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full uppercase ml-1">50 Credits / mo</span>
         </div>
 
         <div className="space-y-4">
@@ -427,15 +455,23 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> vc-domain-verify={businessId.split('-')[0]}</div>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-4 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
                 <p className="text-xs text-blue-700/80 italic">{t('publishing.dnsNote')}</p>
-                <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 shrink-0 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
-                  {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
-                  Verify connection
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                    Cancel Domain
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
+                    {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
+                    Verify connection
+                  </Button>
+                </div>
               </div>
             </div>
           )}
+          <p className="text-xs text-gray-500 mt-2">
+            <strong>Billing Note:</strong> The 50 Credits/month charge cycle will only begin <em>after</em> your domain DNS is successfully verified and connected.
+          </p>
         </div>
       </Card>
 
@@ -456,6 +492,13 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
               </button>
             ))}
           </div>
+        </div>
+        
+        <div className="mb-5 bg-blue-50/50 text-blue-800 text-xs px-3 py-2 rounded-lg border border-blue-100 flex items-start gap-2">
+          <AlertCircle className="size-4 shrink-0 mt-0.5 text-blue-500" />
+          <p>
+            <strong>Usage Cost:</strong> Website hosting consumes <strong>1 Credit per 500 page views</strong>. This is automatically deducted from your balance based on actual traffic.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -539,10 +582,22 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                 </div>
               </div>
             ) : (
-              <button onClick={() => ogRef.current?.click()}
-                className="w-full flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 text-gray-400 hover:text-gray-600 transition-colors">
-                <ImageIcon className="size-6" /><span className="text-sm">{t('publishing.uploadImage')}</span>
-              </button>
+              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
+                setOgImage(url)
+                await savePublishingSettingsAction(businessId, { og_image_url: url })
+              }}>
+                {(openGallery) => (
+                  <div className="flex gap-2">
+                    <button onClick={() => ogRef.current?.click()}
+                      className="flex-1 flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 text-gray-400 hover:text-gray-600 transition-colors">
+                      <ImageIcon className="size-6" /><span className="text-sm">{t('publishing.uploadImage')}</span>
+                    </button>
+                    <button onClick={openGallery} className="w-1/3 flex flex-col items-center gap-2 py-8 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors">
+                      <ImageIcon className="size-6" /><span className="text-[10px] uppercase font-bold">Gallery</span>
+                    </button>
+                  </div>
+                )}
+              </ImageUploader>
             )}
             <input ref={ogRef} type="file" accept="image/*" className="hidden"
               onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'og-images', setOgImage, 'og_image_url')} />
@@ -583,11 +638,25 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                   <img src={favicon} alt="favicon" className="size-8 rounded border border-gray-200 object-contain" />
                 : <div className="size-8 rounded border-2 border-dashed border-gray-200 flex items-center justify-center"><Globe className="size-4 text-gray-300" /></div>
               }
-              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                <Upload className="size-3" /> {favicon ? t('publishing.replace') : t('publishing.upload')}
-                <input ref={faviconRef} type="file" accept="image/*,.ico" className="hidden"
-                  onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicons', setFavicon, 'favicon_url')} />
-              </label>
+              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
+                const isValid = await validateImageDimensions(url, { exactWidth: 32, exactHeight: 32 })
+                if (!isValid) return toast.error(t('publishing.faviconMustBeSquare') || 'Favicon must be exactly 32x32 pixels')
+                setFavicon(url)
+                await savePublishingSettingsAction(businessId, { favicon_url: url })
+              }}>
+                {(openGallery) => (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => faviconRef.current?.click()} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
+                      <Upload className="size-3" /> {favicon ? t('publishing.replace') : t('publishing.upload')}
+                    </button>
+                    <button onClick={openGallery} className="flex items-center text-xs text-gray-600 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors" title="Gallery">
+                      <ImageIcon className="size-3" />
+                    </button>
+                  </div>
+                )}
+              </ImageUploader>
+              <input ref={faviconRef} type="file" accept="image/*,.ico" className="hidden"
+                onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicons', setFavicon, 'favicon_url')} />
               {favicon && (
                 <button onClick={async () => { setFavicon(null); await savePublishingSettingsAction(businessId, { favicon_url: null }) }}
                   className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
@@ -605,11 +674,25 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                   <img src={webclip} alt="webclip" className="size-10 rounded-xl border border-gray-200 object-cover" />
                 : <div className="size-10 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center"><ImageIcon className="size-4 text-gray-300" /></div>
               }
-              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                <Upload className="size-3" /> {webclip ? t('publishing.replace') : t('publishing.upload')}
-                <input ref={webclipRef} type="file" accept="image/*" className="hidden"
-                  onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'webclips', setWebclip, 'apple_touch_icon_url')} />
-              </label>
+              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
+                const isValid = await validateImageDimensions(url, { exactWidth: 180, exactHeight: 180 })
+                if (!isValid) return toast.error(t('publishing.webclipMustBeSquare') || 'Webclip must be exactly 180x180 pixels')
+                setWebclip(url)
+                await savePublishingSettingsAction(businessId, { apple_touch_icon_url: url })
+              }}>
+                {(openGallery) => (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => webclipRef.current?.click()} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
+                      <Upload className="size-3" /> {webclip ? t('publishing.replace') : t('publishing.upload')}
+                    </button>
+                    <button onClick={openGallery} className="flex items-center text-xs text-gray-600 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors" title="Gallery">
+                      <ImageIcon className="size-3" />
+                    </button>
+                  </div>
+                )}
+              </ImageUploader>
+              <input ref={webclipRef} type="file" accept="image/*" className="hidden"
+                onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'webclips', setWebclip, 'apple_touch_icon_url')} />
               {webclip && (
                 <button onClick={async () => { setWebclip(null); await savePublishingSettingsAction(businessId, { apple_touch_icon_url: null }) }}
                   className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>

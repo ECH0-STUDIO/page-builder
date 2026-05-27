@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings, Layers,
+  PanelBottom, Settings, Layers, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,6 +29,7 @@ import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useBusiness } from '@/context/BusinessContext'
 
 import { PublishBar } from './PublishBar'
 import { TemplatePicker } from './TemplatePicker'
@@ -465,6 +466,12 @@ export function EditorShell({
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
+  const [_isPreviewMode, setIsPreviewMode] = useState(false)
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
+
+  const { currentBusiness } = useBusiness()
+  const isStaff = currentBusiness?.role === 'staff'
+  const isPreviewMode = _isPreviewMode || isStaff
 
   const openMobileSettingsIfNeed = useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -537,6 +544,8 @@ export function EditorShell({
           background_color: next.background_color,
           font_family: next.font_family,
           heading_font_family: next.heading_font_family || 'Inter',
+        }).then(() => {
+          setHasUnpublishedChanges(true)
         }).catch(err => toast.error('Failed to save theme: ' + String(err)))
       }, 1000)
       return next
@@ -550,6 +559,9 @@ export function EditorShell({
       if (savePubTimer.current) clearTimeout(savePubTimer.current)
       savePubTimer.current = setTimeout(() => {
         savePublishingSettingsAction(business.id, updated)
+          .then(() => {
+            setHasUnpublishedChanges(true)
+          })
           .catch(err => toast.error('Failed to save settings: ' + String(err)))
       }, 1000)
       return next
@@ -572,12 +584,18 @@ export function EditorShell({
   // ── Auto-save debounce ────────────────────────────────────────────────────
   const performSave = useCallback(async (blocksToSave: PageBlock[]) => {
     setSaveStatus('saving')
-    const result = await savePageBlocksAction(business.id, blocksToSave)
-    if (result.success) {
-      setSaveStatus('saved')
-    } else {
+    try {
+      const res = await savePageBlocksAction(business.id, blocksToSave)
+      if (res.success) {
+        setSaveStatus('saved')
+        setHasUnpublishedChanges(true)
+      } else {
+        setSaveStatus('idle')
+        console.error('Failed to auto-save:', res.error)
+      }
+    } catch (e) {
       setSaveStatus('idle')
-      toast.error(`Save failed: ${result.error}`)
+      console.error('Save error:', e)
     }
   }, [business.id])
 
@@ -684,20 +702,26 @@ export function EditorShell({
   }
 
   // ── Publish ───────────────────────────────────────────────────────────────
-  async function handlePublish(targetState: boolean) {
+  async function handlePublish(state: boolean) {
     setPublishing(true)
-    if (targetState) saveNow() // ensure any pending changes are saved immediately
-    const result = await togglePublishAction(business.id, targetState)
-    if (result.success) {
-      setPublished(result.data.published)
-      toast.success(result.data.published ? 'Page published successfully! 🎉' : 'Page unpublished')
-    } else {
-      toast.error(result.error)
+    if (state) saveNow() // ensure any pending changes are saved immediately
+    try {
+      const res = await togglePublishAction(business.id, state)
+      if (res.success) {
+        setPublished(state)
+        setPublishingSettings(res.data)
+        if (state) setHasUnpublishedChanges(false)
+        toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
+      } else {
+        toast.error(res.error)
+      }
+    } catch (err) {
+      toast.error('Failed to toggle publish status')
     }
     setPublishing(false)
   }
 
-  const LeftSidebarContent = () => (
+  const renderLeftSidebarContent = () => (
     <>
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
@@ -794,7 +818,7 @@ export function EditorShell({
     </>
   )
 
-  const RightSidebarContent = () => (
+  const renderRightSidebarContent = () => (
     <>
       {activeRightPanel === 'block' && selectedBlock ? (
         <>
@@ -861,15 +885,34 @@ export function EditorShell({
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* Top bar */}
-      <PublishBar
-        businessName={business.name}
-        slug={business.slug}
-        published={published}
-        saveStatus={saveStatus}
-        onPublish={handlePublish}
-        publishing={publishing}
-        onSaveNow={saveNow}
-      />
+      {isPreviewMode ? (
+        <div className="h-12 shrink-0 bg-indigo-600 text-white flex items-center justify-center relative shadow-md z-50">
+          <span className="text-sm font-medium tracking-wide flex items-center gap-2">
+            <Eye className="size-4 opacity-80" /> {t('pageBuilder.preview')}
+          </span>
+          {!isStaff && (
+            <button
+              onClick={() => setIsPreviewMode(false)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-indigo-700 rounded-full transition-colors"
+              title={t('pageBuilder.closePreview')}
+            >
+              <X className="size-5" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <PublishBar
+          businessName={business.name}
+          slug={business.slug}
+          published={published}
+          hasUnpublishedChanges={hasUnpublishedChanges}
+          saveStatus={saveStatus}
+          onPublish={handlePublish}
+          publishing={publishing}
+          onSaveNow={saveNow}
+          onTogglePreview={() => setIsPreviewMode(true)}
+        />
+      )}
 
       {/* Template picker overlay */}
       {showTemplatePicker && (
@@ -907,9 +950,11 @@ export function EditorShell({
       <div className="flex flex-1 overflow-hidden relative">
 
         {/* ── Block list sidebar ──────────────────────────────────────────── */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-muted/20">
-          <LeftSidebarContent />
-        </aside>
+        {!isPreviewMode && (
+          <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border bg-muted/20">
+            {renderLeftSidebarContent()}
+          </aside>
+        )}
 
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
@@ -963,6 +1008,7 @@ export function EditorShell({
                   businessName={business.name}
                   logoUrl={business.logo_url ?? undefined}
                   inEditor
+                  isMobilePreview={viewMode === 'mobile'}
                 />
 
                 {viewMode === 'mobile' && (
@@ -978,10 +1024,12 @@ export function EditorShell({
                       <p className="font-semibold text-lg">{t('pageBuilder.canvasEmpty')}</p>
                       <p className="text-sm text-muted-foreground mt-1">{t('pageBuilder.canvasEmptyHint')}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)}>✦ {t('pageBuilder.templates')}</Button>
-                      <Button size="sm" onClick={() => setAddModalOpen(true)}><Plus className="size-4 mr-1.5" /> {t('pageBuilder.addBlock')}</Button>
-                    </div>
+                    {!isStaff && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)}>✦ {t('pageBuilder.templates')}</Button>
+                        <Button size="sm" onClick={() => setAddModalOpen(true)}><Plus className="size-4 mr-1.5" /> {t('pageBuilder.addBlock')}</Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -993,7 +1041,7 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       isMobilePreview={viewMode === 'mobile'}
-                      onClick={() => { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); }}
+                      onClick={isStaff ? undefined : () => { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); }}
                     />
                   </div>
                 ))}
@@ -1013,9 +1061,11 @@ export function EditorShell({
         </main>
 
         {/* ── Settings panel ──────────────────────────────────────────────── */}
-        <aside className="hidden lg:flex flex-col w-80 shrink-0 border-l border-border bg-background">
-          <RightSidebarContent />
-        </aside>
+        {!isPreviewMode && (
+          <aside className="hidden lg:flex flex-col w-80 shrink-0 border-l border-border bg-background">
+            {renderRightSidebarContent()}
+          </aside>
+        )}
 
         {/* ── Mobile Action Bar ────────────────────────────────────────────── */}
         <div className="lg:hidden absolute bottom-0 left-0 right-0 h-14 bg-background border-t border-border flex items-center justify-around z-20 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
@@ -1028,7 +1078,7 @@ export function EditorShell({
             </DrawerTrigger>
             <DrawerContent className="h-[80vh] flex flex-col p-0">
               <VisuallyHidden><DrawerTitle>Sections</DrawerTitle></VisuallyHidden>
-              <LeftSidebarContent />
+              {renderLeftSidebarContent()}
             </DrawerContent>
           </Drawer>
 
@@ -1043,7 +1093,7 @@ export function EditorShell({
             </DrawerTrigger>
             <DrawerContent className="h-[80vh] flex flex-col p-0">
               <VisuallyHidden><DrawerTitle>Settings</DrawerTitle></VisuallyHidden>
-              <RightSidebarContent />
+              {renderRightSidebarContent()}
             </DrawerContent>
           </Drawer>
         </div>

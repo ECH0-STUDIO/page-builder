@@ -525,6 +525,7 @@ export interface Database {
           name: string
           required: boolean
           sort_order: number
+          allow_multiple: boolean
         }
         Insert: {
           id?: string
@@ -532,6 +533,7 @@ export interface Database {
           name: string
           required?: boolean
           sort_order?: number
+          allow_multiple?: boolean
         }
         Update: {
           id?: string
@@ -539,6 +541,7 @@ export interface Database {
           name?: string
           required?: boolean
           sort_order?: number
+          allow_multiple?: boolean
         }
         Relationships: [
           

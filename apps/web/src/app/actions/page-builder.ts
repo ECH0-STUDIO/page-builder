@@ -100,6 +100,10 @@ export async function savePageBlocksAction(
   const { error: insErr } = await db.from('page_blocks').insert(rows)
   if (insErr) return { success: false, error: insErr.message }
 
+  // Set has_unpublished_changes to true
+  await db.from('publishing_settings')
+    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+
   revalidatePath('/dashboard/pages')
   revalidatePath(`/[slug]`)
   return { success: true, data: undefined }
@@ -115,11 +119,28 @@ export async function togglePublishAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  // If we are publishing, we must snapshot the draft state
+  let published_blocks = undefined
+  let published_theme = undefined
+  
+  if (published) {
+    const [blocksRes, themeRes] = await Promise.all([
+      supabase.from('page_blocks').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
+      supabase.from('theme_settings').select('*').eq('business_id', businessId).single()
+    ])
+    if (blocksRes.data) published_blocks = blocksRes.data
+    if (themeRes.data) published_theme = themeRes.data
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
-      { business_id: businessId, published },
+      { 
+        business_id: businessId, 
+        published, 
+        ...(published ? { has_unpublished_changes: false, published_blocks, published_theme } : {})
+      },
       { onConflict: 'business_id' }
     )
     .select()
@@ -151,6 +172,9 @@ export async function saveThemeAction(
     .select()
     .single()
 
+  await supabase.from('publishing_settings')
+    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
   revalidatePath(`/[slug]`)
@@ -176,6 +200,9 @@ export async function saveNavbarAction(
     )
     .select()
     .single()
+
+  await supabase.from('publishing_settings')
+    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')

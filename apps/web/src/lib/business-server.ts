@@ -88,15 +88,22 @@ export async function getAllUserBusinessesServer(userId: string) {
 
   // Fetch businesses where user is a member
   const { data: memberRows } = await adminClient.from('business_members')
-    .select('businesses(*)')
+    .select('role, businesses(*)')
     .eq('user_id', userId)
 
   const memberBusinesses = memberRows
-    ?.map((row: any) => (Array.isArray(row.businesses) ? row.businesses[0] : row.businesses))
+    ?.map((row: any) => {
+      const b = Array.isArray(row.businesses) ? row.businesses[0] : row.businesses
+      if (b) {
+        return { ...b, role: row.role }
+      }
+      return null
+    })
     .filter(Boolean) || []
 
   // Combine and deduplicate
-  const allBusinesses = [...(ownedBusinesses || []), ...memberBusinesses]
+  const ownedWithRole = ownedBusinesses?.map((b: any) => ({ ...b, role: 'owner' })) || []
+  const allBusinesses = [...ownedWithRole, ...memberBusinesses]
   const uniqueBusinesses = Array.from(new Map(allBusinesses.map((b: any) => [b.id, b])).values())
 
   // Sort by created_at ascending

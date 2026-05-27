@@ -30,17 +30,18 @@ async function downloadQR(url: string, filename: string) {
 function SimpleQRCard({ url, label, sublabel, filename }: {
   url: string; label: string; sublabel?: string; filename: string
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [rendered, setRendered] = useState(false)
+  const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (!canvasRef.current || !url) return
-    setRendered(false)
-    QRCode.toCanvas(canvasRef.current, url, {
-      width: 200, margin: 2,
+    if (!url) return
+    setDataUrl(null)
+    QRCode.toDataURL(url, {
+      width: 400, margin: 2,
       color: { dark: '#111111', light: '#ffffff' },
-    }, () => setRendered(true))
+    }, (err, url) => {
+      if (!err) setDataUrl(url)
+    })
   }, [url])
 
   async function copy() {
@@ -50,10 +51,14 @@ function SimpleQRCard({ url, label, sublabel, filename }: {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center gap-4 max-w-xs w-full">
-      <div className="size-48 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100 relative">
-        <canvas ref={canvasRef} className={`transition-opacity ${rendered ? 'opacity-100' : 'opacity-0'}`} />
-        {!rendered && <QrCode className="size-10 text-gray-200 animate-pulse absolute" />}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 flex flex-col items-center gap-4 w-full">
+      <div className="w-full aspect-square rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100 relative p-2">
+        {dataUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={dataUrl} alt="QR Code" className="w-full h-full object-contain mix-blend-multiply transition-opacity animate-in fade-in" />
+        ) : (
+          <QrCode className="size-10 text-gray-200 animate-pulse absolute" />
+        )}
       </div>
       <div className="text-center">
         <p className="font-semibold text-sm text-gray-900">{label}</p>
@@ -62,17 +67,17 @@ function SimpleQRCard({ url, label, sublabel, filename }: {
       <div className="flex gap-2 w-full">
         <button
           onClick={copy}
-          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          title={copied ? "Copied!" : "Copy link"}
+          className="flex-1 flex items-center justify-center h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
         >
-          {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-          {copied ? 'Copied!' : 'Copy link'}
+          {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
         </button>
         <button
           onClick={() => downloadQR(url, filename)}
-          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
+          title="Download PNG"
+          className="flex-1 flex items-center justify-center h-9 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
         >
-          <Download className="size-3.5" />
-          PNG
+          <Download className="size-4" />
         </button>
       </div>
     </div>
@@ -201,7 +206,7 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
       </div>
 
       {kdsEnabled && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {Array.from({ length: Math.min(tableCount, 100) }).map((_, i) => {
             const num = i + 1
             return (
@@ -266,7 +271,7 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
       </div>
 
       {tab === 'design' && (
-        <QRPrintDesigner qrUrl={pageUrl} businessName={businessName} businessLogoUrl={businessLogoUrl} />
+        <QRPrintDesigner businessId={businessId} qrUrl={pageUrl} businessName={businessName} businessLogoUrl={businessLogoUrl || undefined} />
       )}
       {tab === 'items' && (
         <ItemQRTab slug={slug} categories={categories} items={items} />

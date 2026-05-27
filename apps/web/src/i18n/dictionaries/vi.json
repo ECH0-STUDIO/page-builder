@@ -14,7 +14,9 @@
     "account": "Tài khoản",
     "yourBusinesses": "Doanh nghiệp của bạn",
     "addNewBusiness": "Thêm doanh nghiệp mới",
-    "selectBusiness": "Chọn doanh nghiệp"
+    "selectBusiness": "Chọn doanh nghiệp",
+    "gallery": "Thư viện Ảnh",
+    "topUp": "THÊM"
   },
   "overview": {
     "title": "Tổng quan",
@@ -127,8 +129,10 @@
     "saving": "Đang lưu…",
     "toastUrlUpdated": "Đã cập nhật URL trang thành công",
     "toastUrlFailed": "Cập nhật URL thất bại",
-    "toastDomainUpdated": "Đã cập nhật tên miền tùy chỉnh",
-    "toastDomainFailed": "Lưu tên miền thất bại"
+    "toastDomainUpdated": "Đã cập nhật tên miền thành công",
+    "toastDomainFailed": "Lưu tên miền thất bại",
+    "faviconMustBeSquare": "Favicon phải có kích thước chính xác 32x32 pixel",
+    "webclipMustBeSquare": "Webclip phải có kích thước chính xác 180x180 pixel"
   },
   "qr": {
     "title": "Mã QR",
@@ -360,7 +364,12 @@
         "label": "Mã QR",
         "description": "Mã QR để quét liên kết tới trang hoặc URL tùy chỉnh."
       }
-    }
+    },
+    "viewLive": "Xem trang trực tiếp",
+    "saveAsDraft": "Lưu nháp",
+    "publishToLive": "Xuất bản trực tuyến",
+    "closePreview": "Đóng xem trước",
+    "changes": "Có thay đổi"
   },
   "businessProfile": {
     "logo": "Logo",
@@ -429,7 +438,8 @@
     "tabs": {
       "security": "Bảo mật",
       "team": "Quản lý nhóm",
-      "localization": "Khu vực & Ngôn ngữ"
+      "localization": "Khu vực & Ngôn ngữ",
+      "credits": "Thanh toán & Credit"
     },
     "security": {
       "title": "Bảo mật",
@@ -469,7 +479,10 @@
       "pending": "Đang chờ",
       "resend": "Gửi lại",
       "empty": "Chưa có thành viên hoạt động hoặc lời mời đang chờ.",
-      "noBusiness": "Không tìm thấy doanh nghiệp. Vui lòng tạo một doanh nghiệp trước."
+      "noBusiness": "Không tìm thấy doanh nghiệp. Vui lòng tạo một doanh nghiệp trước.",
+      "changeRoleConfirm": "Bạn có chắc chắn muốn thay đổi vai trò của thành viên này không?",
+      "roleChanged": "Đã cập nhật vai trò thành công",
+      "saveChanges": "Lưu thay đổi"
     },
     "localization": {
       "title": "Khu vực & Ngôn ngữ",
@@ -716,8 +729,13 @@
   "menuBuilder": {
     "addCategory": "Thêm danh mục",
     "renameCategory": "Đổi tên danh mục",
-    "categoryName": "Tên",
-    "categoryPlaceholder": "Khai vị, Món chính, Đồ uống…",
+    "categoryName": "Tên danh mục",
+    "categoryPlaceholder": "ví dụ: Món chính",
+    "tagHelp": "Nhấn Enter hoặc , để thêm nhãn tùy chỉnh",
+    "noItemsYet": "Chưa có món nào",
+    "addFirstItem": "Thêm món đầu tiên vào danh mục này.",
+    "multipleChoice": "Nhiều lựa chọn",
+    "singleChoice": "Một lựa chọn",
     "cancel": "Hủy",
     "save": "Lưu",
     "add": "Thêm",
@@ -812,6 +830,71 @@
     "included": "Bao gồm"
   },
   "orders": {
-    "noOrders": "Không có đơn hàng"
+    "newOrderReceived": "Nhận được đơn hàng mới!",
+    "failedUpdateStatus": "Cập nhật trạng thái thất bại",
+    "orderRemoved": "Đã xóa đơn hàng",
+    "undo": "Hoàn tác",
+    "failedUpdatePayment": "Cập nhật thanh toán thất bại",
+    "failedUpdateDetails": "Cập nhật chi tiết đơn hàng thất bại",
+    "orderUpdated": "Đã cập nhật đơn hàng thành công!",
+    "noOrders": "Chưa có đơn hàng nào.",
+    "table": "Bàn",
+    "takeaway": "Mang đi",
+    "edit": "Sửa",
+    "complete": "Hoàn thành",
+    "markPaid": "Đã thanh toán",
+    "cancelOrder": "Hủy đơn hàng",
+    "title": "Đơn hàng trực tiếp",
+    "autoClearMsg": "Đơn hàng sẽ tự động bị xóa sau 48 giờ.",
+    "todayOrders": "Đơn hàng hôm nay",
+    "expectedRev": "Doanh thu dự kiến",
+    "received": "Đã nhận",
+    "completed": "Hoàn thành",
+    "paid": "Đã thanh toán",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "editOrder": "Sửa đơn hàng",
+    "tableNumber": "Số bàn",
+    "items": "Món ăn",
+    "finalTotalOverride": "Ghi đè tổng tiền",
+    "cancel": "Hủy",
+    "saveChanges": "Lưu thay đổi",
+    "timeAgo": {
+      "justNow": "Vừa xong",
+      "minsAgo": "{{m}} phút trước",
+      "hoursMinsAgo": "{{h}}g {{m}}p trước"
+    }
+  },
+  "credits": {
+    "availableCredits": "Credit hiện có",
+    "usedForPremium": "Credit được sử dụng để truy cập các tính năng cao cấp.",
+    "buyCredits": "Mua Credit",
+    "purchaseMore": "Mua thêm Credit để tiếp tục sử dụng các tính năng cao cấp.",
+    "purchaseSuccess": "Đã mua thành công {{amount}} Credit!",
+    "transactionHistory": "Lịch sử giao dịch",
+    "recentUsage": "Các giao dịch mua và sử dụng Credit gần đây",
+    "noTransactions": "Chưa có giao dịch nào."
+  },
+  "gallery": {
+    "title": "Thư viện Ảnh",
+    "description": "Quản lý hình ảnh đã tải lên trên tất cả các trang và thực đơn của bạn.",
+    "storageUsed": "Dung lượng đã sử dụng",
+    "creditCost": "Credit sử dụng",
+    "creditCostDesc": "1 Credit cho mỗi 20 MB",
+    "deleteImage": "Xóa Ảnh",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa ảnh này không? Nếu ảnh này đang được sử dụng trên trang web của bạn, nó sẽ bị lỗi hiển thị!",
+    "uploading": "Đang tải lên...",
+    "uploadNew": "Tải ảnh mới",
+    "noImages": "Chưa có ảnh nào.",
+    "deleting": "Đang xóa...",
+    "inUse": "Đang sử dụng",
+    "notInUse": "Không sử dụng",
+    "cannotDeleteInUse": "Không thể xóa ảnh đang được sử dụng.",
+    "quotaTitle": "Trình theo dõi dung lượng",
+    "quotaUsage": "Đang sử dụng",
+    "billingCycleEnds": "Chu kỳ kết thúc vào",
+    "projectedCharge": "Chi phí gia hạn dự kiến",
+    "credits": "Credits",
+    "quotaExplanation": "Bạn mua trước dung lượng bằng credit (1 credit = 20MB). Nếu bạn xóa ảnh để giảm dung lượng, chi phí gia hạn tháng tiếp theo sẽ tự động giảm xuống!"
   }
 }

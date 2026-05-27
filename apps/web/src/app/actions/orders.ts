@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { CartItem } from '@/components/page-builder/render/CartContext'
 
 export async function createOrderAction(
@@ -10,8 +10,7 @@ export async function createOrderAction(
   totalAmount: number,
   notes: string = ''
 ) {
-  const supabase = await createClient()
-  const db = supabase
+  const db = createAdminClient()
 
   // 1. Create the order
   const { data: order, error: orderError } = await db

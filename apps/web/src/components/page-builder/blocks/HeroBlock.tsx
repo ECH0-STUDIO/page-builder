@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { uploadImageToStorage } from '@/lib/image-utils'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 import { CtaEditor } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type {
@@ -178,17 +179,31 @@ export function HeroSettings({
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-foreground/30 flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
-            >
-              {uploading
-                ? <Loader2 className="size-5 animate-spin" />
-                : <><ImageIcon className="size-5" /><span className="text-xs">{t('heroBlock.clickToUpload')}</span></>
-              }
-            </button>
+            <ImageUploader businessId={businessId} onImageSelect={(url) => set('image_url', url)}>
+              {(openGallery) => (
+                <div className="flex gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="flex-1 aspect-[21/9] rounded-lg border-2 border-dashed border-border hover:border-foreground/30 flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
+                  >
+                    {uploading
+                      ? <Loader2 className="size-5 animate-spin" />
+                      : <><ImageIcon className="size-5" /><span className="text-xs">{t('heroBlock.clickToUpload')}</span></>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openGallery}
+                    className="w-1/3 aspect-[21/9] rounded-lg border border-border hover:bg-muted flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
+                  >
+                    <ImageIcon className="size-5" />
+                    <span className="text-[10px] uppercase font-bold tracking-wider">Gallery</span>
+                  </button>
+                </div>
+              )}
+            </ImageUploader>
           )}
 
           <div className="grid grid-cols-2 gap-2">

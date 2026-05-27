@@ -37,17 +37,17 @@ interface OrdersClientProps {
   businessId: string
 }
 
-function formatTimeAgo(dateString: string) {
-  const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
-  if (diff < 1) return 'Just now'
-  if (diff < 60) return `${diff}m ago`
-  const h = Math.floor(diff / 60)
-  return `${h}h ${diff % 60}m ago`
-}
-
 export function OrdersClient({ businessId }: OrdersClientProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+
+  function formatTimeAgo(dateString: string) {
+    const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
+    if (diff < 1) return t('orders.timeAgo.justNow')
+    if (diff < 60) return t('orders.timeAgo.minsAgo').replace('{{m}}', diff.toString())
+    const h = Math.floor(diff / 60)
+    return t('orders.timeAgo.hoursMinsAgo').replace('{{h}}', h.toString()).replace('{{m}}', (diff % 60).toString())
+  }
   const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useOrders(businessId)
 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
@@ -70,7 +70,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             // New order! Let's re-fetch to get the items, or just play a sound
-            toast.success('New Order Received!', { duration: 5000, icon: '🔔' })
+            toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
             try {
               const audio = new Audio('/bell.mp3') // Assume we have a sound, or it just fails silently
               audio.play().catch(() => {})
@@ -101,15 +101,15 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     const { error } = await db.from('orders').update({ status: newStatus }).eq('id', orderId)
     
     if (error) {
-      toast.error('Failed to update status')
+      toast.error(t('orders.failedUpdateStatus'))
       fetchOrders() // Revert on failure
       return
     }
 
     if (newStatus === 'cancelled' && previousStatus) {
-      toast('Order removed', {
+      toast(t('orders.orderRemoved'), {
         action: {
-          label: 'Undo',
+          label: t('orders.undo'),
           onClick: () => updateOrderStatus(orderId, previousStatus!)
         },
         duration: 5000,
@@ -123,7 +123,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     const db = supabase
     const { error } = await db.from('orders').update({ payment_status: newStatus }).eq('id', orderId)
     if (error) {
-      toast.error('Failed to update payment')
+      toast.error(t('orders.failedUpdatePayment'))
       fetchOrders() // Revert on failure
     }
   }
@@ -149,7 +149,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     }).eq('id', updatedOrder.id)
     
     if (orderError) {
-      toast.error('Failed to update order details')
+      toast.error(t('orders.failedUpdateDetails'))
       return fetchOrders() // Revert
     }
 
@@ -166,7 +166,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
       }
     }
     
-    toast.success('Order updated successfully!')
+    toast.success(t('orders.orderUpdated'))
     fetchOrders() // Re-sync to ensure perfect state
   }
 
@@ -217,7 +217,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
                   <div className="flex items-center gap-2">
                     <span className="bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
                       <Table2 className="size-3" />
-                      {order.table_number ? `Table ${order.table_number}` : 'Takeaway'}
+                      {order.table_number ? `${t('orders.table')} ${order.table_number}` : t('orders.takeaway')}
                     </span>
                     <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
                       <Clock className="size-3" />
@@ -285,15 +285,11 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
       <button 
         onClick={() => setDayFilter('today')} 
         className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'today' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-      >
-        Today
-      </button>
+      >{t('orders.today')}</button>
       <button 
         onClick={() => setDayFilter('yesterday')} 
         className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'yesterday' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-      >
-        Yesterday
-      </button>
+      >{t('orders.yesterday')}</button>
     </div>
   )
 
@@ -304,20 +300,20 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
         {/* 1. Title & 2. Description */}
         <div className="flex flex-col order-1 md:order-none">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            Live Orders
+            {t('orders.title')}
             <DateSwitch className="hidden md:flex" />
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Orders are automatically cleared after 48 hours.</p>
+          <p className="text-sm text-gray-500 mt-1">{t('orders.autoClearMsg')}</p>
         </div>
 
         {/* 3. Stats */}
         <div className="flex gap-3 md:gap-4 order-3 md:order-2 w-full md:w-auto">
           <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
-            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Today's Orders</p>
+            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.todayOrders')}</p>
             <p className="text-lg md:text-xl font-bold text-gray-900">{activeOrders.length}</p>
           </div>
           <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
-            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Expected Rev.</p>
+            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.expectedRev')}</p>
             <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
           </div>
         </div>
@@ -330,15 +326,16 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
       </div>
 
       <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-        {renderColumn('Received', <Clock className="size-5 text-blue-600" />, pending, 'bg-blue-100')}
-        {renderColumn('Completed', <CheckCircle2 className="size-5 text-amber-600" />, completed, 'bg-amber-100')}
-        {renderColumn('Paid', <DollarSign className="size-5 text-green-600" />, paid, 'bg-green-100')}
+        {renderColumn(t('orders.received'), <Clock className="size-5 text-blue-600" />, pending, 'bg-blue-100')}
+        {renderColumn(t('orders.completed'), <CheckCircle2 className="size-5 text-amber-600" />, completed, 'bg-amber-100')}
+        {renderColumn(t('orders.paid'), <DollarSign className="size-5 text-green-600" />, paid, 'bg-green-100')}
       </div>
     </div>
   )
 }
 
 function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: Order) => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<Order>(order)
   
   const updateItemQty = (id: string, delta: number) => {
@@ -362,12 +359,12 @@ function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: 
   return (
     <div className="bg-white border-2 border-blue-400 rounded-xl p-4 shadow-md relative group space-y-4">
       <div className="flex justify-between items-center">
-        <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Edit Order</span>
+        <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{t('orders.editOrder')}</span>
         <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><XCircle className="size-4" /></button>
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 font-semibold mb-1 block">Table Number</label>
+        <label className="text-xs text-gray-500 font-semibold mb-1 block">{t('orders.tableNumber')}</label>
         <input 
           type="text" 
           value={draft.table_number || ''} 
@@ -378,7 +375,7 @@ function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: 
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs text-gray-500 font-semibold block">Items</label>
+        <label className="text-xs text-gray-500 font-semibold block">{t('orders.items')}</label>
         {draft.order_items.map(item => (
           <div key={item.id} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded-lg border border-gray-100">
             <div className="flex-1 min-w-0 pr-4">
@@ -406,22 +403,18 @@ function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: 
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 font-semibold mb-1 block">Final Total Override</label>
+        <label className="text-xs text-gray-500 font-semibold mb-1 block">{t('orders.finalTotalOverride')}</label>
         <input 
           type="number" 
-          value={draft.total_amount / 100} 
-          onChange={e => setDraft(prev => ({ ...prev, total_amount: Math.round(parseFloat(e.target.value || '0') * 100) }))}
+          value={draft.total_amount} 
+          onChange={e => setDraft(prev => ({ ...prev, total_amount: Math.round(parseFloat(e.target.value || '0')) }))}
           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
 
       <div className="flex gap-2 pt-2 mt-2 border-t border-gray-100">
-        <button onClick={onCancel} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-2.5 rounded-lg transition-colors">
-          Cancel
-        </button>
-        <button onClick={() => onSave(draft)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-lg transition-colors shadow-sm">
-          Save Changes
-        </button>
+        <button onClick={onCancel} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold py-2.5 rounded-lg transition-colors">{t('orders.cancel')}</button>
+        <button onClick={() => onSave(draft)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-lg transition-colors shadow-sm">{t('orders.saveChanges')}</button>
       </div>
     </div>
   )

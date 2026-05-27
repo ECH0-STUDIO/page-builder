@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Upload, Copy, X } from 'lucide-react'
+import { Loader2, Upload, Copy, X, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,6 +37,7 @@ import {
 } from '@/lib/constants'
 import { useBusiness } from '@/context/BusinessContext'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 
 type OpeningHoursEntry = {
   day: string
@@ -277,20 +278,34 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               className="sr-only"
               onChange={handleLogoChange}
             />
-            <Button
-              type="button"
-              id="upload-logo-btn"
-              variant="outline"
-              size="sm"
-              disabled={logoUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {logoUploading ? (
-                <><Loader2 className="size-4 animate-spin mr-2" /> {t('businessProfile.uploading')}</>
-              ) : (
-                <><Upload className="size-4 mr-2" /> {t('businessProfile.uploadLogo')}</>
+            <ImageUploader businessId={business.id} onImageSelect={async (url) => {
+              setLogoUrl(url)
+              await updateBusiness(business.id, { logo_url: url })
+              await refreshBusinesses()
+              toast.success(t('businessProfile.toastLogoUpdated'))
+            }}>
+              {(openGallery) => (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    id="upload-logo-btn"
+                    variant="outline"
+                    size="sm"
+                    disabled={logoUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {logoUploading ? (
+                      <><Loader2 className="size-4 animate-spin mr-2" /> {t('businessProfile.uploading')}</>
+                    ) : (
+                      <><Upload className="size-4 mr-2" /> {t('businessProfile.uploadLogo')}</>
+                    )}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={openGallery} title="Select from Gallery">
+                    <ImageIcon className="size-4" />
+                  </Button>
+                </div>
               )}
-            </Button>
+            </ImageUploader>
             <p className="text-xs text-muted-foreground">{t('businessProfile.logoHint')}</p>
           </div>
         </div>

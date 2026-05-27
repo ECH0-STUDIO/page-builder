@@ -14,8 +14,10 @@ export function GlobalNavLoader() {
   }, [pathname, searchParams])
 
   useEffect(() => {
-    const handleAnchorClick = (e: MouseEvent) => {
-      const target = e.currentTarget as HTMLAnchorElement
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = (e.target as Element).closest('a[href]') as HTMLAnchorElement | null
+      if (!target) return
+
       // Only intercept if it's a left click, no modifier keys, same origin, and doesn't have target="_blank"
       if (
         e.button === 0 &&
@@ -39,38 +41,10 @@ export function GlobalNavLoader() {
       }
     }
 
-    const attachListeners = () => {
-      const links = document.querySelectorAll('a[href]')
-      links.forEach((link) => {
-        link.addEventListener('click', handleAnchorClick as EventListener)
-      })
-    }
-
-    // Attach initially
-    attachListeners()
-
-    // Setup mutation observer to attach to dynamically added links
-    const observer = new MutationObserver((mutations) => {
-      let shouldReattach = false
-      for (const mutation of mutations) {
-        if (mutation.addedNodes.length > 0) {
-          shouldReattach = true
-          break
-        }
-      }
-      if (shouldReattach) {
-        attachListeners()
-      }
-    })
-
-    observer.observe(document.body, { childList: true, subtree: true })
+    document.addEventListener('click', handleDocumentClick)
 
     return () => {
-      const links = document.querySelectorAll('a[href]')
-      links.forEach((link) => {
-        link.removeEventListener('click', handleAnchorClick as EventListener)
-      })
-      observer.disconnect()
+      document.removeEventListener('click', handleDocumentClick)
     }
   }, [pathname])
 

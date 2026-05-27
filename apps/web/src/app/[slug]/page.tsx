@@ -84,22 +84,31 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   if (!pubSettings?.published) notFound()
 
-  const [blocksRes, themeRes] = await Promise.all([
-    db.from('page_blocks')
-      .select('*')
-      .eq('business_id', business.id)
-      .eq('visible', true)
-      .order('sort_order', { ascending: true }),
-    db.from('theme_settings')
-      .select('font_family, heading_font_family, navbar_config, footer_config')
-      .eq('business_id', business.id)
-      .single(),
-  ])
+  let pageBlocksRaw = pubSettings?.published_blocks as PageBlock[] | null | undefined
+  let themeRaw = pubSettings?.published_theme
 
-  const bodyFont: string = themeRes.data?.font_family ?? 'Inter'
-  const headingFontRaw: string = themeRes.data?.heading_font_family ?? 'Inter'
-  const navbarConfig: NavbarConfig = (themeRes.data?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
-  const footerConfig: FooterConfig = (themeRes.data?.footer_config as FooterConfig | null) ?? defaultFooterConfig
+  if (!pageBlocksRaw || !themeRaw) {
+    const [blocksRes, themeRes] = await Promise.all([
+      db.from('page_blocks')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('visible', true)
+        .order('sort_order', { ascending: true }),
+      db.from('theme_settings')
+        .select('font_family, heading_font_family, navbar_config, footer_config')
+        .eq('business_id', business.id)
+        .single(),
+    ])
+    pageBlocksRaw = (blocksRes.data as PageBlock[]) ?? []
+    themeRaw = themeRes.data
+  } else {
+    pageBlocksRaw = pageBlocksRaw.filter(b => b.visible)
+  }
+
+  const bodyFont: string = themeRaw?.font_family ?? 'Inter'
+  const headingFontRaw: string = themeRaw?.heading_font_family ?? 'Inter'
+  const navbarConfig: NavbarConfig = (themeRaw?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
+  const footerConfig: FooterConfig = (themeRaw?.footer_config as FooterConfig | null) ?? defaultFooterConfig
 
   // Payment settings — VietQR is stored directly on the business row
   const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
@@ -109,7 +118,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
     : null
 
-  const pageBlocks: PageBlock[] = ((blocksRes.data ?? []) as PageBlock[]).map(b => ({
+  const pageBlocks: PageBlock[] = (pageBlocksRaw ?? []).map(b => ({
     ...b,
     spacing: b.spacing ?? defaultSpacing,
     custom_css: b.custom_css ?? '',

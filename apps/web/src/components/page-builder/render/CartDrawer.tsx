@@ -255,6 +255,10 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center mt-2">
                   <p className="text-sm text-orange-800 font-medium">Please call for a waiter to place your order.</p>
                 </div>
+              ) : !tableFromUrl ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center mt-2">
+                  <p className="text-sm text-gray-600 font-medium">Please scan the QR code on your table to place an order.</p>
+                </div>
               ) : (
                 <button
                   onClick={handlePlaceOrder}

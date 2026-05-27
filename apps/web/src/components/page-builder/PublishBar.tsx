@@ -1,9 +1,16 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Globe, Loader2, Check, Circle, ArrowLeft } from 'lucide-react'
+import { Globe, Loader2, Check, Circle, ArrowLeft, ExternalLink, ChevronDown } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -14,9 +21,11 @@ interface PublishBarProps {
   slug: string
   published: boolean
   saveStatus: SaveStatus
+  hasUnpublishedChanges: boolean
   onPublish: (state: boolean) => void
   publishing: boolean
   onSaveNow: () => void
+  onTogglePreview: () => void
 }
 
 export function PublishBar({
@@ -24,8 +33,10 @@ export function PublishBar({
   slug,
   published,
   saveStatus,
+  hasUnpublishedChanges,
   onPublish,
   publishing,
+  onTogglePreview,
 }: PublishBarProps) {
   const router = useRouter()
   const { t } = useTranslation()
@@ -56,7 +67,7 @@ export function PublishBar({
       <div className="flex items-center gap-2 shrink-0">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Circle className="size-2 fill-muted-foreground" />
+            <Circle className="size-2 fill-muted-foreground text-muted-foreground" />
             <span>{t('pageBuilder.unsaved')}</span>
           </span>
         )}
@@ -81,45 +92,86 @@ export function PublishBar({
           href={`/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-          title={t('pageBuilder.preview')}
+          className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mr-2"
+          title={t('pageBuilder.viewLive')}
         >
-          <Globe className="size-3.5" />
-          <span>{t('pageBuilder.preview')}</span>
+          <ExternalLink className="size-3.5" />
+          <span>{t('pageBuilder.viewLive')}</span>
         </a>
       )}
+
+      {/* Preview Toggle */}
+      <button
+        type="button"
+        onClick={onTogglePreview}
+        className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
+        title={t('pageBuilder.preview')}
+      >
+        <Globe className="size-3.5" />
+        <span>{t('pageBuilder.preview')}</span>
+      </button>
 
       {/* Status badge */}
       <Badge
         variant="outline"
         className={cn(
-          'text-xs shrink-0 hidden md:flex',
+          'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
           published
-            ? 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
+            ? hasUnpublishedChanges
+              ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
+              : 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
             : 'border-border text-muted-foreground'
         )}
       >
-        {published ? t('pageBuilder.live') : t('pageBuilder.draft')}
+        {published ? (
+          hasUnpublishedChanges ? (
+            <>
+              <Circle className="size-2 fill-yellow-500 text-yellow-500" />
+              {t('pageBuilder.changes')}
+            </>
+          ) : (
+            <>
+              <Circle className="size-2 fill-green-600 text-green-600" />
+              {t('pageBuilder.live')}
+            </>
+          )
+        ) : (
+          t('pageBuilder.draft')
+        )}
       </Badge>
 
-      {/* Publish buttons */}
-      <div className="flex items-center gap-2 shrink-0">
-        {published && (
-          <button
-            onClick={() => onPublish(false)}
-            disabled={publishing}
-            className="h-7 px-3 text-xs font-semibold rounded-md transition-colors flex items-center justify-center min-w-[70px] bg-muted text-muted-foreground hover:bg-muted/80 disabled:opacity-50"
-          >
-            {t('pageBuilder.unpublish')}
-          </button>
-        )}
-        <button
-          onClick={() => onPublish(true)}
-          disabled={publishing}
-          className="h-7 px-3 text-xs font-semibold rounded-md transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
-        </button>
+      {/* Publish Dropdown */}
+      <div className="flex items-center shrink-0">
+        <DropdownMenu>
+          <div className="flex bg-primary rounded-md shadow-sm">
+            <button
+              onClick={() => onPublish(true)}
+              disabled={publishing}
+              className="h-7 px-3 text-xs font-semibold rounded-l-md transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
+            </button>
+            <div className="w-px bg-primary-foreground/20" />
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={publishing}
+                className="h-7 px-1.5 rounded-r-md transition-colors flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                <ChevronDown className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+          </div>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onPublish(true)}>
+              {t('pageBuilder.publishToLive')}
+            </DropdownMenuItem>
+            {published && (
+              <DropdownMenuItem onClick={() => onPublish(false)}>
+                {t('pageBuilder.saveAsDraft')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

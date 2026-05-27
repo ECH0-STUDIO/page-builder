@@ -51,17 +51,17 @@ function ItemModal({
     .filter(g => g.item_id === item.id)
     .sort((a, b) => a.sort_order - b.sort_order)
 
-  // selected[groupId] = optionId
-  const [selected, setSelected] = useState<Record<string, string>>({})
+  // selected[groupId] = array of optionId
+  const [selected, setSelected] = useState<Record<string, string[]>>({})
   const [attempted, setAttempted] = useState(false)
   const [added, setAdded] = useState(false)
 
   // Required validation
   const requiredGroups = itemGroups.filter(g => g.required)
-  const allRequiredFilled = requiredGroups.every(g => selected[g.id])
+  const allRequiredFilled = requiredGroups.every(g => selected[g.id] && selected[g.id].length > 0)
 
   // Live running total
-  const variantDelta = Object.values(selected).reduce((sum, optId) => {
+  const variantDelta = Object.values(selected).flat().reduce((sum, optId) => {
     const opt = options.find(o => o.id === optId)
     return sum + (opt?.price_delta ?? 0)
   }, 0)
@@ -72,16 +72,18 @@ function ItemModal({
       setAttempted(true)
       return
     }
-    const variants: CartVariantSelection[] = Object.entries(selected).map(([groupId, optId]) => {
+    const variants: CartVariantSelection[] = Object.entries(selected).flatMap(([groupId, optIds]) => {
       const group = itemGroups.find(g => g.id === groupId)!
-      const opt = options.find(o => o.id === optId)!
-      return {
-        groupId,
-        groupName: group.name,
-        optionId: optId,
-        optionLabel: opt.label,
-        priceDelta: opt.price_delta,
-      }
+      return optIds.map(optId => {
+        const opt = options.find(o => o.id === optId)!
+        return {
+          groupId,
+          groupName: group.name,
+          optionId: optId,
+          optionLabel: opt.label,
+          priceDelta: opt.price_delta,
+        }
+      })
     })
     addItem(item, variants)
     setAdded(true)
@@ -148,7 +150,7 @@ function ItemModal({
               const groupOpts = options
                 .filter(o => o.group_id === group.id)
                 .sort((a, b) => a.sort_order - b.sort_order)
-              const hasError = attempted && group.required && !selected[group.id]
+              const hasError = attempted && group.required && (!selected[group.id] || selected[group.id].length === 0)
 
               return (
                 <div key={group.id} className="space-y-2.5">
@@ -169,12 +171,29 @@ function ItemModal({
 
                   <div className="flex flex-wrap gap-2">
                     {groupOpts.map(opt => {
-                      const isSelected = selected[group.id] === opt.id
+                      const isSelected = selected[group.id]?.includes(opt.id)
+
+                      const toggleSelection = () => {
+                        setSelected(prev => {
+                          const current = prev[group.id] || []
+                          if (group.allow_multiple) {
+                            if (current.includes(opt.id)) {
+                              return { ...prev, [group.id]: current.filter(id => id !== opt.id) }
+                            } else {
+                              return { ...prev, [group.id]: [...current, opt.id] }
+                            }
+                          } else {
+                            // single choice
+                            return { ...prev, [group.id]: [opt.id] }
+                          }
+                        })
+                      }
+
                       return (
                         <button
                           key={opt.id}
                           type="button"
-                          onClick={() => setSelected(prev => ({ ...prev, [group.id]: opt.id }))}
+                          onClick={toggleSelection}
                           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm border-2 transition-all ${
                             isSelected
                               ? 'border-gray-900 bg-gray-900 text-white font-semibold'

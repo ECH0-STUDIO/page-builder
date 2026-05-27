@@ -130,3 +130,51 @@ export async function uploadImageToStorage(
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return `${data.publicUrl}?t=${Date.now()}`
 }
+
+export interface ImageValidationOptions {
+  requireSquare?: boolean
+  exactWidth?: number
+  exactHeight?: number
+}
+
+/**
+ * Validate image dimensions given a File or URL.
+ */
+export function validateImageDimensions(
+  urlOrFile: string | File,
+  options: ImageValidationOptions
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    let objectUrl: string | null = null
+
+    img.onload = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      
+      if (options.requireSquare) {
+        if (img.naturalWidth !== img.naturalHeight) {
+          return resolve(false)
+        }
+      }
+      if (options.exactWidth && img.naturalWidth !== options.exactWidth) {
+        return resolve(false)
+      }
+      if (options.exactHeight && img.naturalHeight !== options.exactHeight) {
+        return resolve(false)
+      }
+      resolve(true)
+    }
+
+    img.onerror = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      resolve(false)
+    }
+
+    if (typeof urlOrFile === 'string') {
+      img.src = urlOrFile
+    } else {
+      objectUrl = URL.createObjectURL(urlOrFile)
+      img.src = objectUrl
+    }
+  })
+}

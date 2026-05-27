@@ -6,6 +6,7 @@ import { ImageIcon, Trash2, Upload, ArrowUp, ArrowDown, Eye, EyeOff } from 'luci
 import { cn } from '@/lib/utils'
 import type { MenuCategory } from '@/app/actions/menu'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 
 // ─── Design presets ────────────────────────────────────────────────────────────
 
@@ -80,12 +81,13 @@ function fileToDataUrl(file: File): Promise<string> {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 interface PrintMenuControlsProps {
+  businessId: string
   settings: PrintSettings
   onChange: (next: PrintSettings) => void
   categories: MenuCategory[]
 }
 
-export function PrintMenuControls({ settings, onChange, categories }: PrintMenuControlsProps) {
+export function PrintMenuControls({ businessId, settings, onChange, categories }: PrintMenuControlsProps) {
   const { t } = useTranslation()
 
   function set<K extends keyof PrintSettings>(key: K, val: PrintSettings[K]) {
@@ -248,12 +250,21 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
                   <img src={settings.page_bg_image} alt="bg"
                     className="h-10 w-14 rounded-md object-cover border border-gray-200 shrink-0" />
                   <div className="flex items-center gap-1.5">
-                    <label className="flex items-center gap-1 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors whitespace-nowrap">
-                      <Upload className="size-3" />
-                      {t('printMenu.replace')}
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
-                    </label>
+                    <ImageUploader businessId={businessId} onImageSelect={(url) => set('page_bg_image', url)}>
+                      {(openGallery) => (
+                        <div className="flex gap-1.5">
+                          <label className="flex items-center gap-1 cursor-pointer text-xs text-gray-600 hover:text-gray-800 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors whitespace-nowrap">
+                            <Upload className="size-3" />
+                            {t('printMenu.replace')}
+                            <input type="file" accept="image/*" className="hidden"
+                              onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
+                          </label>
+                          <button type="button" onClick={openGallery} className="flex items-center text-xs text-gray-600 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors" title="Gallery">
+                            <ImageIcon className="size-3" />
+                          </button>
+                        </div>
+                      )}
+                    </ImageUploader>
                     <button onClick={() => { set('page_bg_image', null); set('page_bg_overlay_opacity', 0) }}
                       className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors">
                       <Trash2 className="size-3.5" />
@@ -276,11 +287,20 @@ export function PrintMenuControls({ settings, onChange, categories }: PrintMenuC
                 </div>
               </div>
             ) : (
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                <ImageIcon className="size-3.5" />
-                {t('printMenu.uploadBg')}
-                <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
-              </label>
+              <ImageUploader businessId={businessId} onImageSelect={(url) => set('page_bg_image', url)}>
+                {(openGallery) => (
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 rounded p-1.5 px-3">
+                      <ImageIcon className="size-3.5" />
+                      {t('printMenu.uploadBg')}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleBgUpload(e.target.files[0])} />
+                    </label>
+                    <button type="button" onClick={openGallery} className="flex items-center text-xs text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 rounded p-1.5 px-3">
+                      Gallery
+                    </button>
+                  </div>
+                )}
+              </ImageUploader>
             )}
           </div>
 

@@ -52,6 +52,7 @@ export default async function PaymentsPage() {
           </p>
         </div>
         <PaymentPrintSection
+          businessId={business.id}
           paymentSettings={paymentSettings}
           businessName={business.name}
           businessLogoUrl={business.logo_url ?? null}

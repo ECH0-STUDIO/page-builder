@@ -9,6 +9,9 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { Download, Printer, ImageIcon, Upload, Trash2, RefreshCw } from 'lucide-react'
 import { QRCardPreview, DEFAULT_DESIGN, SIZE_PRESETS } from './QRCardPreview'
 import type { QRDesign, QRStyle, SizePreset } from './QRCardPreview'
+import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 import { FontPicker } from '@/components/shared/FontPicker'
 import { getGoogleFontLinkTag } from '@/lib/fonts'
 import { cn, safeToPng } from '@/lib/utils'
@@ -67,13 +70,14 @@ function Divider() {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 interface QRPrintDesignerProps {
-  qrUrl?: string
+  businessId: string
+  qrUrl: string
   qrImageSrc?: string
   businessName?: string
-  businessLogoUrl?: string | null
+  businessLogoUrl?: string
 }
 
-export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoUrl }: QRPrintDesignerProps) {
+export function QRPrintDesigner({ businessId, qrUrl, qrImageSrc, businessName, businessLogoUrl }: QRPrintDesignerProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const previewAreaRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.75)
@@ -275,10 +279,19 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
                 </button>
               </div>
             ) : (
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                <ImageIcon className="size-3.5" />{t('qr.designer.uploadBg')}
-                <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('bg', e.target.files[0])} />
-              </label>
+              <ImageUploader businessId={businessId} onImageSelect={(url) => set('bg_image_data', url)}>
+                {(openGallery) => (
+                  <div className="flex gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 rounded p-1.5">
+                      <ImageIcon className="size-3.5" />{t('qr.designer.uploadBg')}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('bg', e.target.files[0])} />
+                    </label>
+                    <button type="button" onClick={openGallery} className="flex items-center justify-center text-xs text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 rounded p-1.5 px-3">
+                      Gallery
+                    </button>
+                  </div>
+                )}
+              </ImageUploader>
             )}
             <ColorRow label={t('qr.designer.color')} value={design.bg_color} onChange={v => set('bg_color', v)} />
             {design.bg_type === 'gradient' && (
@@ -312,10 +325,19 @@ export function QRPrintDesigner({ qrUrl, qrImageSrc, businessName, businessLogoU
               </button>
             </div>
           ) : (
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 border border-dashed border-gray-300 rounded-xl py-3 px-4 hover:border-gray-400 transition-colors">
-              <Upload className="size-3.5" />{t('qr.designer.uploadLogo')}
-              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('logo', e.target.files[0])} />
-            </label>
+            <ImageUploader businessId={businessId} onImageSelect={(url) => set('logo_data', url)}>
+              {(openGallery) => (
+                <div className="flex gap-2 w-full">
+                  <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer text-xs text-gray-500 hover:text-gray-700 border border-dashed border-gray-300 rounded-xl py-3 px-4 hover:border-gray-400 transition-colors">
+                    <Upload className="size-3.5" />{t('qr.designer.uploadLogo')}
+                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('logo', e.target.files[0])} />
+                  </label>
+                  <button type="button" onClick={openGallery} className="flex flex-col items-center justify-center gap-1 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded-xl py-3 px-4 hover:border-gray-400 transition-colors">
+                    <ImageIcon className="size-4" /> Gallery
+                  </button>
+                </div>
+              )}
+            </ImageUploader>
           )}
         </div>
 

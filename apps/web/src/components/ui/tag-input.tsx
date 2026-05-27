@@ -14,6 +14,7 @@ interface TagInputProps {
   className?: string
   maxTags?: number
   formatTag?: (tag: string) => string
+  helpText?: React.ReactNode
 }
 
 export function TagInput({
@@ -24,6 +25,7 @@ export function TagInput({
   className,
   maxTags,
   formatTag = (t) => t,
+  helpText,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -114,10 +116,14 @@ export function TagInput({
         </div>
       )}
 
-      <p className="text-[11px] text-muted-foreground">
-        Press <kbd className="px-1 py-0.5 rounded bg-muted text-xs">Enter</kbd> or{' '}
-        <kbd className="px-1 py-0.5 rounded bg-muted text-xs">,</kbd> to add a custom tag
-      </p>
+      {helpText ? (
+        <div className="text-[11px] text-muted-foreground">{helpText}</div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">
+          Press <kbd className="px-1 py-0.5 rounded bg-muted text-xs">Enter</kbd> or{' '}
+          <kbd className="px-1 py-0.5 rounded bg-muted text-xs">,</kbd> to add a custom tag
+        </p>
+      )}
     </div>
   )
 }

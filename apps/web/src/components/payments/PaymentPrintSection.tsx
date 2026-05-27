@@ -13,12 +13,13 @@ import { CreditCard } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
 
 interface PaymentPrintSectionProps {
+  businessId: string
   paymentSettings: PaymentSettings
   businessName: string
   businessLogoUrl: string | null
 }
 
-export function PaymentPrintSection({ paymentSettings, businessName, businessLogoUrl }: PaymentPrintSectionProps) {
+export function PaymentPrintSection({ businessId, paymentSettings, businessName, businessLogoUrl }: PaymentPrintSectionProps) {
   const { t } = useTranslation()
 
   if (!paymentSettings.vietqr) {
@@ -39,9 +40,11 @@ export function PaymentPrintSection({ paymentSettings, businessName, businessLog
 
   return (
     <QRPrintDesigner
+      businessId={businessId}
+      qrUrl=""
       qrImageSrc={qrImageSrc}
       businessName={businessName}
-      businessLogoUrl={businessLogoUrl}
+      businessLogoUrl={businessLogoUrl || undefined}
     />
   )
 }

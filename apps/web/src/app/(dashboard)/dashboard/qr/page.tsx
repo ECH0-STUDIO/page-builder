@@ -43,7 +43,7 @@ export default async function QRPage() {
   const items: MenuItem[] = itemsRaw ?? []
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl">
+    <div className="p-4 md:p-8 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">{t('sidebar.qrCodes')}</h1>
         <p className="text-muted-foreground text-sm mt-1">

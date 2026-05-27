@@ -63,8 +63,8 @@
    ============================================================ */
 
 :root {
-  /* Brand accent (badges, highlights — NOT the primary button) */
-  --brand: hsl(22 79% 52%);
+  /* Brand accent (badges, highlights) */
+  --brand: hsl(154 68% 37%);
   --brand-foreground: hsl(0 0% 100%);
 
   /* 📝 Font stack */
@@ -89,8 +89,8 @@
   --popover:                 hsl(0 0% 100%);
   --popover-foreground:      hsl(20 14% 4%);
 
-  /* Primary = black button in light mode */
-  --primary:                 hsl(0 0% 9%);
+  /* Primary */
+  --primary:                 hsl(154 68% 37%);
   --primary-foreground:      hsl(0 0% 100%);
 
   /* Secondary = light grey button */
@@ -132,9 +132,9 @@
   --popover:                 hsl(220 14% 11%);
   --popover-foreground:      hsl(30 10% 96%);
 
-  /* Primary = white button in dark mode */
-  --primary:                 hsl(0 0% 98%);
-  --primary-foreground:      hsl(0 0% 9%);
+  /* Primary */
+  --primary:                 hsl(154 68% 45%);
+  --primary-foreground:      hsl(0 0% 100%);
 
   --secondary:               hsl(220 14% 18%);
   --secondary-foreground:    hsl(30 10% 90%);

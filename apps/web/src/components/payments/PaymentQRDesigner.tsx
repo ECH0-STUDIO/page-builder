@@ -10,12 +10,14 @@ import { buildVietQRUrl } from '@/lib/vietqr-utils'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 
 interface PaymentQRDesignerProps {
+  businessId: string
   paymentSettings: PaymentSettings
   businessName: string
   businessLogoUrl: string | null
 }
 
 export function PaymentQRDesigner({
+  businessId,
   paymentSettings,
   businessName,
   businessLogoUrl,
@@ -26,9 +28,11 @@ export function PaymentQRDesigner({
 
   return (
     <QRPrintDesigner
+      businessId={businessId}
+      qrUrl=""
       qrImageSrc={qrImageSrc}
       businessName={businessName}
-      businessLogoUrl={businessLogoUrl}
+      businessLogoUrl={businessLogoUrl || undefined}
     />
   )
 }

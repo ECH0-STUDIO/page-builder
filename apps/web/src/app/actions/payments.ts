@@ -28,8 +28,28 @@ export async function upsertPaymentSettingsAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { role } = await getActiveBusiness(supabase, user.id)
-  if (role !== 'owner' && role !== 'manager') {
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('owner_id')
+    .eq('id', businessId)
+    .single()
+
+  let isAuthorized = false
+  if (business && business.owner_id === user.id) {
+    isAuthorized = true
+  } else {
+    const { data: member } = await supabase
+      .from('business_members')
+      .select('role')
+      .eq('business_id', businessId)
+      .eq('user_id', user.id)
+      .single()
+    if (member && (member.role === 'owner' || member.role === 'manager')) {
+      isAuthorized = true
+    }
+  }
+
+  if (!isAuthorized) {
     return { error: 'Unauthorized: Only owners and managers can update payment settings.' }
   }
 

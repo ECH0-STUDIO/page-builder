@@ -20,9 +20,10 @@ interface NavbarRenderProps {
   logoUrl?: string
   /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
+  isMobilePreview?: boolean
 }
 
-export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor }: NavbarRenderProps) {
+export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview }: NavbarRenderProps) {
   const [open, setOpen] = useState(false)
 
   const isTransparent = config.background_color === 'transparent'
@@ -137,7 +138,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
           {hasLinks && (
             <button
               type="button"
-              onClick={() => !inEditor && setOpen(o => !o)}
+              onClick={() => setOpen(o => !o)}
               aria-label="Toggle navigation menu"
               className="nav-burger-btn"
               style={{
@@ -168,8 +169,17 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
           <div
             className="nav-mobile-panel"
             style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              backgroundColor: bg,
+              backdropFilter: isTransparent ? 'blur(12px)' : undefined,
+              WebkitBackdropFilter: isTransparent ? 'blur(12px)' : undefined,
               borderTop: '1px solid rgba(0,0,0,0.06)',
-              paddingBottom: '12px',
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+              padding: '0 24px 12px 24px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
               display: 'none', // overridden by responsive CSS below
             }}
           >
@@ -200,6 +210,11 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
           .nav-burger-btn    { display: flex !important; }
           .nav-mobile-panel  { display: block !important; }
         }
+        ${isMobilePreview ? `
+          .nav-desktop-links { display: none !important; }
+          .nav-burger-btn    { display: flex !important; }
+          .nav-mobile-panel  { display: block !important; }
+        ` : ''}
       `}</style>
     </nav>
   )

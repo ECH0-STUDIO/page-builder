@@ -36,6 +36,7 @@ export type VariantGroup = {
   name: string
   required: boolean
   sort_order: number
+  allow_multiple: boolean
 }
 
 export type VariantOption = {
@@ -303,7 +304,8 @@ export async function getItemVariantsAction(itemId: string): Promise<{
 export async function addVariantGroupAction(
   itemId: string,
   name: string,
-  required: boolean
+  required: boolean,
+  allow_multiple: boolean = false
 ): Promise<ActionResult<VariantGroup>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -323,7 +325,7 @@ export async function addVariantGroupAction(
 
   const { data, error } = await db
     .from('menu_item_variant_groups')
-    .insert({ item_id: itemId, name: name.trim(), required, sort_order: nextOrder })
+    .insert({ item_id: itemId, name: name.trim(), required, allow_multiple, sort_order: nextOrder })
     .select()
     .single()
 
@@ -333,7 +335,7 @@ export async function addVariantGroupAction(
 
 export async function updateVariantGroupAction(
   id: string,
-  update: { name?: string; required?: boolean }
+  update: { name?: string; required?: boolean; allow_multiple?: boolean }
 ): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

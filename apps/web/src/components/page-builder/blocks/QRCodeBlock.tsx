@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { QRCodeConfig } from '../types'
 import { uploadImageToStorage } from '@/lib/image-utils'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -61,10 +62,6 @@ function SettingsPanelQR({ url }: { url: string }) {
 }
 
 // ─── Settings panel ───────────────────────────────────────────────────────────
-
-
-
-
 
 interface QRCodeSettingsProps {
   config: QRCodeConfig
@@ -286,29 +283,43 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Background Image</Label>
         <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={handleImage} />
         {config.background_image ? (
-          <div className="relative rounded-lg overflow-hidden border border-border aspect-video">
+          <div className="relative rounded-lg overflow-hidden border border-border aspect-[3/4] bg-muted group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={config.background_image} alt="" className="w-full h-full object-cover" />
             <button
               type="button"
               onClick={() => set('background_image', '')}
-              className="absolute top-2 right-2 size-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80"
+              className="absolute top-2 right-2 size-6 rounded-full bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-foreground/30 flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
-          >
-            {uploading
-              ? <Loader2 className="size-5 animate-spin" />
-              : <><ImageIcon className="size-5" /><span className="text-xs">Click to upload</span></>
-            }
-          </button>
+          <ImageUploader businessId={businessId} onImageSelect={(url) => set('background_image', url)}>
+            {(openGallery) => (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="flex-1 aspect-[3/4] max-h-[120px] rounded-lg border-2 border-dashed border-border hover:border-foreground/30 flex flex-col items-center justify-center gap-1.5 text-muted-foreground transition-colors"
+                >
+                  {uploading
+                    ? <Loader2 className="size-5 animate-spin" />
+                    : <><ImageIcon className="size-5" /><span className="text-xs">Click to upload</span></>
+                  }
+                </button>
+                <button
+                  type="button"
+                  onClick={openGallery}
+                  className="w-1/3 aspect-[3/4] max-h-[120px] shrink-0 rounded-lg border border-border hover:bg-muted flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
+                >
+                  <ImageIcon className="size-4" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Gallery</span>
+                </button>
+              </div>
+            )}
+          </ImageUploader>
         )}
       </div>
     </div>

@@ -10,7 +10,7 @@ import type { PrintSettings } from '@/components/print/PrintMenuPreview'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
 interface PrintMenuShellProps {
-  business: { name: string; logo_url?: string | null }
+  business: { id: string; name: string; logo_url?: string | null }
   categories: MenuCategory[]
   items: MenuItem[]
 }
@@ -83,7 +83,7 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
 
       {/* Controls — fixed width right panel on desktop, full width on mobile */}
       <div className="w-full lg:w-80 shrink-0 overflow-y-auto pb-8">
-        <PrintMenuControls settings={settings} onChange={setSettings} categories={categories} />
+        <PrintMenuControls businessId={business.id} settings={settings} onChange={setSettings} categories={categories} />
       </div>
     </div>
   )

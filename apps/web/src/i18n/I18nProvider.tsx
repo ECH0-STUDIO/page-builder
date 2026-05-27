@@ -14,11 +14,13 @@ const I18nContext = createContext<I18nContextType | null>(null)
 
 export function I18nProvider({ dictionary: initialDictionary, children }: { dictionary: Dictionary, children: ReactNode }) {
   const [dictionary, setDictionary] = useState(initialDictionary)
+  const [prevInitial, setPrevInitial] = useState(initialDictionary)
 
   // Sync state if server dictionary changes
-  useEffect(() => {
+  if (initialDictionary !== prevInitial) {
+    setPrevInitial(initialDictionary)
     setDictionary(initialDictionary)
-  }, [initialDictionary])
+  }
 
   const resetDictionary = useCallback(() => {
     setDictionary(initialDictionary)

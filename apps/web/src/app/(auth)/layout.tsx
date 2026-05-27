@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -42,11 +43,10 @@ export default function AuthLayout({
       {/* Content */}
       <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center gap-8 animate-fade-in">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <span className="text-3xl">🍽</span>
-          <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
-            Eatery
-          </span>
+        <Link href="/" className="flex items-center justify-center group">
+          <div className="relative w-48 h-14">
+            <Image src="/logo-full.png" alt="Eatery" fill className="object-contain" priority />
+          </div>
         </Link>
 
         {children}

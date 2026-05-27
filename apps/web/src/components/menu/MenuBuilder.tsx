@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/drawer'
 import { cn } from '@/lib/utils'
 import { uploadImageToStorage } from '@/lib/image-utils'
+import { ImageUploader } from '@/components/shared/ImageUploader'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
@@ -43,6 +44,7 @@ import {
 } from '@/app/actions/menu'
 import { useMenu } from '@/lib/react-query/hooks/useMenu'
 import { useQueryClient } from '@tanstack/react-query'
+import { useBusiness } from '@/context/BusinessContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -87,12 +89,13 @@ function VariantOptionRow({ option, onDelete }: { option: VariantOption; onDelet
 // ─── Variant Group Card ───────────────────────────────────────────────────────
 
 function VariantGroupCard({
-  group, options, onDelete, onToggleRequired, onAddOption, onDeleteOption,
+  group, options, onDelete, onToggleRequired, onToggleAllowMultiple, onAddOption, onDeleteOption,
 }: {
   group: VariantGroup
   options: VariantOption[]
   onDelete: () => void
   onToggleRequired: () => void
+  onToggleAllowMultiple: () => void
   onAddOption: (label: string, priceDelta: number) => Promise<void>
   onDeleteOption: (id: string) => void
 }) {
@@ -120,18 +123,6 @@ function VariantGroupCard({
         <span className="font-semibold text-sm flex-1">{group.name}</span>
         <button
           type="button"
-          onClick={onToggleRequired}
-          className={cn(
-            'text-xs px-2 py-0.5 rounded-full border transition-colors',
-            group.required
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'border-border text-muted-foreground hover:border-foreground/50'
-          )}
-        >
-          {group.required ? t('menuBuilder.required') : t('menuBuilder.optional')}
-        </button>
-        <button
-          type="button"
           onClick={onDelete}
           className="text-muted-foreground hover:text-destructive transition-colors"
         >
@@ -141,6 +132,20 @@ function VariantGroupCard({
 
       {expanded && (
         <>
+          <div className="px-3 py-2.5 border-b border-border/50 bg-muted/10 flex items-center gap-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <Switch id={`grp-req-${group.id}`} checked={group.required} onCheckedChange={onToggleRequired} />
+              <Label htmlFor={`grp-req-${group.id}`} className="text-xs font-medium cursor-pointer">
+                {group.required ? t('menuBuilder.required') : t('menuBuilder.optional')}
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 border-l pl-4 border-border/50">
+              <Switch id={`grp-mult-${group.id}`} checked={group.allow_multiple} onCheckedChange={onToggleAllowMultiple} />
+              <Label htmlFor={`grp-mult-${group.id}`} className="text-xs font-medium cursor-pointer">
+                {group.allow_multiple ? (t('menuBuilder.multipleChoice') || 'Nhiều lựa chọn') : (t('menuBuilder.singleChoice') || 'Một lựa chọn')}
+              </Label>
+            </div>
+          </div>
           {options.length > 0 && (
             <div className="divide-y divide-border/60">
               {options.map(opt => (
@@ -191,6 +196,7 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   const [loading, setLoading] = useState(true)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupRequired, setNewGroupRequired] = useState(true)
+  const [newGroupAllowMultiple, setNewGroupAllowMultiple] = useState(false)
   const [addingGroup, setAddingGroup] = useState(false)
 
   useEffect(() => {
@@ -207,7 +213,7 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   async function handleAddGroup() {
     if (!newGroupName.trim()) return
     setAddingGroup(true)
-    const result = await addVariantGroupAction(itemId, newGroupName, newGroupRequired)
+    const result = await addVariantGroupAction(itemId, newGroupName, newGroupRequired, newGroupAllowMultiple)
     if (result.success) {
       setGroups(prev => [...prev, result.data])
       setNewGroupName('')
@@ -229,6 +235,13 @@ function VariantsPanel({ itemId }: { itemId: string }) {
     const result = await updateVariantGroupAction(group.id, { required: !group.required })
     if (result.success) {
       setGroups(prev => prev.map(g => g.id === group.id ? { ...g, required: !g.required } : g))
+    }
+  }
+
+  async function handleToggleAllowMultiple(group: VariantGroup) {
+    const result = await updateVariantGroupAction(group.id, { allow_multiple: !group.allow_multiple })
+    if (result.success) {
+      setGroups(prev => prev.map(g => g.id === group.id ? { ...g, allow_multiple: !g.allow_multiple } : g))
     }
   }
 
@@ -262,6 +275,7 @@ function VariantsPanel({ itemId }: { itemId: string }) {
           options={options.filter(o => o.group_id === group.id).sort((a, b) => a.sort_order - b.sort_order)}
           onDelete={() => handleDeleteGroup(group.id)}
           onToggleRequired={() => handleToggleRequired(group)}
+          onToggleAllowMultiple={() => handleToggleAllowMultiple(group)}
           onAddOption={(label, price) => handleAddOption(group.id, label, price)}
           onDeleteOption={handleDeleteOption}
         />
@@ -269,29 +283,39 @@ function VariantsPanel({ itemId }: { itemId: string }) {
 
       <div className="border border-dashed border-border rounded-lg p-3 space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('menuBuilder.newOptionGroup')}</p>
-        <div className="flex gap-2 items-center">
-          <Input
-            value={newGroupName}
-            onChange={e => setNewGroupName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddGroup() } }}
-            placeholder={t('menuBuilder.optionNamePlaceholder')}
-            className="h-8 text-sm flex-1"
-          />
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Switch id="grp-required" checked={newGroupRequired} onCheckedChange={setNewGroupRequired} />
-            <Label htmlFor="grp-required" className="text-xs whitespace-nowrap">
-              {newGroupRequired ? t('menuBuilder.required') : t('menuBuilder.optional')}
-            </Label>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex gap-2 items-center">
+            <Input
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddGroup() } }}
+              placeholder={t('menuBuilder.optionNamePlaceholder')}
+              className="h-8 text-sm flex-1"
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={handleAddGroup}
+              disabled={!newGroupName.trim() || addingGroup}
+            >
+              {addingGroup ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3.5" />}
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 shrink-0"
-            onClick={handleAddGroup}
-            disabled={!newGroupName.trim() || addingGroup}
-          >
-            {addingGroup ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3.5" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Switch id="grp-required" checked={newGroupRequired} onCheckedChange={setNewGroupRequired} />
+              <Label htmlFor="grp-required" className="text-xs whitespace-nowrap cursor-pointer">
+                {newGroupRequired ? t('menuBuilder.required') : t('menuBuilder.optional')}
+              </Label>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 border-l pl-3 border-border/50">
+              <Switch id="grp-multiple" checked={newGroupAllowMultiple} onCheckedChange={setNewGroupAllowMultiple} />
+              <Label htmlFor="grp-multiple" className="text-xs whitespace-nowrap cursor-pointer">
+                {newGroupAllowMultiple ? (t('menuBuilder.multipleChoice') || 'Nhiều lựa chọn') : (t('menuBuilder.singleChoice') || 'Một lựa chọn')}
+              </Label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -442,17 +466,26 @@ function ItemDialog({
             <form id="item-detail-form" onSubmit={handleSubmit} className="space-y-4">
               {/* Image */}
               <div className="flex gap-4 items-start">
-                <div
-                  className="size-20 rounded-lg border-2 border-dashed border-border bg-muted flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-foreground/40 transition-colors"
-                  onClick={() => fileRef.current?.click()}
-                  title="Click to upload"
-                >
-                  {imageLoading
-                    ? <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                    : imageUrl
-                      ? <img src={imageUrl} alt="" className="size-full object-cover" />
-                      : <ImageIcon className="size-6 text-muted-foreground" />}
-                </div>
+                <ImageUploader businessId={businessId} onImageSelect={setImageUrl}>
+                  {(openGallery) => (
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <div
+                        className="size-20 rounded-lg border-2 border-dashed border-border bg-muted flex items-center justify-center overflow-hidden cursor-pointer hover:border-foreground/40 transition-colors"
+                        onClick={() => fileRef.current?.click()}
+                        title="Click to upload"
+                      >
+                        {imageLoading
+                          ? <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                          : imageUrl
+                            ? <img src={imageUrl} alt="" className="size-full object-cover" />
+                            : <ImageIcon className="size-6 text-muted-foreground" />}
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={openGallery} className="h-7 text-[10px] uppercase font-bold tracking-wider">
+                        Gallery
+                      </Button>
+                    </div>
+                  )}
+                </ImageUploader>
                 <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium">{t('menuBuilder.photo')}</p>
@@ -488,6 +521,7 @@ function ItemDialog({
                   suggestions={ITEM_TAG_SUGGESTIONS}
                   formatTag={(tag) => ITEM_TAG_SUGGESTIONS.includes(tag) ? t(`menuBuilder.tagsList.${tag}`) : tag}
                   placeholder={t('menuBuilder.addCustomTag')}
+                  helpText={t('menuBuilder.tagHelp') || 'Press Enter or , to add a custom tag'}
                 />
               </div>
             </form>
@@ -537,6 +571,8 @@ interface MenuBuilderProps {
 }
 
 export function MenuBuilder({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
+  const { currentBusiness } = useBusiness()
+  const isStaff = currentBusiness?.role === 'staff'
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const initialData = useMemo(() => ({ categories: initialCategories, items: initialItems }), [initialCategories, initialItems])
@@ -743,7 +779,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         <span className={cn('text-xs shrink-0', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
           {count}
         </span>
-        <DropdownMenu>
+        {!isStaff && (<DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn('size-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity', isSelected ? 'hover:bg-white/20' : 'hover:bg-accent-foreground/10')}
@@ -764,7 +800,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
               <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>)}
       </div>
     )
   }
@@ -791,24 +827,24 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                 <p className="text-xs text-muted-foreground text-center py-2">{t('menuBuilder.noCategoriesYet')}</p>
               )}
               {[...categories].sort((a, b) => a.sort_order - b.sort_order).map(renderCategoryItem)}
-              <Button variant="ghost" className="w-full justify-start mt-2 border border-dashed" onClick={() => setCatDialog({ open: true })}>
+              {!isStaff && (<Button variant="ghost" className="w-full justify-start mt-2 border border-dashed" onClick={() => setCatDialog({ open: true })}>
                 <Plus className="size-4 mr-2" /> {t('menuBuilder.addCategory')}
-              </Button>
+              </Button>)}
             </div>
           </DrawerContent>
         </Drawer>
-        <Button size="icon" variant="outline" className="shrink-0 bg-background" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
+        {!isStaff && (<Button size="icon" variant="outline" className="shrink-0 bg-background" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
           <Plus className="size-4" />
-        </Button>
+        </Button>)}
       </div>
 
       {/* ── Category Sidebar (Desktop) ── */}
       <aside className="hidden md:flex w-56 shrink-0 border-r border-border flex-col bg-muted/30">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('menuBuilder.categories')}</span>
-          <Button id="add-category-btn" size="icon" variant="ghost" className="size-6" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
+          {!isStaff && (<Button id="add-category-btn" size="icon" variant="ghost" className="size-6" onClick={() => setCatDialog({ open: true })} title={t('menuBuilder.addCategory')}>
             <Plus className="size-4" />
-          </Button>
+          </Button>)}
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5 space-y-0">
@@ -825,12 +861,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         <div className="sticky top-0 z-20 flex flex-col bg-background/95 backdrop-blur shadow-sm">
           {/* CSV import/export bar */}
           <div className="px-6 py-3 border-b border-border bg-muted/20">
-            <MenuCsvActions
-              businessId={businessId}
-              categories={categories}
-              items={items}
-              onRefresh={handleCsvRefresh}
-            />
+            {!isStaff && (<MenuCsvActions businessId={businessId} categories={categories} items={items} onRefresh={handleCsvRefresh} />)}
           </div>
 
           {selectedCat && (
@@ -869,9 +900,9 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                     <div className="hidden md:block h-4 w-px bg-border" />
                   </>
                 )}
-                <Button id="add-item-btn" size="sm" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
+                {!isStaff && (<Button id="add-item-btn" size="sm" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
                   <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
-                </Button>
+                </Button>)}
               </div>
             </div>
           )}
@@ -880,22 +911,22 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         {!selectedCat ? (
           <div className="flex items-center justify-center flex-1 text-muted-foreground">
             <div className="text-center">
-              <p className="text-lg font-semibold mb-2">{t('menuBuilder.noCategorySelected')}</p>
+              <p className="text-base font-medium mb-1">{t('menuBuilder.noCategorySelected')}</p>
               <p className="text-sm mb-4">{t('menuBuilder.addCategoryToStart')}</p>
-              <Button onClick={() => setCatDialog({ open: true })}>
-                <Plus className="size-4 mr-2" /> Add category
-              </Button>
+              {!isStaff && (<Button onClick={() => setCatDialog({ open: true })}>
+                <Plus className="size-4 mr-2" /> {t('menuBuilder.addCategory')}
+              </Button>)}
             </div>
           </div>
         ) : (
             <div className="p-6">
               {visibleItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                  <p className="text-base font-medium mb-1">No items yet</p>
-                  <p className="text-sm mb-4">Add your first item to this category.</p>
-                  <Button variant="secondary" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
+                  <p className="text-base font-medium mb-1">{t('menuBuilder.noItemsYet') || 'No items yet'}</p>
+                  <p className="text-sm mb-4">{t('menuBuilder.addFirstItem') || 'Add your first item to this category.'}</p>
+                  {!isStaff && (<Button variant="secondary" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
                     <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
-                  </Button>
+                  </Button>)}
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -953,7 +984,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <h3 className="font-semibold text-sm line-clamp-1">{item.name}</h3>
-                            <DropdownMenu>
+                            {!isStaff && (<DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="size-6 rounded flex items-center justify-center text-muted-foreground hover:bg-accent opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0">
                                   <MoreHorizontal className="size-4" />
@@ -979,7 +1010,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                                   <Trash2 className="size-3.5 mr-2" /> {t('menuBuilder.delete')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
-                            </DropdownMenu>
+                            </DropdownMenu>)}
                           </div>
 
                           {item.description && (

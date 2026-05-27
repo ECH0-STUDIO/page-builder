@@ -54,7 +54,7 @@ export default async function PrintMenuPage() {
 
       <div className="flex-1 min-h-0">
         <PrintMenuShell
-          business={{ name: business.name, logo_url: business.logo_url }}
+          business={{ id: business.id, name: business.name, logo_url: business.logo_url }}
           categories={categories}
           items={items}
         />
