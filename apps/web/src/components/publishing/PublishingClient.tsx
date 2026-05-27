@@ -422,7 +422,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         <div className="flex items-center gap-2 mb-5">
           <Globe className="size-4 text-gray-600" />
           <h2 className="font-semibold text-gray-900">{t('publishing.customDomain')}</h2>
-          <span className="text-[10px] font-bold tracking-widest text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full uppercase ml-1">50 Credits / mo</span>
+          <span className="text-[10px] font-bold tracking-widest text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full uppercase ml-1">{t('publishing.creditMo')}</span>
         </div>
 
         <div className="space-y-4">
@@ -470,7 +470,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
             </div>
           )}
           <p className="text-xs text-gray-500 mt-2">
-            <strong>Billing Note:</strong> The 50 Credits/month charge cycle will only begin <em>after</em> your domain DNS is successfully verified and connected.
+            <strong>{t('publishing.billingNotePrefix')}</strong> {t('publishing.billingNoteText')} <em>{t('publishing.billingNoteTextAfter')}</em> {t('publishing.billingNoteTextEnd')}
           </p>
         </div>
       </Card>
@@ -497,7 +497,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
         <div className="mb-5 bg-blue-50/50 text-blue-800 text-xs px-3 py-2 rounded-lg border border-blue-100 flex items-start gap-2">
           <AlertCircle className="size-4 shrink-0 mt-0.5 text-blue-500" />
           <p>
-            <strong>Usage Cost:</strong> Website hosting consumes <strong>1 Credit per 500 page views</strong>. This is automatically deducted from your balance based on actual traffic.
+            <strong>{t('publishing.usageCostPrefix')}</strong> {t('publishing.usageCostText')} <strong>{t('publishing.usageCostBold')}</strong>{t('publishing.usageCostEnd')}
           </p>
         </div>
 
