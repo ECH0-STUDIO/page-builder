@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     console.log('PayOS Webhook received:', body)
 
     // Verify webhook data
-    const webhookData = payos.verifyPaymentWebhookData(body)
+    const webhookData = (await payos.webhooks.verify(body)) as any
 
     if (webhookData.code === '00' && webhookData.success) {
       const orderCode = webhookData.orderCode

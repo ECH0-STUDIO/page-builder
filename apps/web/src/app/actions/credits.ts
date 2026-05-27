@@ -104,7 +104,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
       cancelUrl: `${DOMAIN}/dashboard/settings?status=cancel`
     }
 
-    const paymentLinkData = await payos.createPaymentLink(requestData)
+    const paymentLinkData = await payos.paymentRequests.create(requestData)
 
     return { success: true, checkoutUrl: paymentLinkData.checkoutUrl }
   } catch (error: any) {
