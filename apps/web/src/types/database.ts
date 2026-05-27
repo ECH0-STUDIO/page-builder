@@ -127,6 +127,7 @@ export interface Database {
           visible: boolean
           created_at: string
           updated_at: string
+          image_url: string | null
         }
         Insert: {
           id?: string
@@ -444,6 +445,12 @@ export interface Database {
           apple_touch_icon_url: string | null
           language: string
           gsc_verification: string | null
+          google_analytics_id: string | null
+          facebook_pixel_id: string | null
+          tiktok_pixel_id: string | null
+          published_blocks: any | null
+          published_theme: any | null
+          has_unpublished_changes: boolean | null
         }
         Insert: {
           id?: string
@@ -461,6 +468,9 @@ export interface Database {
           google_analytics_id?: string | null
           facebook_pixel_id?: string | null
           tiktok_pixel_id?: string | null
+          published_blocks?: any | null
+          published_theme?: any | null
+          has_unpublished_changes?: boolean | null
         }
         Update: {
           id?: string
@@ -478,11 +488,18 @@ export interface Database {
           google_analytics_id?: string | null
           facebook_pixel_id?: string | null
           tiktok_pixel_id?: string | null
+          published_blocks?: any | null
+          published_theme?: any | null
+          has_unpublished_changes?: boolean | null
         }
         Relationships: [
           
         ]
       }
+      storage_subscriptions: { Row: any; Insert: any; Update: any; Relationships: any }
+      credit_balances: { Row: any; Insert: any; Update: any; Relationships: any }
+      credit_orders: { Row: any; Insert: any; Update: any; Relationships: any }
+      credit_transactions: { Row: any; Insert: any; Update: any; Relationships: any }
       print_menus: {
         Row: {
           id: string
@@ -623,6 +640,7 @@ export interface Database {
           heading_font_family: string | null
           navbar_config: any | null
           footer_config: any | null
+          hero_image_url: string | null
         }
         Insert: {
           id?: string

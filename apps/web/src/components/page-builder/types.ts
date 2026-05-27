@@ -369,6 +369,7 @@ export interface PublishingSettings {
   apple_touch_icon_url: string | null
   language: string
   gsc_verification: string | null
+  has_unpublished_changes: boolean | null
 }
 
 export interface ThemeSettings {

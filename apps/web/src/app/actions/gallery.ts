@@ -29,11 +29,11 @@ export async function getGalleryImagesAction(businessId: string) {
 
     const [biz, pub, theme, cats, items, blocks, sub] = await Promise.all([
       supabase.from('businesses').select('logo_url').eq('id', businessId).single(),
-      supabase.from('publishing_settings').select('favicon_url, webclip_url').eq('business_id', businessId).single(),
+      supabase.from('publishing_settings').select('favicon_url, apple_touch_icon_url').eq('business_id', businessId).single(),
       supabase.from('theme_settings').select('hero_image_url').eq('business_id', businessId).single(),
       supabase.from('menu_categories').select('image_url').eq('business_id', businessId),
       supabase.from('menu_items').select('image_url').eq('business_id', businessId),
-      supabase.from('page_blocks').select('content').eq('business_id', businessId),
+      supabase.from('page_blocks').select('config').eq('business_id', businessId),
       supabase.from('storage_subscriptions').select('*').eq('business_id', businessId).single()
     ])
 
@@ -55,11 +55,11 @@ export async function getGalleryImagesAction(businessId: string) {
     }
 
     if (biz.data) activeUrlsString += (biz.data.logo_url || '') + ' '
-    if (pub.data) activeUrlsString += (pub.data.favicon_url || '') + ' ' + (pub.data.webclip_url || '') + ' '
+    if (pub.data) activeUrlsString += (pub.data.favicon_url || '') + ' ' + (pub.data.apple_touch_icon_url || '') + ' '
     if (theme.data) activeUrlsString += (theme.data.hero_image_url || '') + ' '
     cats.data?.forEach(c => activeUrlsString += (c.image_url || '') + ' ')
     items.data?.forEach(i => activeUrlsString += (i.image_url || '') + ' ')
-    blocks.data?.forEach(b => activeUrlsString += JSON.stringify(b.content || {}) + ' ')
+    blocks.data?.forEach(b => activeUrlsString += JSON.stringify(b.config || {}) + ' ')
 
     // List images from relevant buckets
     const buckets = ['page-images', 'favicons', 'logos', 'menu-images']

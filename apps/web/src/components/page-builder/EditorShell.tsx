@@ -1041,7 +1041,7 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       isMobilePreview={viewMode === 'mobile'}
-                      onClick={isStaff ? undefined : () => { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); }}
+                      onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>
                 ))}
