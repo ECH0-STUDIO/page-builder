@@ -4,6 +4,8 @@ import { BusinessProvider } from '@/context/BusinessContext'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { I18nProvider } from '@/i18n/I18nProvider'
 import { getDictionary } from '@/i18n/getDictionary'
+import { GlobalNavLoader } from '@/components/GlobalNavLoader'
+import { Suspense } from 'react'
 import { getActiveBusiness, getAllUserBusinessesServer } from '@/lib/business-server'
 
 export default async function DashboardLayout({
@@ -50,6 +52,9 @@ export default async function DashboardLayout({
             {children}
           </main>
         </div>
+        <Suspense fallback={null}>
+          <GlobalNavLoader />
+        </Suspense>
       </BusinessProvider>
     </I18nProvider>
   )
