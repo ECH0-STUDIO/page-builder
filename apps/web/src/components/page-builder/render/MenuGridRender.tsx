@@ -16,7 +16,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
-import { X, Plus, Check, AlertCircle } from 'lucide-react'
+import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -402,6 +403,7 @@ function ItemRowList({
 // ─── Inner render (needs CartProvider as ancestor) ────────────────────────────
 
 function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & { isMobilePreview?: boolean }) {
+  const { t } = useTranslation()
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
@@ -581,7 +583,7 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Loading...
+            {t('publishing.loading')}
           </div>
         </div>
       )}
