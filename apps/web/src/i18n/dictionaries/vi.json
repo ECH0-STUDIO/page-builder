@@ -875,14 +875,18 @@
     }
   },
   "credits": {
-    "availableCredits": "Credit hiện có",
-    "usedForPremium": "Credit được sử dụng để truy cập các tính năng cao cấp.",
-    "buyCredits": "Mua Credit",
-    "purchaseMore": "Mua thêm Credit để tiếp tục sử dụng các tính năng cao cấp.",
-    "purchaseSuccess": "Đã mua thành công {{amount}} Credit!",
-    "transactionHistory": "Lịch sử giao dịch",
-    "recentUsage": "Các giao dịch mua và sử dụng Credit gần đây",
-    "noTransactions": "Chưa có giao dịch nào."
+    "availableCredits": "Số Dư Tín Dụng",
+    "usedForPremium": "Sử dụng để tạo trang bằng AI",
+    "buyCredits": "Mua Tín Dụng",
+    "purchaseMore": "Mua thêm tín dụng để tạo nhiều trang hơn",
+    "transactionHistory": "Lịch Sử Giao Dịch",
+    "recentUsage": "Lịch sử mua và sử dụng gần đây",
+    "noTransactions": "Chưa có giao dịch nào",
+    "confirmPurchase": "Xác nhận mua",
+    "confirmDetails": "Chi tiết gói Tín Dụng bạn đang chọn mua.",
+    "discountCode": "Mã giảm giá (Tùy chọn)",
+    "discountApplied": "Đã áp dụng mã giảm giá!",
+    "purchaseSuccess": "Thanh toán thành công!"
   },
   "gallery": {
     "title": "Thư viện Ảnh",

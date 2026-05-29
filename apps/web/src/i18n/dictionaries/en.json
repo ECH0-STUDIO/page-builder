@@ -876,13 +876,17 @@
   },
   "credits": {
     "availableCredits": "Available Credits",
-    "usedForPremium": "Credits are used to access premium features.",
+    "usedForPremium": "Used for premium page generations",
     "buyCredits": "Buy Credits",
-    "purchaseMore": "Purchase more credits to continue using premium features.",
-    "purchaseSuccess": "Successfully purchased {{amount}} credits!",
+    "purchaseMore": "Purchase more credits to generate pages",
     "transactionHistory": "Transaction History",
-    "recentUsage": "Recent credit usage and purchases",
-    "noTransactions": "No transactions yet."
+    "recentUsage": "Recent usage and purchases",
+    "noTransactions": "No transactions yet",
+    "confirmPurchase": "Confirm Purchase",
+    "confirmDetails": "Details of the credit package you are purchasing.",
+    "discountCode": "Discount Code (Optional)",
+    "discountApplied": "Discount code applied!",
+    "purchaseSuccess": "Payment successful!"
   },
   "gallery": {
     "title": "Media Gallery",

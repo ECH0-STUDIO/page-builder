@@ -11,8 +11,8 @@ import { formatCurrency } from '@/lib/currency'
 import {
   getCreditBalanceAction,
   getCreditTransactionsAction,
-  purchaseCreditsAction
 } from '@/app/actions/credits'
+import { PurchaseCreditsModal } from './PurchaseCreditsModal'
 
 interface Transaction {
   id: string
@@ -26,7 +26,9 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
   const [balance, setBalance] = useState<number | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-  const [purchasing, setPurchasing] = useState(false)
+  
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedPackage, setSelectedPackage] = useState<{amount: number, price: number} | null>(null)
   
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -58,16 +60,13 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
     loadData()
   }, [businessId])
 
-  async function handlePurchase(amount: number, priceVnd: number) {
-    setPurchasing(true)
-    const res = await purchaseCreditsAction(businessId, amount, priceVnd)
-    if (res.success && res.checkoutUrl) {
-      // Redirect to PayOS checkout page
-      window.location.href = res.checkoutUrl
-    } else {
-      toast.error(res.error || 'Failed to initialize checkout')
-      setPurchasing(false)
-    }
+  function handleSelectPackage(amount: number, priceVnd: number) {
+    setSelectedPackage({ amount, price: priceVnd })
+    setModalOpen(true)
+  }
+
+  function handlePurchaseSuccess() {
+    loadData()
   }
 
   if (loading) {
@@ -109,8 +108,7 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
             <Button
               variant="outline"
               className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50"
-              onClick={() => handlePurchase(50, 50000)}
-              disabled={purchasing}
+              onClick={() => handleSelectPackage(50, 50000)}
             >
               <div className="flex items-center gap-1 font-bold text-xl">
                 <Coins className="size-5 text-yellow-500" /> 50
@@ -120,8 +118,7 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
             <Button
               variant="outline"
               className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50 relative overflow-hidden"
-              onClick={() => handlePurchase(100, 90000)}
-              disabled={purchasing}
+              onClick={() => handleSelectPackage(100, 90000)}
             >
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
               <div className="flex items-center gap-1 font-bold text-xl">
@@ -132,8 +129,7 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
             <Button
               variant="outline"
               className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50"
-              onClick={() => handlePurchase(500, 400000)}
-              disabled={purchasing}
+              onClick={() => handleSelectPackage(500, 400000)}
             >
               <div className="flex items-center gap-1 font-bold text-xl">
                 <Coins className="size-5 text-yellow-500" /> 500
@@ -178,6 +174,17 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {selectedPackage && (
+        <PurchaseCreditsModal 
+          businessId={businessId}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          amount={selectedPackage.amount}
+          priceVnd={selectedPackage.price}
+          onSuccess={handlePurchaseSuccess}
+        />
+      )}
     </div>
   )
 }
