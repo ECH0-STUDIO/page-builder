@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
     // Verify webhook data
     const webhookData = (await payos.webhooks.verify(body)) as any
 
-    if (webhookData.code === '00' && webhookData.success) {
+    // If it's a webhook verification ping
+    if (webhookData.webhookUrl) {
+      return NextResponse.json({ success: true, message: 'Webhook confirmed' })
+    }
+
+    if (webhookData.code === '00') {
       const orderCode = webhookData.orderCode
 
       const adminClient = createAdminClient()
