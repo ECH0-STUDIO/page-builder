@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
       if (orderError || !order) {
         console.error('Order not found:', orderCode)
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+        // Return 200 so PayOS dashboard accepts test webhooks or stops retrying invalid orders
+        return NextResponse.json({ success: true, message: 'Order not found (test webhook)' })
       }
 
       if (order.status === 'paid') {
