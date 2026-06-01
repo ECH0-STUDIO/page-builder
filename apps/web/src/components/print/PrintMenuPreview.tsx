@@ -265,7 +265,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
       }
     }
 
-    const continuedText = t('printMenu.continued' as any)
+    // continuedText is removed
 
     for (const catId of settings.selectedCategories) {
       const cat = categories.find(c => c.id === catId)
@@ -357,8 +357,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
         const colItemsHtml = col.items.map(layoutItem => {
           if (layoutItem.type === 'cat-header' || layoutItem.type === 'cat-header-continued') {
             const cat = categories.find(c => c.id === layoutItem.id)!
-            const isCont = layoutItem.type === 'cat-header-continued'
-            return `<div class="cat-header">${cat.name}${isCont ? ` ${t('printMenu.continued' as any)}` : ''}</div>`
+            return `<div class="cat-header">${cat.name}</div>`
           } else {
             const item = items.find(i => i.id === layoutItem.id)!
             return `
@@ -585,14 +584,13 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
                           {col.items.map((layoutItem, itemIdx) => {
                             if (layoutItem.type === 'cat-header' || layoutItem.type === 'cat-header-continued') {
                               const cat = categories.find(c => c.id === layoutItem.id)!
-                              const isCont = layoutItem.type === 'cat-header-continued'
                               return (
                                 <div key={`cat-${cat.id}-${itemIdx}`} style={{
                                   fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
                                   color: settings.accent_color, borderBottom: `1px solid ${settings.accent_color}80`,
                                   paddingBottom: 4, marginBottom: 20, marginTop: 8
                                 }}>
-                                  {cat.name}{isCont ? ` ${t('printMenu.continued' as any)}` : ''}
+                                  {cat.name}
                                 </div>
                               )
                             } else {
