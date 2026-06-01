@@ -327,7 +327,8 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
 
     setLayoutPages(pages)
     setIsMeasuring(false)
-  }, [settings, categories, items, contentH, t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, categories, items, contentH])
 
 
   function handlePrint() {
