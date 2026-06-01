@@ -453,13 +453,11 @@ function ItemDialog({
           onValueChange={v => setActiveTab(v as 'details' | 'variants')}
           className="pb-2"
         >
-          <TabsList className="w-full h-auto">
-            <TabsTrigger value="details" className="flex-1 whitespace-normal py-2.5 leading-snug">{t('menuBuilder.details')}</TabsTrigger>
-            <TabsTrigger value="variants" className="flex-1 whitespace-normal py-2.5 leading-snug" disabled={!isEditing}>
-              <div className="flex flex-col items-center">
-                <span>{t('menuBuilder.optionsVariants')}</span>
-                {!isEditing && <span className="text-[10px] opacity-60 font-normal">({t('menuBuilder.saveItemFirst')})</span>}
-              </div>
+          <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
+            <TabsTrigger value="details" className="shrink-0">{t('menuBuilder.details')}</TabsTrigger>
+            <TabsTrigger value="variants" className="shrink-0" disabled={!isEditing}>
+              {t('menuBuilder.optionsVariants')}
+              {!isEditing && <span className="ml-1.5 text-[10px] opacity-60 font-normal">({t('menuBuilder.saveItemFirst')})</span>}
             </TabsTrigger>
           </TabsList>
 
