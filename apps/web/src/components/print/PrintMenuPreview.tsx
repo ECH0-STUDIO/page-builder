@@ -4,7 +4,7 @@
  * PrintMenuPreview — live paper preview + print popup.
  */
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Printer, Minus, Plus, Search } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { getFontStack, getGoogleFontLinkTag } from '@/lib/fonts'
@@ -195,13 +195,15 @@ export function MenuContent({ business, categories, items, settings }: MenuConte
 
 // ─── Main preview + print ─────────────────────────────────────────────────────
 
+type LayoutItem = { type: 'cat-header'; id: string } | { type: 'item'; id: string }
+type LayoutColumn = { items: LayoutItem[] }
+type LayoutPage = { columns: LayoutColumn[] }
+
 export function PrintMenuPreview({ business, categories, items, settings, onSave, isSaving }: MenuContentProps) {
-  const contentRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const { t } = useTranslation()
   const paper = PAPER_PX[settings.paper]
 
-  // Build background CSS for paper
   const pageBg = settings.page_bg_image
     ? `url(${settings.page_bg_image}) center/cover no-repeat`
     : settings.page_bg_color
@@ -210,31 +212,109 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
   const headingFontStack = getFontStack(settings.heading_font)
   const bodyFontStack = getFontStack(settings.body_font)
 
-  // Calculations for CSS column pagination
+  // Layout parameters
   const contentW = paper.w - paper.marginX * 2
   const contentH = paper.h - paper.marginY * 2
-  const pageGap = 24
-  const columnGap = paper.marginX * 2 + pageGap
-  const [pagesCount, setPagesCount] = useState(1)
+  const columnGap = 24
+  const columnW = settings.columns === 1 
+    ? contentW 
+    : (contentW - columnGap) / 2
 
-  // Auto-measure pages count for preview
-  import('react').then(({ useEffect }) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      if (!contentRef.current) return
-      const observer = new ResizeObserver(() => {
-        if (!contentRef.current) return
-        const scrollWidth = contentRef.current.scrollWidth
-        const count = Math.round((scrollWidth + columnGap) / (contentW + columnGap))
-        setPagesCount(Math.max(1, count))
-      })
-      observer.observe(contentRef.current)
-      return () => observer.disconnect()
-    }, [paper.w, columnGap, contentW])
-  })
+  // Layout Engine State
+  const [layoutPages, setLayoutPages] = useState<LayoutPage[]>([])
+  const [isMeasuring, setIsMeasuring] = useState(true)
+
+  // Refs for measurement
+  const measureContainerRef = useRef<HTMLDivElement>(null)
+  
+  useEffect(() => {
+    if (!measureContainerRef.current) return
+    const container = measureContainerRef.current
+    
+    // Read heights
+    const mainHeaderEl = container.querySelector('[data-measure="main-header"]') as HTMLElement
+    const mainHeaderH = mainHeaderEl ? mainHeaderEl.offsetHeight + 28 : 0 // 28 is the marginBottom in MenuContent
+
+    const heights = new Map<string, number>()
+    const elements = container.querySelectorAll('[data-measure-id]')
+    elements.forEach(el => {
+      const id = el.getAttribute('data-measure-id')!
+      heights.set(id, (el as HTMLElement).offsetHeight)
+    })
+
+    // Packing algorithm
+    const pages: LayoutPage[] = []
+    let currentColumnIndex = 0
+    let currentPageIndex = 0
+    let currentHeight = 0
+    let availableHeight = contentH - (settings.show_header ? mainHeaderH : 0)
+
+    const advanceColumn = () => {
+      currentColumnIndex++
+      if (currentColumnIndex >= settings.columns) {
+        currentColumnIndex = 0
+        currentPageIndex++
+        availableHeight = contentH
+      }
+      currentHeight = 0
+    }
+
+    const ensureCurrentColumn = () => {
+      if (!pages[currentPageIndex]) pages[currentPageIndex] = { columns: [] }
+      if (!pages[currentPageIndex].columns[currentColumnIndex]) {
+        pages[currentPageIndex].columns[currentColumnIndex] = { items: [] }
+      }
+    }
+
+    for (const catId of settings.selectedCategories) {
+      const cat = categories.find(c => c.id === catId)
+      if (!cat) continue
+      const catItems = items.filter(i => i.category_id === cat.id)
+      if (catItems.length === 0) continue
+
+      const catHeaderId = `cat-${cat.id}`
+      const firstItemId = `item-${catItems[0].id}`
+      const headerH = settings.show_category_dividers ? (heights.get(catHeaderId) || 0) + 20 : 0 // +20 for bottom margin
+      const firstItemH = heights.get(firstItemId) || 0
+
+      ensureCurrentColumn()
+      
+      // Orphan control: Header + first item must fit, or advance column
+      if (currentHeight > 0 && currentHeight + headerH + firstItemH > availableHeight) {
+        advanceColumn()
+        ensureCurrentColumn()
+      }
+
+      if (settings.show_category_dividers) {
+        pages[currentPageIndex].columns[currentColumnIndex].items.push({ type: 'cat-header', id: cat.id })
+        currentHeight += headerH
+      }
+
+      for (const item of catItems) {
+        const itemId = `item-${item.id}`
+        const itemH = heights.get(itemId) || 0
+
+        if (currentHeight > 0 && currentHeight + itemH > availableHeight) {
+          advanceColumn()
+          ensureCurrentColumn()
+        }
+
+        pages[currentPageIndex].columns[currentColumnIndex].items.push({ type: 'item', id: item.id })
+        currentHeight += itemH
+      }
+    }
+
+    if (pages.length === 0) {
+      pages.push({ columns: [{ items: [] }] })
+    }
+
+    setLayoutPages(pages)
+    setIsMeasuring(false)
+  }, [settings, categories, items, contentH])
+
 
   function handlePrint() {
-    if (!contentRef.current) return
+    if (isMeasuring || layoutPages.length === 0) return
 
     const iframe = document.createElement('iframe')
     iframe.style.position = 'fixed'
@@ -252,6 +332,50 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
       ? `background: url(${settings.page_bg_image}) center/cover no-repeat; -webkit-print-color-adjust: exact; print-color-adjust: exact;`
       : `background: ${settings.page_bg_color};`
 
+    // Generate HTML for each page
+    const pagesHtml = layoutPages.map((page, pageIdx) => {
+      const isFirstPage = pageIdx === 0
+      
+      const columnsHtml = page.columns.map(col => {
+        const colItemsHtml = col.items.map(layoutItem => {
+          if (layoutItem.type === 'cat-header') {
+            const cat = categories.find(c => c.id === layoutItem.id)!
+            return `<div class="cat-header">${cat.name}</div>`
+          } else {
+            const item = items.find(i => i.id === layoutItem.id)!
+            return `
+              <div class="item">
+                ${settings.show_images && item.image_url ? `<img src="${item.image_url}" alt="">` : ''}
+                <div class="item-body">
+                  <div class="item-row">
+                    <p class="item-name">${item.name}</p>
+                    ${settings.show_prices && item.price != null ? `<p class="item-price">${formatPrice(item.price)}</p>` : ''}
+                  </div>
+                  ${settings.show_description && item.description ? `<p class="item-desc">${item.description}</p>` : ''}
+                </div>
+              </div>`
+          }
+        }).join('')
+        return `<div class="column">${colItemsHtml}</div>`
+      }).join('')
+
+      const headerHtml = (isFirstPage && settings.show_header) ? `
+        <div class="header">
+          ${business.logo_url ? `<img src="${business.logo_url}" alt="">` : ''}
+          <h1>${settings.heading_text.trim() || business.name}</h1>
+          ${settings.heading_subtext ? `<p>${settings.heading_subtext}</p>` : ''}
+          <div class="header-line"></div>
+        </div>
+      ` : ''
+
+      return `
+        <div class="page">
+          ${headerHtml}
+          <div class="columns-grid">${columnsHtml}</div>
+        </div>
+      `
+    }).join('')
+
     win.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
       <title>${settings.heading_text || business.name} — Menu</title>
@@ -261,22 +385,36 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         html, body { height: 100%; }
         body { font-family: ${bodyFontStack}; color: ${settings.body_text_color}; ${bgCss} -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         h1 { font-family: ${headingFontStack}; }
-        @page { size: ${settings.paper.toUpperCase()}; margin: 14mm; }
-        .content { max-width: 100%; }
-        .grid { display: grid; grid-template-columns: repeat(${settings.columns}, 1fr); gap: 0 24px; align-items: start; }
-        .cat-block { break-inside: avoid-column; page-break-inside: avoid; margin-bottom: 20px; }
-        .cat-header { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: ${settings.accent_color}; border-bottom: 1px solid ${settings.accent_color}80; padding-bottom: 4px; margin-bottom: 8px; }
-        .item { display: flex; gap: 10px; padding: ${settings.item_card_bg !== 'transparent' ? '10px' : '9px 0'}; border-bottom: ${settings.item_card_bg !== 'transparent' ? 'none' : `1px solid ${settings.body_text_color}22`}; margin-bottom: ${settings.item_card_bg !== 'transparent' ? '8px' : '0'}; background: ${settings.item_card_bg}; border-radius: ${settings.item_card_bg !== 'transparent' ? settings.item_card_radius : 0}px; break-inside: avoid; }
+        @page { size: ${settings.paper.toUpperCase()}; margin: 0; }
+        
+        .page { 
+          width: ${paper.w}px; 
+          height: ${paper.h}px; 
+          padding: ${paper.marginY}px ${paper.marginX}px;
+          page-break-after: always;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .columns-grid { display: grid; grid-template-columns: repeat(${settings.columns}, 1fr); gap: 0 ${columnGap}px; align-items: start; }
+        .column { display: flex; flex-direction: column; }
+        
+        .cat-header { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: ${settings.accent_color}; border-bottom: 1px solid ${settings.accent_color}80; padding-bottom: 4px; margin-bottom: 20px; margin-top: 8px; }
+        
+        .item { display: flex; gap: 10px; padding: ${settings.item_card_bg !== 'transparent' ? '10px' : '9px 0'}; border-bottom: ${settings.item_card_bg !== 'transparent' ? 'none' : `1px solid ${settings.body_text_color}22`}; margin-bottom: ${settings.item_card_bg !== 'transparent' ? '8px' : '0'}; background: ${settings.item_card_bg}; border-radius: ${settings.item_card_bg !== 'transparent' ? settings.item_card_radius : 0}px; }
         .item img { width:56px; height:56px; object-fit:cover; border-radius:6px; flex-shrink:0; }
         .item-body { flex:1; min-width:0; }
         .item-row { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
-        .item-name { font-weight:600; font-size:12px; line-height:1.3; color:${settings.body_text_color}; }
-        .item-price { font-weight:700; font-size:12px; color:${settings.accent_color}; white-space:nowrap; flex-shrink:0; }
-        .item-desc { font-size:10px; color:${settings.body_text_color}99; margin-top:2px; line-height:1.4; }
+        .item-name { font-weight:600; font-size:13px; line-height:1.3; color:${settings.body_text_color}; margin: 0; }
+        .item-price { font-weight:700; font-size:13px; color:${settings.accent_color}; white-space:nowrap; flex-shrink:0; margin: 0; }
+        .item-desc { font-size:11px; color:${settings.body_text_color}99; margin: 3px 0 0; line-height:1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        
         .header { margin-bottom: 28px; text-align: center; }
-        .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: ${settings.header_text_color}; }
-        .header p { font-size: 13px; color: ${settings.header_text_color}aa; margin-top: 4px; font-style: italic; }
+        .header img { height: 48px; object-fit: contain; margin-bottom: 8px; display: block; margin: 0 auto 8px; }
+        .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: ${settings.header_text_color}; margin: 0; }
+        .header p { font-size: 13px; color: ${settings.header_text_color}aa; margin: 4px 0 0; font-style: italic; }
         .header-line { height: 1px; background: ${settings.accent_color}; margin-top: 12px; opacity: 0.5; }
+        
         body::before { content:''; position:fixed; inset:0;
           background:${settings.page_bg_overlay_color};
           opacity:${(settings.page_bg_overlay_opacity / 100).toFixed(2)};
@@ -285,7 +423,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         body > * { position:relative; z-index:1; }
       </style>
     </head><body>
-      <div class="content">${contentRef.current.innerHTML}</div>
+      ${pagesHtml}
     </body></html>`)
     win.document.close()
 
@@ -300,33 +438,56 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
     }, 500)
   }
 
-  async function handleDownloadPng() {
-    if (!contentRef.current) return
-    try {
-      // Load fonts first
-      const url = getGoogleFontLinkTag([settings.heading_font, settings.body_font])
-      if (url) {
-        const el = document.createElement('div')
-        el.innerHTML = url
-        const link = el.firstElementChild as HTMLLinkElement
-        if (link && !document.querySelector(`link[href="${link.href}"]`)) {
-          document.head.appendChild(link)
-          await new Promise(r => setTimeout(r, 700))
-        }
-      }
-      const paperEl = contentRef.current.parentElement!
-      const dataUrl = await safeToPng(paperEl, { pixelRatio: 3, cacheBust: true })
-      const a = document.createElement('a')
-      a.download = `menu-${settings.paper}.png`
-      a.href = dataUrl
-      a.click()
-    } catch (e) {
-      console.error('PNG export failed', e)
-    }
-  }
+  const headingText = settings.heading_text.trim() || business.name
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 h-full" style={{ fontFamily: bodyFontStack, color: settings.body_text_color }}>
+      
+      {/* Hidden Measurement Layer */}
+      <div 
+        ref={measureContainerRef}
+        style={{ 
+          position: 'absolute', top: -9999, left: -9999, visibility: 'hidden', pointerEvents: 'none',
+          width: columnW // ensure elements wrap exactly as they would in a single column
+        }}
+      >
+        {/* Measure Header */}
+        <div data-measure="main-header" style={{ width: contentW, textAlign: 'center' }}>
+          {business.logo_url && <img src={business.logo_url} alt="" style={{ height: 48, marginBottom: 8, display: 'block', margin: '0 auto 8px' }} />}
+          <h1 style={{ fontFamily: headingFontStack, fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
+            {headingText}
+          </h1>
+          {settings.heading_subtext && <p style={{ fontSize: 13, margin: '4px 0 0' }}>{settings.heading_subtext}</p>}
+          <div style={{ height: 1, marginTop: 12 }} />
+        </div>
+
+        {/* Measure Categories & Items */}
+        {settings.selectedCategories.map(catId => {
+          const cat = categories.find(c => c.id === catId)
+          if (!cat) return null
+          const catItems = items.filter(i => i.category_id === cat.id)
+          if (catItems.length === 0) return null
+
+          return (
+            <div key={cat.id}>
+              {settings.show_category_dividers && (
+                <div data-measure-id={`cat-${cat.id}`} style={{
+                  fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
+                  paddingBottom: 4, marginBottom: 8, marginTop: 8
+                }}>
+                  {cat.name}
+                </div>
+              )}
+              {catItems.map(item => (
+                <div data-measure-id={`item-${item.id}`} key={item.id}>
+                  <MenuCard item={item} settings={settings} />
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 shrink-0">
         <div className="flex items-center gap-2">
@@ -336,8 +497,8 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
               {isSaving ? t('printMenu.saved') : t('printMenu.saveChanges')}
             </button>
           )}
-          <button onClick={handlePrint}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+          <button onClick={handlePrint} disabled={isMeasuring}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
             <Printer className="size-4" />
             {t('printMenu.printPdf')}
           </button>
@@ -346,54 +507,88 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
 
       {/* Preview Area */}
       <div className="flex-1 relative min-h-0">
-        {/* Scrollable paper preview */}
         <div className="absolute inset-0 overflow-auto bg-neutral-300 rounded-2xl p-6">
           <div className="mx-auto" style={{
             zoom: zoom,
             display: 'flex',
-            gap: pageGap,
+            gap: 24,
             width: 'max-content',
             position: 'relative'
           }}>
-            {/* Page Backgrounds */}
-            {Array.from({ length: pagesCount }).map((_, i) => (
-              <div key={i} style={{
-                width: paper.w,
-                height: paper.h,
-                background: pageBg,
-                boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
-                borderRadius: 4,
-                flexShrink: 0,
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                {settings.page_bg_overlay_opacity > 0 && (
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: settings.page_bg_overlay_color,
-                    opacity: settings.page_bg_overlay_opacity / 100,
-                  }} />
-                )}
-              </div>
-            ))}
+            {layoutPages.map((page, pageIdx) => {
+              const isFirstPage = pageIdx === 0
+              return (
+                <div key={pageIdx} style={{
+                  width: paper.w,
+                  height: paper.h,
+                  background: pageBg,
+                  boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
+                  borderRadius: 4,
+                  flexShrink: 0,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  padding: `${paper.marginY}px ${paper.marginX}px`
+                }}>
+                  {/* Overlay */}
+                  {settings.page_bg_overlay_opacity > 0 && (
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: settings.page_bg_overlay_color,
+                      opacity: settings.page_bg_overlay_opacity / 100,
+                      pointerEvents: 'none',
+                      zIndex: 0
+                    }} />
+                  )}
 
-            {/* Content Container (flows across backgrounds using CSS columns) */}
-            <div 
-              ref={contentRef}
-              style={{
-                position: 'absolute',
-                top: paper.marginY,
-                left: paper.marginX,
-                bottom: paper.marginY,
-                height: contentH,
-                columnWidth: contentW,
-                columnGap: columnGap,
-                columnFill: 'auto',
-                zIndex: 1,
-              }}
-            >
-              <MenuContent business={business} categories={categories} items={items} settings={settings} />
-            </div>
+                  {/* Page Content */}
+                  <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    {isFirstPage && settings.show_header && (
+                      <div style={{ marginBottom: 28, textAlign: 'center' }}>
+                        {business.logo_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={business.logo_url} alt="" style={{ height: 48, objectFit: 'contain', marginBottom: 8, display: 'block', margin: '0 auto 8px' }} />
+                        )}
+                        <h1 style={{ fontFamily: headingFontStack, fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: settings.header_text_color, margin: 0 }}>
+                          {headingText}
+                        </h1>
+                        {settings.heading_subtext && (
+                          <p style={{ fontSize: 13, color: settings.header_text_color + 'aa', margin: '4px 0 0', fontStyle: 'italic' }}>
+                            {settings.heading_subtext}
+                          </p>
+                        )}
+                        <div style={{ height: 1, background: settings.accent_color, marginTop: 12, opacity: 0.5 }} />
+                      </div>
+                    )}
+
+                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${settings.columns}, 1fr)`, gap: `0 ${columnGap}px`, alignItems: 'start' }}>
+                      {page.columns.map((col, colIdx) => (
+                        <div key={colIdx} style={{ display: 'flex', flexDirection: 'column' }}>
+                          {col.items.map((layoutItem, itemIdx) => {
+                            if (layoutItem.type === 'cat-header') {
+                              const cat = categories.find(c => c.id === layoutItem.id)!
+                              return (
+                                <div key={`cat-${cat.id}-${itemIdx}`} style={{
+                                  fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
+                                  color: settings.accent_color, borderBottom: `1px solid ${settings.accent_color}80`,
+                                  paddingBottom: 4, marginBottom: 20, marginTop: 8
+                                }}>
+                                  {cat.name}
+                                </div>
+                              )
+                            } else {
+                              const item = items.find(i => i.id === layoutItem.id)!
+                              return (
+                                <MenuCard key={`item-${item.id}-${itemIdx}`} item={item} settings={settings} />
+                              )
+                            }
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
         
@@ -421,3 +616,4 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
     </div>
   )
 }
+
