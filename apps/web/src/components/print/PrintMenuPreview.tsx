@@ -72,8 +72,8 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
 
 // Paper dimensions in px at 96 dpi (used for the in-browser preview)
 export const PAPER_PX = {
-  a4: { w: 794, h: 1123, label: 'A4', margin: '40px 48px' },
-  a5: { w: 559, h: 794,  label: 'A5', margin: '32px 36px' },
+  a4: { w: 794, h: 1123, label: 'A4', marginY: 40, marginX: 48 },
+  a5: { w: 559, h: 794,  label: 'A5', marginY: 32, marginX: 36 },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -171,9 +171,10 @@ export function MenuContent({ business, categories, items, settings }: MenuConte
           const catItems = items.filter(i => i.category_id === cat.id)
           if (catItems.length === 0) return null
           return (
-            <div key={cat.id} style={{ breakInside: 'avoid', pageBreakInside: 'avoid', marginBottom: 20 }}>
+            <div key={cat.id} style={{ marginBottom: 20 }}>
               {settings.show_category_dividers && (
                 <div style={{
+                  breakInside: 'avoid', pageBreakInside: 'avoid',
                   fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
                   color: settings.accent_color, borderBottom: `1px solid ${settings.accent_color}80`,
                   paddingBottom: 4, marginBottom: 8,
@@ -208,6 +209,29 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
   const fontLink = getGoogleFontLinkTag([settings.heading_font, settings.body_font])
   const headingFontStack = getFontStack(settings.heading_font)
   const bodyFontStack = getFontStack(settings.body_font)
+
+  // Calculations for CSS column pagination
+  const contentW = paper.w - paper.marginX * 2
+  const contentH = paper.h - paper.marginY * 2
+  const pageGap = 24
+  const columnGap = paper.marginX * 2 + pageGap
+  const [pagesCount, setPagesCount] = useState(1)
+
+  // Auto-measure pages count for preview
+  import('react').then(({ useEffect }) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      if (!contentRef.current) return
+      const observer = new ResizeObserver(() => {
+        if (!contentRef.current) return
+        const scrollWidth = contentRef.current.scrollWidth
+        const count = Math.round((scrollWidth + columnGap) / (contentW + columnGap))
+        setPagesCount(Math.max(1, count))
+      })
+      observer.observe(contentRef.current)
+      return () => observer.disconnect()
+    }, [paper.w, columnGap, contentW])
+  })
 
   function handlePrint() {
     if (!contentRef.current) return
@@ -325,31 +349,52 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         {/* Scrollable paper preview */}
         <div className="absolute inset-0 overflow-auto bg-neutral-300 rounded-2xl p-6">
           <div className="mx-auto" style={{
-          zoom: zoom,
-          width: paper.w,
-          minHeight: paper.h,
-          background: pageBg,
-          boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
-          borderRadius: 4,
-          padding: paper.margin,
-          flexShrink: 0,
-          position: 'relative',
-        }}>
-          {/* Overlay — sits between bg image and content */}
-          {settings.page_bg_overlay_opacity > 0 && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: settings.page_bg_overlay_color,
-              opacity: settings.page_bg_overlay_opacity / 100,
-              borderRadius: 4,
-              pointerEvents: 'none',
-              zIndex: 0,
-            }} />
-          )}
-          <div ref={contentRef} style={{ position: 'relative', zIndex: 1 }}>
-            <MenuContent business={business} categories={categories} items={items} settings={settings} />
+            zoom: zoom,
+            display: 'flex',
+            gap: pageGap,
+            width: 'max-content',
+            position: 'relative'
+          }}>
+            {/* Page Backgrounds */}
+            {Array.from({ length: pagesCount }).map((_, i) => (
+              <div key={i} style={{
+                width: paper.w,
+                height: paper.h,
+                background: pageBg,
+                boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
+                borderRadius: 4,
+                flexShrink: 0,
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {settings.page_bg_overlay_opacity > 0 && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: settings.page_bg_overlay_color,
+                    opacity: settings.page_bg_overlay_opacity / 100,
+                  }} />
+                )}
+              </div>
+            ))}
+
+            {/* Content Container (flows across backgrounds using CSS columns) */}
+            <div 
+              ref={contentRef}
+              style={{
+                position: 'absolute',
+                top: paper.marginY,
+                left: paper.marginX,
+                bottom: paper.marginY,
+                height: contentH,
+                columnWidth: contentW,
+                columnGap: columnGap,
+                columnFill: 'auto',
+                zIndex: 1,
+              }}
+            >
+              <MenuContent business={business} categories={categories} items={items} settings={settings} />
+            </div>
           </div>
-        </div>
         </div>
         
         {/* Floating Zoom Controls */}
