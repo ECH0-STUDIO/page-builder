@@ -453,11 +453,13 @@ function ItemDialog({
           onValueChange={v => setActiveTab(v as 'details' | 'variants')}
           className="pb-2"
         >
-          <TabsList className="w-full">
-            <TabsTrigger value="details" className="flex-1">{t('menuBuilder.details')}</TabsTrigger>
-            <TabsTrigger value="variants" className="flex-1" disabled={!isEditing}>
-              {t('menuBuilder.optionsVariants')}
-              {!isEditing && <span className="ml-1.5 text-[10px] opacity-60">({t('menuBuilder.saveItemFirst')})</span>}
+          <TabsList className="w-full h-auto">
+            <TabsTrigger value="details" className="flex-1 whitespace-normal py-2.5 leading-snug">{t('menuBuilder.details')}</TabsTrigger>
+            <TabsTrigger value="variants" className="flex-1 whitespace-normal py-2.5 leading-snug" disabled={!isEditing}>
+              <div className="flex flex-col items-center">
+                <span>{t('menuBuilder.optionsVariants')}</span>
+                {!isEditing && <span className="text-[10px] opacity-60 font-normal">({t('menuBuilder.saveItemFirst')})</span>}
+              </div>
             </TabsTrigger>
           </TabsList>
 
@@ -540,7 +542,7 @@ function ItemDialog({
         {/* ── Pinned footer ── */}
         <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background rounded-b-xl sm:rounded-b-2xl">
           {activeTab === 'details' ? (
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{t('menuBuilder.cancel')}</Button>
               <Button
                 type="submit"

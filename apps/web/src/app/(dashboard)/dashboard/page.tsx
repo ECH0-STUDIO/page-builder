@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       {/* Analytics */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight">{t('overview.analytics.title')}</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-primary/10 text-primary rounded-full">
