@@ -133,8 +133,7 @@ interface MenuContentProps {
   categories: MenuCategory[]
   items: MenuItem[]
   settings: PrintSettings
-  onSave?: () => void
-  isSaving?: boolean
+  onClose?: () => void
 }
 
 export function MenuContent({ business, categories, items, settings }: MenuContentProps) {
@@ -195,11 +194,11 @@ export function MenuContent({ business, categories, items, settings }: MenuConte
 
 // ─── Main preview + print ─────────────────────────────────────────────────────
 
-type LayoutItem = { type: 'cat-header'; id: string } | { type: 'item'; id: string }
+type LayoutItem = { type: 'cat-header'; id: string } | { type: 'cat-header-continued'; id: string } | { type: 'item'; id: string }
 type LayoutColumn = { items: LayoutItem[] }
 type LayoutPage = { columns: LayoutColumn[] }
 
-export function PrintMenuPreview({ business, categories, items, settings, onSave, isSaving }: MenuContentProps) {
+export function PrintMenuPreview({ business, categories, items, settings, onClose }: MenuContentProps) {
   const [zoom, setZoom] = useState(1)
   const { t } = useTranslation()
   const paper = PAPER_PX[settings.paper]
@@ -266,6 +265,8 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
       }
     }
 
+    const continuedText = t('printMenu.continued' as any)
+
     for (const catId of settings.selectedCategories) {
       const cat = categories.find(c => c.id === catId)
       if (!cat) continue
@@ -277,10 +278,20 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
       const headerH = settings.show_category_dividers ? (heights.get(catHeaderId) || 0) + 20 : 0 // +20 for bottom margin
       const firstItemH = heights.get(firstItemId) || 0
 
+      // Calculate total category height
+      let totalCatH = headerH
+      for (const item of catItems) {
+        totalCatH += heights.get(`item-${item.id}`) || 0
+      }
+
       ensureCurrentColumn()
       
-      // Orphan control: Header + first item must fit, or advance column
-      if (currentHeight > 0 && currentHeight + headerH + firstItemH > availableHeight) {
+      // Smart packing: If category doesn't fit in remaining space, but DOES fit in an empty column, move it to the next column
+      if (currentHeight > 0 && currentHeight + totalCatH > availableHeight && totalCatH <= contentH) {
+        advanceColumn()
+        ensureCurrentColumn()
+      } else if (currentHeight > 0 && currentHeight + headerH + firstItemH > availableHeight) {
+        // Orphan control: If it can't move to a new column safely, at least ensure header + first item fit
         advanceColumn()
         ensureCurrentColumn()
       }
@@ -297,6 +308,12 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
         if (currentHeight > 0 && currentHeight + itemH > availableHeight) {
           advanceColumn()
           ensureCurrentColumn()
+          
+          // Inject "Continued" header since we broke the category across columns
+          if (settings.show_category_dividers) {
+            pages[currentPageIndex].columns[currentColumnIndex].items.push({ type: 'cat-header-continued', id: cat.id })
+            currentHeight += headerH
+          }
         }
 
         pages[currentPageIndex].columns[currentColumnIndex].items.push({ type: 'item', id: item.id })
@@ -310,7 +327,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
 
     setLayoutPages(pages)
     setIsMeasuring(false)
-  }, [settings, categories, items, contentH])
+  }, [settings, categories, items, contentH, t])
 
 
   function handlePrint() {
@@ -338,9 +355,10 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
       
       const columnsHtml = page.columns.map(col => {
         const colItemsHtml = col.items.map(layoutItem => {
-          if (layoutItem.type === 'cat-header') {
+          if (layoutItem.type === 'cat-header' || layoutItem.type === 'cat-header-continued') {
             const cat = categories.find(c => c.id === layoutItem.id)!
-            return `<div class="cat-header">${cat.name}</div>`
+            const isCont = layoutItem.type === 'cat-header-continued'
+            return `<div class="cat-header">${cat.name}${isCont ? ` ${t('printMenu.continued' as any)}` : ''}</div>`
           } else {
             const item = items.find(i => i.id === layoutItem.id)!
             return `
@@ -491,10 +509,10 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 shrink-0">
         <div className="flex items-center gap-2">
-          {onSave && (
-            <button onClick={onSave} disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
-              {isSaving ? t('printMenu.saved') : t('printMenu.saveChanges')}
+          {onClose && (
+            <button onClick={onClose}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
+              Close
             </button>
           )}
           <button onClick={handlePrint} disabled={isMeasuring}
@@ -511,6 +529,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
           <div className="mx-auto" style={{
             zoom: zoom,
             display: 'flex',
+            flexDirection: 'column',
             gap: 24,
             width: 'max-content',
             position: 'relative'
@@ -564,15 +583,16 @@ export function PrintMenuPreview({ business, categories, items, settings, onSave
                       {page.columns.map((col, colIdx) => (
                         <div key={colIdx} style={{ display: 'flex', flexDirection: 'column' }}>
                           {col.items.map((layoutItem, itemIdx) => {
-                            if (layoutItem.type === 'cat-header') {
+                            if (layoutItem.type === 'cat-header' || layoutItem.type === 'cat-header-continued') {
                               const cat = categories.find(c => c.id === layoutItem.id)!
+                              const isCont = layoutItem.type === 'cat-header-continued'
                               return (
                                 <div key={`cat-${cat.id}-${itemIdx}`} style={{
                                   fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
                                   color: settings.accent_color, borderBottom: `1px solid ${settings.accent_color}80`,
                                   paddingBottom: 4, marginBottom: 20, marginTop: 8
                                 }}>
-                                  {cat.name}
+                                  {cat.name}{isCont ? ` ${t('printMenu.continued' as any)}` : ''}
                                 </div>
                               )
                             } else {

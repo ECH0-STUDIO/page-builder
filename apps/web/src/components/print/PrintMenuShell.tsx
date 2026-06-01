@@ -24,8 +24,9 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
   })
 
   const [isLoaded, setIsLoaded] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Load from local storage
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`print_settings_${business.name}`)
@@ -36,11 +37,12 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
     setIsLoaded(true)
   }, [business.name])
 
-  const handleSave = () => {
-    setIsSaving(true)
-    localStorage.setItem(`print_settings_${business.name}`, JSON.stringify(settings))
-    setTimeout(() => setIsSaving(false), 500)
-  }
+  // Auto-save to local storage
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(`print_settings_${business.name}`, JSON.stringify(settings))
+    }
+  }, [settings, isLoaded, business.name])
 
   if (!isLoaded) return null // prevent hydration mismatch
 
@@ -49,7 +51,7 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
       
       {/* Mobile Preview Trigger */}
       <div className="lg:hidden sticky top-0 z-10 bg-background/95 backdrop-blur pb-4 pt-2 -mx-4 px-4 border-b">
-        <Dialog>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
             <Button className="w-full" size="lg">
               <Eye className="size-4 mr-2" /> View Preview
@@ -62,8 +64,7 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
               categories={categories} 
               items={items} 
               settings={settings}
-              onSave={handleSave}
-              isSaving={isSaving}
+              onClose={() => setIsModalOpen(false)}
             />
           </DialogContent>
         </Dialog>
@@ -76,8 +77,6 @@ export function PrintMenuShell({ business, categories, items }: PrintMenuShellPr
           categories={categories} 
           items={items} 
           settings={settings}
-          onSave={handleSave}
-          isSaving={isSaving}
         />
       </div>
 
