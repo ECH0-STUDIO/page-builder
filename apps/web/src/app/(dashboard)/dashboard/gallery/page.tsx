@@ -1,39 +1,25 @@
-import { Suspense } from 'react'
-import { Metadata } from 'next'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getActiveBusiness } from '@/lib/business-server'
 import { GalleryClient } from '@/components/gallery/GalleryClient'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Media Gallery | Eatery',
 }
 
 export default async function GalleryPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  // Get active business ID from cookie
-  const cookieStore = await cookies()
-  const currentBusinessId = cookieStore.get('eatery_current_business_id')?.value
+  const { business, role } = await getActiveBusiness(supabase, user.id)
+  if (!business) redirect('/dashboard')
 
-  if (!currentBusinessId) {
-    redirect('/dashboard')
-  }
-
-  // Ensure user has access
-  const { data: member } = await supabase
-    .from('business_members')
-    .select('role')
-    .eq('business_id', currentBusinessId)
-    .single()
-
-  if (!member) {
+  if (role === 'staff') {
     redirect('/dashboard')
   }
 
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Gallery...</div>}>
-      <GalleryClient businessId={currentBusinessId} />
-    </Suspense>
+    <GalleryClient businessId={business.id} />
   )
 }

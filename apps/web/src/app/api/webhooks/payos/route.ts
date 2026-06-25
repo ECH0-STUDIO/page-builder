@@ -58,6 +58,11 @@ export async function POST(req: NextRequest) {
         .update({ balance: newBalance })
         .eq('business_id', order.business_id)
 
+      // Update discount usage
+      if (order.discount_code_id) {
+        await (adminClient as any).rpc('increment_discount_uses', { d_id: order.discount_code_id })
+      }
+
       // 4. Log transaction
       await (adminClient as any)
         .from('credit_transactions')

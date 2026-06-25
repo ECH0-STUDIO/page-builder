@@ -215,7 +215,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
     const res = await verifyDnsAction(publishing.custom_domain, businessId)
     setVerifyingDns(false)
     if (res.success) {
-      toast.success('DNS is correctly configured and connected!')
+      toast.success(t('publishing.dnsVerified'))
     } else {
       toast.error(res.error)
     }
@@ -447,7 +447,7 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
                 <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> CNAME</div>
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> {publishing.custom_domain.split('.').length > 2 ? publishing.custom_domain.split('.')[0] : '@'}</div>
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Target:</span> cname.pinit.app</div>
+                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Target:</span> {t('publishing.dnsTarget')}</div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
                   <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> TXT</div>

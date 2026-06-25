@@ -49,6 +49,10 @@ cp apps/web/.env.example apps/web/.env.local
 
 **Shortcut:** copy all values from your Vercel project → Settings → Environment Variables.
 
+Optional for custom domains: `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (auto-register domains on DNS verify).
+
+Optional for discount code admin UI: `PLATFORM_ADMIN_EMAILS=you@example.com` → manage codes at `/dashboard/admin/discount-codes`.
+
 ## Scripts
 
 | Command | Description |

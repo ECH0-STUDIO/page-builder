@@ -36,11 +36,11 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
   useEffect(() => {
     const status = searchParams.get('status')
     if (status === 'success') {
-      toast.success('Thanh toán thành công! / Payment successful!')
-      router.replace('/dashboard/settings')
+      toast.success(t('credits.purchaseSuccess'))
+      router.replace('/dashboard/settings/credits')
     } else if (status === 'cancel') {
-      toast.error('Đã hủy thanh toán / Payment cancelled')
-      router.replace('/dashboard/settings')
+      toast.error(t('credits.paymentCancelled'))
+      router.replace('/dashboard/settings/credits')
     }
   }, [searchParams, router])
 

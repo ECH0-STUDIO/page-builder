@@ -69,6 +69,25 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // ── Custom domain routing ──
+  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appHost = new URL(appUrl).hostname.toLowerCase()
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1'
+  const isPlatformHost =
+    isLocalHost ||
+    host === appHost ||
+    (host?.endsWith('.vercel.app') ?? false)
+
+  if (host && !isPlatformHost && !pathname.startsWith('/api')) {
+    const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
+    if (slug) {
+      const rewriteUrl = request.nextUrl.clone()
+      rewriteUrl.pathname = `/${slug}`
+      return NextResponse.rewrite(rewriteUrl)
+    }
+  }
+
   // Protect dashboard and onboarding routes
   if ((pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) && !user) {
     return NextResponse.redirect(new URL('/login', request.url))

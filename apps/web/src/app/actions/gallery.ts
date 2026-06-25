@@ -104,6 +104,21 @@ export async function getGalleryImagesAction(businessId: string) {
     // Sort by newest overall
     allImages.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
 
+    const totalBytes = allImages.reduce((sum, img) => sum + (img.size || 0), 0)
+
+    // Process storage billing if due
+    const { billStorageIfDueAction } = await import('@/app/actions/credits')
+    const billingResult = await billStorageIfDueAction(businessId, totalBytes)
+    if (billingResult.billed) {
+      const adminClient = createAdminClient()
+      const { data: refreshedSub } = await adminClient
+        .from('storage_subscriptions')
+        .select('*')
+        .eq('business_id', businessId)
+        .single()
+      if (refreshedSub) subscriptionData = refreshedSub
+    }
+
     return { 
       success: true, 
       data: allImages,

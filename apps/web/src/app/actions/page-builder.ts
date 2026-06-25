@@ -1,9 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import dns from 'dns/promises'
-import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig } from '@/components/page-builder/types'
+import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
+import { addDomainToVercel, removeDomainFromVercel } from '@/lib/vercel-domains'
+import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -210,6 +212,32 @@ export async function saveNavbarAction(
   return { success: true, data }
 }
 
+export async function saveFooterAction(
+  businessId: string,
+  footerConfig: FooterConfig
+): Promise<ActionResult<ThemeSettings>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { data, error } = await supabase
+    .from('theme_settings')
+    .upsert(
+      { business_id: businessId, footer_config: footerConfig },
+      { onConflict: 'business_id' }
+    )
+    .select()
+    .single()
+
+  await supabase.from('publishing_settings')
+    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/pages')
+  revalidatePath(`/[slug]`)
+  return { success: true, data }
+}
+
 // ─── Publishing settings (standalone, for /dashboard/publishing) ──────────────
 
 export async function getPublishingAction(businessId: string): Promise<{
@@ -235,6 +263,8 @@ export async function savePublishingSettingsAction(
   businessId: string,
   fields: {
     custom_domain?: string | null
+    custom_domain_verified?: boolean
+    custom_domain_billed_until?: string | null
     seo_title?: string | null
     seo_description?: string | null
     og_image_url?: string | null
@@ -251,8 +281,23 @@ export async function savePublishingSettingsAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if ('custom_domain' in fields) {
+    const { data: existing } = await supabase
+      .from('publishing_settings')
+      .select('custom_domain')
+      .eq('business_id', businessId)
+      .single()
+
+    if (fields.custom_domain === null && existing?.custom_domain) {
+      await removeDomainFromVercel(existing.custom_domain)
+    }
+
+    fields.custom_domain_verified = false
+    fields.custom_domain_billed_until = null
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('publishing_settings')
     .upsert(
       { business_id: businessId, ...fields },
@@ -336,12 +381,41 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
       isConnected = hasTxt
     } else {
       const cnames = await dns.resolveCname(domain).catch((): string[] => [])
-      isConnected = cnames.includes('cname.pinit.app') || cnames.includes('cname.vercel-dns.com')
+      isConnected = cnames.some(c =>
+        c === 'cname.vercel-dns.com' ||
+        c.endsWith('.cname.vercel-dns.com') ||
+        c === 'cname.pinit.app'
+      )
     }
     
-    if (isConnected) return { success: true, data: undefined }
-    return { success: false, error: 'DNS not propagated yet' }
-  } catch (e) {
-    return { success: false, error: 'DNS not propagated yet' }
+    if (!isConnected) {
+      return { success: false, error: 'DNS chưa được cấu hình đúng. Vui lòng kiểm tra lại bản ghi CNAME/TXT.' }
+    }
+
+    const vercelResult = await addDomainToVercel(domain)
+    if (!vercelResult.ok && !vercelResult.skipped) {
+      console.warn('Vercel domain registration failed:', vercelResult.error)
+    }
+
+    const adminClient = createAdminClient()
+    await (adminClient as any)
+      .from('publishing_settings')
+      .update({ custom_domain_verified: true })
+      .eq('business_id', businessId)
+
+    const billing = await billCustomDomainIfDueAction(businessId)
+    if (!billing.success) {
+      await (adminClient as any)
+        .from('publishing_settings')
+        .update({ custom_domain_verified: false })
+        .eq('business_id', businessId)
+      return { success: false, error: billing.error || 'Không đủ Credits để kích hoạt tên miền.' }
+    }
+
+    revalidatePath('/dashboard/publishing')
+    revalidatePath(`/[slug]`)
+    return { success: true, data: undefined }
+  } catch {
+    return { success: false, error: 'DNS chưa lan truyền. Vui lòng thử lại sau vài phút.' }
   }
 }
