@@ -109,6 +109,11 @@
     "lastNDays": "{{n}} ngày qua",
     "loading": "Đang tải…",
     "creditMo": "50 Tín dụng / tháng",
+    "dnsVerified": "DNS đã được cấu hình và kết nối thành công!",
+    "dnsTarget": "cname.vercel-dns.com",
+    "domainConnected": "Tên miền đã kết nối",
+    "cancelDomain": "Gỡ tên miền",
+    "verifyConnection": "Xác minh kết nối",
     "billingNotePrefix": "Lưu ý thanh toán:",
     "billingNoteText": "Chu kỳ tính phí 50 Tín dụng/tháng sẽ chỉ bắt đầu",
     "billingNoteTextAfter": "sau khi",
@@ -415,7 +420,7 @@
     "toastInvalidZalo": "Vui lòng nhập URL Zalo hợp lệ",
     "toastInvalidTikTok": "Vui lòng nhập URL TikTok hợp lệ",
     "toastInvalidYoutube": "Vui lòng nhập URL YouTube hợp lệ",
-    "headerDesc": "Thông tin này xuất hiện trên trang công khai của bạn và trong danh mục.",
+    "headerDesc": "Thông tin này hiển thị trên trang công khai của nhà hàng bạn.",
     "days": {
       "monday": "Thứ hai",
       "tuesday": "Thứ ba",
@@ -699,7 +704,11 @@
     "copyrightText": "Văn bản bản quyền",
     "colours": "Màu sắc",
     "background": "Nền",
-    "text": "Chữ"
+    "text": "Chữ",
+    "saveFooter": "Lưu chân trang",
+    "footerSaved": "Đã lưu chân trang",
+    "saveFailed": "Lưu thất bại:",
+    "saving": "Đang lưu..."
   },
   "qrCodeBlock": {
     "qrCode": "Mã QR",
@@ -877,9 +886,9 @@
   },
   "credits": {
     "availableCredits": "Số Dư Tín Dụng",
-    "usedForPremium": "Sử dụng để tạo trang bằng AI",
+    "usedForPremium": "Dùng cho tên miền riêng và lưu trữ ảnh",
     "buyCredits": "Mua Tín Dụng",
-    "purchaseMore": "Mua thêm tín dụng để tạo nhiều trang hơn",
+    "purchaseMore": "Mua thêm tín dụng cho tên miền riêng và lưu trữ ảnh",
     "transactionHistory": "Lịch Sử Giao Dịch",
     "recentUsage": "Lịch sử mua và sử dụng gần đây",
     "noTransactions": "Chưa có giao dịch nào",
@@ -887,7 +896,9 @@
     "confirmDetails": "Chi tiết gói Tín Dụng bạn đang chọn mua.",
     "discountCode": "Mã giảm giá (Tùy chọn)",
     "discountApplied": "Đã áp dụng mã giảm giá!",
-    "purchaseSuccess": "Thanh toán thành công!"
+    "purchaseSuccess": "Thanh toán thành công!",
+    "paymentCancelled": "Đã hủy thanh toán",
+    "pageDescription": "Quản lý tín dụng, mua thêm và xem lịch sử giao dịch."
   },
   "gallery": {
     "title": "Thư viện Ảnh",

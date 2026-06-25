@@ -3,6 +3,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+const CUSTOM_DOMAIN_CREDITS_PER_MONTH = 50
+const STORAGE_CREDITS_PER_20MB = 1
+
 export async function getCreditBalanceAction(businessId: string) {
   try {
     const supabase = await createClient()
@@ -94,6 +97,130 @@ export async function verifyDiscountCodeAction(code: string, packagePrice: numbe
     console.error('verifyDiscountCodeAction error:', error)
     return { success: false, error: error.message }
   }
+}
+
+/** Deduct credits from a business balance. Returns false if insufficient balance. */
+export async function deductCreditsAction(
+  businessId: string,
+  amount: number,
+  description: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0) return { success: true }
+
+  try {
+    const adminClient = createAdminClient()
+
+    const { data: currentBalance } = await (adminClient as any)
+      .from('credit_balances')
+      .select('balance')
+      .eq('business_id', businessId)
+      .single()
+
+    const balance = (currentBalance?.balance as number | undefined) ?? 0
+    if (balance < amount) {
+      return { success: false, error: 'Không đủ Credits. Vui lòng nạp thêm.' }
+    }
+
+    await (adminClient as any)
+      .from('credit_balances')
+      .update({ balance: balance - amount })
+      .eq('business_id', businessId)
+
+    await (adminClient as any).from('credit_transactions').insert({
+      business_id: businessId,
+      amount: -amount,
+      description,
+    })
+
+    revalidatePath('/dashboard/settings/credits')
+    return { success: true }
+  } catch (error) {
+    console.error('deductCreditsAction error:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to deduct credits' }
+  }
+}
+
+/** Bill custom domain hosting (50 credits / 30 days) after DNS is verified. */
+export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean }> {
+  const adminClient = createAdminClient()
+
+  const { data: pub } = await (adminClient as any)
+    .from('publishing_settings')
+    .select('custom_domain, custom_domain_verified, custom_domain_billed_until')
+    .eq('business_id', businessId)
+    .single()
+
+  if (!pub?.custom_domain || !pub.custom_domain_verified) {
+    return { success: true, billed: false }
+  }
+
+  const billedUntil = pub.custom_domain_billed_until ? new Date(pub.custom_domain_billed_until) : null
+  if (billedUntil && billedUntil > new Date()) {
+    return { success: true, billed: false }
+  }
+
+  const deduct = await deductCreditsAction(
+    businessId,
+    CUSTOM_DOMAIN_CREDITS_PER_MONTH,
+    `Tên miền tùy chỉnh (${pub.custom_domain}) — ${CUSTOM_DOMAIN_CREDITS_PER_MONTH} Credits/tháng`
+  )
+
+  if (!deduct.success) return deduct
+
+  const nextBill = new Date()
+  nextBill.setDate(nextBill.getDate() + 30)
+
+  await (adminClient as any)
+    .from('publishing_settings')
+    .update({ custom_domain_billed_until: nextBill.toISOString() })
+    .eq('business_id', businessId)
+
+  return { success: true, billed: true }
+}
+
+/** Bill gallery storage (1 credit per 20 MB) when the billing cycle is due. */
+export async function billStorageIfDueAction(
+  businessId: string,
+  usedBytes: number
+): Promise<{ success: boolean; error?: string; billed?: boolean; creditsCharged?: number }> {
+  const adminClient = createAdminClient()
+
+  const { data: sub } = await (adminClient as any)
+    .from('storage_subscriptions')
+    .select('*')
+    .eq('business_id', businessId)
+    .single()
+
+  if (!sub) return { success: true, billed: false }
+
+  const nextBilling = new Date(sub.next_billing_date)
+  if (nextBilling > new Date()) {
+    return { success: true, billed: false }
+  }
+
+  const usedMb = Math.max(usedBytes / (1024 * 1024), 20)
+  const creditsNeeded = Math.max(1, Math.ceil(usedMb / 20))
+
+  const deduct = await deductCreditsAction(
+    businessId,
+    creditsNeeded,
+    `Lưu trữ ảnh — ${Math.round(usedMb)} MB (${creditsNeeded} Credits)`
+  )
+
+  if (!deduct.success) return deduct
+
+  const nextDate = new Date()
+  nextDate.setDate(nextDate.getDate() + 30)
+
+  await (adminClient as any)
+    .from('storage_subscriptions')
+    .update({
+      current_quota_mb: Math.ceil(usedMb),
+      next_billing_date: nextDate.toISOString(),
+    })
+    .eq('business_id', businessId)
+
+  return { success: true, billed: true, creditsCharged: creditsNeeded }
 }
 
 // Start PayOS checkout session
@@ -198,8 +325,8 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
       orderCode: orderCode,
       amount: finalPrice,
       description: `Mua ${amount} Credits`,
-      returnUrl: `${DOMAIN}/dashboard/settings?status=success`,
-      cancelUrl: `${DOMAIN}/dashboard/settings?status=cancel`
+      returnUrl: `${DOMAIN}/dashboard/settings/credits?status=success`,
+      cancelUrl: `${DOMAIN}/dashboard/settings/credits?status=cancel`
     }
 
     const paymentLinkData = await payos.paymentRequests.create(requestData)

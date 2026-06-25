@@ -109,6 +109,11 @@
     "lastNDays": "Last {{n}} days",
     "loading": "Loading…",
     "creditMo": "50 Credits / mo",
+    "dnsVerified": "DNS is correctly configured and connected!",
+    "dnsTarget": "cname.vercel-dns.com",
+    "domainConnected": "Custom domain connected",
+    "cancelDomain": "Remove domain",
+    "verifyConnection": "Verify connection",
     "billingNotePrefix": "Billing Note:",
     "billingNoteText": "The 50 Credits/month charge cycle will only begin",
     "billingNoteTextAfter": "after",
@@ -415,7 +420,7 @@
     "toastInvalidZalo": "Please enter a valid Zalo URL",
     "toastInvalidTikTok": "Please enter a valid TikTok URL",
     "toastInvalidYoutube": "Please enter a valid YouTube URL",
-    "headerDesc": "This information appears on your public page and in the directory.",
+    "headerDesc": "This information appears on your public restaurant page.",
     "days": {
       "monday": "Monday",
       "tuesday": "Tuesday",
@@ -699,7 +704,11 @@
     "copyrightText": "Copyright Text",
     "colours": "Colours",
     "background": "Background",
-    "text": "Text"
+    "text": "Text",
+    "saveFooter": "Save footer",
+    "footerSaved": "Footer saved",
+    "saveFailed": "Save failed:",
+    "saving": "Saving..."
   },
   "qrCodeBlock": {
     "qrCode": "QR Code",
@@ -877,9 +886,9 @@
   },
   "credits": {
     "availableCredits": "Available Credits",
-    "usedForPremium": "Used for premium page generations",
+    "usedForPremium": "Used for custom domains and image storage",
     "buyCredits": "Buy Credits",
-    "purchaseMore": "Purchase more credits to generate pages",
+    "purchaseMore": "Purchase credits for custom domains and gallery storage",
     "transactionHistory": "Transaction History",
     "recentUsage": "Recent usage and purchases",
     "noTransactions": "No transactions yet",
@@ -887,7 +896,9 @@
     "confirmDetails": "Details of the credit package you are purchasing.",
     "discountCode": "Discount Code (Optional)",
     "discountApplied": "Discount code applied!",
-    "purchaseSuccess": "Payment successful!"
+    "purchaseSuccess": "Payment successful!",
+    "paymentCancelled": "Payment cancelled",
+    "pageDescription": "Manage credits, purchase packages, and view transaction history."
   },
   "gallery": {
     "title": "Media Gallery",

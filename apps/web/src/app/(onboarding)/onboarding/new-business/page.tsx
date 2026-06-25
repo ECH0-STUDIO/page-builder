@@ -188,7 +188,7 @@ export default function NewBusinessPage() {
           <CardHeader>
             <CardTitle>What type of business?</CardTitle>
             <CardDescription>
-              This helps customers find you in the directory.
+              This helps customers find your restaurant online.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -343,6 +343,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       />
 
       <CartDrawer businessId={business.id} paymentSettings={paymentSettings} />
+      <PaymentDrawer paymentSettings={paymentSettings} />
     </div>
     </div>
     </CartProvider>

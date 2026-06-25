@@ -14,8 +14,10 @@ import { Button } from '@/components/ui/button'
 import { slugify, checkSlugAvailable } from '@/lib/business'
 import { updateBusinessAction } from '@/app/actions/business'
 import {
-  togglePublishAction, savePublishingSettingsAction, getPageViewsAction, verifyDnsAction
+  togglePublishAction, savePublishingSettingsAction, getPageViewsAction, verifyDnsAction,
+  connectCustomDomainAction, disconnectCustomDomainAction,
 } from '@/app/actions/page-builder'
+import type { DnsRecord } from '@/lib/vercel-domains'
 import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
@@ -48,6 +50,11 @@ interface PublishingClientProps {
   slug: string
   analytics: { total: number; periodTotal: number; daily: DayViewStat[] }
   baseUrl: string
+  initialDomainSetup?: {
+    domain: string | null
+    verified: boolean
+    dnsRecords: DnsRecord[]
+  }
 }
 
 // ─── Bar chart ────────────────────────────────────────────────────────────────
@@ -122,7 +129,14 @@ async function uploadPublishingImage(businessId: string, file: File, pathPrefix:
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function PublishingClient({ businessId, publishing, slug: initialSlug, analytics: initialAnalytics, baseUrl }: PublishingClientProps) {
+export function PublishingClient({
+  businessId,
+  publishing,
+  slug: initialSlug,
+  analytics: initialAnalytics,
+  baseUrl,
+  initialDomainSetup,
+}: PublishingClientProps) {
   const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
@@ -133,7 +147,11 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   const [webclip, setWebclip] = useState<string | null>(publishing?.apple_touch_icon_url ?? null)
   const [language, setLanguage] = useState(publishing?.language ?? 'en')
   const [gscTag, setGscTag] = useState(publishing?.gsc_verification ?? '')
-  const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? '')
+  const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? initialDomainSetup?.domain ?? '')
+  const [domainVerified, setDomainVerified] = useState(
+    initialDomainSetup?.verified ?? (publishing as { custom_domain_verified?: boolean } | null)?.custom_domain_verified ?? false
+  )
+  const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>(initialDomainSetup?.dnsRecords ?? [])
   const [savingDomain, setSavingDomain] = useState(false)
   const [verifyingDns, setVerifyingDns] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -181,11 +199,18 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   }
 
   async function handleSaveDomain() {
+    if (!customDomain.trim()) return
     setSavingDomain(true)
     try {
-      const res = await savePublishingSettingsAction(businessId, { custom_domain: customDomain || null })
-      if (res.success) toast.success(t('publishing.toastDomainUpdated'))
-      else toast.error(res.error)
+      const res = await connectCustomDomainAction(businessId, customDomain.trim())
+      if (res.success) {
+        setDnsRecords(res.data.dnsRecords)
+        setDomainVerified(false)
+        setCustomDomain(customDomain.trim().toLowerCase())
+        toast.success(t('publishing.toastDomainUpdated'))
+      } else {
+        toast.error(res.error)
+      }
     } catch {
       toast.error(t('publishing.toastDomainFailed'))
     } finally {
@@ -196,12 +221,15 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   async function handleRemoveDomain() {
     setSavingDomain(true)
     try {
-      const res = await savePublishingSettingsAction(businessId, { custom_domain: null })
+      const res = await disconnectCustomDomainAction(businessId)
       if (res.success) {
         setCustomDomain('')
+        setDnsRecords([])
+        setDomainVerified(false)
         toast.success(t('publishing.toastDomainUpdated'))
+      } else {
+        toast.error(res.error)
       }
-      else toast.error(res.error)
     } catch {
       toast.error(t('publishing.toastDomainFailed'))
     } finally {
@@ -210,12 +238,15 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
   }
 
   async function handleVerifyDns() {
-    if (!publishing?.custom_domain) return
+    const domain = customDomain || publishing?.custom_domain
+    if (!domain) return
     setVerifyingDns(true)
-    const res = await verifyDnsAction(publishing.custom_domain, businessId)
+    const res = await verifyDnsAction(domain, businessId)
     setVerifyingDns(false)
     if (res.success) {
-      toast.success('DNS is correctly configured and connected!')
+      setDomainVerified(true)
+      setDnsRecords([])
+      toast.success(t('publishing.dnsVerified'))
     } else {
       toast.error(res.error)
     }
@@ -432,41 +463,55 @@ export function PublishingClient({ businessId, publishing, slug: initialSlug, an
               <input type="text" value={customDomain} onChange={e => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
                 placeholder="Enter custom domain"
                 className="flex-1 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
-              <Button onClick={handleSaveDomain} disabled={savingDomain || customDomain === publishing?.custom_domain} className="shrink-0 h-10">
+              <Button onClick={handleSaveDomain} disabled={savingDomain || !customDomain.trim() || (customDomain === publishing?.custom_domain && dnsRecords.length > 0)} className="shrink-0 h-10">
                 {savingDomain ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
               </Button>
             </div>
           </div>
 
-          {publishing?.custom_domain && (
+          {customDomain && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 space-y-3">
-              <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
-              <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
-              
-              <div className="space-y-2">
-                <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> CNAME</div>
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> {publishing.custom_domain.split('.').length > 2 ? publishing.custom_domain.split('.')[0] : '@'}</div>
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Target:</span> cname.pinit.app</div>
+              {domainVerified ? (
+                <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  <span className="text-sm font-medium">{t('publishing.domainConnected')}</span>
+                  <a
+                    href={`https://${customDomain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto text-xs underline"
+                  >
+                    https://{customDomain}
+                  </a>
                 </div>
-                <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> TXT</div>
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> _vercel</div>
-                  <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> vc-domain-verify={businessId.split('-')[0]}</div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-                <p className="text-xs text-blue-700/80 italic">{t('publishing.dnsNote')}</p>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
-                    Cancel Domain
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
-                    {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
-                    Verify connection
-                  </Button>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
+                  <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
+
+                  <div className="space-y-2">
+                    {(dnsRecords.length > 0 ? dnsRecords : [{ type: 'CNAME', name: '@', value: t('publishing.dnsTarget') }]).map((record, i) => (
+                      <div key={i} className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
+                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> {record.type}</div>
+                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> {record.name}</div>
+                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> {record.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+                    <p className="text-xs text-blue-700/80 italic">{t('publishing.dnsNote')}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                        {t('publishing.cancelDomain')}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
+                        {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
+                        {t('publishing.verifyConnection')}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
           <p className="text-xs text-gray-500 mt-2">

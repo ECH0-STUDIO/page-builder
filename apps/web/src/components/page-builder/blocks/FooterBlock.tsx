@@ -1,22 +1,52 @@
+import { useState } from 'react'
+import { Check, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { FooterConfig } from '../types'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { saveFooterAction } from '@/app/actions/page-builder'
 
 export function FooterSettings({
   config,
   onChange,
+  businessId,
 }: {
   config: FooterConfig
   onChange: (config: FooterConfig) => void
+  businessId: string
 }) {
   const { t } = useTranslation()
-  const set = (k: keyof FooterConfig, v: any) => onChange({ ...config, [k]: v })
+  const [saving, setSaving] = useState(false)
+  const set = (k: keyof FooterConfig, v: FooterConfig[keyof FooterConfig]) => onChange({ ...config, [k]: v })
+
+  async function handleSave() {
+    setSaving(true)
+    const result = await saveFooterAction(businessId, config)
+    if (result.success) {
+      toast.success(t('footerBlock.footerSaved'))
+    } else {
+      toast.error(t('footerBlock.saveFailed') + ' ' + result.error)
+    }
+    setSaving(false)
+  }
 
   return (
     <div className="space-y-6">
+      <Button
+        type="button"
+        size="sm"
+        className="w-full"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Check className="size-3.5 mr-1.5" />}
+        {saving ? t('footerBlock.saving') : t('footerBlock.saveFooter')}
+      </Button>
+
       <div>
         <h3 className="text-sm font-semibold mb-1">{t('footerBlock.footerSettings')}</h3>
         <p className="text-xs text-muted-foreground">{t('footerBlock.appearsBottom')}</p>

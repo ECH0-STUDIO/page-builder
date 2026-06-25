@@ -20,21 +20,19 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
 
   return (
     <>
-      {/* ── Floating payment button ── */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100"
-          aria-label="Payment Methods"
+          aria-label="Thanh toán"
         >
           <CreditCard className="size-5 text-gray-700" />
           <div className="text-sm leading-tight text-left">
-            <p className="font-semibold">Pay</p>
+            <p className="font-semibold">Thanh toán</p>
           </div>
         </button>
       )}
 
-      {/* ── Backdrop ── */}
       {open && (
         <div
           className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
@@ -42,13 +40,11 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
         />
       )}
 
-      {/* ── Left side drawer ── */}
       <div
         className={`fixed top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
           open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <button
             onClick={() => setOpen(false)}
@@ -57,35 +53,33 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
             <ChevronLeft className="size-4" />
           </button>
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-gray-900 text-base">Payment Methods</h2>
+            <h2 className="font-bold text-gray-900 text-base">Phương thức thanh toán</h2>
           </div>
-          <div className="size-8" /> {/* Placeholder for center alignment */}
+          <div className="size-8" />
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8">
           <div>
-            <h3 className="font-bold text-gray-900 mb-2">Pay securely</h3>
+            <h3 className="font-bold text-gray-900 mb-2">Thanh toán an toàn</h3>
             <p className="text-sm text-gray-500">
-              Scan the QR code below using your banking app to transfer your payment. Please show the payment confirmation to our staff.
+              Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản. Vui lòng xuất trình xác nhận thanh toán cho nhân viên.
             </p>
           </div>
 
           <div className="border border-gray-100 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-b from-white to-gray-50 shadow-sm relative overflow-hidden">
-            {/* Decorative background elements */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-50 rounded-full blur-3xl opacity-50 -ml-10 -mb-10 pointer-events-none" />
 
             <div className="relative z-10 w-full flex flex-col items-center gap-6">
               <div className="flex items-center gap-2">
-                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">VietQR Transfer</div>
+                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">Chuyển khoản VietQR</div>
               </div>
               
               <div className="bg-white p-3 rounded-2xl shadow-md border border-gray-100 transition-transform hover:scale-105 duration-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={vietqrImageUrl}
-                  alt="VietQR payment code"
+                  alt="Mã thanh toán VietQR"
                   className="w-[220px] h-[220px] object-contain"
                 />
               </div>
@@ -94,7 +88,7 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
                 <p className="font-bold text-gray-900 text-lg leading-tight">{vietqr.account_name}</p>
                 <p className="text-sm text-gray-600 font-medium">{bankName}</p>
                 <div className="inline-flex items-center gap-2 mt-1 px-3 py-1 bg-gray-100/80 rounded-lg">
-                  <span className="text-xs text-gray-500 font-semibold uppercase">A/C No.</span>
+                  <span className="text-xs text-gray-500 font-semibold uppercase">Số TK</span>
                   <p className="text-sm text-gray-900 font-bold tracking-wide">{vietqr.account_number}</p>
                 </div>
               </div>

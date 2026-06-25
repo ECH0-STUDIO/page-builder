@@ -858,6 +858,7 @@ export function EditorShell({
             <FooterSettings
               config={footerConfig}
               onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
+              businessId={business.id}
             />
           </div>
         </>

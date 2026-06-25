@@ -22,7 +22,7 @@ export default async function BusinessProfilePage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Business Profile</h1>
         <p className="text-muted-foreground mt-1">
-          This information appears on your public page and in the directory.
+          This information appears on your public restaurant page.
         </p>
       </div>
 
