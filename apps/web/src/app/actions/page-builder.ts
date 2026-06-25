@@ -4,7 +4,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import dns from 'dns/promises'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
-import { addDomainToVercel, removeDomainFromVercel } from '@/lib/vercel-domains'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
@@ -282,16 +281,6 @@ export async function savePublishingSettingsAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   if ('custom_domain' in fields) {
-    const { data: existing } = await supabase
-      .from('publishing_settings')
-      .select('custom_domain')
-      .eq('business_id', businessId)
-      .single()
-
-    if (fields.custom_domain === null && existing?.custom_domain) {
-      await removeDomainFromVercel(existing.custom_domain)
-    }
-
     fields.custom_domain_verified = false
     fields.custom_domain_billed_until = null
   }
@@ -390,11 +379,6 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
     
     if (!isConnected) {
       return { success: false, error: 'DNS chưa được cấu hình đúng. Vui lòng kiểm tra lại bản ghi CNAME/TXT.' }
-    }
-
-    const vercelResult = await addDomainToVercel(domain)
-    if (!vercelResult.ok && !vercelResult.skipped) {
-      console.warn('Vercel domain registration failed:', vercelResult.error)
     }
 
     const adminClient = createAdminClient()

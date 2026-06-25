@@ -223,66 +223,6 @@ export async function billStorageIfDueAction(
   return { success: true, billed: true, creditsCharged: creditsNeeded }
 }
 
-function isPlatformAdmin(email: string | undefined): boolean {
-  if (!email) return false
-  const admins = (process.env.PLATFORM_ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-  return admins.includes(email.toLowerCase())
-}
-
-export async function createDiscountCodeAction(input: {
-  code: string
-  discountType: 'percent' | 'fixed'
-  discountValue: number
-  maxUses?: number | null
-}) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || !isPlatformAdmin(user.email)) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const adminClient = createAdminClient()
-    const { data, error } = await (adminClient as any)
-      .from('discount_codes')
-      .insert({
-        code: input.code.toUpperCase().trim(),
-        discount_type: input.discountType,
-        discount_value: input.discountValue,
-        max_uses: input.maxUses ?? null,
-        is_active: true,
-      })
-      .select()
-      .single()
-
-    if (error) return { success: false, error: error.message }
-    return { success: true, data }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create code' }
-  }
-}
-
-export async function listDiscountCodesAction() {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || !isPlatformAdmin(user.email)) {
-      return { success: false, error: 'Unauthorized' }
-    }
-
-    const adminClient = createAdminClient()
-    const { data, error } = await (adminClient as any)
-      .from('discount_codes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) return { success: false, error: error.message }
-    return { success: true, data }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to list codes' }
-  }
-}
-
 // Start PayOS checkout session
 export async function purchaseCreditsAction(businessId: string, amount: number, priceVnd: number, discountCode?: string) {
   try {

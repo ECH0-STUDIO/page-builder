@@ -49,9 +49,27 @@ cp apps/web/.env.example apps/web/.env.local
 
 **Shortcut:** copy all values from your Vercel project → Settings → Environment Variables.
 
-Optional for custom domains: `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (auto-register domains on DNS verify).
+## Platform admin (you, not business owners)
 
-Optional for discount code admin UI: `PLATFORM_ADMIN_EMAILS=you@example.com` → manage codes at `/dashboard/admin/discount-codes`.
+### Discount codes
+
+Business owners can **enter** a code when buying credits. Only you create codes — in the **Supabase SQL editor**, not in the app:
+
+```sql
+INSERT INTO discount_codes (code, discount_type, discount_value, max_uses, is_active)
+VALUES ('FREEPROMO', 'percent', 100, 5, true);
+```
+
+See `supabase/scripts/create_discount_code.sql` for examples. Use `100` percent for free credit packages (0đ checkout).
+
+### Custom domains
+
+Two separate steps:
+
+1. **Business owner** (in app): adds domain → configures DNS → clicks Verify. App checks DNS, deducts credits, routes traffic to their page.
+2. **You** (in Vercel dashboard): add the same domain under Project → Settings → Domains so Vercel accepts HTTPS traffic for that hostname.
+
+The app does not register domains with Vercel automatically — you add each customer domain once in Vercel when they connect.
 
 ## Scripts
 
