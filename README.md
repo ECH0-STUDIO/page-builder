@@ -62,14 +62,19 @@ VALUES ('FREEPROMO', 'percent', 100, 5, true);
 
 See `supabase/scripts/create_discount_code.sql` for examples. Use `100` percent for free credit packages (0đ checkout).
 
-### Custom domains
+### Custom domains (self-service for business owners)
 
-Two separate steps:
+Business owners connect domains entirely in the app: enter domain → add DNS records → Verify → done.
 
-1. **Business owner** (in app): adds domain → configures DNS → clicks Verify. App checks DNS, deducts credits, routes traffic to their page.
-2. **You** (in Vercel dashboard): add the same domain under Project → Settings → Domains so Vercel accepts HTTPS traffic for that hostname.
+**You only set these once** in Vercel environment variables (not visible to business owners):
 
-The app does not register domains with Vercel automatically — you add each customer domain once in Vercel when they connect.
+```
+VERCEL_TOKEN=...           # vercel.com/account/tokens
+VERCEL_PROJECT_ID=...      # Project Settings → General
+VERCEL_TEAM_ID=...         # only if project is under a team
+```
+
+The app registers each domain with Vercel automatically when the user saves it.
 
 ## Scripts
 

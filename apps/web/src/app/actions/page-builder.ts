@@ -2,9 +2,18 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import dns from 'dns/promises'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
+import {
+  addDomainToProject,
+  verifyProjectDomain,
+  getProjectDomain,
+  getDomainConfig,
+  removeDomainFromProject,
+  buildDnsRecords,
+  isVercelDomainsConfigured,
+  type DnsRecord,
+} from '@/lib/vercel-domains'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -353,32 +362,151 @@ export async function getPageViewsAction(
   return { total, periodTotal, daily }
 }
 
-// ─── DNS Verification ────────────────────────────────────────────────────────
+// ─── Custom domain (self-service via Vercel API) ─────────────────────────────
+
+export async function getCustomDomainSetupAction(businessId: string): Promise<{
+  domain: string | null
+  verified: boolean
+  dnsRecords: DnsRecord[]
+}> {
+  const supabase = await createClient()
+  const { data: pub } = await (supabase as any)
+    .from('publishing_settings')
+    .select('custom_domain, custom_domain_verified')
+    .eq('business_id', businessId)
+    .single()
+
+  const domain = pub?.custom_domain ?? null
+  const verified = pub?.custom_domain_verified === true
+
+  if (!domain) {
+    return { domain: null, verified: false, dnsRecords: [] }
+  }
+
+  if (verified) {
+    return { domain, verified: true, dnsRecords: [] }
+  }
+
+  const vercel = await getProjectDomain(domain)
+  const dnsRecords = buildDnsRecords(domain, vercel.verification)
+
+  return { domain, verified: false, dnsRecords }
+}
+
+export async function connectCustomDomainAction(
+  businessId: string,
+  domain: string
+): Promise<ActionResult<{ dnsRecords: DnsRecord[] }>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const normalized = domain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+  if (!normalized || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(normalized)) {
+    return { success: false, error: 'Tên miền không hợp lệ' }
+  }
+
+  if (!isVercelDomainsConfigured()) {
+    return { success: false, error: 'Custom domains chưa được cấu hình trên máy chủ. Liên hệ hỗ trợ.' }
+  }
+
+  const { data: existing } = await (supabase as any)
+    .from('publishing_settings')
+    .select('custom_domain')
+    .eq('business_id', businessId)
+    .single()
+
+  if (existing?.custom_domain && existing.custom_domain !== normalized) {
+    await removeDomainFromProject(existing.custom_domain)
+  }
+
+  const vercel = await addDomainToProject(normalized)
+  if (!vercel.ok) {
+    return { success: false, error: vercel.error || 'Không thể đăng ký tên miền với Vercel' }
+  }
+
+  const dnsRecords = buildDnsRecords(normalized, vercel.verification)
+
+  const { error } = await (supabase as any)
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        custom_domain: normalized,
+        custom_domain_verified: false,
+        custom_domain_billed_until: null,
+      },
+      { onConflict: 'business_id' }
+    )
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/dashboard/publishing')
+  return { success: true, data: { dnsRecords } }
+}
+
+export async function disconnectCustomDomainAction(businessId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { data: existing } = await (supabase as any)
+    .from('publishing_settings')
+    .select('custom_domain')
+    .eq('business_id', businessId)
+    .single()
+
+  if (existing?.custom_domain) {
+    await removeDomainFromProject(existing.custom_domain)
+  }
+
+  const { error } = await (supabase as any)
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        custom_domain: null,
+        custom_domain_verified: false,
+        custom_domain_billed_until: null,
+      },
+      { onConflict: 'business_id' }
+    )
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/dashboard/publishing')
+  revalidatePath(`/[slug]`)
+  return { success: true, data: undefined }
+}
 
 export async function verifyDnsAction(domain: string, businessId: string): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  if (!isVercelDomainsConfigured()) {
+    return { success: false, error: 'Custom domains chưa được cấu hình trên máy chủ.' }
+  }
+
   try {
-    const isApex = domain.split('.').length === 2
-    let isConnected = false
-    
-    if (isApex) {
-      const txts = await dns.resolveTxt(`_vercel.${domain}`).catch(() => [])
-      const hasTxt = txts.some(t => t.join('').includes(`vc-domain-verify=${businessId.split('-')[0]}`))
-      isConnected = hasTxt
-    } else {
-      const cnames = await dns.resolveCname(domain).catch((): string[] => [])
-      isConnected = cnames.some(c =>
-        c === 'cname.vercel-dns.com' ||
-        c.endsWith('.cname.vercel-dns.com') ||
-        c === 'cname.pinit.app'
-      )
+    const verifyResult = await verifyProjectDomain(domain)
+    const configResult = await getDomainConfig(domain)
+    const projectDomain = await getProjectDomain(domain)
+
+    const isVerified =
+      verifyResult.verified === true ||
+      projectDomain.verified === true ||
+      (verifyResult.ok && configResult.ok && configResult.misconfigured === false)
+
+    if (!isVerified && !verifyResult.ok) {
+      return {
+        success: false,
+        error: verifyResult.error || 'DNS chưa được cấu hình đúng. Kiểm tra bản ghi và thử lại sau vài phút.',
+      }
     }
-    
-    if (!isConnected) {
-      return { success: false, error: 'DNS chưa được cấu hình đúng. Vui lòng kiểm tra lại bản ghi CNAME/TXT.' }
+
+    if (!isVerified) {
+      return { success: false, error: 'DNS chưa lan truyền. Vui lòng đợi vài phút rồi thử lại.' }
     }
 
     const adminClient = createAdminClient()
@@ -400,6 +528,6 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
     revalidatePath(`/[slug]`)
     return { success: true, data: undefined }
   } catch {
-    return { success: false, error: 'DNS chưa lan truyền. Vui lòng thử lại sau vài phút.' }
+    return { success: false, error: 'Không thể xác minh tên miền. Vui lòng thử lại.' }
   }
 }

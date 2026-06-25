@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
 // import { createClient } from '@/lib/supabase/server'
-import { getPublishingAction, getPageViewsAction } from '@/app/actions/page-builder'
+import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
 import { getServerTranslation } from '@/i18n/getDictionary'
@@ -22,9 +22,10 @@ export default async function PublishingPage() {
 
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-  const [{ publishing, slug }, analytics] = await Promise.all([
+  const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),
+    getCustomDomainSetupAction(business.id),
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -45,6 +46,7 @@ export default async function PublishingPage() {
         slug={slug ?? business.id}
         analytics={analytics}
         baseUrl={baseUrl}
+        initialDomainSetup={domainSetup}
       />
     </div>
   )
