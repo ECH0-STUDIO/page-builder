@@ -69,6 +69,17 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Supabase may redirect to Site URL root with ?code= (legacy misconfig). Forward to callback.
+  const authCode = request.nextUrl.searchParams.get('code')
+  if (authCode && !pathname.startsWith('/api/auth/callback')) {
+    const callbackUrl = request.nextUrl.clone()
+    callbackUrl.pathname = '/api/auth/callback'
+    if (!callbackUrl.searchParams.has('next')) {
+      callbackUrl.searchParams.set('next', '/dashboard')
+    }
+    return NextResponse.redirect(callbackUrl)
+  }
+
   // ── Custom domain routing ──
   const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
