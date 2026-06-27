@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+@plugin "@tailwindcss/forms";
+
+/* Preline UI */
+@source "../../node_modules/preline/dist/*.js";
+@import "../../node_modules/preline/variants.css";
 
 @custom-variant dark (&:is(.dark *));
 
