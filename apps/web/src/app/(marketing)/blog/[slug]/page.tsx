@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MarketingShell } from '@/components/marketing/MarketingShell'
-import { MarketingCta } from '@/components/marketing/MarketingCta'
+import { NexbetShell } from '@/components/marketing/nexbet/NexbetShell'
+import { NexbetCta } from '@/components/marketing/nexbet/NexbetBlogSection'
 import { getBlogPost, getBlogPosts, renderBlogBody } from '@/lib/blog'
 
 export const revalidate = 300
@@ -18,10 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = await getBlogPost(slug)
   if (!post) return { title: 'Post not found' }
-  return {
-    title: post.title,
-    description: post.excerpt,
-  }
+  return { title: post.title, description: post.excerpt }
 }
 
 export default async function BlogPostPage({ params }: Props) {
@@ -32,36 +29,44 @@ export default async function BlogPostPage({ params }: Props) {
   const paragraphs = renderBlogBody(post.body)
 
   return (
-    <MarketingShell activeNav="/blog">
-      <article className="py-16 lg:py-24">
-        <div className="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto">
-            <Link href="/blog" className="text-sm font-medium text-emerald-700 hover:text-emerald-800">
-              ← Back to blog
+    <NexbetShell>
+      <div className="padding-section-medium" />
+      <div className="padding-global">
+        <div className="container-large">
+          <article style={{ maxWidth: '42rem', margin: '0 auto' }}>
+            <Link href="/blog" className="footer_link w-inline-block" style={{ marginBottom: '1.5rem' }}>
+              <div>← Back to blog</div>
             </Link>
-
-            <header className="mt-8 mb-10">
-              <time className="text-sm text-gray-500">
+            <div className="pill-item" style={{ marginBottom: '1rem', display: 'inline-flex' }}>
+              <div>
                 {new Date(post.publishedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
                 })}
-              </time>
-              <h1 className="mt-3 text-4xl font-bold text-gray-900 tracking-tight">{post.title}</h1>
-              <p className="mt-4 text-lg text-gray-600">{post.excerpt}</p>
-              <p className="mt-4 text-sm text-gray-500">By {post.author}</p>
-            </header>
-
-            <div className="prose prose-gray max-w-none space-y-5 text-gray-700 leading-relaxed">
-              {paragraphs.map((paragraph) => (
-                <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+              </div>
+            </div>
+            <h1 className="hero_title" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+              {post.title}
+            </h1>
+            <p className="text-color-secondary" style={{ marginBottom: '2rem' }}>
+              {post.excerpt}
+            </p>
+            <div className="text-color-secondary" style={{ marginBottom: '0.5rem' }}>
+              By {post.author}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '2rem' }}>
+              {paragraphs.map((p) => (
+                <p key={p.slice(0, 48)} className="text-color-secondary">
+                  {p}
+                </p>
               ))}
             </div>
-          </div>
+          </article>
         </div>
-      </article>
-      <MarketingCta />
-    </MarketingShell>
+      </div>
+      <div className="padding-section-medium" />
+      <NexbetCta />
+    </NexbetShell>
   )
 }
