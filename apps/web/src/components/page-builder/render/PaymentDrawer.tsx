@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronLeft, CreditCard } from 'lucide-react'
+import { useTranslation } from '@/i18n/I18nProvider'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 
@@ -12,6 +13,7 @@ interface PaymentDrawerProps {
 
 export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps) {
   const [open, setOpen] = useState(false)
+  const { t } = useTranslation()
 
   if (!paymentSettings || !paymentSettings.vietqr) return null
 
@@ -26,11 +28,11 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
         <button
           onClick={() => setOpen(true)}
           className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100 ${contained ? 'pointer-events-auto' : ''}`}
-          aria-label="Thanh toán"
+          aria-label={t('payment.title')}
         >
           <CreditCard className="size-5 text-gray-700" />
           <div className="text-sm leading-tight text-left">
-            <p className="font-semibold">Thanh toán</p>
+            <p className="font-semibold">{t('payment.title')}</p>
           </div>
         </button>
       )}
@@ -55,16 +57,16 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
             <ChevronLeft className="size-4" />
           </button>
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-gray-900 text-base">Phương thức thanh toán</h2>
+            <h2 className="font-bold text-gray-900 text-base">{t('payment.methods')}</h2>
           </div>
           <div className="size-8" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8">
           <div>
-            <h3 className="font-bold text-gray-900 mb-2">Thanh toán an toàn</h3>
+            <h3 className="font-bold text-gray-900 mb-2">{t('payment.securePayment')}</h3>
             <p className="text-sm text-gray-500">
-              Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản. Vui lòng xuất trình xác nhận thanh toán cho nhân viên.
+              {t('payment.scanQrTransfer')}
             </p>
           </div>
 
@@ -74,14 +76,14 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
 
             <div className="relative z-10 w-full flex flex-col items-center gap-6">
               <div className="flex items-center gap-2">
-                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">Chuyển khoản VietQR</div>
+                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">{t('payment.vietqrTransfer')}</div>
               </div>
 
               <div className="bg-white p-3 rounded-2xl shadow-md border border-gray-100 transition-transform hover:scale-105 duration-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={vietqrImageUrl}
-                  alt="Mã thanh toán VietQR"
+                  alt={t('payment.vietqrTransfer')}
                   className="w-[220px] h-[220px] object-contain"
                 />
               </div>
@@ -90,7 +92,7 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
                 <p className="font-bold text-gray-900 text-lg leading-tight">{vietqr.account_name}</p>
                 <p className="text-sm text-gray-600 font-medium">{bankName}</p>
                 <div className="inline-flex items-center gap-2 mt-1 px-3 py-1 bg-gray-100/80 rounded-lg">
-                  <span className="text-xs text-gray-500 font-semibold uppercase">Số TK</span>
+                  <span className="text-xs text-gray-500 font-semibold uppercase">{t('cart.accountNumber')}</span>
                   <p className="text-sm text-gray-900 font-bold tracking-wide">{vietqr.account_number}</p>
                 </div>
               </div>

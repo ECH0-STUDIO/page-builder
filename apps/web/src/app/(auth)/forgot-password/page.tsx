@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -39,15 +41,15 @@ export default function ForgotPasswordPage() {
       <Card id="forgot-success" className="w-full glass shadow-lg">
         <CardHeader className="text-center">
           <div className="text-4xl mb-2">🔐</div>
-          <CardTitle className="text-xl">Check your email</CardTitle>
+          <CardTitle className="text-xl">{t('auth.forgot.successTitle')}</CardTitle>
           <CardDescription>
-            We sent a password reset link to{' '}
+            {t('auth.forgot.successDescription')}{' '}
             <span className="font-medium text-foreground">{email}</span>.
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login" className="text-sm text-primary font-semibold hover:underline">
-            Back to sign in
+            {t('auth.forgot.backToSignIn')}
           </Link>
         </CardFooter>
       </Card>
@@ -57,9 +59,9 @@ export default function ForgotPasswordPage() {
   return (
     <Card id="forgot-card" className="w-full glass shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl">Reset password</CardTitle>
+        <CardTitle className="text-xl">{t('auth.forgot.title')}</CardTitle>
         <CardDescription>
-          Enter your email and we&apos;ll send you a reset link.
+          {t('auth.forgot.description')}
         </CardDescription>
       </CardHeader>
 
@@ -75,7 +77,7 @@ export default function ForgotPasswordPage() {
 
         <form id="forgot-form" onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
+            <Label htmlFor="email">{t('auth.forgot.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -93,16 +95,16 @@ export default function ForgotPasswordPage() {
             className="w-full shadow-brand"
             disabled={loading}
           >
-            {loading ? 'Sending…' : 'Send reset link'}
+            {loading ? t('auth.forgot.sending') : t('auth.forgot.sendLink')}
           </Button>
         </form>
       </CardContent>
 
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
-          Remember it?{' '}
+          {t('auth.forgot.remember')}{' '}
           <Link href="/login" className="text-primary font-semibold hover:underline">
-            Sign in
+            {t('auth.forgot.signIn')}
           </Link>
         </p>
       </CardFooter>

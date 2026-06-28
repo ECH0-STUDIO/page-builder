@@ -1,22 +1,26 @@
 import { FooterConfig } from '../types'
+import { LiveStoreFooter } from './LiveStoreFooter'
 
 export function FooterRender({
   config,
   businessName,
   inEditor = false,
+  locale,
 }: {
   config: FooterConfig
   businessName: string
   inEditor?: boolean
+  /** Active visitor locale — only used on live store for language switcher */
+  locale?: 'vi' | 'en'
 }) {
   const currentYear = new Date().getFullYear()
-  
+
   return (
-    <footer 
+    <footer
       className="w-full py-8 px-6 text-center text-sm"
-      style={{ 
-        backgroundColor: config.background_color, 
-        color: config.text_color 
+      style={{
+        backgroundColor: config.background_color,
+        color: config.text_color,
       }}
     >
       <div className="max-w-4xl mx-auto space-y-2">
@@ -27,9 +31,7 @@ export function FooterRender({
           &copy; {currentYear} {config.copyright_text}
         </p>
         {!inEditor && (
-          <p className="text-xs opacity-50 mt-4 pt-4 border-t border-current/10">
-            Powered by Eatery
-          </p>
+          <LiveStoreFooter locale={locale} />
         )}
       </div>
     </footer>

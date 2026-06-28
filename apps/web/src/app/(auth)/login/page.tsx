@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 function GoogleIcon() {
   return (
@@ -25,6 +26,7 @@ function GoogleIcon() {
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { t } = useTranslation()
   const nextUrl = searchParams.get('next') || '/dashboard'
 
   const [email, setEmail] = useState('')
@@ -34,7 +36,7 @@ function LoginContent() {
   const [error, setError] = useState(() => {
     // Show a friendly message if redirected back from a failed OAuth callback
     const callbackError = searchParams.get('error')
-    if (callbackError === 'auth_callback_failed') return 'Sign-in failed. Please try again or use a different method.'
+    if (callbackError === 'auth_callback_failed') return t('auth.login.oauthFailed')
     return ''
   })
 
@@ -69,8 +71,8 @@ function LoginContent() {
   return (
     <Card id="login-card" className="w-full glass shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to manage your digital page.</CardDescription>
+        <CardTitle className="text-xl">{t('auth.login.title')}</CardTitle>
+        <CardDescription>{t('auth.login.description')}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-5">
@@ -85,7 +87,7 @@ function LoginContent() {
 
         <form id="login-form" onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
+            <Label htmlFor="email">{t('auth.login.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -99,18 +101,18 @@ function LoginContent() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.login.password')}</Label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-muted-foreground hover:text-primary transition-colors"
               >
-                Forgot password?
+                {t('auth.login.forgotPassword')}
               </Link>
             </div>
             <Input
               id="password"
               type="password"
-              placeholder="Your password"
+              placeholder={t('auth.login.passwordPlaceholder')}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -124,13 +126,13 @@ function LoginContent() {
             className="w-full shadow-brand"
             disabled={loading}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
           </Button>
         </form>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <Separator className="flex-1" />
-          or
+          {t('auth.login.or')}
           <Separator className="flex-1" />
         </div>
 
@@ -143,15 +145,15 @@ function LoginContent() {
           type="button"
         >
           <GoogleIcon />
-          {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+          {googleLoading ? t('auth.login.redirecting') : t('auth.login.continueGoogle')}
         </Button>
       </CardContent>
 
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link href={`/signup?next=${encodeURIComponent(nextUrl)}`} className="text-primary font-semibold hover:underline">
-            Sign up free
+            {t('auth.login.signUpFree')}
           </Link>
         </p>
       </CardFooter>

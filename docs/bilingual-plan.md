@@ -1,6 +1,6 @@
 # Bilingual (Vietnamese + English) — implementation plan
 
-Target audience is Vietnam. This document plans dual-language support without implementing it yet.
+Target audience is Vietnam. Visitors and editors work in **one language at a time** — Vietnamese **or** English, never both displayed together.
 
 ## Current state (audit)
 
@@ -13,28 +13,28 @@ Target audience is Vietnam. This document plans dual-language support without im
 | Menu items / page blocks | Single language | One `name`, `heading`, `description` field per entity. |
 | Publishing `language` field | Stored | Used for `html[lang]` and schema; not a full content locale system. |
 
-## Product requirements (from stakeholder)
+## Product requirements
 
-1. **Page builder** — toggle: show Vietnamese only, English only, or **both** (bilingual display).
-2. **Section settings** — edit content per language (hero heading, menu grid text, etc.).
-3. **Menu builder** — item name/description in VI + EN.
+1. **Single-locale display** — live page shows Vietnamese **or** English for a given visit, based on IP/cookie/switcher. Never side-by-side or stacked dual text.
+2. **Page builder** — locale toggle (🇻🇳 / 🇬🇧) edits **one language at a time** per block and menu item.
+3. **Menu builder** — item name/description stored per locale; render picks active locale only.
 4. **Live store** — auto language from IP (existing cookie logic), footer language switcher, system UI (cart, buttons) translated.
-5. **URLs** — optional `?lang=vi` or `/vi/{slug}` (decide in phase 2).
+5. **URLs** — optional `?lang=vi` (phase 2); cookie is sufficient for MVP.
 
 ## Recommended architecture
 
-### Phase 1 — System UI i18n (1–2 PRs, low risk)
+### Phase 1 — System UI i18n (in progress)
 
 - Wrap `(auth)/layout.tsx` in `I18nProvider` (same as dashboard).
-- Add `cart.*`, `order.*` keys to `en.json` / `vi.json`; use `t()` in `CartDrawer`, `PaymentDrawer`, `MenuGridRender`.
-- Live store: load dictionary from `NEXT_LOCALE` cookie + `publishing_settings.language` as fallback.
-- Footer language switcher on live store (sets cookie, reload).
+- Add `cart.*`, `order.*`, `auth.*`, `liveStore.*` keys to `en.json` / `vi.json`; use `t()` in `CartDrawer`, `PaymentDrawer`, auth pages.
+- Live store: `resolveLiveLocale(cookie, publishing_settings.language)` in `[slug]/layout.tsx`.
+- Footer language switcher on live store (sets `NEXT_LOCALE` cookie, reload).
 
 **No schema changes.**
 
 ### Phase 2 — Store content bilingual (medium)
 
-**Option A — JSON fields (recommended for MVP)**
+**JSON fields (recommended for MVP)**
 
 ```sql
 -- page_blocks.config already JSONB; extend shapes:
@@ -45,32 +45,30 @@ ALTER TABLE menu_items ADD COLUMN name_i18n jsonb;
 ALTER TABLE menu_items ADD COLUMN description_i18n jsonb;
 ```
 
-- `publishing_settings` add `content_locales: text[]` default `'{vi,en}'`, `display_mode: 'single' | 'bilingual'`.
-- Page builder toggle writes `display_mode` + active edit locale tab.
-- Render helpers: `pickLocale(obj, locale, fallbackLocale)`.
-
-**Option B — separate rows per locale** (heavier, better for many languages later).
+- `publishing_settings.content_locales: text[]` default `'{vi,en}'`.
+- Render helper: `pickLocale(value, locale)` — returns **one** string for the active locale.
+- Backfill: `{ "vi": existing_value, "en": existing_value }`.
 
 ### Phase 3 — Page builder UX (larger)
 
-- Global settings panel: **Languages** — checkboxes VI / EN, display mode (single vs side-by-side on live).
-- Per-block settings: locale tabs (🇻🇳 / 🇬🇧) editing the same block config keys.
-- Menu builder: duplicate fields or tabs per item.
-- Canvas preview: locale switcher next to desktop/mobile toggle.
+- Locale toggle in editor toolbar — edits **one language at a time**.
+- Per-block settings show fields for **active edit locale** only.
+- Menu builder: locale tabs per item.
+- Canvas preview respects selected preview locale.
 
 ### Phase 4 — Live rendering rules
 
-| `display_mode` | Live behavior |
+| Visitor locale | Live behavior |
 |----------------|---------------|
-| `single` | Show active locale from cookie/IP; fallback to `vi`. |
-| `bilingual` | Show both (e.g. EN title / VI subtitle, or stacked). |
+| `vi` | All system UI + content in Vietnamese; fallback to English if field empty. |
+| `en` | All system UI + content in English; fallback to Vietnamese if field empty. |
 
 - Cart/checkout always uses visitor locale for system strings.
-- SEO: `hreflang` alternates when bilingual published.
+- SEO: `hreflang` alternates when both locales are published with content.
 
 ## Data migration
 
-- Backfill: `{ "vi": existing_value, "en": existing_value }` for all translatable config keys.
+- Backfill i18n JSON from existing single-string fields.
 - Publish snapshot includes full i18n config in `published_blocks`.
 
 ## Testing checklist
@@ -78,19 +76,20 @@ ALTER TABLE menu_items ADD COLUMN description_i18n jsonb;
 - [ ] VN IP → live store Vietnamese cart strings
 - [ ] US IP → English
 - [ ] Footer switcher overrides cookie
-- [ ] Bilingual mode shows both languages on menu items
-- [ ] Single-locale mode hides empty secondary locale
+- [ ] Single-locale mode shows only active language (no dual text)
+- [ ] Empty secondary locale falls back to primary
 
 ## Out of scope (later)
 
 - Auto-translate (Google / DeepL API)
 - More than 2 languages
 - Per-locale custom domains
+- Simultaneous bilingual display (rejected — not useful for this product)
 
 ## Suggested order of work
 
-1. Fix production domains + preview (current PR).
+1. Fix production domains + preview (PR #7).
 2. Phase 1 — auth + cart i18n + live footer switcher.
-3. Phase 2 schema + migration + render helpers.
-4. Phase 3 page builder UI.
-5. Phase 4 bilingual display modes + SEO.
+3. Phase 2 schema + migration + `pickLocale` render helpers.
+4. Phase 3 page builder locale toggle UI.
+5. Phase 4 content rendering + SEO hreflang.

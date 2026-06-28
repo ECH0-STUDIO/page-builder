@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Mail } from 'lucide-react'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 function GoogleIcon() {
   return (
@@ -26,6 +27,7 @@ function GoogleIcon() {
 function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { t } = useTranslation()
   const nextUrl = searchParams.get('next') || '/dashboard'
 
   const [fullName, setFullName] = useState('')
@@ -76,18 +78,18 @@ function SignupContent() {
       <Card id="signup-success" className="w-full glass shadow-lg">
         <CardHeader className="text-center">
           <div className="text-4xl mb-2">📬</div>
-          <CardTitle className="text-xl">Check your inbox</CardTitle>
+          <CardTitle className="text-xl">{t('auth.signup.successTitle')}</CardTitle>
           <CardDescription className="text-sm">
-            We sent a verification link to{' '}
+            {t('auth.signup.successDescription')}{' '}
             <span className="font-medium text-foreground">{email}</span>.
-            Click it to activate your account.
+            {t('auth.signup.successHint')}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
-            Wrong email?{' '}
+            {t('auth.signup.wrongEmail')}{' '}
             <Link href="/signup" className="text-primary font-semibold hover:underline">
-              Try again
+              {t('auth.signup.tryAgain')}
             </Link>
           </p>
         </CardFooter>
@@ -98,9 +100,9 @@ function SignupContent() {
   return (
     <Card id="signup-card" className="w-full glass shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl">Create account</CardTitle>
+        <CardTitle className="text-xl">{t('auth.signup.title')}</CardTitle>
         <CardDescription>
-          Start building your digital menu page — free forever.
+          {t('auth.signup.description')}
         </CardDescription>
       </CardHeader>
 
@@ -116,11 +118,11 @@ function SignupContent() {
 
         <form id="signup-form" onSubmit={handleSignup} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full name</Label>
+            <Label htmlFor="fullName">{t('auth.signup.fullName')}</Label>
             <Input
               id="fullName"
               type="text"
-              placeholder="Nguyen Van A"
+              placeholder={t('auth.signup.fullNamePlaceholder')}
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               required
@@ -129,7 +131,7 @@ function SignupContent() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
+            <Label htmlFor="email">{t('auth.signup.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -142,11 +144,11 @@ function SignupContent() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('auth.signup.password')}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="At least 8 characters"
+              placeholder={t('auth.signup.passwordPlaceholder')}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -161,13 +163,13 @@ function SignupContent() {
             className="w-full shadow-brand"
             disabled={loading}
           >
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? t('auth.signup.creating') : t('auth.signup.createAccount')}
           </Button>
         </form>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <Separator className="flex-1" />
-          or
+          {t('auth.signup.or')}
           <Separator className="flex-1" />
         </div>
 
@@ -180,15 +182,15 @@ function SignupContent() {
           type="button"
         >
           <GoogleIcon />
-          {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+          {googleLoading ? t('auth.signup.redirecting') : t('auth.signup.continueGoogle')}
         </Button>
       </CardContent>
 
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {t('auth.signup.hasAccount')}{' '}
           <Link href={`/login?next=${encodeURIComponent(nextUrl)}`} className="text-primary font-semibold hover:underline">
-            Sign in
+            {t('auth.signup.signIn')}
           </Link>
         </p>
       </CardFooter>
