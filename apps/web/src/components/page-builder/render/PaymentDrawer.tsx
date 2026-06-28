@@ -12,20 +12,20 @@ interface PaymentDrawerProps {
 
 export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps) {
   const [open, setOpen] = useState(false)
-  const position = contained ? 'absolute' : 'fixed'
 
   if (!paymentSettings || !paymentSettings.vietqr) return null
 
   const vietqr = paymentSettings.vietqr
   const vietqrImageUrl = buildVietQRUrl(vietqr)
   const bankName = VIET_BANKS.find(b => b.code === vietqr.bank_code)?.name ?? vietqr.bank_code
+  const position = contained ? 'absolute' : 'fixed'
 
-  return (
+  const ui = (
     <>
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100`}
+          className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100 ${contained ? 'pointer-events-auto' : ''}`}
           aria-label="Thanh toán"
         >
           <CreditCard className="size-5 text-gray-700" />
@@ -37,13 +37,13 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
 
       {open && (
         <div
-          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm`}
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm ${contained ? 'pointer-events-auto' : ''}`}
           onClick={() => setOpen(false)}
         />
       )}
 
       <div
-        className={`${position} top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${contained ? 'pointer-events-auto' : ''} ${
           open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
@@ -76,7 +76,7 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
               <div className="flex items-center gap-2">
                 <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">Chuyển khoản VietQR</div>
               </div>
-              
+
               <div className="bg-white p-3 rounded-2xl shadow-md border border-gray-100 transition-transform hover:scale-105 duration-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -100,4 +100,14 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
       </div>
     </>
   )
+
+  if (contained) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[90]">
+        {ui}
+      </div>
+    )
+  }
+
+  return ui
 }

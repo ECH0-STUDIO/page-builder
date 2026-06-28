@@ -1068,8 +1068,9 @@ export function EditorShell({
                 className={cn(
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
                   viewMode === 'mobile'
-                    ? 'w-[375px] rounded-[32px] overflow-hidden'
+                    ? 'w-[375px] rounded-[32px]'
                     : 'rounded-xl',
+                  (isPreviewMode || viewMode === 'mobile') && 'overflow-hidden',
                 )}
                 style={{
                   fontFamily: `'${fontFamily}', sans-serif`,
@@ -1080,6 +1081,9 @@ export function EditorShell({
                         ...(displayDesktopZoom < 1 ? { zoom: displayDesktopZoom } : {}),
                       }
                     : {}),
+                  ...(isPreviewMode
+                    ? { height: 'min(calc(100dvh - 8.5rem), 860px)' }
+                    : {}),
                 }}
               >
                 {/* Heading font scoped to this canvas frame */}
@@ -1087,6 +1091,7 @@ export function EditorShell({
                   h1, h2, h3, h4, h5, h6 { font-family: '${headingFont}', sans-serif !important; }
                 ` }} />
 
+                <div className={cn(isPreviewMode && 'absolute inset-0 overflow-y-auto overflow-x-hidden')}>
                 {/* ── PERMANENT NAVBAR always at top ── */}
                 <NavbarRender
                   config={navbarConfig}
@@ -1138,6 +1143,7 @@ export function EditorShell({
                   businessName={business.name}
                   inEditor={!isPreviewMode}
                 />
+                </div>
 
                 {isPreviewMode && (
                   <LiveStoreCart

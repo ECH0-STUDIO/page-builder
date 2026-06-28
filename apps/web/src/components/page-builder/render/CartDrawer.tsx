@@ -164,13 +164,13 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
 
   const hasVietQR = paymentSettings?.vietqr && paymentSettings.vietqr.bank_code
 
-  return (
+  const ui = (
     <>
       {/* ── Floating cart button ── */}
       {!open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
-          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all`}
+          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
           aria-label="View order"
         >
           <div className="relative">
@@ -190,7 +190,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
       {!open && totalItems === 0 && pastOrders.length > 0 && (
         <button
           onClick={() => { setStep('payment'); setOpen(true); }}
-          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all`}
+          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
         >
           <div className="relative">
             <CheckCircle2 className="size-5 text-green-500" />
@@ -205,14 +205,14 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
       {/* ── Backdrop ── */}
       {open && (
         <div
-          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm`}
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm ${contained ? 'pointer-events-auto' : ''}`}
           onClick={handleClose}
         />
       )}
 
       {/* ── Right side drawer ── */}
       <div
-        className={`${position} top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${contained ? 'pointer-events-auto' : ''} ${
           open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
       >
@@ -389,4 +389,14 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
       </div>
     </>
   )
+
+  if (contained) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[100]">
+        {ui}
+      </div>
+    )
+  }
+
+  return ui
 }

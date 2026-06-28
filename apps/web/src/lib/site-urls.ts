@@ -30,6 +30,35 @@ export function getAppHostname(): string {
   return new URL(getAppBaseUrl()).hostname.toLowerCase()
 }
 
+/** Strip www. for comparing apex vs www marketing hosts */
+export function normalizeSiteHostname(hostname: string): string {
+  return hostname.toLowerCase().replace(/^www\./, '')
+}
+
+/** Marketing host — apex and www (eateryvn.com + www.eateryvn.com) */
+export function isMarketingHostname(
+  requestHost: string | undefined,
+  configuredMarketingHost: string
+): boolean {
+  if (!requestHost) return false
+  const host = requestHost.toLowerCase()
+  const target = configuredMarketingHost.toLowerCase()
+  const bare = normalizeSiteHostname(target)
+  return host === target || host === bare || host === `www.${bare}`
+}
+
+/**
+ * App host — exact match only (app.eateryvn.com).
+ * Never treat www marketing apex as the app host when env URLs are misconfigured.
+ */
+export function isAppHostname(
+  requestHost: string | undefined,
+  configuredAppHost: string
+): boolean {
+  if (!requestHost) return false
+  return requestHost.toLowerCase() === configuredAppHost.toLowerCase()
+}
+
 export function marketingPath(path: string = ''): string {
   const base = getMarketingBaseUrl()
   if (!path || path === '/') return base
