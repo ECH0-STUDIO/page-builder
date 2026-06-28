@@ -84,14 +84,14 @@ export function TextImageSettings({
   businessId,
   blocks,
   onChange,
-  editLocale,
+  
 }: {
   config: TextImageConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
   onChange: (c: TextImageConfig) => void
-  editLocale: SupportedLocale
+  
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -252,13 +252,13 @@ export function TextImageSettings({
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
           <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <LocalizedInput id="ti-heading" locale={editLocale} value={config.heading} onChange={v => set('heading', v)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
+            <LocalizedInput id="ti-heading" value={config.heading} onChange={v => set('heading', v)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
             <LocalizedTextarea
               id="ti-body"
-              locale={editLocale}
+              
               value={config.body}
               onChange={v => set('body', v)}
               placeholder="Write your content here…&#10;Line breaks are preserved."
@@ -273,7 +273,7 @@ export function TextImageSettings({
               label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
-              editLocale={editLocale}
+              
               onChange={v => set('cta', v)}
               onRemove={() => set('cta', null)}
             />

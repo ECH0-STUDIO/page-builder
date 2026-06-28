@@ -29,9 +29,10 @@ import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
-import { localizeMenuCategories, localizeMenuItems } from '@/i18n/menu-content'
 import { useBusiness } from '@/context/BusinessContext'
+import { LocaleBar, DEFAULT_ENABLED_LOCALES } from '@/components/i18n/LocaleBar'
+import { LocaleEditProvider } from '@/components/i18n/LocaleEditContext'
+import { LOCALE_CREDIT_COST_PER_MONTH } from '@/i18n/locale-content'
 
 import { PublishBar } from './PublishBar'
 import { TemplatePicker } from './TemplatePicker'
@@ -181,7 +182,7 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, editLocale,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, previewLocale,
 }: {
   block: PageBlock
   isSelected: boolean
@@ -190,7 +191,7 @@ function LiveBlockCard({
   onClick: () => void
   previewLayout?: PreviewLayout
   interactive?: boolean
-  editLocale: SupportedLocale
+  previewLocale: string
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
@@ -268,11 +269,11 @@ function LiveBlockCard({
             config={block.config as HeroConfig}
             businessName={business.name}
             previewLayout={previewLayout}
-            locale={editLocale}
+            locale={previewLocale}
           />
         )}
         {block.type === 'text_image' && (
-          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} locale={editLocale} />
+          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} locale={previewLocale} />
         )}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
@@ -280,7 +281,7 @@ function LiveBlockCard({
             config={block.config as MenuGridConfig}
             data={menuGridData}
             previewLayout={previewLayout}
-            locale={editLocale}
+            locale={previewLocale}
           />
         )}
         {block.type === 'qr_code' && (
@@ -289,7 +290,7 @@ function LiveBlockCard({
             targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
             paymentSettings={business.payment_settings}
             downloadLabel={t('qrCodeBlock.saveQrCode')}
-            locale={editLocale}
+            locale={previewLocale}
           />
         )}
       </div>
@@ -300,7 +301,7 @@ function LiveBlockCard({
 // ─── Settings panel ────────────────────────────────────────────────────────────
 
 function BlockSettingsPanel({
-  block, business, blocks, categories, items, onChange, editLocale,
+  block, business, blocks, categories, items, onChange,
 }: {
   block: PageBlock
   business: Business
@@ -308,7 +309,6 @@ function BlockSettingsPanel({
   categories: MenuCategory[]
   items: MenuItem[]
   onChange: (b: PageBlock) => void
-  editLocale: SupportedLocale
 }) {
   const { t } = useTranslation()
   const anchorId = block.block_anchor_id ?? ''
@@ -327,13 +327,11 @@ function BlockSettingsPanel({
       {block.type === 'hero' && (
         <HeroSettings config={block.config as HeroConfig} businessId={business.id}
           blocks={blocks}
-          editLocale={editLocale}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'text_image' && (
         <TextImageSettings config={block.config as TextImageConfig} businessId={business.id}
           blocks={blocks}
-          editLocale={editLocale}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'contact' && (
@@ -345,7 +343,6 @@ function BlockSettingsPanel({
           config={block.config as MenuGridConfig}
           categories={categories}
           items={items}
-          editLocale={editLocale}
           onChange={c => onChange({ ...block, config: c })}
         />
       )}
@@ -354,7 +351,6 @@ function BlockSettingsPanel({
           config={block.config as QRCodeConfig}
           businessSlug={business.slug ?? undefined}
           businessId={business.id}
-          editLocale={editLocale}
           onChange={c => onChange({ ...block, config: c })}
         />
       )}
@@ -499,9 +495,20 @@ export function EditorShell({
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
   const [_isPreviewMode, setIsPreviewMode] = useState(false)
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
-  const [editLocale, setEditLocale] = useState<SupportedLocale>(() =>
-    toSupportedLocale(initialPublishing?.language ?? 'vi'),
-  )
+  const [editLocale, setEditLocale] = useState('vi')
+
+  const enabledLocales = useMemo(() => {
+    const fromPub = publishingSettings?.enabled_locales?.filter(Boolean)
+    return fromPub && fromPub.length > 0 ? fromPub : [...DEFAULT_ENABLED_LOCALES]
+  }, [publishingSettings?.enabled_locales])
+
+  const primaryLocale = enabledLocales[0] ?? 'vi'
+
+  const localeEditValue = useMemo(() => ({
+    editLocale,
+    enabledLocales,
+    primaryLocale,
+  }), [editLocale, enabledLocales, primaryLocale])
 
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
@@ -532,14 +539,14 @@ export function EditorShell({
 
   const dndId = useId()
 
-  // Real menu data for the canvas — localized for active edit locale
-  const menuGridData: MenuGridData = useMemo(() => ({
-    categories: localizeMenuCategories(categories, editLocale),
-    items: localizeMenuItems(initialItems, editLocale),
+  // Real menu data for the canvas — items are pre-loaded so the canvas shows actual content
+  const menuGridData: MenuGridData = {
+    categories,
+    items: initialItems,
     variantGroups: initialVariantGroups,
     variantOptions: initialVariantOptions,
     businessSlug: business.slug ?? '',
-  }), [categories, initialItems, initialVariantGroups, initialVariantOptions, business.slug, editLocale])
+  }
 
   const isFirstRender = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -624,6 +631,20 @@ export function EditorShell({
       return next
     })
   }, [business.id])
+
+  const handleAddLocale = useCallback((code: string) => {
+    if (enabledLocales.includes(code)) return
+    const isExtra = !DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])
+    if (isExtra) {
+      toast.info(
+        t('pageBuilder.addLanguageCreditNote').replace('{{credits}}', String(LOCALE_CREDIT_COST_PER_MONTH)),
+      )
+    }
+    const next = [...enabledLocales, code]
+    handlePublishingChange({ enabled_locales: next })
+    setEditLocale(code)
+  }, [enabledLocales, handlePublishingChange, t])
+
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
     const families = [...new Set([fontFamily, headingFont])]
@@ -887,7 +908,7 @@ export function EditorShell({
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} editLocale={editLocale} />
+              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
           </div>
         </>
       ) : activeRightPanel === 'navbar' ? (
@@ -901,7 +922,6 @@ export function EditorShell({
               config={navbarConfig}
               businessId={business.id}
               blocks={blocks}
-              editLocale={editLocale}
               onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
             />
           </div>
@@ -917,7 +937,6 @@ export function EditorShell({
               config={footerConfig}
               onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
               businessId={business.id}
-              editLocale={editLocale}
             />
           </div>
         </>
@@ -941,7 +960,8 @@ export function EditorShell({
   )
 
   return (
-    // Fix-position overlay covers the full viewport including the dashboard sidebar
+    <LocaleEditProvider value={localeEditValue}>
+    {/* Fix-position overlay covers the full viewport including the dashboard sidebar */}
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* Top bar */}
@@ -971,8 +991,6 @@ export function EditorShell({
           publishing={publishing}
           onSaveNow={saveNow}
           onTogglePreview={() => setIsPreviewMode(true)}
-          editLocale={editLocale}
-          onEditLocaleChange={setEditLocale}
         />
       )}
 
@@ -1020,6 +1038,15 @@ export function EditorShell({
 
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
+
+          {!isPreviewMode && (
+            <LocaleBar
+              enabledLocales={enabledLocales}
+              activeLocale={editLocale}
+              onActiveLocaleChange={setEditLocale}
+              onAddLocale={handleAddLocale}
+            />
+          )}
 
           {/* Viewport toggle + desktop zoom */}
           <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80 flex-wrap">
@@ -1150,8 +1177,8 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       previewLayout={canvasPreviewLayout}
+                      previewLocale={editLocale}
                       interactive={isPreviewMode}
-                      editLocale={editLocale}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>
@@ -1172,7 +1199,6 @@ export function EditorShell({
                     paymentSettings={paymentSettings}
                     previewMode
                     contained
-                    locale={editLocale}
                   />
                 )}
               </div>
@@ -1227,5 +1253,6 @@ export function EditorShell({
         <AddBlockModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onAdd={addBlock} />
       )}
     </div>
+    </LocaleEditProvider>
   )
 }

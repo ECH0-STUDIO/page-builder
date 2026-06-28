@@ -71,10 +71,10 @@ interface QRCodeSettingsProps {
   businessSlug?: string
   businessId: string
   onChange: (c: QRCodeConfig) => void
-  editLocale: SupportedLocale
+  
 }
 
-export function QRCodeSettings({ config, businessSlug, businessId, onChange, editLocale }: QRCodeSettingsProps) {
+export function QRCodeSettings({ config, businessSlug, businessId, onChange }: QRCodeSettingsProps) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -159,7 +159,7 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange, edi
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.label')}</Label>
         <LocalizedInput
-          locale={editLocale}
+          
           value={config.label}
           onChange={v => set('label', v)}
           placeholder={t('qrCodeBlock.scanToView')}

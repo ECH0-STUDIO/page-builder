@@ -76,14 +76,12 @@ export function HeroSettings({
   businessId,
   blocks,
   onChange,
-  editLocale,
 }: {
   config: HeroConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
   onChange: (c: HeroConfig) => void
-  editLocale: SupportedLocale
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -346,15 +344,15 @@ export function HeroSettings({
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.content')}</Label>
         <div className="space-y-1.5">
           <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
-          <LocalizedInput id="hero-heading" locale={editLocale} value={config.heading} onChange={v => set('heading', v)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+          <LocalizedInput id="hero-heading" value={config.heading} onChange={v => set('heading', v)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-tagline" className="text-xs">{t('heroBlock.tagline')}</Label>
-          <LocalizedInput id="hero-tagline" locale={editLocale} value={config.tagline} onChange={v => set('tagline', v)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
+          <LocalizedInput id="hero-tagline" value={config.tagline} onChange={v => set('tagline', v)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
-          <LocalizedTextarea id="hero-body" locale={editLocale} value={config.body} onChange={v => set('body', v)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+          <LocalizedTextarea id="hero-body" value={config.body} onChange={v => set('body', v)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
         </div>
       </div>
 
@@ -368,7 +366,6 @@ export function HeroSettings({
             label={t('heroBlock.primaryButton')}
             value={config.cta}
             blocks={blocks}
-            editLocale={editLocale}
             onChange={v => set('cta', v)}
             onRemove={() => set('cta', null)}
           />
@@ -385,7 +382,6 @@ export function HeroSettings({
               label={t('heroBlock.secondaryLink')}
               value={config.cta_secondary}
               blocks={blocks}
-              editLocale={editLocale}
               onChange={v => set('cta_secondary', v)}
               onRemove={() => set('cta_secondary', null)}
             />

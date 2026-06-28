@@ -15,13 +15,14 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 import { toast } from 'sonner'
 import { useTranslationWithFallback } from '@/i18n/I18nProvider'
-import type { SupportedLocale } from '@/i18n/locale'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 // ─── Cart Item Row ─────────────────────────────────────────────────────────────
 
 function CartItemRow({ item, locale }: { item: CartItem; locale: SupportedLocale }) {
   const { removeItem, updateQuantity } = useCart()
-  const { t } = useTranslationWithFallback(locale)
+  const activeLocale = toSupportedLocale(locale)
+  const { t } = useTranslationWithFallback(activeLocale)
 
   return (
     <div className="flex gap-3 py-4 border-b border-gray-100 last:border-0">
@@ -66,14 +67,15 @@ interface CartDrawerProps {
   previewMode?: boolean
   /** Pin overlays inside a relative canvas (page builder) instead of the viewport */
   contained?: boolean
-  locale?: SupportedLocale
+  locale?: string
 }
 
 type DrawerStep = 'cart' | 'payment'
 
 export function CartDrawer({ businessId, paymentSettings, previewMode, contained, locale = 'vi' }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
-  const { t } = useTranslationWithFallback(locale)
+  const activeLocale = toSupportedLocale(locale)
+  const { t } = useTranslationWithFallback(activeLocale)
   const searchParams = useSearchParams()
   const tableFromUrl = searchParams.get('table') ?? ''
 
@@ -242,7 +244,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
           <>
             <div className="flex-1 overflow-y-auto px-5">
               {items.map(item => (
-                <CartItemRow key={item.cartId} item={item} locale={locale} />
+                <CartItemRow key={item.cartId} item={item} locale={activeLocale} />
               ))}
             </div>
 

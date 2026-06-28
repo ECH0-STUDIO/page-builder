@@ -57,14 +57,14 @@ export function NavbarSettings({
   businessId,
   blocks,
   onChange,
-  editLocale,
+  
 }: {
   config: NavbarConfig
   businessId: string
   /** Current page blocks so anchors can reference them */
   blocks: PageBlock[]
   onChange: (c: NavbarConfig) => void
-  editLocale: SupportedLocale
+  
 }) {
   const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
@@ -176,7 +176,7 @@ export function NavbarSettings({
                   </button>
                 </div>
                 <LocalizedInput
-                  locale={editLocale}
+                  
                   value={link.label}
                   onChange={label => updateLink(i, { label })}
                   placeholder={t('navbarBlock.linkLabel')}

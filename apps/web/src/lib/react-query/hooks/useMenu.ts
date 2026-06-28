@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
-import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 
 export function useMenu(businessId: string, initialData?: { categories: MenuCategory[], items: MenuItem[] }) {
   const supabase = createClient()
@@ -34,8 +33,8 @@ export function useMenu(businessId: string, initialData?: { categories: MenuCate
       if (itemRes.error) throw new Error(itemRes.error.message)
       
       return {
-        categories: (catRes.data ?? []).map(normalizeMenuCategory),
-        items: (itemRes.data ?? []).map(normalizeMenuItem),
+        categories: catRes.data as MenuCategory[],
+        items: itemRes.data as MenuItem[],
       }
     },
     initialData,

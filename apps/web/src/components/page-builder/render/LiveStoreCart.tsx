@@ -12,7 +12,7 @@ interface LiveStoreCartProps {
   previewMode?: boolean
   /** Pin cart UI inside the page-builder canvas frame */
   contained?: boolean
-  locale?: SupportedLocale
+  locale?: string
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {

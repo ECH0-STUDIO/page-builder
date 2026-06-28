@@ -22,7 +22,7 @@ interface NavbarRenderProps {
   /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
   isMobilePreview?: boolean
-  locale?: SupportedLocale
+  locale?: string
 }
 
 export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview, locale }: NavbarRenderProps) {

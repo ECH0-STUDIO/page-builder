@@ -2,7 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
+import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig, SeoI18nStore } from '@/components/page-builder/types'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -15,6 +15,15 @@ import {
   type DnsRecord,
 } from '@/lib/vercel-domains'
 export type { PublishingSettings } from '@/components/page-builder/types'
+
+function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
+  if (!row) return null
+  return {
+    ...(row as unknown as PublishingSettings),
+    enabled_locales: Array.isArray(row.enabled_locales) ? row.enabled_locales as string[] : null,
+    seo_i18n: (row.seo_i18n ?? null) as SeoI18nStore | null,
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,7 +75,7 @@ export async function getPageDataAction(businessId: string): Promise<{
 
   return {
     blocks: (blocksRes.data as any) ?? [],
-    publishing: pubRes.data ?? null,
+    publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
     theme: themeRes.data ?? null,
   }
 }
@@ -175,7 +184,7 @@ export async function togglePublishAction(
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
-  return { success: true, data }
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────
@@ -278,7 +287,7 @@ export async function getPublishingAction(businessId: string): Promise<{
   ])
 
   return {
-    publishing: pubRes.data ?? null,
+    publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
     slug: bizRes.data?.slug ?? null,
   }
 }
@@ -296,6 +305,8 @@ export async function savePublishingSettingsAction(
     apple_touch_icon_url?: string | null
     language?: string
     gsc_verification?: string | null
+    enabled_locales?: string[] | null
+    seo_i18n?: SeoI18nStore | null
     google_analytics_id?: string | null
     facebook_pixel_id?: string | null
     tiktok_pixel_id?: string | null
@@ -323,7 +334,7 @@ export async function savePublishingSettingsAction(
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
   await revalidateLiveStore(supabase, businessId)
-  return { success: true, data }
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
 
 // ─── Page view analytics ──────────────────────────────────────────────────────

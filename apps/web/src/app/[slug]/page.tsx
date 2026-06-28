@@ -22,9 +22,9 @@ import {
 } from '@/lib/schema'
 import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
-import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -141,8 +141,8 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
       db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     ])
-    menuCategories = (cats ?? []).map(normalizeMenuCategory)
-    menuItems = (itms ?? []).map(normalizeMenuItem)
+    menuCategories = normalizeMenuCategories((cats ?? []) as Record<string, unknown>[])
+    menuItems = normalizeMenuItems((itms ?? []) as Record<string, unknown>[])
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)

@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
-import { useTranslationWithFallback } from '@/i18n/I18nProvider'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { localizeMenuCategories, localizeMenuItems } from '@/i18n/menu-content'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
@@ -46,17 +46,16 @@ export interface MenuGridData {
 // ─── Item Modal (with cart integration) ──────────────────────────────────────
 
 function ItemModal({
-  item, groups, options, config, onClose, locale,
+  item, groups, options, config, onClose,
 }: {
   item: MenuItem
   groups: VariantGroup[]
   options: VariantOption[]
   config: MenuGridConfig
   onClose: () => void
-  locale: SupportedLocale
 }) {
   const { addItem } = useCart()
-  const { t } = useTranslationWithFallback(locale)
+  const { t } = useTranslation()
 
   const itemGroups = groups
     .filter(g => g.item_id === item.id)
@@ -271,7 +270,7 @@ function ItemModal({
 // ─── Item Card (grid layout) ───────────────────────────────────────────────────
 
 function ItemCardGrid({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount, locale,
+  item, config, onClick, onQuickAdd, hasVariants, optionCount
 }: {
   item: MenuItem
   config: MenuGridConfig
@@ -279,9 +278,8 @@ function ItemCardGrid({
   onQuickAdd: () => void
   hasVariants: boolean
   optionCount: number
-  locale: SupportedLocale
 }) {
-  const { t } = useTranslationWithFallback(locale)
+  const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
   const bgColor = config.background_color || '#ffffff'
 
@@ -348,7 +346,7 @@ function ItemCardGrid({
 // ─── Item Row (list layout) ──────────────────────────────────────────────────
 
 function ItemRowList({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount, locale,
+  item, config, onClick, onQuickAdd, hasVariants, optionCount
 }: {
   item: MenuItem
   config: MenuGridConfig
@@ -356,9 +354,8 @@ function ItemRowList({
   onQuickAdd: () => void
   hasVariants: boolean
   optionCount: number
-  locale: SupportedLocale
 }) {
-  const { t } = useTranslationWithFallback(locale)
+  const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
   const bgColor = config.background_color || '#ffffff'
 
@@ -422,7 +419,7 @@ function MenuGridInner({
   previewLayout,
   isMobilePreview,
   locale,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: SupportedLocale }) {
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
   const activeLocale = toSupportedLocale(locale)
   const localizedData = useMemo(() => ({
     ...data,
@@ -437,7 +434,7 @@ function MenuGridInner({
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
-  const { t } = useTranslationWithFallback(activeLocale)
+  const { t } = useTranslation()
   const { categories, items, variantGroups, variantOptions } = localizedData
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
@@ -592,9 +589,9 @@ function MenuGridInner({
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} locale={activeLocale} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemRowList key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     ) : (
-                      <ItemCardGrid key={item.id} item={item} config={config} locale={activeLocale} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemCardGrid key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     )
                   })}
                 </div>
@@ -611,7 +608,6 @@ function MenuGridInner({
           groups={variantGroups}
           options={variantOptions}
           config={config}
-          locale={activeLocale}
           onClose={() => setModalItem(null)}
         />
       )}
@@ -645,7 +641,7 @@ export function MenuGridRender({
   previewLayout,
   isMobilePreview,
   locale,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: SupportedLocale }) {
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
   return (
     <MenuGridInner
       config={config}

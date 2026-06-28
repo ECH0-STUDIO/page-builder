@@ -52,7 +52,7 @@ interface TextImageRenderProps {
   config: TextImageConfig
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
-  locale?: SupportedLocale
+  locale?: string
 }
 
 export function TextImageRender({ config, isMobilePreview, previewLayout, locale }: TextImageRenderProps) {

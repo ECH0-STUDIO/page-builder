@@ -3,19 +3,19 @@
 import { useState } from 'react'
 import { ChevronLeft, CreditCard } from 'lucide-react'
 import { useTranslationWithFallback } from '@/i18n/I18nProvider'
-import type { SupportedLocale } from '@/i18n/locale'
+import { toSupportedLocale } from '@/i18n/locale'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 
 interface PaymentDrawerProps {
   paymentSettings?: PaymentSettings
   contained?: boolean
-  locale?: SupportedLocale
+  locale?: string
 }
 
 export function PaymentDrawer({ paymentSettings, contained, locale = 'vi' }: PaymentDrawerProps) {
   const [open, setOpen] = useState(false)
-  const { t } = useTranslationWithFallback(locale)
+  const { t } = useTranslationWithFallback(toSupportedLocale(locale))
 
   if (!paymentSettings || !paymentSettings.vietqr) return null
 

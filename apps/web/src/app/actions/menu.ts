@@ -14,6 +14,7 @@ export type MenuCategory = {
   name_i18n?: MenuI18nMap | null
   sort_order: number
   visible: boolean
+  visible_locales?: string[] | null
   created_at: string
   updated_at: string
 }
@@ -31,6 +32,7 @@ export type MenuItem = {
   available: boolean
   sort_order: number
   tags: string[] | null
+  visible_locales?: string[] | null
   created_at: string
   updated_at: string
 }
@@ -139,7 +141,13 @@ export async function addCategoryAction(
 
 export async function updateCategoryAction(
   id: string,
-  update: { name?: string; name_i18n?: MenuI18nMap | null; visible?: boolean; sort_order?: number }
+  update: {
+    name?: string
+    name_i18n?: MenuI18nMap | null
+    visible?: boolean
+    visible_locales?: string[] | null
+    sort_order?: number
+  }
 ): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -230,7 +238,7 @@ export async function addItemAction(
       category_id: categoryId,
       name: primaryLocalizedValue(nameI18n) || item.name.trim(),
       name_i18n: nameI18n,
-      description: primaryLocalizedValue(descI18n) || item.description?.trim() || null,
+      description: descI18n ? (primaryLocalizedValue(descI18n) || item.description?.trim() || null) : (item.description?.trim() || null),
       description_i18n: descI18n,
       price: item.price,
       image_url: item.image_url || null,
@@ -259,6 +267,7 @@ export async function updateItemAction(
     tags: string[]
     sort_order: number
     category_id: string
+    visible_locales: string[] | null
   }>
 ): Promise<ActionResult> {
   const supabase = await createClient()
@@ -274,7 +283,9 @@ export async function updateItemAction(
     payload.name = primaryLocalizedValue(update.name_i18n) || update.name
   }
   if (update.description_i18n !== undefined) {
-    payload.description = primaryLocalizedValue(update.description_i18n) || update.description || null
+    payload.description = update.description_i18n
+      ? (primaryLocalizedValue(update.description_i18n) || update.description || null)
+      : (update.description ?? null)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

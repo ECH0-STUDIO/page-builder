@@ -20,7 +20,7 @@ interface QRCodeRenderProps {
   paymentSettings?: PaymentSettings | null
   /** Optional translated label for download button */
   downloadLabel?: string
-  locale?: SupportedLocale
+  locale?: string
 }
 
 const SIZE_MAP: Record<QRCodeConfig['size'], number> = {

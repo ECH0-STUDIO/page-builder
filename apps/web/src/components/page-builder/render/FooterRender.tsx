@@ -12,7 +12,7 @@ export function FooterRender({
   businessName: string
   inEditor?: boolean
   /** Active visitor locale — only used on live store for language switcher */
-  locale?: 'vi' | 'en'
+  locale?: string
 }) {
   const currentYear = new Date().getFullYear()
   const activeLocale = toSupportedLocale(locale)

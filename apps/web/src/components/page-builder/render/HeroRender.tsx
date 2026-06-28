@@ -44,7 +44,7 @@ export function HeroRender({
   businessName?: string
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
-  locale?: SupportedLocale
+  locale?: string
 }) {
   const activeLocale = toSupportedLocale(locale)
   const layout: PreviewLayout | undefined =

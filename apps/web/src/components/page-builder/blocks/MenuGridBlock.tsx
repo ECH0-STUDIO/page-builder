@@ -55,10 +55,10 @@ interface MenuGridSettingsProps {
   categories: MenuCategory[]
   items: MenuItem[]
   onChange: (c: MenuGridConfig) => void
-  editLocale: SupportedLocale
+  
 }
 
-export function MenuGridSettings({ config, categories, items, onChange, editLocale }: MenuGridSettingsProps) {
+export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
   const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCatId, setFilterCatId] = useState('all')
@@ -95,7 +95,7 @@ export function MenuGridSettings({ config, categories, items, onChange, editLoca
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
         <LocalizedInput
-          locale={editLocale}
+          
           value={config.heading}
           onChange={v => set('heading', v)}
           placeholder={t('menuGridBlock.headingPlaceholder')}
@@ -107,7 +107,7 @@ export function MenuGridSettings({ config, categories, items, onChange, editLoca
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
         <LocalizedTextarea
-          locale={editLocale}
+          
           value={config.description ?? ''}
           onChange={v => set('description', v)}
           placeholder={t('menuGridBlock.descPlaceholder')}

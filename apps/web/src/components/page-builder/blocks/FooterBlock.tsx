@@ -16,12 +16,12 @@ export function FooterSettings({
   config,
   onChange,
   businessId,
-  editLocale,
+  
 }: {
   config: FooterConfig
   onChange: (config: FooterConfig) => void
   businessId: string
-  editLocale: SupportedLocale
+  
 }) {
   const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
@@ -69,7 +69,7 @@ export function FooterSettings({
         <div className="space-y-1.5">
           <Label className="text-xs">{t('footerBlock.copyrightText')}</Label>
           <LocalizedInput
-            locale={editLocale}
+            
             value={config.copyright_text}
             onChange={v => set('copyright_text', v)}
             className="h-8 text-xs"

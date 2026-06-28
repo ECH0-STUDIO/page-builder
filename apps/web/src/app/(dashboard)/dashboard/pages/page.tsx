@@ -6,7 +6,7 @@ import { EditorShell } from '@/components/page-builder/EditorShell'
 import { getPageDataAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
-import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 
 export const metadata: Metadata = { title: 'Page Builder' }
 
@@ -29,8 +29,8 @@ export default async function PagesPage() {
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
   ])
 
-  const categories: MenuCategory[] = (categoriesRaw ?? []).map(normalizeMenuCategory)
-  const items: MenuItem[] = (itemsRaw ?? []).map(normalizeMenuItem)
+  const categories = normalizeMenuCategories((categoriesRaw ?? []) as Record<string, unknown>[])
+  const items = normalizeMenuItems((itemsRaw ?? []) as Record<string, unknown>[])
 
   // Fetch variants only if there are items (avoids redundant query)
   let variantGroups: VariantGroup[] = []

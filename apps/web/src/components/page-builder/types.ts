@@ -2,7 +2,7 @@
  * Page Builder — shared type definitions
  */
 
-import type { LocalizedValue } from '@/i18n/locale'
+import type { LocalizedValue, LocaleStringMap } from '@/i18n/locale'
 
 // ─── Block types ──────────────────────────────────────────────────────────────
 
@@ -372,6 +372,19 @@ export interface PublishingSettings {
   language: string
   gsc_verification: string | null
   has_unpublished_changes: boolean | null
+  /** Content locales enabled for this store (default vi + en). */
+  enabled_locales?: string[] | null
+  /** Per-locale SEO: { title, description, og_image_url } maps with copy-on-write meta. */
+  seo_i18n?: SeoI18nStore | null
+  google_analytics_id?: string | null
+  facebook_pixel_id?: string | null
+  tiktok_pixel_id?: string | null
+}
+
+export interface SeoI18nStore {
+  title?: LocaleStringMap
+  description?: LocaleStringMap
+  og_image_url?: LocaleStringMap
 }
 
 export interface ThemeSettings {
