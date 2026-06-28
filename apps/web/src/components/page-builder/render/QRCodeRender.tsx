@@ -10,6 +10,7 @@ import QRCode from 'qrcode'
 import { Download } from 'lucide-react'
 import type { QRCodeConfig } from '../types'
 import { buildVietQRUrl, type PaymentSettings } from '@/lib/vietqr-utils'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 interface QRCodeRenderProps {
   config: QRCodeConfig
@@ -19,6 +20,7 @@ interface QRCodeRenderProps {
   paymentSettings?: PaymentSettings | null
   /** Optional translated label for download button */
   downloadLabel?: string
+  locale?: string
 }
 
 const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
@@ -27,7 +29,9 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
   lg: 280,
 }
 
-export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code' }: QRCodeRenderProps) {
+export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale }: QRCodeRenderProps) {
+  const activeLocale = toSupportedLocale(locale)
+  const label = pickLocale(config.label, activeLocale)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'
@@ -109,9 +113,9 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
         </div>
 
         {/* Label */}
-        {config.label && (
+        {label && (
           <p className="text-sm font-medium text-center" style={{ color: textColor, opacity: 0.7 }}>
-            {config.label}
+            {label}
           </p>
         )}
 

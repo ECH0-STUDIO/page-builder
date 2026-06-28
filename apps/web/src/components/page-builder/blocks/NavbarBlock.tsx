@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale, type SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput } from '@/components/i18n/LocalizedField'
 import { saveNavbarAction } from '@/app/actions/page-builder'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
 
@@ -28,7 +30,7 @@ export function NavbarPreview({ config }: { config: NavbarConfig }) {
         </div>
         <div className="flex gap-2">
           {config.links.slice(0, 3).map((l, i) => (
-            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{l.label}</span>
+            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{pickLocale(l.label, 'vi') || 'Link'}</span>
           ))}
           {config.links.length > 3 && <span className="text-[10px] text-muted-foreground">+{config.links.length - 3}</span>}
           {config.links.length === 0 && <span className="text-[10px] text-muted-foreground/40 italic">{t('navbarBlock.noLinks')}</span>}
@@ -55,12 +57,14 @@ export function NavbarSettings({
   businessId,
   blocks,
   onChange,
+  
 }: {
   config: NavbarConfig
   businessId: string
   /** Current page blocks so anchors can reference them */
   blocks: PageBlock[]
   onChange: (c: NavbarConfig) => void
+  
 }) {
   const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
@@ -171,9 +175,10 @@ export function NavbarSettings({
                     <GripVertical className="size-3 -rotate-90" />
                   </button>
                 </div>
-                <Input
+                <LocalizedInput
+                  
                   value={link.label}
-                  onChange={e => updateLink(i, { label: e.target.value })}
+                  onChange={label => updateLink(i, { label })}
                   placeholder={t('navbarBlock.linkLabel')}
                   className="h-7 text-xs flex-1"
                 />

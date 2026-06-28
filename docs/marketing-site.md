@@ -23,6 +23,8 @@ NEXT_PUBLIC_APP_URL=https://app.eateryvn.com
 NEXT_PUBLIC_SITE_URL=https://eateryvn.com
 ```
 
+**Critical:** `NEXT_PUBLIC_APP_URL` must be `https://app.eateryvn.com` — never `eateryvn.com` or `www.eateryvn.com`. If misconfigured, `www.eateryvn.com` redirects in a loop (`/` → `/login` → `/login` …).
+
 3. Redeploy after changing env vars.
 
 ## Supabase Auth URLs

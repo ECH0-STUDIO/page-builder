@@ -123,8 +123,10 @@ export interface Database {
           id: string
           business_id: string
           name: string
+          name_i18n: Json | null
           sort_order: number
           visible: boolean
+          visible_locales: string[] | null
           created_at: string
           updated_at: string
           image_url: string | null
@@ -133,8 +135,10 @@ export interface Database {
           id?: string
           business_id: string
           name: string
+          name_i18n?: Json | null
           sort_order?: number
           visible?: boolean
+          visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -142,8 +146,10 @@ export interface Database {
           id?: string
           business_id?: string
           name?: string
+          name_i18n?: Json | null
           sort_order?: number
           visible?: boolean
+          visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -247,12 +253,15 @@ export interface Database {
           business_id: string
           category_id: string
           name: string
+          name_i18n: Json | null
           description: string | null
+          description_i18n: Json | null
           price: number
           image_url: string | null
           available: boolean
           sort_order: number
           tags: string[] | null
+          visible_locales: string[] | null
           created_at: string
           updated_at: string
         }
@@ -261,12 +270,15 @@ export interface Database {
           business_id: string
           category_id: string
           name: string
+          name_i18n?: Json | null
           description?: string | null
+          description_i18n?: Json | null
           price?: number
           image_url?: string | null
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -275,12 +287,15 @@ export interface Database {
           business_id?: string
           category_id?: string
           name?: string
+          name_i18n?: Json | null
           description?: string | null
+          description_i18n?: Json | null
           price?: number
           image_url?: string | null
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -451,6 +466,8 @@ export interface Database {
           published_blocks: any | null
           published_theme: any | null
           has_unpublished_changes: boolean | null
+          enabled_locales: string[] | null
+          seo_i18n: Json | null
         }
         Insert: {
           id?: string
@@ -471,6 +488,8 @@ export interface Database {
           published_blocks?: any | null
           published_theme?: any | null
           has_unpublished_changes?: boolean | null
+          enabled_locales?: string[] | null
+          seo_i18n?: Json | null
         }
         Update: {
           id?: string
@@ -491,6 +510,8 @@ export interface Database {
           published_blocks?: any | null
           published_theme?: any | null
           has_unpublished_changes?: boolean | null
+          enabled_locales?: string[] | null
+          seo_i18n?: Json | null
         }
         Relationships: [
           

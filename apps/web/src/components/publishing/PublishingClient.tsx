@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Globe, Copy, ExternalLink, CheckCircle2, XCircle,
-  FileText, Image as ImageIcon, Upload, Trash2,
   BarChart2, Eye, TrendingUp, Palette, QrCode, ChevronRight,
   Download, Loader2, AlertCircle, Save
 } from 'lucide-react'
@@ -14,33 +13,14 @@ import { Button } from '@/components/ui/button'
 import { slugify, checkSlugAvailable } from '@/lib/business'
 import { updateBusinessAction } from '@/app/actions/business'
 import {
-  togglePublishAction, savePublishingSettingsAction, getPageViewsAction, verifyDnsAction,
+  togglePublishAction, getPageViewsAction, verifyDnsAction,
   connectCustomDomainAction, disconnectCustomDomainAction,
 } from '@/app/actions/page-builder'
 import type { DnsRecord } from '@/lib/vercel-domains'
 import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
-import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
-import { ImageUploader } from '@/components/shared/ImageUploader'
-import { validateImageDimensions } from '@/lib/image-utils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-
-// ─── Supported languages ──────────────────────────────────────────────────────
-
-const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'vi', label: 'Tiếng Việt' },
-  { code: 'th', label: 'ภาษาไทย' },
-  { code: 'zh', label: '中文' },
-  { code: 'ja', label: '日本語' },
-  { code: 'ko', label: '한국어' },
-  { code: 'fr', label: 'Français' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'es', label: 'Español' },
-  { code: 'id', label: 'Bahasa Indonesia' },
-  { code: 'ms', label: 'Bahasa Melayu' },
-]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,17 +96,6 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   )
 }
 
-// ─── Image upload helper ──────────────────────────────────────────────────────
-
-async function uploadPublishingImage(businessId: string, file: File, pathPrefix: string): Promise<string> {
-  const supabase = createClient()
-  const ext = file.name.split('.').pop()
-  const path = `${pathPrefix}/${businessId}.${ext}`
-  const { error } = await supabase.storage.from('page-images').upload(path, file, { upsert: true })
-  if (error) throw error
-  return supabase.storage.from('page-images').getPublicUrl(path).data.publicUrl
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function PublishingClient({
@@ -140,13 +109,6 @@ export function PublishingClient({
   const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
-  const [seoTitle, setSeoTitle] = useState(publishing?.seo_title ?? '')
-  const [seoDesc, setSeoDesc] = useState(publishing?.seo_description ?? '')
-  const [ogImage, setOgImage] = useState<string | null>(publishing?.og_image_url ?? null)
-  const [favicon, setFavicon] = useState<string | null>(publishing?.favicon_url ?? null)
-  const [webclip, setWebclip] = useState<string | null>(publishing?.apple_touch_icon_url ?? null)
-  const [language, setLanguage] = useState(publishing?.language ?? 'en')
-  const [gscTag, setGscTag] = useState(publishing?.gsc_verification ?? '')
   const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? initialDomainSetup?.domain ?? '')
   const [domainVerified, setDomainVerified] = useState(
     initialDomainSetup?.verified ?? (publishing as { custom_domain_verified?: boolean } | null)?.custom_domain_verified ?? false
@@ -159,10 +121,6 @@ export function PublishingClient({
   const [analytics, setAnalytics] = useState(initialAnalytics)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
   const { t } = useTranslation()
-
-  const ogRef = useRef<HTMLInputElement>(null)
-  const faviconRef = useRef<HTMLInputElement>(null)
-  const webclipRef = useRef<HTMLInputElement>(null)
 
   // ── Slug state ──
   const [slug, setSlug] = useState(initialSlug)
@@ -302,50 +260,6 @@ export function PublishingClient({
     navigator.clipboard.writeText(publicUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  // ── Image uploads ─────────────────────────────────────────────────────────
-
-  async function handleImageUpload(
-    file: File,
-    pathPrefix: string,
-    setter: (url: string) => void,
-    field: 'og_image_url' | 'favicon_url' | 'apple_touch_icon_url'
-  ) {
-    if (field === 'favicon_url') {
-      const isValid = await validateImageDimensions(file, { exactWidth: 32, exactHeight: 32 })
-      if (!isValid) return toast.error(t('publishing.faviconMustBeSquare') || 'Favicon must be exactly 32x32 pixels')
-    }
-    if (field === 'apple_touch_icon_url') {
-      const isValid = await validateImageDimensions(file, { exactWidth: 180, exactHeight: 180 })
-      if (!isValid) return toast.error(t('publishing.webclipMustBeSquare') || 'Webclip must be exactly 180x180 pixels')
-    }
-
-    try {
-      const url = await uploadPublishingImage(businessId, file, pathPrefix)
-      setter(url)
-      await savePublishingSettingsAction(businessId, { [field]: url })
-      toast.success('Image updated')
-    } catch { toast.error('Upload failed') }
-  }
-
-  // ── Save SEO + extras ─────────────────────────────────────────────────────
-
-  function handleSave() {
-    startTransition(async () => {
-      const res = await savePublishingSettingsAction(businessId, {
-        seo_title: seoTitle || null,
-        seo_description: seoDesc || null,
-        language,
-        gsc_verification: gscTag || null,
-      })
-      if (res.success) {
-        toast.success('Settings saved')
-        queryClient.invalidateQueries({ queryKey: ['pageData', businessId] })
-      } else {
-        toast.error(res.error)
-      }
-    })
   }
 
   return (
@@ -577,188 +491,11 @@ export function PublishingClient({
         </div>
       </Card>
 
-      {/* ── SEO & Social ── */}
-      <Card>
-        <div className="flex items-center gap-2 mb-5">
-          <FileText className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">{t('publishing.seo')}</h2>
-        </div>
-
-        <div className="space-y-5">
-          {/* SEO Title */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.pageTitle')}</label>
-            <input type="text" value={seoTitle} onChange={e => setSeoTitle(e.target.value)}
-              placeholder={t('publishing.pageTitlePlaceholder')}
-              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400" />
-            <p className="text-xs text-gray-400">{t('publishing.pageTitleHint')}</p>
-          </div>
-
-          {/* Meta description */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">{t('publishing.metaDesc')}</label>
-              <span className={cn('text-xs', seoDesc.length > 155 ? 'text-red-500' : 'text-gray-400')}>
-                {seoDesc.length} / 160
-              </span>
-            </div>
-            <textarea value={seoDesc} onChange={e => setSeoDesc(e.target.value)} rows={3}
-              placeholder={t('publishing.metaDescPlaceholder')}
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 resize-none" />
-          </div>
-
-          {/* OG Image */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.ogImage')}</label>
-            <p className="text-xs text-gray-400">{t('publishing.ogImageHint')}</p>
-            {ogImage ? (
-              <div className="relative rounded-xl overflow-hidden border border-gray-200 aspect-[1200/630] max-h-40 bg-gray-50 group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={ogImage} alt="OG" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
-                  <button onClick={() => ogRef.current?.click()}
-                    className="bg-white rounded-lg px-3 py-1.5 text-xs font-medium text-gray-800 flex items-center gap-1.5 shadow">
-                    <Upload className="size-3" /> Replace
-                  </button>
-                  <button onClick={async () => { setOgImage(null); await savePublishingSettingsAction(businessId, { og_image_url: null }); toast.success('Removed') }}
-                    className="bg-white rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 flex items-center gap-1.5 shadow">
-                    <Trash2 className="size-3" /> Remove
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
-                setOgImage(url)
-                await savePublishingSettingsAction(businessId, { og_image_url: url })
-              }}>
-                {(openGallery) => (
-                  <div className="flex gap-2">
-                    <button onClick={() => ogRef.current?.click()}
-                      className="flex-1 flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 text-gray-400 hover:text-gray-600 transition-colors">
-                      <ImageIcon className="size-6" /><span className="text-sm">{t('publishing.uploadImage')}</span>
-                    </button>
-                    <button onClick={openGallery} className="w-1/3 flex flex-col items-center gap-2 py-8 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors">
-                      <ImageIcon className="size-6" /><span className="text-[10px] uppercase font-bold">Gallery</span>
-                    </button>
-                  </div>
-                )}
-              </ImageUploader>
-            )}
-            <input ref={ogRef} type="file" accept="image/*" className="hidden"
-              onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'og-images', setOgImage, 'og_image_url')} />
-          </div>
-
-          <button onClick={handleSave} disabled={isPending}
-            className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
-            {isPending ? t('publishing.saving') : t('publishing.saveSeo')}
-          </button>
-        </div>
-      </Card>
-
-      {/* ── Branding & Identity ── */}
-      <Card>
-        <div className="flex items-center gap-2 mb-5">
-          <Palette className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">{t('publishing.branding')}</h2>
-        </div>
-
-        <div className="space-y-5">
-          {/* Language */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.pageLanguage')}</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)}
-              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 bg-white">
-              {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label} ({l.code})</option>)}
-            </select>
-            <p className="text-xs text-gray-400">{t('publishing.langHint')}</p>
-          </div>
-
-          {/* Favicon */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.favicon')}</label>
-            <p className="text-xs text-gray-400">{t('publishing.faviconHint')}</p>
-            <div className="flex items-center gap-3">
-              {favicon
-                ? /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={favicon} alt="favicon" className="size-8 rounded border border-gray-200 object-contain" />
-                : <div className="size-8 rounded border-2 border-dashed border-gray-200 flex items-center justify-center"><Globe className="size-4 text-gray-300" /></div>
-              }
-              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
-                const isValid = await validateImageDimensions(url, { exactWidth: 32, exactHeight: 32 })
-                if (!isValid) return toast.error(t('publishing.faviconMustBeSquare') || 'Favicon must be exactly 32x32 pixels')
-                setFavicon(url)
-                await savePublishingSettingsAction(businessId, { favicon_url: url })
-              }}>
-                {(openGallery) => (
-                  <div className="flex gap-1.5">
-                    <button onClick={() => faviconRef.current?.click()} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                      <Upload className="size-3" /> {favicon ? t('publishing.replace') : t('publishing.upload')}
-                    </button>
-                    <button onClick={openGallery} className="flex items-center text-xs text-gray-600 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors" title="Gallery">
-                      <ImageIcon className="size-3" />
-                    </button>
-                  </div>
-                )}
-              </ImageUploader>
-              <input ref={faviconRef} type="file" accept="image/*,.ico" className="hidden"
-                onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicons', setFavicon, 'favicon_url')} />
-              {favicon && (
-                <button onClick={async () => { setFavicon(null); await savePublishingSettingsAction(businessId, { favicon_url: null }) }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
-              )}
-            </div>
-          </div>
-
-          {/* Apple Touch Icon */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.webclip')}</label>
-            <p className="text-xs text-gray-400">{t('publishing.webclipHint')}</p>
-            <div className="flex items-center gap-3">
-              {webclip
-                ? /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={webclip} alt="webclip" className="size-10 rounded-xl border border-gray-200 object-cover" />
-                : <div className="size-10 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center"><ImageIcon className="size-4 text-gray-300" /></div>
-              }
-              <ImageUploader businessId={businessId} onImageSelect={async (url) => {
-                const isValid = await validateImageDimensions(url, { exactWidth: 180, exactHeight: 180 })
-                if (!isValid) return toast.error(t('publishing.webclipMustBeSquare') || 'Webclip must be exactly 180x180 pixels')
-                setWebclip(url)
-                await savePublishingSettingsAction(businessId, { apple_touch_icon_url: url })
-              }}>
-                {(openGallery) => (
-                  <div className="flex gap-1.5">
-                    <button onClick={() => webclipRef.current?.click()} className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors">
-                      <Upload className="size-3" /> {webclip ? t('publishing.replace') : t('publishing.upload')}
-                    </button>
-                    <button onClick={openGallery} className="flex items-center text-xs text-gray-600 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors" title="Gallery">
-                      <ImageIcon className="size-3" />
-                    </button>
-                  </div>
-                )}
-              </ImageUploader>
-              <input ref={webclipRef} type="file" accept="image/*" className="hidden"
-                onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'webclips', setWebclip, 'apple_touch_icon_url')} />
-              {webclip && (
-                <button onClick={async () => { setWebclip(null); await savePublishingSettingsAction(businessId, { apple_touch_icon_url: null }) }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
-              )}
-            </div>
-          </div>
-
-          {/* GSC verification */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">{t('publishing.gsc')}</label>
-            <input type="text" value={gscTag} onChange={e => setGscTag(e.target.value)}
-              placeholder="Paste your verification code (e.g. abc123xyz...)"
-              className="w-full h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
-            <p className="text-xs text-gray-400">{t('publishing.gscHint')}</p>
-          </div>
-
-          <button onClick={handleSave} disabled={isPending}
-            className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
-            {isPending ? t('publishing.saving') : t('publishing.saveSettings')}
-          </button>
-        </div>
+      {/* SEO, favicon, analytics tags → Page Builder → Global Settings (Chủ đề) */}
+      <Card className="bg-gray-50 border-dashed">
+        <p className="text-sm text-gray-600">
+          {t('publishing.seoMovedHint')}
+        </p>
       </Card>
 
       {/* ── Quick Actions ── */}
@@ -766,7 +503,7 @@ export function PublishingClient({
         <h2 className="font-semibold text-gray-900 mb-4">{t('publishing.quickActions')}</h2>
         <div className="space-y-2">
           {[
-            { href: '/dashboard/pages', icon: Palette, label: t('publishing.editPageBuilder'), desc: t('publishing.editPageBuilderDesc') },
+            { href: '/dashboard/pages', icon: Palette, label: t('publishing.editPageBuilder'), desc: t('publishing.editPageBuilderSeoDesc') },
             { href: '/dashboard/qr', icon: QrCode, label: t('sidebar.qrCodes'), desc: t('publishing.qrCodesDesc') },
           ].map(item => (
             <a key={item.href} href={item.href}

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Script from 'next/script'
 import type { Metadata } from 'next'
@@ -22,6 +23,8 @@ import {
 import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import { resolveLiveLocale } from '@/i18n/locale'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -138,8 +141,8 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
       db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     ])
-    menuCategories = cats ?? []
-    menuItems = itms ?? []
+    menuCategories = normalizeMenuCategories((cats ?? []) as Record<string, unknown>[])
+    menuItems = normalizeMenuItems((itms ?? []) as Record<string, unknown>[])
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)
@@ -180,14 +183,17 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
   }
   const schemaJson = serializeSchemas(schemas)
 
-  // Language for html[lang]
-  const pageLanguage = pubSettings?.language ?? 'en'
+  const cookieStore = await cookies()
+  const visitorLocale = resolveLiveLocale(
+    cookieStore.get('NEXT_LOCALE')?.value,
+    pubSettings?.language ?? null,
+  )
 
   return (
     <CartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
-      lang={pageLanguage}
+      lang={visitorLocale}
       className="min-h-screen bg-white w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
       style={{ fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined }}
     >
@@ -201,7 +207,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       {pubSettings?.gsc_verification && (
         <meta name="google-site-verification" content={pubSettings.gsc_verification} />
       )}
-      <link rel="alternate" hrefLang={pageLanguage} href={pageUrl} />
+      <link rel="alternate" hrefLang={visitorLocale} href={pageUrl} />
       {/* Twitter card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={pubSettings?.seo_title || business.name} />
@@ -269,6 +275,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         config={navbarConfig}
         businessName={business.name}
         logoUrl={business.logo_url ?? undefined}
+        locale={visitorLocale}
       />
 
       <main>
@@ -300,10 +307,10 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                 )}
                 <div data-live-block={block.id} style={innerStyle}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
+                    <HeroRender config={block.config as HeroConfig} businessName={business.name} locale={visitorLocale} />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} />
+                    <TextImageRender config={block.config as TextImageConfig} locale={visitorLocale} />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender
@@ -321,6 +328,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
+                      locale={visitorLocale}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -328,7 +336,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? qrConfig.custom_url
                       : `${baseUrl}/${slug}`
-                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
+                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} locale={visitorLocale} />
                   })()}
                 </div>
               </div>
@@ -340,9 +348,10 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       <FooterRender
         config={footerConfig}
         businessName={business.name}
+        locale={visitorLocale}
       />
 
-      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} />
+      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} locale={visitorLocale} />
     </div>
     </div>
     </CartProvider>

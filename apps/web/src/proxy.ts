@@ -4,19 +4,13 @@ import {
   appPath,
   getAppHostname,
   getMarketingHostname,
+  isAppHostname,
   isAppOnlyPath,
+  isMarketingHostname,
   isMarketingPath,
-  isPublicSlugPath,
   isSplitDomainDeployment,
   marketingPath,
 } from '@/lib/site-urls'
-
-function hostMatches(requestHost: string | undefined, configuredHost: string): boolean {
-  if (!requestHost) return false
-  const host = requestHost.toLowerCase()
-  const target = configuredHost.toLowerCase()
-  return host === target || host === `www.${target}`
-}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -88,13 +82,13 @@ export async function proxy(request: NextRequest) {
   const isLocalHost = host === 'localhost' || host === '127.0.0.1'
   const splitDomains = isSplitDomainDeployment() && !isLocalHost
 
-  const isMarketingHost = splitDomains && hostMatches(host, marketingHost)
-  const isAppHost = splitDomains && hostMatches(host, appHost)
+  const isMarketingHost = splitDomains && isMarketingHostname(host, marketingHost)
+  const isAppHost = splitDomains && isAppHostname(host, appHost)
 
   const isPlatformHost =
     isLocalHost ||
-    hostMatches(host, appHost) ||
-    hostMatches(host, marketingHost) ||
+    isAppHostname(host, appHost) ||
+    isMarketingHostname(host, marketingHost) ||
     (host?.endsWith('.vercel.app') ?? false)
 
   // Supabase may redirect with ?code= on Site URL root
@@ -113,15 +107,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Marketing vs app subdomain routing ──
+  // Marketing host wins when both could match (misconfigured APP_URL on apex/www).
   if (isMarketingHost) {
-    // App routes (login, dashboard, etc.) live on the app subdomain.
-    // Public store pages (/slug) are served on the marketing host too.
     if (isAppOnlyPath(pathname)) {
       return NextResponse.redirect(appPath(pathname + search))
     }
-  }
-
-  if (isAppHost) {
+  } else if (isAppHost) {
     if (pathname === '/') {
       const dest = user ? '/dashboard' : '/login'
       return NextResponse.redirect(new URL(dest, request.url))
@@ -159,6 +150,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    // Skip Next.js internals (incl. RSC flight requests under /_next) and static assets.
+    '/((?!_next|favicon.ico|icon.png|robots.txt|sitemap.xml|api/).*)',
   ],
 }

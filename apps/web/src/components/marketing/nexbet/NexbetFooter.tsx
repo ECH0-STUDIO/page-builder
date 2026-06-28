@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { appPath } from '@/lib/site-urls'
+import { appPath, marketingPath } from '@/lib/site-urls'
 
 export function NexbetFooter() {
   return (
@@ -47,7 +47,7 @@ export function NexbetFooter() {
               <div className="footer_info">
                 <div className="footer_copy">
                   <div>© {new Date().getFullYear()} Eatery</div>
-                  <a href="https://eateryvn.com" className="text-color-on-primary text-weight-medium">
+                  <a href={marketingPath('/')} className="text-color-on-primary text-weight-medium">
                     eateryvn.com
                   </a>
                 </div>

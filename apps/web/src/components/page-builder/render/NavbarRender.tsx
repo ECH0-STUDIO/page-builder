@@ -13,6 +13,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import type { NavbarConfig } from '../types'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 interface NavbarRenderProps {
   config: NavbarConfig
@@ -21,9 +22,11 @@ interface NavbarRenderProps {
   /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
   isMobilePreview?: boolean
+  locale?: string
 }
 
-export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview }: NavbarRenderProps) {
+export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview, locale }: NavbarRenderProps) {
+  const activeLocale = toSupportedLocale(locale)
   const [open, setOpen] = useState(false)
 
   const isTransparent = config.background_color === 'transparent'
@@ -131,7 +134,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
                 onMouseEnter={e => !inEditor && (e.currentTarget.style.opacity = '1')}
                 onMouseLeave={e => !inEditor && (e.currentTarget.style.opacity = '0.85')}
               >
-                {link.label}
+                {pickLocale(link.label, activeLocale)}
               </a>
             ))}
           </div>
@@ -205,7 +208,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
                   borderBottom: i < config.links.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
                 }}
               >
-                {link.label}
+                {pickLocale(link.label, activeLocale)}
               </a>
             ))}
           </div>

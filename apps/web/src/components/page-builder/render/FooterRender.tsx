@@ -1,22 +1,29 @@
 import { FooterConfig } from '../types'
+import { LiveStoreFooter } from './LiveStoreFooter'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 export function FooterRender({
   config,
   businessName,
   inEditor = false,
+  locale,
 }: {
   config: FooterConfig
   businessName: string
   inEditor?: boolean
+  /** Active visitor locale — only used on live store for language switcher */
+  locale?: string
 }) {
   const currentYear = new Date().getFullYear()
-  
+  const activeLocale = toSupportedLocale(locale)
+  const copyright = pickLocale(config.copyright_text, activeLocale)
+
   return (
-    <footer 
+    <footer
       className="w-full py-8 px-6 text-center text-sm"
-      style={{ 
-        backgroundColor: config.background_color, 
-        color: config.text_color 
+      style={{
+        backgroundColor: config.background_color,
+        color: config.text_color,
       }}
     >
       <div className="max-w-4xl mx-auto space-y-2">
@@ -24,12 +31,10 @@ export function FooterRender({
           <p className="font-semibold text-lg">{businessName}</p>
         )}
         <p className="opacity-80">
-          &copy; {currentYear} {config.copyright_text}
+          &copy; {currentYear} {copyright}
         </p>
         {!inEditor && (
-          <p className="text-xs opacity-50 mt-4 pt-4 border-t border-current/10">
-            Powered by Eatery
-          </p>
+          <LiveStoreFooter locale={locale} />
         )}
       </div>
     </footer>

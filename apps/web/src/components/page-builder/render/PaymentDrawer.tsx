@@ -2,48 +2,52 @@
 
 import { useState } from 'react'
 import { ChevronLeft, CreditCard } from 'lucide-react'
+import { useTranslationWithFallback } from '@/i18n/I18nProvider'
+import { toSupportedLocale } from '@/i18n/locale'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 
 interface PaymentDrawerProps {
   paymentSettings?: PaymentSettings
   contained?: boolean
+  locale?: string
 }
 
-export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps) {
+export function PaymentDrawer({ paymentSettings, contained, locale = 'vi' }: PaymentDrawerProps) {
   const [open, setOpen] = useState(false)
-  const position = contained ? 'absolute' : 'fixed'
+  const { t } = useTranslationWithFallback(toSupportedLocale(locale))
 
   if (!paymentSettings || !paymentSettings.vietqr) return null
 
   const vietqr = paymentSettings.vietqr
   const vietqrImageUrl = buildVietQRUrl(vietqr)
   const bankName = VIET_BANKS.find(b => b.code === vietqr.bank_code)?.name ?? vietqr.bank_code
+  const position = contained ? 'absolute' : 'fixed'
 
-  return (
+  const ui = (
     <>
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100`}
-          aria-label="Thanh toán"
+          className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100 ${contained ? 'pointer-events-auto' : ''}`}
+          aria-label={t('payment.title')}
         >
           <CreditCard className="size-5 text-gray-700" />
           <div className="text-sm leading-tight text-left">
-            <p className="font-semibold">Thanh toán</p>
+            <p className="font-semibold">{t('payment.title')}</p>
           </div>
         </button>
       )}
 
       {open && (
         <div
-          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm`}
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm ${contained ? 'pointer-events-auto' : ''}`}
           onClick={() => setOpen(false)}
         />
       )}
 
       <div
-        className={`${position} top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${contained ? 'pointer-events-auto' : ''} ${
           open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
@@ -55,16 +59,16 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
             <ChevronLeft className="size-4" />
           </button>
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-gray-900 text-base">Phương thức thanh toán</h2>
+            <h2 className="font-bold text-gray-900 text-base">{t('payment.methods')}</h2>
           </div>
           <div className="size-8" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8">
           <div>
-            <h3 className="font-bold text-gray-900 mb-2">Thanh toán an toàn</h3>
+            <h3 className="font-bold text-gray-900 mb-2">{t('payment.securePayment')}</h3>
             <p className="text-sm text-gray-500">
-              Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản. Vui lòng xuất trình xác nhận thanh toán cho nhân viên.
+              {t('payment.scanQrTransfer')}
             </p>
           </div>
 
@@ -74,14 +78,14 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
 
             <div className="relative z-10 w-full flex flex-col items-center gap-6">
               <div className="flex items-center gap-2">
-                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">Chuyển khoản VietQR</div>
+                <div className="font-bold text-gray-900 uppercase tracking-widest text-xs">{t('payment.vietqrTransfer')}</div>
               </div>
-              
+
               <div className="bg-white p-3 rounded-2xl shadow-md border border-gray-100 transition-transform hover:scale-105 duration-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={vietqrImageUrl}
-                  alt="Mã thanh toán VietQR"
+                  alt={t('payment.vietqrTransfer')}
                   className="w-[220px] h-[220px] object-contain"
                 />
               </div>
@@ -90,7 +94,7 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
                 <p className="font-bold text-gray-900 text-lg leading-tight">{vietqr.account_name}</p>
                 <p className="text-sm text-gray-600 font-medium">{bankName}</p>
                 <div className="inline-flex items-center gap-2 mt-1 px-3 py-1 bg-gray-100/80 rounded-lg">
-                  <span className="text-xs text-gray-500 font-semibold uppercase">Số TK</span>
+                  <span className="text-xs text-gray-500 font-semibold uppercase">{t('cart.accountNumber')}</span>
                   <p className="text-sm text-gray-900 font-bold tracking-wide">{vietqr.account_number}</p>
                 </div>
               </div>
@@ -100,4 +104,14 @@ export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps
       </div>
     </>
   )
+
+  if (contained) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[90]">
+        {ui}
+      </div>
+    )
+  }
+
+  return ui
 }

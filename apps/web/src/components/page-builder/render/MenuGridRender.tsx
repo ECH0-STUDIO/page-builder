@@ -14,10 +14,12 @@
  * as a sibling so it sits outside the scrollable content.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { localizeMenuCategories, localizeMenuItems } from '@/i18n/menu-content'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -53,6 +55,7 @@ function ItemModal({
   onClose: () => void
 }) {
   const { addItem } = useCart()
+  const { t } = useTranslation()
 
   const itemGroups = groups
     .filter(g => g.item_id === item.id)
@@ -135,7 +138,7 @@ function ItemModal({
                 <h3 className="text-xl font-bold leading-tight text-gray-900">{item.name}</h3>
                 {!item.available && (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium mt-1">
-                    Sold Out
+                    {t('cart.soldOut')}
                   </span>
                 )}
               </div>
@@ -164,15 +167,15 @@ function ItemModal({
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-gray-900">{group.name}</p>
                     {group.required
-                      ? <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-900 text-white font-semibold uppercase tracking-wide">Required</span>
-                      : <span className="text-[10px] text-gray-400">Optional</span>
+                      ? <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-900 text-white font-semibold uppercase tracking-wide">{t('cart.required')}</span>
+                      : <span className="text-[10px] text-gray-400">{t('cart.optional')}</span>
                     }
                   </div>
 
                   {hasError && (
                     <div className="flex items-center gap-1.5 text-red-500 text-xs">
                       <AlertCircle className="size-3 shrink-0" />
-                      <span>Please make a selection</span>
+                      <span>{t('cart.pleaseSelect')}</span>
                     </div>
                   )}
 
@@ -230,7 +233,7 @@ function ItemModal({
         <div className="px-5 pb-8 pt-4 border-t border-gray-100 bg-white space-y-3 shrink-0">
           {config.show_price && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">{hasGroups ? 'Current total' : 'Price'}</span>
+              <span className="text-sm text-gray-500">{hasGroups ? t('cart.currentTotal') : t('cart.price')}</span>
               <span className="text-lg font-bold text-gray-900 tabular-nums transition-all">
                 {formatCurrency(runningTotal)}
               </span>
@@ -248,14 +251,14 @@ function ItemModal({
               }`}
             >
               {added ? (
-                <><Check className="size-5" strokeWidth={3} />Added to order!</>
+                <><Check className="size-5" strokeWidth={3} />{t('cart.addedToOrder')}</>
               ) : (
-                <><Plus className="size-5" />Add to order</>
+                <><Plus className="size-5" />{t('cart.addToOrder')}</>
               )}
             </button>
           ) : (
             <div className="w-full py-4 rounded-2xl bg-gray-100 text-gray-400 font-semibold text-base text-center">
-              Currently unavailable
+              {t('cart.currentlyUnavailable')}
             </div>
           )}
         </div>
@@ -276,6 +279,7 @@ function ItemCardGrid({
   hasVariants: boolean
   optionCount: number
 }) {
+  const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
   const bgColor = config.background_color || '#ffffff'
 
@@ -304,7 +308,7 @@ function ItemCardGrid({
           }
           {!item.available && config.show_unavailable_badge && (
             <span className="absolute bottom-2 right-2 text-[11px] px-2 py-0.5 rounded-full bg-black/60 text-white font-medium backdrop-blur-sm">
-              Sold Out
+              {t('cart.soldOut')}
             </span>
           )}
           {(item.tags || []).includes('Bestseller') && (
@@ -322,7 +326,7 @@ function ItemCardGrid({
         <div className="flex flex-col mt-2">
           {hasVariants && optionCount > 0 && (
             <span className="text-[10px] font-semibold tracking-wider text-amber-600 mb-1.5 uppercase">
-              {optionCount} {optionCount === 1 ? 'Option' : 'Options'} available
+              {optionCount} {optionCount === 1 ? t('cart.option') : t('cart.options')} {t('cart.availableLabel')}
             </span>
           )}
           <div className="flex items-center justify-between">
@@ -351,6 +355,7 @@ function ItemRowList({
   hasVariants: boolean
   optionCount: number
 }) {
+  const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
   const bgColor = config.background_color || '#ffffff'
 
@@ -382,7 +387,7 @@ function ItemRowList({
         <div className="flex items-center gap-2">
           <p className="font-semibold text-sm" style={{ color: textColor }}>{item.name}</p>
           {!item.available && config.show_unavailable_badge && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">Sold Out</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
           )}
         </div>
         {config.show_description && item.description && (
@@ -390,7 +395,7 @@ function ItemRowList({
         )}
         {hasVariants && optionCount > 0 && (
           <p className="text-[10px] mt-1 font-semibold text-amber-600 uppercase tracking-wider">
-            {optionCount} {optionCount === 1 ? 'Option' : 'Options'} available
+            {optionCount} {optionCount === 1 ? t('cart.option') : t('cart.options')} {t('cart.availableLabel')}
           </p>
         )}
       </div>
@@ -413,14 +418,24 @@ function MenuGridInner({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  locale,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
+  const activeLocale = toSupportedLocale(locale)
+  const localizedData = useMemo(() => ({
+    ...data,
+    categories: localizeMenuCategories(data.categories, activeLocale),
+    items: localizeMenuItems(data.items, activeLocale),
+  }), [data, activeLocale])
+
+  const sectionHeading = pickLocale(config.heading, activeLocale)
+  const sectionDescription = pickLocale(config.description, activeLocale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
-  const { categories, items, variantGroups, variantOptions } = data
+  const { categories, items, variantGroups, variantOptions } = localizedData
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -477,26 +492,26 @@ function MenuGridInner({
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
-          {(config.heading || config.description) && (
+          {(sectionHeading || sectionDescription) && (
             <div style={{ marginBottom: '32px' }}>
-              {config.heading && (
+              {sectionHeading && (
                 <h2 style={{
                   color: textColor,
                   ...typography.h2,
-                  marginBottom: config.description ? '12px' : 0,
+                  marginBottom: sectionDescription ? '12px' : 0,
                   wordBreak: 'break-word'
                 }}>
-                  {config.heading}
+                  {sectionHeading}
                 </h2>
               )}
-              {config.description && (
+              {sectionDescription && (
                 <p style={{
                   color: textColor,
                   ...typography.bodyMd,
                   maxWidth: '700px',
                   whiteSpace: 'pre-wrap'
                 }}>
-                  {config.description}
+                  {sectionDescription}
                 </p>
               )}
             </div>
@@ -625,13 +640,15 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  locale,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
   return (
     <MenuGridInner
       config={config}
       data={data}
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
+      locale={locale}
     />
   )
 }
