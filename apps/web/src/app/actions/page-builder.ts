@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig, SeoI18nStore } from '@/components/page-builder/types'
+import { isLocaleColumnSchemaError, sanitizeSeoI18nForDb } from '@/i18n/locale-content'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -54,29 +55,38 @@ export async function getPageDataAction(businessId: string): Promise<{
   publishing: PublishingSettings | null
   theme: ThemeSettings | null
 }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
+  try {
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase
 
-  const [blocksRes, pubRes, themeRes] = await Promise.all([
-    db.from('page_blocks')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('sort_order', { ascending: true }),
-    db.from('publishing_settings')
-      .select('*')
-      .eq('business_id', businessId)
-      .single(),
-    db.from('theme_settings')
-      .select('*')
-      .eq('business_id', businessId)
-      .single(),
-  ])
+    const [blocksRes, pubRes, themeRes] = await Promise.all([
+      db.from('page_blocks')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('sort_order', { ascending: true }),
+      db.from('publishing_settings')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+      db.from('theme_settings')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+    ])
 
-  return {
-    blocks: (blocksRes.data as any) ?? [],
-    publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
-    theme: themeRes.data ?? null,
+    if (blocksRes.error) console.error('[getPageDataAction] blocks:', blocksRes.error.message)
+    if (pubRes.error) console.error('[getPageDataAction] publishing:', pubRes.error.message)
+    if (themeRes.error) console.error('[getPageDataAction] theme:', themeRes.error.message)
+
+    return {
+      blocks: (blocksRes.data as PageBlock[]) ?? [],
+      publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
+      theme: (themeRes.data as ThemeSettings | null) ?? null,
+    }
+  } catch (err) {
+    console.error('[getPageDataAction] unexpected:', err)
+    return { blocks: [], publishing: null, theme: null }
   }
 }
 
@@ -312,29 +322,55 @@ export async function savePublishingSettingsAction(
     tiktok_pixel_id?: string | null
   }
 ): Promise<ActionResult<PublishingSettings>> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Not authenticated' }
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
 
-  if ('custom_domain' in fields) {
-    fields.custom_domain_verified = false
-    fields.custom_domain_billed_until = null
+    if ('custom_domain' in fields) {
+      fields.custom_domain_verified = false
+      fields.custom_domain_billed_until = null
+    }
+
+    const payload: Record<string, unknown> = { business_id: businessId, ...fields }
+    if ('seo_i18n' in fields) {
+      payload.seo_i18n = sanitizeSeoI18nForDb(fields.seo_i18n as Record<string, unknown> | null)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let { data, error } = await (supabase as any)
+      .from('publishing_settings')
+      .upsert(payload, { onConflict: 'business_id' })
+      .select()
+      .single()
+
+    // DB without migration 032 — retry without locale columns so the editor still works.
+    if (error && isLocaleColumnSchemaError(error.message)) {
+      const { enabled_locales: _e, seo_i18n: _s, ...legacy } = payload
+      ;({ data, error } = await (supabase as any)
+        .from('publishing_settings')
+        .upsert({ business_id: businessId, ...legacy }, { onConflict: 'business_id' })
+        .select()
+        .single())
+      if (!error) {
+        return {
+          success: false,
+          error: 'Locale columns are not in your database yet. Run migration 032_store_locales.sql on Supabase, then try again.',
+        }
+      }
+    }
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/publishing')
+    await revalidateLiveStore(supabase, businessId)
+    return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+  } catch (err) {
+    console.error('[savePublishingSettingsAction]', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to save publishing settings',
+    }
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from('publishing_settings')
-    .upsert(
-      { business_id: businessId, ...fields },
-      { onConflict: 'business_id' }
-    )
-    .select()
-    .single()
-
-  if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/publishing')
-  await revalidateLiveStore(supabase, businessId)
-  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
 
 // ─── Page view analytics ──────────────────────────────────────────────────────

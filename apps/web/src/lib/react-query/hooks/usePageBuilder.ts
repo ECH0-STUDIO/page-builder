@@ -16,5 +16,8 @@ export function usePageData(businessId: string, initialData?: Awaited<ReturnType
       return getPageDataAction(businessId)
     },
     initialData,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   })
 }

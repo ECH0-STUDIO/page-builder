@@ -623,8 +623,12 @@ export function EditorShell({
       if (savePubTimer.current) clearTimeout(savePubTimer.current)
       savePubTimer.current = setTimeout(() => {
         savePublishingSettingsAction(business.id, updated)
-          .then(() => {
-            setHasUnpublishedChanges(true)
+          .then(res => {
+            if (res.success) {
+              setHasUnpublishedChanges(true)
+            } else {
+              toast.error(res.error)
+            }
           })
           .catch(err => toast.error('Failed to save settings: ' + String(err)))
       }, 1000)

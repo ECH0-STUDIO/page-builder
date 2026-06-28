@@ -150,6 +150,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    // Skip Next.js internals (incl. RSC flight requests under /_next) and static assets.
+    '/((?!_next|favicon.ico|icon.png|robots.txt|sitemap.xml|api/).*)',
   ],
 }

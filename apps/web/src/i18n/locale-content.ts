@@ -125,3 +125,26 @@ export const OPTIONAL_LOCALES: { code: string; label: string }[] = [
 
 export const DEFAULT_ENABLED_LOCALES: SupportedLocale[] = ['vi', 'en']
 export const LOCALE_CREDIT_COST_PER_MONTH = 20
+
+/** Ensure seo_i18n is a plain JSON object safe for server actions + Postgres jsonb. */
+export function sanitizeSeoI18nForDb(
+  store: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  if (!store || typeof store !== 'object') return null
+  try {
+    return JSON.parse(JSON.stringify(store)) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+export function isLocaleColumnSchemaError(message: string): boolean {
+  const m = message.toLowerCase()
+  return (
+    m.includes('enabled_locales')
+    || m.includes('seo_i18n')
+    || m.includes('name_i18n')
+    || m.includes('visible_locales')
+    || m.includes('schema cache')
+  )
+}
