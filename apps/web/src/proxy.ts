@@ -114,7 +114,9 @@ export async function proxy(request: NextRequest) {
 
   // ── Marketing vs app subdomain routing ──
   if (isMarketingHost) {
-    if (isAppOnlyPath(pathname) || isPublicSlugPath(pathname)) {
+    // App routes (login, dashboard, etc.) live on the app subdomain.
+    // Public store pages (/slug) are served on the marketing host too.
+    if (isAppOnlyPath(pathname)) {
       return NextResponse.redirect(appPath(pathname + search))
     }
   }

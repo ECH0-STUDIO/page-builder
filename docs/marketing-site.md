@@ -4,8 +4,8 @@ Production layout:
 
 | Host | Purpose |
 |------|---------|
-| `eateryvn.com` (or `eatery.com`) | Marketing: `/`, `/pricing`, `/features`, `/contact`, `/blog` |
-| `app.eateryvn.com` | Application: login, dashboard, page builder, public menu pages |
+| `eateryvn.com` (or `eatery.com`) | Marketing: `/`, `/pricing`, `/features`, `/contact`, `/blog`, **and public store pages** `/{slug}` |
+| `app.eateryvn.com` | Application: login, dashboard, page builder, public menu pages (`/{slug}`) |
 
 Both hosts point to the **same Vercel project**. Routing is handled in `apps/web/src/proxy.ts`.
 

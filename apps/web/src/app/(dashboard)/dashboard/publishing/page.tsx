@@ -5,6 +5,7 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
+import { getPublicStoreUrl } from '@/lib/site-urls'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Publishing' }
@@ -28,8 +29,7 @@ export default async function PublishingPage() {
     getCustomDomainSetupAction(business.id),
   ])
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
+  const baseUrl = slug ? getPublicStoreUrl(slug) : getPublicStoreUrl(business.slug ?? business.id)
 
   return (
     <div className="p-4 md:p-8 max-w-5xl">

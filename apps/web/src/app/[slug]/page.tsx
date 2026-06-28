@@ -19,6 +19,7 @@ import { ViewTracker } from '@/components/ViewTracker'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
+import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 
@@ -160,10 +161,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     }
   }
 
-  // Resolved base URL for QR Code blocks (avoids window usage on server)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'localhost:3000'
-  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
-  const pageUrl = `${baseUrl}/${slug}`
+  // Resolved base URL for QR Code blocks and schema.org
+  const baseUrl = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
+  const pageUrl = getPublicStoreUrl(slug)
 
   // ─── Schema.org JSON-LD ─────────────────────────────────────────────────────
   const pubInfo = {

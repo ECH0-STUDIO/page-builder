@@ -42,6 +42,15 @@ export function appPath(path: string = ''): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+/** Canonical public store page URL — served on marketing host when split. */
+export function getPublicStoreUrl(slug: string): string {
+  const clean = slug.replace(/^\/+/, '')
+  if (isSplitDomainDeployment()) {
+    return `${getMarketingBaseUrl()}/${clean}`
+  }
+  return `${getAppBaseUrl()}/${clean}`
+}
+
 export function getAuthCallbackUrl(nextPath: string = '/dashboard'): string {
   return `${getAppBaseUrl()}/api/auth/callback?next=${encodeURIComponent(nextPath)}`
 }
