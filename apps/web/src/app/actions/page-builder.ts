@@ -2,8 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig, SeoI18nStore } from '@/components/page-builder/types'
-import { isLocaleColumnSchemaError, sanitizeSeoI18nForDb } from '@/i18n/locale-content'
+import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -19,11 +18,7 @@ export type { PublishingSettings } from '@/components/page-builder/types'
 
 function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
   if (!row) return null
-  return {
-    ...(row as unknown as PublishingSettings),
-    enabled_locales: Array.isArray(row.enabled_locales) ? row.enabled_locales as string[] : null,
-    seo_i18n: (row.seo_i18n ?? null) as SeoI18nStore | null,
-  }
+  return row as unknown as PublishingSettings
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -315,8 +310,6 @@ export async function savePublishingSettingsAction(
     apple_touch_icon_url?: string | null
     language?: string
     gsc_verification?: string | null
-    enabled_locales?: string[] | null
-    seo_i18n?: SeoI18nStore | null
     google_analytics_id?: string | null
     facebook_pixel_id?: string | null
     tiktok_pixel_id?: string | null
@@ -333,32 +326,13 @@ export async function savePublishingSettingsAction(
     }
 
     const payload: Record<string, unknown> = { business_id: businessId, ...fields }
-    if ('seo_i18n' in fields) {
-      payload.seo_i18n = sanitizeSeoI18nForDb(fields.seo_i18n as Record<string, unknown> | null)
-    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let { data, error } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('publishing_settings')
       .upsert(payload, { onConflict: 'business_id' })
       .select()
       .single()
-
-    // DB without migration 032 — retry without locale columns so the editor still works.
-    if (error && isLocaleColumnSchemaError(error.message)) {
-      const { enabled_locales: _e, seo_i18n: _s, ...legacy } = payload
-      ;({ data, error } = await (supabase as any)
-        .from('publishing_settings')
-        .upsert({ business_id: businessId, ...legacy }, { onConflict: 'business_id' })
-        .select()
-        .single())
-      if (!error) {
-        return {
-          success: false,
-          error: 'Locale columns are not in your database yet. Run migration 032_store_locales.sql on Supabase, then try again.',
-        }
-      }
-    }
 
     if (error) return { success: false, error: error.message }
     revalidatePath('/dashboard/publishing')

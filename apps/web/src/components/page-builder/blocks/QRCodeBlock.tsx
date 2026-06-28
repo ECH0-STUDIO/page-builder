@@ -13,8 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale, type SupportedLocale } from '@/i18n/locale'
-import { LocalizedInput } from '@/components/i18n/LocalizedField'
+import { plainText } from '@/i18n/locale'
 import type { QRCodeConfig } from '../types'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
@@ -32,7 +31,7 @@ export function QRCodePreview({ config }: { config: QRCodeConfig }) {
           <div key={i} className={cn('rounded-[1px]', [0, 2, 6, 8].includes(i) ? 'bg-foreground/70' : i === 4 ? 'bg-foreground/40' : 'bg-foreground/20')} />
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground truncate max-w-full">{pickLocale(config.label, 'vi') || t('qrCodeBlock.qrCode')}</p>
+      <p className="text-[10px] text-muted-foreground truncate max-w-full">{plainText(config.label) || t('qrCodeBlock.qrCode')}</p>
     </div>
   )
 }
@@ -158,10 +157,9 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
       {/* Label */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.label')}</Label>
-        <LocalizedInput
-          
-          value={config.label}
-          onChange={v => set('label', v)}
+        <Input
+          value={plainText(config.label)}
+          onChange={e => set('label', e.target.value)}
           placeholder={t('qrCodeBlock.scanToView')}
           className="h-8 text-sm"
         />

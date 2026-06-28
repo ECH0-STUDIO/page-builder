@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { primaryLocalizedValue, type MenuI18nMap } from '@/i18n/locale'
 import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -11,10 +10,8 @@ export type MenuCategory = {
   id: string
   business_id: string
   name: string
-  name_i18n?: MenuI18nMap | null
   sort_order: number
   visible: boolean
-  visible_locales?: string[] | null
   created_at: string
   updated_at: string
 }
@@ -24,15 +21,12 @@ export type MenuItem = {
   business_id: string
   category_id: string
   name: string
-  name_i18n?: MenuI18nMap | null
   description: string | null
-  description_i18n?: MenuI18nMap | null
   price: number
   image_url: string | null
   available: boolean
   sort_order: number
   tags: string[] | null
-  visible_locales?: string[] | null
   created_at: string
   updated_at: string
 }
@@ -107,7 +101,6 @@ async function userOwnsVariantOptionBusiness(supabase: Awaited<ReturnType<typeof
 export async function addCategoryAction(
   businessId: string,
   name: string,
-  name_i18n?: MenuI18nMap | null,
 ): Promise<ActionResult<MenuCategory>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -126,11 +119,10 @@ export async function addCategoryAction(
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
   const trimmed = name.trim()
-  const i18n = name_i18n ?? { vi: trimmed, en: trimmed }
 
   const { data, error } = await db
     .from('menu_categories')
-    .insert({ business_id: businessId, name: primaryLocalizedValue(i18n) || trimmed, name_i18n: i18n, sort_order: nextOrder })
+    .insert({ business_id: businessId, name: trimmed, sort_order: nextOrder })
     .select()
     .single()
 
@@ -143,9 +135,7 @@ export async function updateCategoryAction(
   id: string,
   update: {
     name?: string
-    name_i18n?: MenuI18nMap | null
     visible?: boolean
-    visible_locales?: string[] | null
     sort_order?: number
   }
 ): Promise<ActionResult> {
@@ -158,9 +148,6 @@ export async function updateCategoryAction(
   }
 
   const payload = { ...update }
-  if (update.name_i18n) {
-    payload.name = primaryLocalizedValue(update.name_i18n) || update.name
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
@@ -201,8 +188,6 @@ export async function addItemAction(
   item: {
     name: string
     description?: string
-    name_i18n?: MenuI18nMap | null
-    description_i18n?: MenuI18nMap | null
     price: number
     image_url?: string
     tags?: string[]
@@ -224,22 +209,13 @@ export async function addItemAction(
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
-  const nameI18n = item.name_i18n ?? { vi: item.name.trim(), en: item.name.trim() }
-  const descI18n = item.description_i18n ?? (
-    item.description?.trim()
-      ? { vi: item.description.trim(), en: item.description.trim() }
-      : null
-  )
-
   const { data, error } = await db
     .from('menu_items')
     .insert({
       business_id: businessId,
       category_id: categoryId,
-      name: primaryLocalizedValue(nameI18n) || item.name.trim(),
-      name_i18n: nameI18n,
-      description: descI18n ? (primaryLocalizedValue(descI18n) || item.description?.trim() || null) : (item.description?.trim() || null),
-      description_i18n: descI18n,
+      name: item.name.trim(),
+      description: item.description?.trim() || null,
       price: item.price,
       image_url: item.image_url || null,
       tags: item.tags ?? [],
@@ -258,16 +234,13 @@ export async function updateItemAction(
   id: string,
   update: Partial<{
     name: string
-    name_i18n: MenuI18nMap | null
     description: string | null
-    description_i18n: MenuI18nMap | null
     price: number
     image_url: string | null
     available: boolean
     tags: string[]
     sort_order: number
     category_id: string
-    visible_locales: string[] | null
   }>
 ): Promise<ActionResult> {
   const supabase = await createClient()
@@ -279,14 +252,6 @@ export async function updateItemAction(
   }
 
   const payload = { ...update }
-  if (update.name_i18n) {
-    payload.name = primaryLocalizedValue(update.name_i18n) || update.name
-  }
-  if (update.description_i18n !== undefined) {
-    payload.description = update.description_i18n
-      ? (primaryLocalizedValue(update.description_i18n) || update.description || null)
-      : (update.description ?? null)
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase

@@ -275,7 +275,6 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         config={navbarConfig}
         businessName={business.name}
         logoUrl={business.logo_url ?? undefined}
-        locale={visitorLocale}
       />
 
       <main>
@@ -307,10 +306,10 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                 )}
                 <div data-live-block={block.id} style={innerStyle}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} locale={visitorLocale} />
+                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} locale={visitorLocale} />
+                    <TextImageRender config={block.config as TextImageConfig} />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender
@@ -328,7 +327,6 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
-                      locale={visitorLocale}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -336,7 +334,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? qrConfig.custom_url
                       : `${baseUrl}/${slug}`
-                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} locale={visitorLocale} />
+                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
                 </div>
               </div>
@@ -348,7 +346,6 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       <FooterRender
         config={footerConfig}
         businessName={business.name}
-        locale={visitorLocale}
       />
 
       <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} locale={visitorLocale} />

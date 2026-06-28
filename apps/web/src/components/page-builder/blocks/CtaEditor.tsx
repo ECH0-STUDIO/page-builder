@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
 import { ctaHref } from '../cta-utils'
-import { LocalizedInput } from '@/components/i18n/LocalizedField'
+import { plainText } from '@/i18n/locale'
 // Re-export so existing client-side imports from CtaEditor still resolve
 export { ctaHref } from '../cta-utils'
 
@@ -88,10 +88,10 @@ export function CtaEditor({
       </div>
 
       {/* Label */}
-      <LocalizedInput
+      <Input
         placeholder={t('ctaEditor.buttonLabel')}
-        value={value.label}
-        onChange={label => onChange({ ...value, label })}
+        value={plainText(value.label)}
+        onChange={e => onChange({ ...value, label: e.target.value })}
         className="h-8 text-sm"
       />
 

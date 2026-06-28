@@ -18,8 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale, type SupportedLocale } from '@/i18n/locale'
-import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
+import { plainText } from '@/i18n/locale'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
@@ -33,7 +32,7 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
       <div className="flex items-center gap-2">
         <div className="size-8 rounded bg-muted flex items-center justify-center text-base">🍽️</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold">{pickLocale(config.heading, 'vi') || t('menuGridBlock.menu')}</p>
+          <p className="text-xs font-semibold">{plainText(config.heading) || t('menuGridBlock.menu')}</p>
           <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? t('menuGridBlock.tabsOn') : t('menuGridBlock.noTabs')}</p>
         </div>
       </div>
@@ -94,10 +93,9 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       {/* Heading */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
-        <LocalizedInput
-          
-          value={config.heading}
-          onChange={v => set('heading', v)}
+        <Input
+          value={plainText(config.heading)}
+          onChange={e => set('heading', e.target.value)}
           placeholder={t('menuGridBlock.headingPlaceholder')}
           className="h-8 text-sm"
         />
@@ -106,10 +104,9 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
-        <LocalizedTextarea
-          
-          value={config.description ?? ''}
-          onChange={v => set('description', v)}
+        <Textarea
+          value={plainText(config.description ?? '')}
+          onChange={e => set('description', e.target.value)}
           placeholder={t('menuGridBlock.descPlaceholder')}
           className="text-sm min-h-[60px]"
         />

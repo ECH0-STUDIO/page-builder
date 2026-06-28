@@ -1,22 +1,18 @@
 import { FooterConfig } from '../types'
 import { LiveStoreFooter } from './LiveStoreFooter'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { plainText } from '@/i18n/locale'
 
 export function FooterRender({
   config,
   businessName,
   inEditor = false,
-  locale,
 }: {
   config: FooterConfig
   businessName: string
   inEditor?: boolean
-  /** Active visitor locale — only used on live store for language switcher */
-  locale?: string
 }) {
   const currentYear = new Date().getFullYear()
-  const activeLocale = toSupportedLocale(locale)
-  const copyright = pickLocale(config.copyright_text, activeLocale)
+  const copyright = plainText(config.copyright_text)
 
   return (
     <footer
@@ -34,7 +30,7 @@ export function FooterRender({
           &copy; {currentYear} {copyright}
         </p>
         {!inEditor && (
-          <LiveStoreFooter locale={locale} />
+          <LiveStoreFooter />
         )}
       </div>
     </footer>

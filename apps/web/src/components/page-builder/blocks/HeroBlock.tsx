@@ -17,8 +17,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { CtaEditor } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale, type SupportedLocale } from '@/i18n/locale'
-import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
+import { plainText } from '@/i18n/locale'
 import type {
   HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock,
 } from '../types'
@@ -27,8 +26,8 @@ import type {
 
 export function HeroPreview({ config }: { config: HeroConfig }) {
   const { t } = useTranslation()
-  const heading = pickLocale(config.heading, 'vi')
-  const tagline = pickLocale(config.tagline, 'vi')
+  const heading = plainText(config.heading)
+  const tagline = plainText(config.tagline)
   const layoutLabels: Record<HeroLayout, string> = {
     centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay at 40%
     split: t('heroBlock.split'),
@@ -344,15 +343,15 @@ export function HeroSettings({
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.content')}</Label>
         <div className="space-y-1.5">
           <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
-          <LocalizedInput id="hero-heading" value={config.heading} onChange={v => set('heading', v)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+          <Input id="hero-heading" value={plainText(config.heading)} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-tagline" className="text-xs">{t('heroBlock.tagline')}</Label>
-          <LocalizedInput id="hero-tagline" value={config.tagline} onChange={v => set('tagline', v)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
+          <Input id="hero-tagline" value={plainText(config.tagline)} onChange={e => set('tagline', e.target.value)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
-          <LocalizedTextarea id="hero-body" value={config.body} onChange={v => set('body', v)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+          <Textarea id="hero-body" value={plainText(config.body)} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
         </div>
       </div>
 

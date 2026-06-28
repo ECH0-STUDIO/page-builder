@@ -18,8 +18,7 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
-import { localizeMenuCategories, localizeMenuItems } from '@/i18n/menu-content'
+import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -418,24 +417,16 @@ function MenuGridInner({
   data,
   previewLayout,
   isMobilePreview,
-  locale,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
-  const activeLocale = toSupportedLocale(locale)
-  const localizedData = useMemo(() => ({
-    ...data,
-    categories: localizeMenuCategories(data.categories, activeLocale),
-    items: localizeMenuItems(data.items, activeLocale),
-  }), [data, activeLocale])
-
-  const sectionHeading = pickLocale(config.heading, activeLocale)
-  const sectionDescription = pickLocale(config.description, activeLocale)
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  const sectionHeading = plainText(config.heading)
+  const sectionDescription = plainText(config.description)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
-  const { categories, items, variantGroups, variantOptions } = localizedData
+  const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -640,15 +631,13 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-  locale,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: string }) {
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
   return (
     <MenuGridInner
       config={config}
       data={data}
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
-      locale={locale}
     />
   )
 }

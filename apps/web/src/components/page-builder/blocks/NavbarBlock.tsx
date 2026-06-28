@@ -13,8 +13,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale, type SupportedLocale } from '@/i18n/locale'
-import { LocalizedInput } from '@/components/i18n/LocalizedField'
+import { plainText } from '@/i18n/locale'
 import { saveNavbarAction } from '@/app/actions/page-builder'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
 
@@ -30,7 +29,7 @@ export function NavbarPreview({ config }: { config: NavbarConfig }) {
         </div>
         <div className="flex gap-2">
           {config.links.slice(0, 3).map((l, i) => (
-            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{pickLocale(l.label, 'vi') || 'Link'}</span>
+            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{plainText(l.label) || 'Link'}</span>
           ))}
           {config.links.length > 3 && <span className="text-[10px] text-muted-foreground">+{config.links.length - 3}</span>}
           {config.links.length === 0 && <span className="text-[10px] text-muted-foreground/40 italic">{t('navbarBlock.noLinks')}</span>}
@@ -175,10 +174,9 @@ export function NavbarSettings({
                     <GripVertical className="size-3 -rotate-90" />
                   </button>
                 </div>
-                <LocalizedInput
-                  
-                  value={link.label}
-                  onChange={label => updateLink(i, { label })}
+                <Input
+                  value={plainText(link.label)}
+                  onChange={e => updateLink(i, { label: e.target.value })}
                   placeholder={t('navbarBlock.linkLabel')}
                   className="h-7 text-xs flex-1"
                 />

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { pickLocale } from '@/i18n/locale'
+import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type {
@@ -21,8 +21,6 @@ import type {
   BlockBackground, PaddingSize, CtaButton, BorderRadius, PageBlock,
 } from '../types'
 import { CtaEditor } from './CtaEditor'
-import type { SupportedLocale } from '@/i18n/locale'
-import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -60,11 +58,11 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
         )}
         {config.layout !== 'img_only' && (
           <div className="flex-1 space-y-0.5 min-w-0">
-            {pickLocale(config.heading, 'vi') && <p className="text-xs font-semibold truncate">{pickLocale(config.heading, 'vi')}</p>}
-            {pickLocale(config.body, 'vi') && (
-              <p className="text-[10px] text-muted-foreground line-clamp-2">{pickLocale(config.body, 'vi')}</p>
+            {plainText(config.heading) && <p className="text-xs font-semibold truncate">{plainText(config.heading)}</p>}
+            {plainText(config.body) && (
+              <p className="text-[10px] text-muted-foreground line-clamp-2">{plainText(config.body)}</p>
             )}
-            {!pickLocale(config.heading, 'vi') && !pickLocale(config.body, 'vi') && (
+            {!plainText(config.heading) && !plainText(config.body) && (
               <p className="text-[10px] text-muted-foreground/50 italic">{t('textImageBlock.textContentPlaceholder')}…</p>
             )}
           </div>
@@ -252,15 +250,20 @@ export function TextImageSettings({
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
           <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <LocalizedInput id="ti-heading" value={config.heading} onChange={v => set('heading', v)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
+            <Input
+              id="ti-heading"
+              value={plainText(config.heading)}
+              onChange={e => set('heading', e.target.value)}
+              placeholder={t('textImageBlock.headingPlaceholder')}
+              className="h-8 text-sm"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
-            <LocalizedTextarea
+            <Textarea
               id="ti-body"
-              
-              value={config.body}
-              onChange={v => set('body', v)}
+              value={plainText(config.body)}
+              onChange={e => set('body', e.target.value)}
               placeholder="Write your content here…&#10;Line breaks are preserved."
               rows={5}
               className="resize-none text-sm"

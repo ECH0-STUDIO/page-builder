@@ -1,57 +1,19 @@
-import type { Locale } from './getDictionary'
-import {
-  getLocalizedField,
-  getLocalizedFieldForEdit,
-  pickLocale as pickLocaleContent,
-  primaryLocalizedValue as primaryLocalizedValueContent,
-  setLocalizedField,
-  stripLocaleFromObject,
-  type LocalizedValue,
-  type LocaleStringMap,
-} from './locale-content'
+import { plainText, type LegacyLocalized } from './locale-content'
 
 /** Locales supported for system UI (dashboard, cart, auth). */
 export const SUPPORTED_LOCALES = ['vi', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
-export type MenuI18nMap = Partial<Record<string, string>>
-
 export function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
   return value === 'vi' || value === 'en'
 }
 
-/**
- * Resolve the active locale for a live store visitor.
- * One locale at a time — never mixed.
- */
+/** Live store content is single-language for MVP. */
 export function resolveLiveLocale(
-  cookieLocale: string | null | undefined,
-  storeDefaultLocale: string | null | undefined,
+  _cookieLocale?: string | null,
+  _storeDefaultLocale?: string | null,
 ): SupportedLocale {
-  if (isSupportedLocale(cookieLocale)) return cookieLocale
-  if (isSupportedLocale(storeDefaultLocale)) return storeDefaultLocale
   return 'vi'
-}
-
-export type { LocalizedValue, LocaleStringMap }
-export { getLocalizedField, getLocalizedFieldForEdit, setLocalizedField, stripLocaleFromObject }
-
-/**
- * Pick a single string for the active locale from plain or i18n-shaped values.
- */
-export function pickLocale(
-  value: LocalizedValue,
-  locale: string,
-  enabledLocales: string[] = ['vi', 'en'],
-): string {
-  return pickLocaleContent(value, locale, enabledLocales)
-}
-
-export function primaryLocalizedValue(
-  map: LocaleStringMap | Record<string, string>,
-  primaryLocale: string = 'vi',
-): string {
-  return primaryLocalizedValueContent(map, primaryLocale)
 }
 
 export function toSupportedLocale(locale: string | null | undefined): SupportedLocale {
@@ -63,11 +25,9 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',
 }
 
-/** Whether a menu row is shown for the given content locale. */
-export function isVisibleInLocale(
-  visibleLocales: string[] | null | undefined,
-  locale: string,
-): boolean {
-  if (!visibleLocales || visibleLocales.length === 0) return true
-  return visibleLocales.includes(locale)
+/** @deprecated Use plainText — kept for gradual migration of legacy locale-map configs. */
+export function pickLocale(value: LegacyLocalized, _locale?: string): string {
+  return plainText(value)
 }
+
+export { plainText, type LegacyLocalized }

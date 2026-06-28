@@ -30,9 +30,6 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
-import { LocaleBar, DEFAULT_ENABLED_LOCALES } from '@/components/i18n/LocaleBar'
-import { LocaleEditProvider } from '@/components/i18n/LocaleEditContext'
-import { stripLocaleFromObject } from '@/i18n/locale-content'
 
 import { PublishBar } from './PublishBar'
 import { TemplatePicker } from './TemplatePicker'
@@ -182,7 +179,7 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, previewLocale,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive,
 }: {
   block: PageBlock
   isSelected: boolean
@@ -191,7 +188,6 @@ function LiveBlockCard({
   onClick: () => void
   previewLayout?: PreviewLayout
   interactive?: boolean
-  previewLocale: string
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
@@ -269,11 +265,10 @@ function LiveBlockCard({
             config={block.config as HeroConfig}
             businessName={business.name}
             previewLayout={previewLayout}
-            locale={previewLocale}
           />
         )}
         {block.type === 'text_image' && (
-          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} locale={previewLocale} />
+          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} />
         )}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
@@ -281,7 +276,6 @@ function LiveBlockCard({
             config={block.config as MenuGridConfig}
             data={menuGridData}
             previewLayout={previewLayout}
-            locale={previewLocale}
           />
         )}
         {block.type === 'qr_code' && (
@@ -290,7 +284,6 @@ function LiveBlockCard({
             targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
             paymentSettings={business.payment_settings}
             downloadLabel={t('qrCodeBlock.saveQrCode')}
-            locale={previewLocale}
           />
         )}
       </div>
@@ -496,20 +489,6 @@ export function EditorShell({
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
   const [_isPreviewMode, setIsPreviewMode] = useState(false)
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
-  const [editLocale, setEditLocale] = useState('vi')
-
-  const enabledLocales = useMemo(() => {
-    const fromPub = publishingSettings?.enabled_locales?.filter(Boolean)
-    return fromPub && fromPub.length > 0 ? fromPub : [...DEFAULT_ENABLED_LOCALES]
-  }, [publishingSettings?.enabled_locales])
-
-  const primaryLocale = enabledLocales[0] ?? 'vi'
-
-  const localeEditValue = useMemo(() => ({
-    editLocale,
-    enabledLocales,
-    primaryLocale,
-  }), [editLocale, enabledLocales, primaryLocale])
 
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
@@ -644,50 +623,6 @@ export function EditorShell({
       return next
     })
   }, [business.id])
-
-  const handleAddLocale = useCallback((code: string) => {
-    if (enabledLocales.includes(code)) return
-    const next = [...enabledLocales, code]
-    handlePublishingChange({ enabled_locales: next })
-    setEditLocale(code)
-  }, [enabledLocales, handlePublishingChange])
-
-  const handleRemoveLocale = useCallback((code: string) => {
-    if (enabledLocales.length <= 1) return
-    if (DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])) return
-
-    const nextLocales = enabledLocales.filter(l => l !== code)
-    const nextSeo = publishingSettings?.seo_i18n
-      ? stripLocaleFromObject(publishingSettings.seo_i18n, code)
-      : null
-
-    setBlocks(prev => prev.map(b => ({
-      ...b,
-      config: stripLocaleFromObject(b.config, code),
-    })))
-
-    if (theme?.navbar_config || theme?.footer_config) {
-      handleThemeChange({
-        navbar_config: theme.navbar_config
-          ? stripLocaleFromObject(theme.navbar_config, code)
-          : theme.navbar_config,
-        footer_config: theme.footer_config
-          ? stripLocaleFromObject(theme.footer_config, code)
-          : theme.footer_config,
-      })
-    }
-
-    handlePublishingChange({ enabled_locales: nextLocales, seo_i18n: nextSeo })
-    if (editLocale === code) setEditLocale(primaryLocale)
-  }, [
-    enabledLocales,
-    publishingSettings?.seo_i18n,
-    theme,
-    handlePublishingChange,
-    handleThemeChange,
-    editLocale,
-    primaryLocale,
-  ])
 
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
@@ -997,8 +932,6 @@ export function EditorShell({
               publishing={publishingSettings}
               onThemeChange={handleThemeChange}
               onPublishingChange={handlePublishingChange}
-              onAddLocale={handleAddLocale}
-              onRemoveLocale={handleRemoveLocale}
             />
           </div>
         </>
@@ -1007,8 +940,6 @@ export function EditorShell({
   )
 
   return (
-    <LocaleEditProvider value={localeEditValue}>
-    {/* Fix-position overlay covers the full viewport including the dashboard sidebar */}
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* Top bar */}
@@ -1072,15 +1003,6 @@ export function EditorShell({
           </div>
         </DialogContent>
       </Dialog>
-
-      {!isPreviewMode && (
-        <LocaleBar
-          enabledLocales={enabledLocales}
-          activeLocale={editLocale}
-          onActiveLocaleChange={setEditLocale}
-          onAddLocale={handleAddLocale}
-        />
-      )}
 
       {/* 3-column body */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -1191,7 +1113,6 @@ export function EditorShell({
                   logoUrl={business.logo_url ?? undefined}
                   inEditor={!isPreviewMode}
                   isMobilePreview={viewMode === 'mobile'}
-                  locale={editLocale}
                 />
 
                 {viewMode === 'mobile' && (
@@ -1224,7 +1145,6 @@ export function EditorShell({
                       business={business}
                       menuGridData={menuGridData}
                       previewLayout={canvasPreviewLayout}
-                      previewLocale={editLocale}
                       interactive={isPreviewMode}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
@@ -1236,7 +1156,6 @@ export function EditorShell({
                   config={footerConfig}
                   businessName={business.name}
                   inEditor={!isPreviewMode}
-                  locale={editLocale}
                 />
                 </div>
 
@@ -1300,6 +1219,5 @@ export function EditorShell({
         <AddBlockModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onAdd={addBlock} />
       )}
     </div>
-    </LocaleEditProvider>
   )
 }

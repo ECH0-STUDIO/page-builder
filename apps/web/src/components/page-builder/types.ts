@@ -2,8 +2,6 @@
  * Page Builder — shared type definitions
  */
 
-import type { LocalizedValue, LocaleStringMap } from '@/i18n/locale'
-
 // ─── Block types ──────────────────────────────────────────────────────────────
 
 export type BlockType = 'hero' | 'text_image' | 'contact' | 'menu_grid' | 'qr_code'
@@ -101,7 +99,7 @@ export type CtaAction = 'url' | 'tel' | 'anchor' | 'email'
 export type CtaStyle = 'filled' | 'outlined' | 'text'
 
 export interface CtaButton {
-  label: LocalizedValue
+  label: string
   action: CtaAction
   value: string
   style: CtaStyle
@@ -116,9 +114,9 @@ export type SplitImageSide = 'left' | 'right'
 
 export interface HeroConfig {
   layout: HeroLayout
-  heading: LocalizedValue
-  tagline: LocalizedValue
-  body: LocalizedValue
+  heading: string
+  tagline: string
+  body: string
   image_url: string
   image_position: ImagePosition
   overlay_opacity: number
@@ -174,8 +172,8 @@ export type BorderRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full'
 
 export interface TextImageConfig {
   layout: TextImageLayout
-  heading: LocalizedValue
-  body: LocalizedValue
+  heading: string
+  body: string
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
@@ -250,7 +248,7 @@ export interface MenuGridConfig {
   show_price: boolean
   show_unavailable_badge: boolean
   /** Section heading shown above the grid (optional) */
-  heading: LocalizedValue
+  heading: string
   /** Show tabs/buttons to filter by category on the live page */
   show_category_tabs: boolean
   /** Section background colour */
@@ -258,7 +256,7 @@ export interface MenuGridConfig {
   /** Heading + text colour */
   text_color: string
   /** Description shown below heading */
-  description?: LocalizedValue
+  description?: string
   /** Selection mode: 'category' (default) or 'custom_items' */
   selection_mode?: 'category' | 'custom_items'
   /** Array of item IDs to show when selection_mode is 'custom_items' */
@@ -291,7 +289,7 @@ export interface QRCodeConfig {
   target: 'payment' | 'custom'
   custom_url: string
   size: 'sm' | 'md' | 'lg'
-  label: LocalizedValue
+  label: string
   show_download: boolean
   background_color: string
   background_image?: string
@@ -317,7 +315,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
 export interface NavLink {
-  label: LocalizedValue
+  label: string
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
 }
@@ -345,7 +343,7 @@ export const defaultNavbarConfig: NavbarConfig = {
 
 export interface FooterConfig {
   show_business_name: boolean
-  copyright_text: LocalizedValue
+  copyright_text: string
   background_color: string
   text_color: string
 }
@@ -372,19 +370,9 @@ export interface PublishingSettings {
   language: string
   gsc_verification: string | null
   has_unpublished_changes: boolean | null
-  /** Content locales enabled for this store (default vi + en). */
-  enabled_locales?: string[] | null
-  /** Per-locale SEO: { title, description, og_image_url } maps with copy-on-write meta. */
-  seo_i18n?: SeoI18nStore | null
   google_analytics_id?: string | null
   facebook_pixel_id?: string | null
   tiktok_pixel_id?: string | null
-}
-
-export interface SeoI18nStore {
-  title?: LocaleStringMap
-  description?: LocaleStringMap
-  og_image_url?: LocaleStringMap
 }
 
 export interface ThemeSettings {

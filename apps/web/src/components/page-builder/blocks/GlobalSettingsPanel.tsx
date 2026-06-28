@@ -11,73 +11,27 @@ import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImageToStorage, validateImageDimensions } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
-import type { ThemeSettings, PublishingSettings, SeoI18nStore } from '../types'
+import type { ThemeSettings, PublishingSettings } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { getLocalizedFieldForEdit, setLocalizedField } from '@/i18n/locale'
-import { DEFAULT_ENABLED_LOCALES, LOCALE_CREDIT_COST_PER_MONTH, OPTIONAL_LOCALES } from '@/i18n/locale-content'
-import { LOCALE_LABELS, type SupportedLocale } from '@/i18n/locale'
-import { useLocaleEdit } from '@/components/i18n/LocaleEditContext'
-import { LocaleFieldLabel } from '@/components/i18n/LocaleFieldLabel'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Plus, Trash2 } from 'lucide-react'
 
 interface GlobalSettingsPanelProps {
   theme: ThemeSettings | null
   publishing: PublishingSettings | null
   onThemeChange: (updated: Partial<ThemeSettings>) => void
   onPublishingChange: (updated: Partial<PublishingSettings>) => void
-  onAddLocale?: (locale: string) => void
-  onRemoveLocale?: (locale: string) => void
 }
 
 const FONTS = ['Inter', 'Outfit', 'Playfair Display', 'Lora', 'Space Grotesk', 'Roboto Mono']
-
-function legacySeoMap(legacy: string | null | undefined, enabledLocales: string[]) {
-  const text = legacy ?? ''
-  const map: Record<string, string> = {}
-  for (const l of enabledLocales) map[l] = text
-  return map
-}
-
-function readSeoField(
-  seoI18n: SeoI18nStore | null | undefined,
-  field: keyof SeoI18nStore,
-  legacy: string | null | undefined,
-  locale: string,
-  enabledLocales: string[],
-): string {
-  const map = seoI18n?.[field]
-  if (map) return getLocalizedFieldForEdit(map, locale)
-  return locale === enabledLocales[0] ? (legacy ?? '') : ''
-}
 
 export function GlobalSettingsPanel({
   theme,
   publishing,
   onThemeChange,
   onPublishingChange,
-  onAddLocale,
-  onRemoveLocale,
 }: GlobalSettingsPanelProps) {
   const { t } = useTranslation()
-  const { editLocale, enabledLocales, primaryLocale } = useLocaleEdit()
   const thm = theme || {} as ThemeSettings
   const p = publishing || {} as PublishingSettings
-  const seoI18n = p.seo_i18n ?? {}
-  const [localeToDelete, setLocaleToDelete] = useState<string | null>(null)
-
-  const availableToAdd = OPTIONAL_LOCALES.filter(o => !enabledLocales.includes(o.code))
 
   const faviconRef = useRef<HTMLInputElement>(null)
   const webclipRef = useRef<HTMLInputElement>(null)
@@ -85,22 +39,6 @@ export function GlobalSettingsPanel({
   const [uploadingFavicon, setUploadingFavicon] = useState(false)
   const [uploadingWebclip, setUploadingWebclip] = useState(false)
   const [uploadingOg, setUploadingOg] = useState(false)
-
-  function updateSeoField(
-    field: keyof SeoI18nStore,
-    text: string,
-    legacyKey: 'seo_title' | 'seo_description' | 'og_image_url',
-  ) {
-    const legacy = p[legacyKey]
-    const currentMap = seoI18n[field] ?? legacySeoMap(legacy, enabledLocales)
-    const nextMap = setLocalizedField(currentMap, editLocale, text, enabledLocales, primaryLocale)
-    const nextSeo: SeoI18nStore = { ...seoI18n, [field]: nextMap }
-    const patch: Partial<PublishingSettings> = { seo_i18n: nextSeo }
-    if (editLocale === primaryLocale) {
-      patch[legacyKey] = text || null
-    }
-    onPublishingChange(patch)
-  }
 
   async function handleUploadFavicon(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -155,11 +93,11 @@ export function GlobalSettingsPanel({
     if (!file) return
     setUploadingOg(true)
     try {
-      const path = `${p.business_id}/og-${editLocale}-${Date.now()}.jpg`
+      const path = `${p.business_id}/og-${Date.now()}.jpg`
       const url = await uploadImageToStorage('page-images', path, file, {
         maxWidth: 1200, maxHeight: 630, quality: 0.85, targetSizeKB: 400,
       })
-      updateSeoField('og_image_url', url, 'og_image_url')
+      onPublishingChange({ og_image_url: url })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -168,108 +106,40 @@ export function GlobalSettingsPanel({
     }
   }
 
-  const seoTitle = readSeoField(seoI18n, 'title', p.seo_title, editLocale, enabledLocales)
-  const seoDescription = readSeoField(seoI18n, 'description', p.seo_description, editLocale, enabledLocales)
-  const ogImageUrl = readSeoField(seoI18n, 'og_image_url', p.og_image_url, editLocale, enabledLocales)
-
   return (
-    <>
     <div className="space-y-8 p-4">
-      {/* ── Content languages ── */}
-      <div className="space-y-3">
-        <h3 className="font-semibold text-sm">{t('pageBuilder.languages')}</h3>
-        <p className="text-[11px] text-muted-foreground leading-snug">{t('pageBuilder.languagesHint')}</p>
-        <ul className="space-y-1.5">
-          {enabledLocales.map(code => {
-            const label = LOCALE_LABELS[code as SupportedLocale]
-              ?? OPTIONAL_LOCALES.find(o => o.code === code)?.label
-              ?? code.toUpperCase()
-            const isDefault = DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])
-            const canDelete = enabledLocales.length > 1 && onRemoveLocale
-            return (
-              <li
-                key={code}
-                className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs"
-              >
-                <span className="font-medium">{label}</span>
-                <div className="flex items-center gap-1">
-                  {isDefault && (
-                    <span className="text-[10px] text-muted-foreground">{t('pageBuilder.defaultLanguage')}</span>
-                  )}
-                  {canDelete && !isDefault && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => setLocaleToDelete(code)}
-                      aria-label={t('pageBuilder.removeLanguage')}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-        {availableToAdd.length > 0 && onAddLocale && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs gap-1">
-                <Plus className="size-3" />
-                {t('pageBuilder.addLanguage')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <p className="px-2 py-1.5 text-[10px] text-muted-foreground leading-snug">
-                {t('pageBuilder.addLanguageCreditNote').replace('{{credits}}', String(LOCALE_CREDIT_COST_PER_MONTH))}
-              </p>
-              {availableToAdd.map(o => (
-                <DropdownMenuItem key={o.code} onClick={() => onAddLocale(o.code)}>
-                  {o.label} ({o.code})
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* ── SEO & Meta (per content locale) ── */}
+      {/* ── SEO & Meta ── */}
       <div className="space-y-4">
         <h3 className="font-semibold text-sm">{t('pageBuilder.globalSeo')}</h3>
-        <p className="text-[11px] text-muted-foreground leading-snug">{t('pageBuilder.perLocaleFieldsHint')}</p>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <LocaleFieldLabel>{t('pageBuilder.pageTitle')}</LocaleFieldLabel>
+            <Label className="text-xs">{t('pageBuilder.pageTitle')}</Label>
             <Input
-              value={seoTitle}
-              onChange={e => updateSeoField('title', e.target.value, 'seo_title')}
+              value={p.seo_title || ''}
+              onChange={e => onPublishingChange({ seo_title: e.target.value || null })}
               placeholder={t('pageBuilder.pageTitlePlaceholder')}
               className="text-xs"
             />
           </div>
           <div className="space-y-1.5">
-            <LocaleFieldLabel>{t('pageBuilder.metaDesc')}</LocaleFieldLabel>
+            <Label className="text-xs">{t('pageBuilder.metaDesc')}</Label>
             <Textarea
-              value={seoDescription}
-              onChange={e => updateSeoField('description', e.target.value, 'seo_description')}
+              value={p.seo_description || ''}
+              onChange={e => onPublishingChange({ seo_description: e.target.value || null })}
               placeholder={t('pageBuilder.metaDescPlaceholder')}
               className="text-xs min-h-[80px]"
             />
           </div>
           <div className="space-y-1.5">
-            <LocaleFieldLabel>{t('pageBuilder.ogImage')}</LocaleFieldLabel>
+            <Label className="text-xs">{t('pageBuilder.ogImage')}</Label>
             <div className="flex gap-2 w-full">
-              {ogImageUrl && (
+              {p.og_image_url && (
                 <div className="size-14 rounded-md border border-border overflow-hidden shrink-0 bg-white relative group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ogImageUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={p.og_image_url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
-                    onClick={() => updateSeoField('og_image_url', '', 'og_image_url')}
+                    onClick={() => onPublishingChange({ og_image_url: null })}
                     className="absolute inset-0 bg-black/50 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="size-4" />
@@ -286,7 +156,7 @@ export function GlobalSettingsPanel({
               >
                 {uploadingOg ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : <ImageIcon className="size-4 text-muted-foreground/50" />}
                 <span className="text-xs font-normal truncate">
-                  {uploadingOg ? t('pageBuilder.uploading') : ogImageUrl ? t('pageBuilder.replace') : t('pageBuilder.uploadOgImage')}
+                  {uploadingOg ? t('pageBuilder.uploading') : p.og_image_url ? t('pageBuilder.replace') : t('pageBuilder.uploadOgImage')}
                 </span>
               </Button>
               <input type="file" accept="image/*" className="hidden" ref={ogImageRef} onChange={handleUploadOgImage} />
@@ -490,31 +360,5 @@ export function GlobalSettingsPanel({
         </div>
       </div>
     </div>
-
-    <Dialog open={!!localeToDelete} onOpenChange={o => !o && setLocaleToDelete(null)}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('pageBuilder.removeLanguageTitle')}</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          {t('pageBuilder.removeLanguageConfirm')}
-        </p>
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={() => setLocaleToDelete(null)}>
-            {t('pageBuilder.cancel')}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              if (localeToDelete && onRemoveLocale) onRemoveLocale(localeToDelete)
-              setLocaleToDelete(null)
-            }}
-          >
-            {t('pageBuilder.removeLanguage')}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-    </>
   )
 }
