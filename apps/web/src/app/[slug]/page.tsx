@@ -11,8 +11,8 @@ import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
 import { QRCodeRender } from '@/components/page-builder/render/QRCodeRender'
 import { FooterRender } from '@/components/page-builder/render/FooterRender'
 import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
+import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
-import { CartDrawer } from '@/components/page-builder/render/CartDrawer'
 import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, type FooterConfig } from '@/components/page-builder/types'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -342,8 +342,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         businessName={business.name}
       />
 
-      <CartDrawer businessId={business.id} paymentSettings={paymentSettings} />
-      <PaymentDrawer paymentSettings={paymentSettings} />
+      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} />
     </div>
     </div>
     </CartProvider>

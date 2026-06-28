@@ -1,10 +1,16 @@
+import { Suspense } from 'react'
+import { I18nProvider } from '@/i18n/I18nProvider'
+import { getDictionary } from '@/i18n/getDictionary'
+
 /**
- * Dedicated layout for the public live business page.
- * Intentionally skips ThemeProvider (next-themes) to avoid the
- * "script tag inside React component" dev-overlay error and to ensure
- * the live page always renders in light mode regardless of the
- * visitor's OS preference.
+ * Public live store layout — light mode only, with i18n for menu/cart strings.
  */
-export default function SlugLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default async function SlugLayout({ children }: { children: React.ReactNode }) {
+  const dictionary = await getDictionary()
+
+  return (
+    <I18nProvider dictionary={dictionary}>
+      <Suspense fallback={null}>{children}</Suspense>
+    </I18nProvider>
+  )
 }

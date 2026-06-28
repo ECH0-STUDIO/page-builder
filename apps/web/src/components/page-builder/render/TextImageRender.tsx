@@ -12,6 +12,7 @@ import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
 import { ctaHref } from '../cta-utils'
 import { getTypography } from './typography'
 import Image from 'next/image'
+import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 
 function CtaLink({ cta }: { cta: CtaButton }) {
   const href = ctaHref(cta)
@@ -49,12 +50,15 @@ const RADIUS: Record<BorderRadius, string> = {
 interface TextImageRenderProps {
   config: TextImageConfig
   isMobilePreview?: boolean
+  previewLayout?: PreviewLayout
 }
 
-export function TextImageRender({ config, isMobilePreview }: TextImageRenderProps) {
+export function TextImageRender({ config, isMobilePreview, previewLayout }: TextImageRenderProps) {
+  const layout: PreviewLayout | undefined =
+    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const padStyle = PADDING[config.padding] ?? PADDING.normal
   const radius   = RADIUS[config.border_radius ?? 'md']
-  const typography = getTypography(isMobilePreview)
+  const typography = getTypography(isForcedMobileLayout(layout))
 
   // ── Background ─────────────────────────────────────────────────────────────
   const bgStyle: React.CSSProperties =
