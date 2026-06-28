@@ -44,7 +44,7 @@ function getAnchorOptions(blocks: PageBlock[]) {
   return blocks.map((b, i) => ({
     id: b.id,
     label: `${b.type.replace('_', ' ')} — block ${i + 1}`,
-    anchor: `block-${b.id}`,
+    anchor: b.block_anchor_id ?? `block-${b.id}`,
   }))
 }
 

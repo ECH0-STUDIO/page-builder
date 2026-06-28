@@ -55,9 +55,12 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
 
   function handleLinkClick(href: string) {
     if (inEditor) return
-    if (href.startsWith('block-')) {
-      const el = document.getElementById(href)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = document.getElementById(href)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else if (href.startsWith('block-')) {
+      const fallback = document.getElementById(href)
+      fallback?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
@@ -187,7 +190,13 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               <a
                 key={i}
                 href={getHref(link)}
-                onClick={() => setOpen(false)}
+                onClick={e => {
+                  if (link.anchor && !inEditor) {
+                    e.preventDefault()
+                    handleLinkClick(link.href)
+                  }
+                  setOpen(false)
+                }}
                 style={{
                   ...linkStyle,
                   display: 'block',

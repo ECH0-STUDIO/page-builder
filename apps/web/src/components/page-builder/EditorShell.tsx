@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings, Layers, X,
+  PanelBottom, Settings, Layers, X, Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,6 +59,8 @@ import type { MenuGridData } from './render/MenuGridRender'
 import { QRCodeRender } from './render/QRCodeRender'
 import { CartProvider } from './render/CartContext'
 import { CartDrawer } from './render/CartDrawer'
+import { PaymentDrawer } from './render/PaymentDrawer'
+import type { PaymentSettings } from '@/lib/vietqr-utils'
 
 import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
@@ -70,6 +72,10 @@ import type {
 import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings } from './types'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+
+// ─── Canvas layout ─────────────────────────────────────────────────────────────
+
+const CANVAS_DESKTOP_WIDTH = 1440
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -173,7 +179,7 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, isMobilePreview,
+  block, isSelected, business, menuGridData, onClick, isMobilePreview, interactive,
 }: {
   block: PageBlock
   isSelected: boolean
@@ -181,6 +187,7 @@ function LiveBlockCard({
   menuGridData: MenuGridData
   onClick: () => void
   isMobilePreview?: boolean
+  interactive?: boolean
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
@@ -211,9 +218,9 @@ function LiveBlockCard({
 
   return (
     <div
-      onClick={onClick}
+      onClick={interactive ? undefined : onClick}
       style={{ marginTop: spacing.margin_top, marginBottom: spacing.margin_bottom }}
-      className="relative group cursor-pointer"
+      className={cn('relative group', interactive ? '' : 'cursor-pointer')}
     >
       {/* Scoped custom CSS */}
       {block.custom_css && (
@@ -222,16 +229,18 @@ function LiveBlockCard({
         }} />
       )}
 
-      {/* Selection / hover overlay */}
-      <div className={cn(
-        'absolute inset-0 z-10 pointer-events-none transition-all duration-150',
-        isSelected
-          ? 'ring-2 ring-primary ring-inset'
-          : 'ring-1 ring-transparent group-hover:ring-primary/40 ring-inset'
-      )} />
+      {/* Selection / hover overlay — edit mode only */}
+      {!interactive && (
+        <div className={cn(
+          'absolute inset-0 z-10 pointer-events-none transition-all duration-150',
+          isSelected
+            ? 'ring-2 ring-primary ring-inset'
+            : 'ring-1 ring-transparent group-hover:ring-primary/40 ring-inset'
+        )} />
+      )}
 
       {/* Block label (selected) */}
-      {isSelected && (
+      {!interactive && isSelected && (
         <div className="absolute top-2 left-2 z-20 pointer-events-none">
           <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-semibold px-2 py-0.5 rounded shadow-md">
             {blockIcon(block.type)} {t(`pageBuilder.blocks.${block.type}.label`)}
@@ -239,7 +248,7 @@ function LiveBlockCard({
         </div>
       )}
 
-      {/* Actual rendered content — pointer-events:none prevents link clicks */}
+      {/* Actual rendered content */}
       <div
         data-block-id={block.id}
         style={{
@@ -247,8 +256,8 @@ function LiveBlockCard({
           paddingRight: spacing.padding_right,
           paddingBottom: spacing.padding_bottom,
           paddingLeft: spacing.padding_left,
-          pointerEvents: 'none',
-          userSelect: 'none',
+          pointerEvents: interactive ? 'auto' : 'none',
+          userSelect: interactive ? 'auto' : 'none',
         }}
       >
         {block.type === 'hero' && <HeroRender config={block.config as HeroConfig} businessName={business.name} isMobilePreview={isMobilePreview} />}
@@ -462,6 +471,9 @@ export function EditorShell({
   const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
+  const [desktopZoom, setDesktopZoom] = useState(1)
+  const canvasScrollRef = useRef<HTMLDivElement>(null)
+  const [canvasWidth, setCanvasWidth] = useState(0)
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
@@ -514,6 +526,27 @@ export function EditorShell({
   const headingFont = theme?.heading_font_family ?? 'Inter'
   const navbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig = theme?.footer_config ?? defaultFooterConfig
+  const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
+
+  const fitDesktopZoom = canvasWidth > 0
+    ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
+    : 1
+  const displayDesktopZoom = fitDesktopZoom * desktopZoom
+  const showDesktopZoomControls = viewMode === 'desktop' && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+
+  useEffect(() => {
+    const el = canvasScrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      setCanvasWidth(entries[0]?.contentRect.width ?? 0)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    setDesktopZoom(1)
+  }, [viewMode])
 
   // Derive which panel to show on the right
   const activeRightPanel: RightPanel =
@@ -960,8 +993,8 @@ export function EditorShell({
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
 
-          {/* Viewport toggle */}
-          <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80">
+          {/* Viewport toggle + desktop zoom */}
+          <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80 flex-wrap">
             <div className="flex items-center bg-white dark:bg-gray-900 rounded-lg p-0.5 gap-0.5 shadow-sm border border-black/5 dark:border-white/5">
               <button
                 type="button"
@@ -984,19 +1017,60 @@ export function EditorShell({
                 <Smartphone className="size-3.5" /> {t('pageBuilder.mobile')}
               </button>
             </div>
+
+            {showDesktopZoomControls && (
+              <div className="flex items-center gap-1 bg-white dark:bg-gray-900 rounded-lg px-1 py-0.5 shadow-sm border border-black/5 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.max(0.25, Math.round((z - 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom out"
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <span className="text-xs font-medium tabular-nums min-w-[3rem] text-center">
+                  {Math.round(displayDesktopZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.min(2, Math.round((z + 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom in"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(1)}
+                  className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Canvas scroll — overflow-y-auto (NOT hidden) so sticky navbar works */}
-          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          <div ref={canvasScrollRef} className="flex-1 overflow-y-auto overflow-x-auto pb-16 lg:pb-0">
             <div className="py-6 px-4 min-h-full">
               <CartProvider>
               <div
                 className={cn(
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
-                  // No overflow-hidden here — it breaks position:sticky
-                  viewMode === 'mobile' ? 'w-[375px] rounded-[32px] overflow-hidden' : 'w-full max-w-[1440px] rounded-xl',
+                  viewMode === 'mobile'
+                    ? 'w-[375px] rounded-[32px] overflow-hidden'
+                    : 'rounded-xl',
                 )}
-                style={{ fontFamily: `'${fontFamily}', sans-serif` }}
+                style={{
+                  fontFamily: `'${fontFamily}', sans-serif`,
+                  ...(viewMode === 'desktop'
+                    ? {
+                        width: CANVAS_DESKTOP_WIDTH,
+                        maxWidth: 'none',
+                        ...(displayDesktopZoom < 1 ? { zoom: displayDesktopZoom } : {}),
+                      }
+                    : {}),
+                }}
               >
                 {/* Heading font scoped to this canvas frame */}
                 <style dangerouslySetInnerHTML={{ __html: `
@@ -1008,7 +1082,7 @@ export function EditorShell({
                   config={navbarConfig}
                   businessName={business.name}
                   logoUrl={business.logo_url ?? undefined}
-                  inEditor
+                  inEditor={!isPreviewMode}
                   isMobilePreview={viewMode === 'mobile'}
                 />
 
@@ -1035,13 +1109,14 @@ export function EditorShell({
                 )}
 
                 {blocks.map(block => (
-                  <div key={block.id} id={`block-${block.id}`}>
+                  <div key={block.id} id={block.block_anchor_id ?? `block-${block.id}`}>
                     <LiveBlockCard
                       block={block}
-                      isSelected={block.id === selectedId}
+                      isSelected={!isPreviewMode && block.id === selectedId}
                       business={business}
                       menuGridData={menuGridData}
                       isMobilePreview={viewMode === 'mobile'}
+                      interactive={isPreviewMode}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>
@@ -1051,10 +1126,15 @@ export function EditorShell({
                 <FooterRender
                   config={footerConfig}
                   businessName={business.name}
-                  inEditor
+                  inEditor={!isPreviewMode}
                 />
 
-                <CartDrawer />
+                <CartDrawer
+                  businessId={business.id}
+                  paymentSettings={paymentSettings}
+                  previewMode={isPreviewMode}
+                />
+                {isPreviewMode && <PaymentDrawer paymentSettings={paymentSettings} />}
               </div>
               </CartProvider>
             </div>
@@ -1069,6 +1149,7 @@ export function EditorShell({
         )}
 
         {/* ── Mobile Action Bar ────────────────────────────────────────────── */}
+        {!isPreviewMode && (
         <div className="lg:hidden absolute bottom-0 left-0 right-0 h-14 bg-background border-t border-border flex items-center justify-around z-20 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
           <Drawer open={mobileBlocksOpen} onOpenChange={setMobileBlocksOpen}>
             <DrawerTrigger asChild>
@@ -1098,6 +1179,7 @@ export function EditorShell({
             </DrawerContent>
           </Drawer>
         </div>
+        )}
       </div>
 
       {/* Add block modal */}

@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { getPublicStoreUrl } from '@/lib/site-urls'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -89,14 +90,14 @@ export function PublishBar({
       {/* View live */}
       {published && (
         <a
-          href={`/${slug}`}
+          href={getPublicStoreUrl(slug)}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mr-2"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mr-1 sm:mr-2 p-1.5 sm:p-0 rounded-md sm:rounded-none hover:bg-accent sm:hover:bg-transparent"
           title={t('pageBuilder.viewLive')}
         >
           <ExternalLink className="size-3.5" />
-          <span>{t('pageBuilder.viewLive')}</span>
+          <span className="hidden md:inline">{t('pageBuilder.viewLive')}</span>
         </a>
       )}
 
@@ -104,11 +105,11 @@ export function PublishBar({
       <button
         type="button"
         onClick={onTogglePreview}
-        className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
         title={t('pageBuilder.preview')}
       >
         <Globe className="size-3.5" />
-        <span>{t('pageBuilder.preview')}</span>
+        <span className="hidden md:inline">{t('pageBuilder.preview')}</span>
       </button>
 
       {/* Status badge */}

@@ -22,6 +22,22 @@ type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+/** Revalidate the public store page for a business (by slug). */
+async function revalidateLiveStore(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  businessId: string
+) {
+  const { data } = await db
+    .from('businesses')
+    .select('slug')
+    .eq('id', businessId)
+    .maybeSingle()
+  if (data?.slug) {
+    revalidatePath(`/${data.slug}`)
+  }
+}
+
 // ─── Load page data ───────────────────────────────────────────────────────────
 
 export async function getPageDataAction(businessId: string): Promise<{
@@ -115,7 +131,7 @@ export async function savePageBlocksAction(
     .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
 
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
 
@@ -158,7 +174,7 @@ export async function togglePublishAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -187,7 +203,7 @@ export async function saveThemeAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -216,7 +232,7 @@ export async function saveNavbarAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -242,7 +258,7 @@ export async function saveFooterAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -306,7 +322,7 @@ export async function savePublishingSettingsAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -475,7 +491,7 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/dashboard/publishing')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
 
@@ -525,7 +541,7 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
     }
 
     revalidatePath('/dashboard/publishing')
-    revalidatePath(`/[slug]`)
+    await revalidateLiveStore(supabase, businessId)
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Không thể xác minh tên miền. Vui lòng thử lại.' }

@@ -59,11 +59,13 @@ function CartItemRow({ item }: { item: CartItem }) {
 interface CartDrawerProps {
   businessId?: string
   paymentSettings?: PaymentSettings
+  /** When true, cart UI works but placing orders is blocked. */
+  previewMode?: boolean
 }
 
 type DrawerStep = 'cart' | 'payment'
 
-export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
+export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const searchParams = useSearchParams()
   const tableFromUrl = searchParams.get('table') ?? ''
@@ -110,6 +112,10 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
   if (totalItems === 0 && !open && step === 'cart' && pastOrders.length === 0) return null
 
   async function handlePlaceOrder() {
+    if (previewMode) {
+      toast.info('Preview mode — orders are disabled. Publish your page to accept real orders.')
+      return
+    }
     if (!businessId) {
       toast.error('Unable to place order: Business ID missing')
       return

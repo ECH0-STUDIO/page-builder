@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthCallbackUrl } from '@/lib/site-urls'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,7 +47,7 @@ function SignupContent() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextUrl)}`,
+        emailRedirectTo: getAuthCallbackUrl(nextUrl),
       },
     })
 
@@ -65,7 +66,7 @@ function SignupContent() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextUrl)}`,
+        redirectTo: getAuthCallbackUrl(nextUrl),
       },
     })
   }
