@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslation } from '@/i18n/I18nProvider'
+import { useTranslationWithFallback } from '@/i18n/I18nProvider'
 import { LanguageSwitcher } from '@/components/live-store/LanguageSwitcher'
 import type { SupportedLocale } from '@/i18n/locale'
 
@@ -10,7 +10,7 @@ export function LiveStoreFooter({
   locale?: SupportedLocale
   textColor?: string
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslationWithFallback(locale ?? 'vi')
 
   return (
     <>

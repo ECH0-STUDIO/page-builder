@@ -1172,6 +1172,7 @@ export function EditorShell({
                     paymentSettings={paymentSettings}
                     previewMode
                     contained
+                    locale={editLocale}
                   />
                 )}
               </div>

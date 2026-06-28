@@ -351,7 +351,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         locale={visitorLocale}
       />
 
-      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} />
+      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} locale={visitorLocale} />
     </div>
     </div>
     </CartProvider>

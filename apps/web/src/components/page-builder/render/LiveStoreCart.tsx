@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { CartDrawer } from './CartDrawer'
 import { PaymentDrawer } from './PaymentDrawer'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import type { SupportedLocale } from '@/i18n/locale'
 
 interface LiveStoreCartProps {
   businessId: string
@@ -11,13 +12,14 @@ interface LiveStoreCartProps {
   previewMode?: boolean
   /** Pin cart UI inside the page-builder canvas frame */
   contained?: boolean
+  locale?: SupportedLocale
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {
   return (
     <>
       <CartDrawer {...props} />
-      <PaymentDrawer paymentSettings={props.paymentSettings} contained={props.contained} />
+      <PaymentDrawer paymentSettings={props.paymentSettings} contained={props.contained} locale={props.locale} />
     </>
   )
 }
