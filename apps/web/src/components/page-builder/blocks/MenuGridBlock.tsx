@@ -18,6 +18,8 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale, type SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
@@ -31,7 +33,7 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
       <div className="flex items-center gap-2">
         <div className="size-8 rounded bg-muted flex items-center justify-center text-base">🍽️</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold">{config.heading || t('menuGridBlock.menu')}</p>
+          <p className="text-xs font-semibold">{pickLocale(config.heading, 'vi') || t('menuGridBlock.menu')}</p>
           <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? t('menuGridBlock.tabsOn') : t('menuGridBlock.noTabs')}</p>
         </div>
       </div>
@@ -50,13 +52,13 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
 
 interface MenuGridSettingsProps {
   config: MenuGridConfig
-  /** All categories for this business, so user can pick which to show */
   categories: MenuCategory[]
   items: MenuItem[]
   onChange: (c: MenuGridConfig) => void
+  editLocale: SupportedLocale
 }
 
-export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
+export function MenuGridSettings({ config, categories, items, onChange, editLocale }: MenuGridSettingsProps) {
   const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCatId, setFilterCatId] = useState('all')
@@ -92,9 +94,10 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       {/* Heading */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
-        <Input
+        <LocalizedInput
+          locale={editLocale}
           value={config.heading}
-          onChange={e => set('heading', e.target.value)}
+          onChange={v => set('heading', v)}
           placeholder={t('menuGridBlock.headingPlaceholder')}
           className="h-8 text-sm"
         />
@@ -103,9 +106,10 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
-        <Textarea
+        <LocalizedTextarea
+          locale={editLocale}
           value={config.description ?? ''}
-          onChange={e => set('description', e.target.value)}
+          onChange={v => set('description', v)}
           placeholder={t('menuGridBlock.descPlaceholder')}
           className="text-sm min-h-[60px]"
         />

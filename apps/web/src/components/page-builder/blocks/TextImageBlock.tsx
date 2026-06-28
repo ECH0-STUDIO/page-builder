@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type {
@@ -20,6 +21,8 @@ import type {
   BlockBackground, PaddingSize, CtaButton, BorderRadius, PageBlock,
 } from '../types'
 import { CtaEditor } from './CtaEditor'
+import type { SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -57,11 +60,11 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
         )}
         {config.layout !== 'img_only' && (
           <div className="flex-1 space-y-0.5 min-w-0">
-            {config.heading && <p className="text-xs font-semibold truncate">{config.heading}</p>}
-            {config.body && (
-              <p className="text-[10px] text-muted-foreground line-clamp-2">{config.body}</p>
+            {pickLocale(config.heading, 'vi') && <p className="text-xs font-semibold truncate">{pickLocale(config.heading, 'vi')}</p>}
+            {pickLocale(config.body, 'vi') && (
+              <p className="text-[10px] text-muted-foreground line-clamp-2">{pickLocale(config.body, 'vi')}</p>
             )}
-            {!config.heading && !config.body && (
+            {!pickLocale(config.heading, 'vi') && !pickLocale(config.body, 'vi') && (
               <p className="text-[10px] text-muted-foreground/50 italic">{t('textImageBlock.textContentPlaceholder')}…</p>
             )}
           </div>
@@ -81,12 +84,14 @@ export function TextImageSettings({
   businessId,
   blocks,
   onChange,
+  editLocale,
 }: {
   config: TextImageConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
   onChange: (c: TextImageConfig) => void
+  editLocale: SupportedLocale
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -247,14 +252,15 @@ export function TextImageSettings({
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
           <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <Input id="ti-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
+            <LocalizedInput id="ti-heading" locale={editLocale} value={config.heading} onChange={v => set('heading', v)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
-            <Textarea
+            <LocalizedTextarea
               id="ti-body"
+              locale={editLocale}
               value={config.body}
-              onChange={e => set('body', e.target.value)}
+              onChange={v => set('body', v)}
               placeholder="Write your content here…&#10;Line breaks are preserved."
               rows={5}
               className="resize-none text-sm"
@@ -267,6 +273,7 @@ export function TextImageSettings({
               label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
+              editLocale={editLocale}
               onChange={v => set('cta', v)}
               onRemove={() => set('cta', null)}
             />

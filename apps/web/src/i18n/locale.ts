@@ -52,3 +52,45 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   vi: 'Tiếng Việt',
   en: 'English',
 }
+
+/** Read the string for a single edit locale from plain or i18n-shaped values. */
+export function getLocalizedField(value: LocalizedValue, locale: SupportedLocale): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  return value[locale] ?? ''
+}
+
+/** Write one locale slice; upgrades plain strings to `{ vi, en }` shape. */
+export function setLocalizedField(
+  value: LocalizedValue,
+  locale: SupportedLocale,
+  text: string,
+): Record<SupportedLocale, string> {
+  const next: Record<SupportedLocale, string> = {
+    vi: typeof value === 'object' && value ? (value.vi ?? '') : typeof value === 'string' ? value : '',
+    en: typeof value === 'object' && value ? (value.en ?? '') : typeof value === 'string' ? value : '',
+  }
+  next[locale] = text
+  return next
+}
+
+/** Primary legacy column value — prefer Vietnamese, then English. */
+export function primaryLocalizedValue(value: LocalizedValue): string {
+  return pickLocale(value, 'vi', 'en')
+}
+
+export type MenuI18nMap = Partial<Record<SupportedLocale, string>>
+
+export function buildMenuI18nPayload(
+  existing: MenuI18nMap | string | null | undefined,
+  legacy: string | null | undefined,
+  locale: SupportedLocale,
+  text: string,
+): MenuI18nMap {
+  const base = typeof existing === 'object' && existing
+    ? { ...existing }
+    : legacy
+      ? { vi: legacy, en: legacy }
+      : {}
+  return { ...base, [locale]: text.trim() }
+}

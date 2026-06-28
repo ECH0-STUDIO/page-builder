@@ -2,6 +2,8 @@
  * Page Builder — shared type definitions
  */
 
+import type { LocalizedValue } from '@/i18n/locale'
+
 // ─── Block types ──────────────────────────────────────────────────────────────
 
 export type BlockType = 'hero' | 'text_image' | 'contact' | 'menu_grid' | 'qr_code'
@@ -99,7 +101,7 @@ export type CtaAction = 'url' | 'tel' | 'anchor' | 'email'
 export type CtaStyle = 'filled' | 'outlined' | 'text'
 
 export interface CtaButton {
-  label: string
+  label: LocalizedValue
   action: CtaAction
   value: string
   style: CtaStyle
@@ -114,9 +116,9 @@ export type SplitImageSide = 'left' | 'right'
 
 export interface HeroConfig {
   layout: HeroLayout
-  heading: string
-  tagline: string
-  body: string
+  heading: LocalizedValue
+  tagline: LocalizedValue
+  body: LocalizedValue
   image_url: string
   image_position: ImagePosition
   overlay_opacity: number
@@ -172,8 +174,8 @@ export type BorderRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full'
 
 export interface TextImageConfig {
   layout: TextImageLayout
-  heading: string
-  body: string
+  heading: LocalizedValue
+  body: LocalizedValue
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
@@ -248,7 +250,7 @@ export interface MenuGridConfig {
   show_price: boolean
   show_unavailable_badge: boolean
   /** Section heading shown above the grid (optional) */
-  heading: string
+  heading: LocalizedValue
   /** Show tabs/buttons to filter by category on the live page */
   show_category_tabs: boolean
   /** Section background colour */
@@ -256,7 +258,7 @@ export interface MenuGridConfig {
   /** Heading + text colour */
   text_color: string
   /** Description shown below heading */
-  description?: string
+  description?: LocalizedValue
   /** Selection mode: 'category' (default) or 'custom_items' */
   selection_mode?: 'category' | 'custom_items'
   /** Array of item IDs to show when selection_mode is 'custom_items' */
@@ -289,7 +291,7 @@ export interface QRCodeConfig {
   target: 'payment' | 'custom'
   custom_url: string
   size: 'sm' | 'md' | 'lg'
-  label: string
+  label: LocalizedValue
   show_download: boolean
   background_color: string
   background_image?: string
@@ -315,7 +317,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
 export interface NavLink {
-  label: string
+  label: LocalizedValue
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
 }
@@ -343,7 +345,7 @@ export const defaultNavbarConfig: NavbarConfig = {
 
 export interface FooterConfig {
   show_business_name: boolean
-  copyright_text: string
+  copyright_text: LocalizedValue
   background_color: string
   text_color: string
 }

@@ -6,6 +6,7 @@ import { QRManager } from '@/components/qr/QRManager'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'QR Codes' }
@@ -39,8 +40,8 @@ export default async function QRPage() {
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),
   ])
 
-  const categories: MenuCategory[] = categoriesRaw ?? []
-  const items: MenuItem[] = itemsRaw ?? []
+  const categories: MenuCategory[] = (categoriesRaw ?? []).map(normalizeMenuCategory)
+  const items: MenuItem[] = (itemsRaw ?? []).map(normalizeMenuItem)
 
   return (
     <div className="p-4 md:p-8 max-w-6xl">

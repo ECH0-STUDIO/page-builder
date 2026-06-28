@@ -32,6 +32,8 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { buildMenuI18nPayload, getLocalizedField, primaryLocalizedValue, type SupportedLocale } from '@/i18n/locale'
+import { LocaleToggle } from '@/components/i18n/LocaleToggle'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -329,17 +331,25 @@ function CategoryDialog({
 }: {
   open: boolean
   onClose: () => void
-  onSave: (name: string) => Promise<void>
+  onSave: (payload: { name: string; name_i18n: Record<string, string> }) => Promise<void>
   initial?: MenuCategory
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(initial?.name ?? '')
+  const [editLocale, setEditLocale] = useState<SupportedLocale>('vi')
+  const [nameI18n, setNameI18n] = useState<Record<string, string>>(() => {
+    const base = initial?.name_i18n ?? { vi: initial?.name ?? '', en: initial?.name ?? '' }
+    return { vi: base.vi ?? initial?.name ?? '', en: base.en ?? initial?.name ?? '' }
+  })
+  const name = getLocalizedField(nameI18n, editLocale)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await onSave(name)
+    await onSave({
+      name: primaryLocalizedValue(nameI18n) || name,
+      name_i18n: nameI18n,
+    })
     setLoading(false)
     onClose()
   }
@@ -347,8 +357,9 @@ function CategoryDialog({
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="sm:max-w-sm w-[95vw] rounded-xl sm:w-full">
-        <DialogHeader>
+        <DialogHeader className="space-y-3">
           <DialogTitle>{initial ? t('menuBuilder.renameCategory') : t('menuBuilder.addCategory')}</DialogTitle>
+          <LocaleToggle value={editLocale} onChange={setEditLocale} size="xs" />
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
@@ -356,7 +367,7 @@ function CategoryDialog({
             <Input
               id="cat-name"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={e => setNameI18n(prev => ({ ...prev, [editLocale]: e.target.value }))}
               placeholder={t('menuBuilder.categoryPlaceholder')}
               required
               autoFocus
@@ -383,15 +394,30 @@ function ItemDialog({
   onClose: () => void
   /** Called when the user explicitly clicks "Save changes" */
   onSave: (item: {
-    name: string; description: string; price: number; image_url?: string; tags: string[]
+    name: string
+    description: string
+    name_i18n?: Record<string, string>
+    description_i18n?: Record<string, string> | null
+    price: number
+    image_url?: string
+    tags: string[]
   }) => Promise<void>
   categoryId: string
   businessId: string
   initial?: MenuItem
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(initial?.name ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
+  const [editLocale, setEditLocale] = useState<SupportedLocale>('vi')
+  const [nameI18n, setNameI18n] = useState<Record<string, string>>(() => {
+    const base = initial?.name_i18n ?? { vi: initial?.name ?? '', en: initial?.name ?? '' }
+    return { vi: base.vi ?? initial?.name ?? '', en: base.en ?? initial?.name ?? '' }
+  })
+  const [descriptionI18n, setDescriptionI18n] = useState<Record<string, string>>(() => {
+    const base = initial?.description_i18n ?? { vi: initial?.description ?? '', en: initial?.description ?? '' }
+    return { vi: base.vi ?? initial?.description ?? '', en: base.en ?? initial?.description ?? '' }
+  })
+  const name = getLocalizedField(nameI18n, editLocale)
+  const description = getLocalizedField(descriptionI18n, editLocale)
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '')
@@ -433,7 +459,15 @@ function ItemDialog({
     const parsedPrice = parseFloat(price)
     if (isNaN(parsedPrice) || parsedPrice < 0) { toast.error('Enter a valid price'); return }
     setSaving(true)
-    await onSave({ name, description, price: parsedPrice, image_url: imageUrl || undefined, tags })
+    await onSave({
+      name: primaryLocalizedValue(nameI18n) || name,
+      description: primaryLocalizedValue(descriptionI18n) || description,
+      name_i18n: nameI18n,
+      description_i18n: descriptionI18n.vi || descriptionI18n.en ? descriptionI18n : null,
+      price: parsedPrice,
+      image_url: imageUrl || undefined,
+      tags,
+    })
     setSaving(false)
     onClose()
   }
@@ -442,8 +476,9 @@ function ItemDialog({
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       {/* p-0 so we can control padding per zone and pin the footer */}
       <DialogContent className="sm:max-w-lg p-0 flex flex-col w-[95vw] md:w-full" style={{ maxHeight: 'min(90vh, 700px)' }}>
-        <DialogHeader className="px-4 md:px-6 pt-6 pb-3 shrink-0">
+        <DialogHeader className="px-4 md:px-6 pt-6 pb-3 shrink-0 space-y-3">
           <DialogTitle>{isEditing ? t('menuBuilder.editItem') : t('menuBuilder.addItem')}</DialogTitle>
+          <LocaleToggle value={editLocale} onChange={setEditLocale} size="xs" />
         </DialogHeader>
 
         {/* Scrollable body */}
@@ -500,12 +535,12 @@ function ItemDialog({
 
               <div className="space-y-1.5">
                 <Label htmlFor="item-name">{t('menuBuilder.itemName')}</Label>
-                <Input id="item-name" value={name} onChange={e => setName(e.target.value)} placeholder={t('menuBuilder.itemNamePlaceholder')} required autoFocus />
+                <Input id="item-name" value={name} onChange={e => setNameI18n(prev => buildMenuI18nPayload(prev, initial?.name, editLocale, e.target.value))} placeholder={t('menuBuilder.itemNamePlaceholder')} required autoFocus />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="item-desc">{t('menuBuilder.description')}</Label>
-                <Textarea id="item-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder={t('menuBuilder.descriptionPlaceholder')} rows={2} className="resize-none" />
+                <Textarea id="item-desc" value={description} onChange={e => setDescriptionI18n(prev => buildMenuI18nPayload(prev, initial?.description, editLocale, e.target.value))} placeholder={t('menuBuilder.descriptionPlaceholder')} rows={2} className="resize-none" />
               </div>
 
               <div className="space-y-1.5">
@@ -633,14 +668,19 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
   }
 
   // ── Category handlers ──
-  async function handleSaveCategory(name: string) {
+  async function handleSaveCategory(payload: { name: string; name_i18n: Record<string, string> }) {
     if (catDialog.editing) {
-      const result = await updateCategoryAction(catDialog.editing.id, { name })
+      const result = await updateCategoryAction(catDialog.editing.id, {
+        name: payload.name,
+        name_i18n: payload.name_i18n,
+      })
       if (!result.success) { toast.error(result.error); return }
-      setCategories(prev => prev.map(c => c.id === catDialog.editing!.id ? { ...c, name } : c))
+      setCategories(prev => prev.map(c => c.id === catDialog.editing!.id
+        ? { ...c, name: payload.name, name_i18n: payload.name_i18n }
+        : c))
       toast.success(t('menuBuilder.categoryUpdated'))
     } else {
-      const result = await addCategoryAction(businessId, name)
+      const result = await addCategoryAction(businessId, payload.name, payload.name_i18n)
       if (!result.success) { toast.error(result.error); return }
       setCategories(prev => [...prev, result.data])
       setSelectedCatId(result.data.id)
@@ -667,12 +707,20 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
 
   // ── Item handlers ──
   async function handleSaveItem(itemData: {
-    name: string; description: string; price: number; image_url?: string; tags: string[]
+    name: string
+    description: string
+    name_i18n?: Record<string, string>
+    description_i18n?: Record<string, string> | null
+    price: number
+    image_url?: string
+    tags: string[]
   }) {
     if (itemDialog.editing) {
       const result = await updateItemAction(itemDialog.editing.id, {
         name: itemData.name,
+        name_i18n: itemData.name_i18n ?? null,
         description: itemData.description || null,
+        description_i18n: itemData.description_i18n ?? null,
         price: itemData.price,
         image_url: itemData.image_url || null,
         tags: itemData.tags,
@@ -680,7 +728,16 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => prev.map(i =>
         i.id === itemDialog.editing!.id
-          ? { ...i, name: itemData.name, description: itemData.description || null, price: itemData.price, image_url: itemData.image_url || null, tags: itemData.tags }
+          ? {
+            ...i,
+            name: itemData.name,
+            name_i18n: itemData.name_i18n ?? i.name_i18n,
+            description: itemData.description || null,
+            description_i18n: itemData.description_i18n ?? i.description_i18n,
+            price: itemData.price,
+            image_url: itemData.image_url || null,
+            tags: itemData.tags,
+          }
           : i
       ))
       toast.success(t('menuBuilder.itemSaved'))

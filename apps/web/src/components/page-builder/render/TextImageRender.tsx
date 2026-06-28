@@ -10,11 +10,12 @@
 
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
 import { ctaHref } from '../cta-utils'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 
-function CtaLink({ cta }: { cta: CtaButton }) {
+function CtaLink({ cta, locale }: { cta: CtaButton; locale: SupportedLocale }) {
   const href = ctaHref(cta)
   const base = 'inline-block mt-6 px-6 py-3 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-80 select-none'
   const styles: Record<typeof cta.style, string> = {
@@ -22,7 +23,7 @@ function CtaLink({ cta }: { cta: CtaButton }) {
     outlined: 'border-2 border-gray-900 text-gray-900',
     text:     'underline underline-offset-4 text-gray-900 px-0',
   }
-  return <a href={href} className={`${base} ${styles[cta.style]}`}>{cta.label}</a>
+  return <a href={href} className={`${base} ${styles[cta.style]}`}>{pickLocale(cta.label, locale)}</a>
 }
 
 const PADDING: Record<string, React.CSSProperties> = {
@@ -51,9 +52,13 @@ interface TextImageRenderProps {
   config: TextImageConfig
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
+  locale?: SupportedLocale
 }
 
-export function TextImageRender({ config, isMobilePreview, previewLayout }: TextImageRenderProps) {
+export function TextImageRender({ config, isMobilePreview, previewLayout, locale }: TextImageRenderProps) {
+  const activeLocale = toSupportedLocale(locale)
+  const heading = pickLocale(config.heading, activeLocale)
+  const body = pickLocale(config.body, activeLocale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const padStyle = PADDING[config.padding] ?? PADDING.normal
@@ -111,29 +116,29 @@ export function TextImageRender({ config, isMobilePreview, previewLayout }: Text
       minWidth: 0,
       textAlign: isTextOnly ? 'center' : 'left',
     }}>
-      {config.heading && (
+      {heading && (
         <h2 style={{
           ...typography.h2,
           color: '#111',
           margin: 0,
         }}>
-          {config.heading}
+          {heading}
         </h2>
       )}
-      {config.body && (
+      {body && (
         <p style={{
           ...typography.bodyMd,
           color: '#555',
-          marginTop: config.heading ? '16px' : 0,
+          marginTop: heading ? '16px' : 0,
           whiteSpace: 'pre-wrap',
         }}>
-          {config.body}
+          {body}
         </p>
       )}
-      {!config.heading && !config.body && (
+      {!heading && !body && (
         <p style={{ color: '#ccc', fontSize: '15px', fontStyle: 'italic' }}>Add heading or body text in the settings panel.</p>
       )}
-      {config.cta && <CtaLink cta={config.cta} />}
+      {config.cta && <CtaLink cta={config.cta} locale={activeLocale} />}
     </div>
   )
 

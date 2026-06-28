@@ -22,6 +22,7 @@ import {
 } from '@/lib/schema'
 import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
 
@@ -140,8 +141,8 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
       db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     ])
-    menuCategories = cats ?? []
-    menuItems = itms ?? []
+    menuCategories = (cats ?? []).map(normalizeMenuCategory)
+    menuItems = (itms ?? []).map(normalizeMenuItem)
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)
@@ -274,6 +275,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         config={navbarConfig}
         businessName={business.name}
         logoUrl={business.logo_url ?? undefined}
+        locale={visitorLocale}
       />
 
       <main>
@@ -305,10 +307,10 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                 )}
                 <div data-live-block={block.id} style={innerStyle}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
+                    <HeroRender config={block.config as HeroConfig} businessName={business.name} locale={visitorLocale} />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} />
+                    <TextImageRender config={block.config as TextImageConfig} locale={visitorLocale} />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender
@@ -326,6 +328,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
+                      locale={visitorLocale}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -333,7 +336,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? qrConfig.custom_url
                       : `${baseUrl}/${slug}`
-                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
+                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} locale={visitorLocale} />
                   })()}
                 </div>
               </div>

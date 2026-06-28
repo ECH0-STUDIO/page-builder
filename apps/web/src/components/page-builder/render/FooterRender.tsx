@@ -1,5 +1,6 @@
 import { FooterConfig } from '../types'
 import { LiveStoreFooter } from './LiveStoreFooter'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 export function FooterRender({
   config,
@@ -14,6 +15,8 @@ export function FooterRender({
   locale?: 'vi' | 'en'
 }) {
   const currentYear = new Date().getFullYear()
+  const activeLocale = toSupportedLocale(locale)
+  const copyright = pickLocale(config.copyright_text, activeLocale)
 
   return (
     <footer
@@ -28,7 +31,7 @@ export function FooterRender({
           <p className="font-semibold text-lg">{businessName}</p>
         )}
         <p className="opacity-80">
-          &copy; {currentYear} {config.copyright_text}
+          &copy; {currentYear} {copyright}
         </p>
         {!inEditor && (
           <LiveStoreFooter locale={locale} />

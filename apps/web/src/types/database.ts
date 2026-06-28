@@ -123,6 +123,7 @@ export interface Database {
           id: string
           business_id: string
           name: string
+          name_i18n: Json | null
           sort_order: number
           visible: boolean
           created_at: string
@@ -133,6 +134,7 @@ export interface Database {
           id?: string
           business_id: string
           name: string
+          name_i18n?: Json | null
           sort_order?: number
           visible?: boolean
           created_at?: string
@@ -142,6 +144,7 @@ export interface Database {
           id?: string
           business_id?: string
           name?: string
+          name_i18n?: Json | null
           sort_order?: number
           visible?: boolean
           created_at?: string
@@ -247,7 +250,9 @@ export interface Database {
           business_id: string
           category_id: string
           name: string
+          name_i18n: Json | null
           description: string | null
+          description_i18n: Json | null
           price: number
           image_url: string | null
           available: boolean
@@ -261,7 +266,9 @@ export interface Database {
           business_id: string
           category_id: string
           name: string
+          name_i18n?: Json | null
           description?: string | null
+          description_i18n?: Json | null
           price?: number
           image_url?: string | null
           available?: boolean
@@ -275,7 +282,9 @@ export interface Database {
           business_id?: string
           category_id?: string
           name?: string
+          name_i18n?: Json | null
           description?: string | null
+          description_i18n?: Json | null
           price?: number
           image_url?: string | null
           available?: boolean

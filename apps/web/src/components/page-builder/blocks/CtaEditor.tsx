@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
 import { ctaHref } from '../cta-utils'
+import type { SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput } from '@/components/i18n/LocalizedField'
 // Re-export so existing client-side imports from CtaEditor still resolve
 export { ctaHref } from '../cta-utils'
 
@@ -51,6 +53,7 @@ export function CtaEditor({
   value,
   label: fieldLabel,
   blocks,
+  editLocale,
   onChange,
   onRemove,
 }: {
@@ -58,6 +61,7 @@ export function CtaEditor({
   label: string
   /** Full block list — used to populate the 'scroll to' section dropdown */
   blocks: PageBlock[]
+  editLocale: SupportedLocale
   onChange: (v: CtaButton) => void
   onRemove: () => void
 }) {
@@ -87,10 +91,11 @@ export function CtaEditor({
       </div>
 
       {/* Label */}
-      <Input
+      <LocalizedInput
         placeholder={t('ctaEditor.buttonLabel')}
+        locale={editLocale}
         value={value.label}
-        onChange={e => onChange({ ...value, label: e.target.value })}
+        onChange={label => onChange({ ...value, label })}
         className="h-8 text-sm"
       />
 
@@ -171,11 +176,13 @@ export function SimpleCtaEditor({
   blocks,
   onChange,
   onRemove,
+  editLocale = 'vi',
 }: {
   value: CtaButton
   blocks: PageBlock[]
   onChange: (v: CtaButton) => void
   onRemove: () => void
+  editLocale?: SupportedLocale
 }) {
   return (
     <div className="space-y-2 p-3 rounded-lg border border-border/60 bg-muted/20">
@@ -185,7 +192,7 @@ export function SimpleCtaEditor({
           <X className="size-3.5" />
         </button>
       </div>
-      <CtaEditor value={value} label="" blocks={blocks} onChange={onChange} onRemove={onRemove} />
+      <CtaEditor value={value} label="" blocks={blocks} editLocale={editLocale} onChange={onChange} onRemove={onRemove} />
     </div>
   )
 }

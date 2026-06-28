@@ -14,10 +14,12 @@
  * as a sibling so it sits outside the scrollable content.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { localizeMenuCategories, localizeMenuItems } from '@/i18n/menu-content'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -416,14 +418,24 @@ function MenuGridInner({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  locale,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: SupportedLocale }) {
+  const activeLocale = toSupportedLocale(locale)
+  const localizedData = useMemo(() => ({
+    ...data,
+    categories: localizeMenuCategories(data.categories, activeLocale),
+    items: localizeMenuItems(data.items, activeLocale),
+  }), [data, activeLocale])
+
+  const sectionHeading = pickLocale(config.heading, activeLocale)
+  const sectionDescription = pickLocale(config.description, activeLocale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
-  const { categories, items, variantGroups, variantOptions } = data
+  const { categories, items, variantGroups, variantOptions } = localizedData
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -480,26 +492,26 @@ function MenuGridInner({
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
-          {(config.heading || config.description) && (
+          {(sectionHeading || sectionDescription) && (
             <div style={{ marginBottom: '32px' }}>
-              {config.heading && (
+              {sectionHeading && (
                 <h2 style={{
                   color: textColor,
                   ...typography.h2,
-                  marginBottom: config.description ? '12px' : 0,
+                  marginBottom: sectionDescription ? '12px' : 0,
                   wordBreak: 'break-word'
                 }}>
-                  {config.heading}
+                  {sectionHeading}
                 </h2>
               )}
-              {config.description && (
+              {sectionDescription && (
                 <p style={{
                   color: textColor,
                   ...typography.bodyMd,
                   maxWidth: '700px',
                   whiteSpace: 'pre-wrap'
                 }}>
-                  {config.description}
+                  {sectionDescription}
                 </p>
               )}
             </div>
@@ -628,13 +640,15 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  locale,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; locale?: SupportedLocale }) {
   return (
     <MenuGridInner
       config={config}
       data={data}
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
+      locale={locale}
     />
   )
 }

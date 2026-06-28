@@ -10,7 +10,7 @@ Target audience is Vietnam. Visitors and editors work in **one language at a tim
 | Login / signup / forgot-password | **No** | Auth route group has no `I18nProvider`; UI strings are hardcoded English. |
 | Live store `/[slug]` | **Partial** | `[slug]/layout.tsx` has `I18nProvider` but dictionary comes from visitor cookie only. Cart drawer strings are hardcoded English. |
 | Marketing site | English | Nexbet export; not wired to i18n. |
-| Menu items / page blocks | Single language | One `name`, `heading`, `description` field per entity. |
+| Menu items / page blocks | Bilingual JSON | `name_i18n`, `description_i18n`, block `config` fields as `{ vi, en }`; `pickLocale` at render. |
 | Publishing `language` field | Stored | Used for `html[lang]` and schema; not a full content locale system. |
 
 ## Product requirements
@@ -23,7 +23,7 @@ Target audience is Vietnam. Visitors and editors work in **one language at a tim
 
 ## Recommended architecture
 
-### Phase 1 — System UI i18n (in progress)
+### Phase 1 — System UI i18n (done)
 
 - Wrap `(auth)/layout.tsx` in `I18nProvider` (same as dashboard).
 - Add `cart.*`, `order.*`, `auth.*`, `liveStore.*` keys to `en.json` / `vi.json`; use `t()` in `CartDrawer`, `PaymentDrawer`, auth pages.
@@ -32,7 +32,7 @@ Target audience is Vietnam. Visitors and editors work in **one language at a tim
 
 **No schema changes.**
 
-### Phase 2 — Store content bilingual (medium)
+### Phase 2 — Store content bilingual (done)
 
 **JSON fields (recommended for MVP)**
 
@@ -40,23 +40,23 @@ Target audience is Vietnam. Visitors and editors work in **one language at a tim
 -- page_blocks.config already JSONB; extend shapes:
 { "heading": { "vi": "...", "en": "..." } }
 
--- menu_items
+-- menu_items / menu_categories (migration 031_menu_i18n.sql)
 ALTER TABLE menu_items ADD COLUMN name_i18n jsonb;
 ALTER TABLE menu_items ADD COLUMN description_i18n jsonb;
+ALTER TABLE menu_categories ADD COLUMN name_i18n jsonb;
 ```
 
-- `publishing_settings.content_locales: text[]` default `'{vi,en}'`.
-- Render helper: `pickLocale(value, locale)` — returns **one** string for the active locale.
+- `pickLocale(value, locale)` — returns **one** string for the active locale.
 - Backfill: `{ "vi": existing_value, "en": existing_value }`.
 
-### Phase 3 — Page builder UX (larger)
+### Phase 3 — Page builder UX (done)
 
 - Locale toggle in editor toolbar — edits **one language at a time**.
 - Per-block settings show fields for **active edit locale** only.
-- Menu builder: locale tabs per item.
-- Canvas preview respects selected preview locale.
+- Menu builder: locale tabs per item and category.
+- Canvas preview uses `pickLocale` for the active preview locale.
 
-### Phase 4 — Live rendering rules
+### Phase 4 — Live rendering rules (done)
 
 | Visitor locale | Live behavior |
 |----------------|---------------|

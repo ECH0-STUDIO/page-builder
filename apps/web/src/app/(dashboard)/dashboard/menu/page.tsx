@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
 // import { createClient } from '@/lib/supabase/server'
 import { MenuBuilder } from '@/components/menu/MenuBuilder'
+import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Menu' }
@@ -31,8 +32,8 @@ export default async function MenuPage() {
   return (
     <MenuBuilder
       businessId={business.id}
-      initialCategories={categories ?? []}
-      initialItems={items ?? []}
+      initialCategories={(categories ?? []).map(normalizeMenuCategory)}
+      initialItems={(items ?? []).map(normalizeMenuItem)}
     />
   )
 }

@@ -6,6 +6,7 @@ import { PrintMenuShell } from '@/components/print/PrintMenuShell'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Print Menu' }
@@ -28,8 +29,8 @@ export default async function PrintMenuPage() {
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),
   ])
 
-  const categories: MenuCategory[] = categoriesRaw ?? []
-  const items: MenuItem[] = itemsRaw ?? []
+  const categories: MenuCategory[] = (categoriesRaw ?? []).map(normalizeMenuCategory)
+  const items: MenuItem[] = (itemsRaw ?? []).map(normalizeMenuItem)
 
   if (categories.length === 0) {
     return (

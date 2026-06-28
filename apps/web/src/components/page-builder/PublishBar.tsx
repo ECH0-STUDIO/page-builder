@@ -14,6 +14,8 @@ import {
 import { getPublicStoreUrl } from '@/lib/site-urls'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { LocaleToggle } from '@/components/i18n/LocaleToggle'
+import type { SupportedLocale } from '@/i18n/locale'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved'
 
@@ -27,6 +29,8 @@ interface PublishBarProps {
   publishing: boolean
   onSaveNow: () => void
   onTogglePreview: () => void
+  editLocale: SupportedLocale
+  onEditLocaleChange: (locale: SupportedLocale) => void
 }
 
 export function PublishBar({
@@ -38,6 +42,8 @@ export function PublishBar({
   onPublish,
   publishing,
   onTogglePreview,
+  editLocale,
+  onEditLocaleChange,
 }: PublishBarProps) {
   const router = useRouter()
   const { t } = useTranslation()
@@ -61,6 +67,13 @@ export function PublishBar({
       {/* Business name */}
       <span className="font-semibold text-sm truncate max-w-[140px]">{businessName}</span>
       <span className="text-muted-foreground/40 text-xs hidden lg:inline shrink-0">/ Page Builder</span>
+
+      <LocaleToggle
+        value={editLocale}
+        onChange={onEditLocaleChange}
+        size="xs"
+        className="hidden sm:inline-flex shrink-0"
+      />
 
       <div className="flex-1 min-w-0" />
 

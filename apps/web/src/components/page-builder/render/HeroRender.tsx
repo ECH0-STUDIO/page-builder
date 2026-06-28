@@ -15,12 +15,13 @@
 
 import type { HeroConfig, CtaButton } from '../types'
 import { ctaHref } from '../cta-utils'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { type PreviewLayout, isForcedMobileLayout, sectionPaddingClass } from './preview-layout'
 
-function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
+function CtaLink({ cta, textColor, locale }: { cta: CtaButton; textColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
   const base = 'inline-block px-7 py-3.5 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-90 select-none'
   const isLight = textColor === '#ffffff' || textColor === 'white'
@@ -29,7 +30,7 @@ function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
     outlined: { border: `2px solid ${textColor}`, color: textColor, backgroundColor: 'transparent' },
     text:     { textDecoration: 'underline', textUnderlineOffset: '4px', color: textColor, paddingLeft: 0, paddingRight: 0 },
   }
-  return <a href={href} className={base} style={styles[cta.style]}>{cta.label}</a>
+  return <a href={href} className={base} style={styles[cta.style]}>{pickLocale(cta.label, locale)}</a>
 }
 
 export function HeroRender({
@@ -37,18 +38,23 @@ export function HeroRender({
   businessName,
   isMobilePreview,
   previewLayout,
+  locale,
 }: {
   config: HeroConfig
   businessName?: string
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
+  locale?: SupportedLocale
 }) {
+  const activeLocale = toSupportedLocale(locale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
-  const heading   = config.heading || businessName || 'Welcome'
+  const heading = pickLocale(config.heading, activeLocale) || businessName || 'Welcome'
+  const tagline = pickLocale(config.tagline, activeLocale)
+  const body = pickLocale(config.body, activeLocale)
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const padY      = config.section_padding_y ?? 80
   const typography = getTypography(mobileLayout)
@@ -77,12 +83,12 @@ export function HeroRender({
       <section className={sectionPx} style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
-          {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
-          {config.body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
+          {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
+          {body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
-              {config.cta && <CtaLink cta={config.cta} textColor={textColor} />}
-              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} />}
+              {config.cta && <CtaLink cta={config.cta} textColor={textColor} locale={activeLocale} />}
+              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} locale={activeLocale} />}
             </div>
           )}
         </div>
@@ -100,12 +106,12 @@ export function HeroRender({
       <div className={splitPx} style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', paddingTop: padY, paddingBottom: padY, ...heightBase }}>
         <div>
           <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
-          {config.tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{config.tagline}</p>}
-          {config.body && <p style={{ color: panelTxt, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap' }}>{config.body}</p>}
+          {tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{tagline}</p>}
+          {body && <p style={{ color: panelTxt, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap' }}>{body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '32px' }}>
-              {config.cta && <CtaLink cta={config.cta} textColor={panelTxt} />}
-              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={panelTxt} />}
+              {config.cta && <CtaLink cta={config.cta} textColor={panelTxt} locale={activeLocale} />}
+              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={panelTxt} locale={activeLocale} />}
             </div>
           )}
         </div>
@@ -149,12 +155,12 @@ export function HeroRender({
       <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlayOpacity})` }} />
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '800px', width: '100%' }}>
         <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
-        {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
-        {config.body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{config.body}</p>}
+        {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
+        {body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{body}</p>}
         {(config.cta || config.cta_secondary) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
-            {config.cta && <CtaLink cta={config.cta} textColor={textColor} />}
-            {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} />}
+            {config.cta && <CtaLink cta={config.cta} textColor={textColor} locale={activeLocale} />}
+            {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} locale={activeLocale} />}
           </div>
         )}
       </div>

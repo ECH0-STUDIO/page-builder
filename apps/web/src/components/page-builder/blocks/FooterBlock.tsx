@@ -8,16 +8,20 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from '@/i18n/I18nProvider'
+import type { SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput } from '@/components/i18n/LocalizedField'
 import { saveFooterAction } from '@/app/actions/page-builder'
 
 export function FooterSettings({
   config,
   onChange,
   businessId,
+  editLocale,
 }: {
   config: FooterConfig
   onChange: (config: FooterConfig) => void
   businessId: string
+  editLocale: SupportedLocale
 }) {
   const { t } = useTranslation()
   const [saving, setSaving] = useState(false)
@@ -64,9 +68,10 @@ export function FooterSettings({
 
         <div className="space-y-1.5">
           <Label className="text-xs">{t('footerBlock.copyrightText')}</Label>
-          <Input 
-            value={config.copyright_text} 
-            onChange={e => set('copyright_text', e.target.value)}
+          <LocalizedInput
+            locale={editLocale}
+            value={config.copyright_text}
+            onChange={v => set('copyright_text', v)}
             className="h-8 text-xs"
           />
         </div>

@@ -17,6 +17,8 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { CtaEditor } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { pickLocale, type SupportedLocale } from '@/i18n/locale'
+import { LocalizedInput, LocalizedTextarea } from '@/components/i18n/LocalizedField'
 import type {
   HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock,
 } from '../types'
@@ -25,6 +27,8 @@ import type {
 
 export function HeroPreview({ config }: { config: HeroConfig }) {
   const { t } = useTranslation()
+  const heading = pickLocale(config.heading, 'vi')
+  const tagline = pickLocale(config.tagline, 'vi')
   const layoutLabels: Record<HeroLayout, string> = {
     centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay at 40%
     split: t('heroBlock.split'),
@@ -52,10 +56,10 @@ export function HeroPreview({ config }: { config: HeroConfig }) {
       )}
       <div className="p-3 space-y-0.5">
         <p className="text-xs font-semibold truncate">
-          {config.heading || <span className="text-muted-foreground italic">{t('heroBlock.heading')}…</span>}
+          {heading || <span className="text-muted-foreground italic">{t('heroBlock.heading')}…</span>}
         </p>
-        {config.tagline && (
-          <p className="text-xs text-muted-foreground truncate">{config.tagline}</p>
+        {tagline && (
+          <p className="text-xs text-muted-foreground truncate">{tagline}</p>
         )}
         <p className="text-[10px] text-muted-foreground/60 pt-1">
           {layoutLabels[config.layout]} · {config.height}
@@ -72,12 +76,14 @@ export function HeroSettings({
   businessId,
   blocks,
   onChange,
+  editLocale,
 }: {
   config: HeroConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
   onChange: (c: HeroConfig) => void
+  editLocale: SupportedLocale
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -340,15 +346,15 @@ export function HeroSettings({
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.content')}</Label>
         <div className="space-y-1.5">
           <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
-          <Input id="hero-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+          <LocalizedInput id="hero-heading" locale={editLocale} value={config.heading} onChange={v => set('heading', v)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-tagline" className="text-xs">{t('heroBlock.tagline')}</Label>
-          <Input id="hero-tagline" value={config.tagline} onChange={e => set('tagline', e.target.value)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
+          <LocalizedInput id="hero-tagline" locale={editLocale} value={config.tagline} onChange={v => set('tagline', v)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
-          <Textarea id="hero-body" value={config.body} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+          <LocalizedTextarea id="hero-body" locale={editLocale} value={config.body} onChange={v => set('body', v)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
         </div>
       </div>
 
@@ -362,6 +368,7 @@ export function HeroSettings({
             label={t('heroBlock.primaryButton')}
             value={config.cta}
             blocks={blocks}
+            editLocale={editLocale}
             onChange={v => set('cta', v)}
             onRemove={() => set('cta', null)}
           />
@@ -378,6 +385,7 @@ export function HeroSettings({
               label={t('heroBlock.secondaryLink')}
               value={config.cta_secondary}
               blocks={blocks}
+              editLocale={editLocale}
               onChange={v => set('cta_secondary', v)}
               onRemove={() => set('cta_secondary', null)}
             />
