@@ -2,7 +2,7 @@
 
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { getLocalizedField, setLocalizedField, type LocalizedValue } from '@/i18n/locale'
+import { getLocalizedFieldForEdit, setLocalizedField, type LocalizedValue } from '@/i18n/locale'
 import { useLocaleEdit } from './LocaleEditContext'
 
 type InputProps = React.ComponentProps<typeof Input>
@@ -32,7 +32,7 @@ export function LocalizedInput({
   return (
     <Input
       {...props}
-      value={getLocalizedField(value, locale, enabledLocales)}
+      value={getLocalizedFieldForEdit(value, locale)}
       onChange={e => onChange(
         setLocalizedField(value, locale, e.target.value, enabledLocales, primaryLocale),
       )}
@@ -56,7 +56,7 @@ export function LocalizedTextarea({
   return (
     <Textarea
       {...props}
-      value={getLocalizedField(value, locale, enabledLocales)}
+      value={getLocalizedFieldForEdit(value, locale)}
       onChange={e => onChange(
         setLocalizedField(value, locale, e.target.value, enabledLocales, primaryLocale),
       )}

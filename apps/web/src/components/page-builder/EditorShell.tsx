@@ -32,7 +32,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
 import { LocaleBar, DEFAULT_ENABLED_LOCALES } from '@/components/i18n/LocaleBar'
 import { LocaleEditProvider } from '@/components/i18n/LocaleEditContext'
-import { LOCALE_CREDIT_COST_PER_MONTH } from '@/i18n/locale-content'
+import { stripLocaleFromObject } from '@/i18n/locale-content'
 
 import { PublishBar } from './PublishBar'
 import { TemplatePicker } from './TemplatePicker'
@@ -489,6 +489,7 @@ export function EditorShell({
   const [desktopZoom, setDesktopZoom] = useState(1)
   const canvasScrollRef = useRef<HTMLDivElement>(null)
   const [canvasWidth, setCanvasWidth] = useState(0)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
@@ -563,7 +564,15 @@ export function EditorShell({
     ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
     : 1
   const displayDesktopZoom = fitDesktopZoom * desktopZoom
-  const showDesktopZoomControls = viewMode === 'desktop' && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+  const showDesktopZoomControls = isMobileDevice && viewMode === 'desktop' && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobileDevice(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   useEffect(() => {
     const el = canvasScrollRef.current
@@ -638,16 +647,47 @@ export function EditorShell({
 
   const handleAddLocale = useCallback((code: string) => {
     if (enabledLocales.includes(code)) return
-    const isExtra = !DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])
-    if (isExtra) {
-      toast.info(
-        t('pageBuilder.addLanguageCreditNote').replace('{{credits}}', String(LOCALE_CREDIT_COST_PER_MONTH)),
-      )
-    }
     const next = [...enabledLocales, code]
     handlePublishingChange({ enabled_locales: next })
     setEditLocale(code)
-  }, [enabledLocales, handlePublishingChange, t])
+  }, [enabledLocales, handlePublishingChange])
+
+  const handleRemoveLocale = useCallback((code: string) => {
+    if (enabledLocales.length <= 1) return
+    if (DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])) return
+
+    const nextLocales = enabledLocales.filter(l => l !== code)
+    const nextSeo = publishingSettings?.seo_i18n
+      ? stripLocaleFromObject(publishingSettings.seo_i18n, code)
+      : null
+
+    setBlocks(prev => prev.map(b => ({
+      ...b,
+      config: stripLocaleFromObject(b.config, code),
+    })))
+
+    if (theme?.navbar_config || theme?.footer_config) {
+      handleThemeChange({
+        navbar_config: theme.navbar_config
+          ? stripLocaleFromObject(theme.navbar_config, code)
+          : theme.navbar_config,
+        footer_config: theme.footer_config
+          ? stripLocaleFromObject(theme.footer_config, code)
+          : theme.footer_config,
+      })
+    }
+
+    handlePublishingChange({ enabled_locales: nextLocales, seo_i18n: nextSeo })
+    if (editLocale === code) setEditLocale(primaryLocale)
+  }, [
+    enabledLocales,
+    publishingSettings?.seo_i18n,
+    theme,
+    handlePublishingChange,
+    handleThemeChange,
+    editLocale,
+    primaryLocale,
+  ])
 
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
@@ -803,7 +843,7 @@ export function EditorShell({
     setPublishing(false)
   }
 
-  const renderLeftSidebarContent = () => (
+  const renderLeftSidebarContent = ({ showGlobalSettings = true }: { showGlobalSettings?: boolean } = {}) => (
     <>
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
@@ -881,7 +921,7 @@ export function EditorShell({
         </div>
       </div>
 
-      {/* Page Settings */}
+      {showGlobalSettings && (
       <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0">
         <button
           type="button"
@@ -897,6 +937,7 @@ export function EditorShell({
           Global Settings
         </button>
       </div>
+      )}
     </>
   )
 
@@ -956,6 +997,8 @@ export function EditorShell({
               publishing={publishingSettings}
               onThemeChange={handleThemeChange}
               onPublishingChange={handlePublishingChange}
+              onAddLocale={handleAddLocale}
+              onRemoveLocale={handleRemoveLocale}
             />
           </div>
         </>
@@ -1030,6 +1073,15 @@ export function EditorShell({
         </DialogContent>
       </Dialog>
 
+      {!isPreviewMode && (
+        <LocaleBar
+          enabledLocales={enabledLocales}
+          activeLocale={editLocale}
+          onActiveLocaleChange={setEditLocale}
+          onAddLocale={handleAddLocale}
+        />
+      )}
+
       {/* 3-column body */}
       <div className="flex flex-1 overflow-hidden relative">
 
@@ -1042,15 +1094,6 @@ export function EditorShell({
 
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
-
-          {!isPreviewMode && (
-            <LocaleBar
-              enabledLocales={enabledLocales}
-              activeLocale={editLocale}
-              onActiveLocaleChange={setEditLocale}
-              onAddLocale={handleAddLocale}
-            />
-          )}
 
           {/* Viewport toggle + desktop zoom */}
           <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80 flex-wrap">
@@ -1230,7 +1273,7 @@ export function EditorShell({
             </DrawerTrigger>
             <DrawerContent className="h-[80vh] flex flex-col p-0">
               <VisuallyHidden><DrawerTitle>Sections</DrawerTitle></VisuallyHidden>
-              {renderLeftSidebarContent()}
+              {renderLeftSidebarContent({ showGlobalSettings: false })}
             </DrawerContent>
           </Drawer>
 

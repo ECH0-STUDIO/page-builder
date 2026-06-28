@@ -5,7 +5,7 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
-import { getPublicStoreUrl } from '@/lib/site-urls'
+import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Publishing' }
@@ -29,7 +29,7 @@ export default async function PublishingPage() {
     getCustomDomainSetupAction(business.id),
   ])
 
-  const baseUrl = slug ? getPublicStoreUrl(slug) : getPublicStoreUrl(business.slug ?? business.id)
+  const siteOrigin = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
 
   return (
     <div className="p-4 md:p-8 max-w-5xl">
@@ -45,7 +45,7 @@ export default async function PublishingPage() {
         publishing={publishing}
         slug={slug ?? business.id}
         analytics={analytics}
-        baseUrl={baseUrl}
+        baseUrl={siteOrigin}
         initialDomainSetup={domainSetup}
       />
     </div>

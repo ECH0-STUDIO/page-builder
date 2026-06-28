@@ -46,6 +46,60 @@ export function getLocalizedField(
   return pickLocale(value, locale, enabledLocales)
 }
 
+/** Raw string for controlled inputs — preserves spaces while typing. */
+export function getLocalizedFieldForEdit(
+  value: LocalizedValue,
+  locale: string,
+): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  const raw = value[locale]
+  return typeof raw === 'string' ? raw : ''
+}
+
+export function stripLocaleFromLocalizedValue(
+  value: LocalizedValue,
+  locale: string,
+): LocalizedValue {
+  if (value == null || typeof value === 'string') return value
+  const { _customized, ...rest } = value
+  const next: LocaleStringMap = { ...rest }
+  delete next[locale]
+  const customized = _customized ? { ..._customized } : undefined
+  if (customized) {
+    delete customized[locale]
+    if (Object.keys(customized).length > 0) next._customized = customized
+  }
+  return next
+}
+
+function isLocaleStringMap(obj: unknown): obj is LocaleStringMap {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false
+  const entries = Object.entries(obj)
+  if (entries.length === 0) return false
+  return entries.every(([k, v]) => {
+    if (k === '_customized') return typeof v === 'object' && v !== null
+    return typeof v === 'string'
+  })
+}
+
+/** Deep-remove a locale key from nested localized maps (block configs, nav, etc.). */
+export function stripLocaleFromObject<T>(obj: T, locale: string): T {
+  if (obj == null || typeof obj !== 'string' && typeof obj !== 'object') return obj
+  if (typeof obj === 'string') return obj
+  if (Array.isArray(obj)) {
+    return obj.map(item => stripLocaleFromObject(item, locale)) as T
+  }
+  if (isLocaleStringMap(obj)) {
+    return stripLocaleFromLocalizedValue(obj, locale) as T
+  }
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    out[k] = stripLocaleFromObject(v, locale)
+  }
+  return out as T
+}
+
 /**
  * Copy-on-write: editing the primary locale propagates to linked locales;
  * editing another locale marks it customized.

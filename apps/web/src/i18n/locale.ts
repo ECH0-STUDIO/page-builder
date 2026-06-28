@@ -1,9 +1,11 @@
 import type { Locale } from './getDictionary'
 import {
   getLocalizedField,
+  getLocalizedFieldForEdit,
   pickLocale as pickLocaleContent,
   primaryLocalizedValue as primaryLocalizedValueContent,
   setLocalizedField,
+  stripLocaleFromObject,
   type LocalizedValue,
   type LocaleStringMap,
 } from './locale-content'
@@ -32,7 +34,7 @@ export function resolveLiveLocale(
 }
 
 export type { LocalizedValue, LocaleStringMap }
-export { getLocalizedField, setLocalizedField }
+export { getLocalizedField, getLocalizedFieldForEdit, setLocalizedField, stripLocaleFromObject }
 
 /**
  * Pick a single string for the active locale from plain or i18n-shaped values.

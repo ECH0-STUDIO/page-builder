@@ -210,7 +210,7 @@ export function PublishingClient({
     }
   }
 
-  const publicUrl = `${baseUrl}/${initialSlug}`
+  const publicUrl = `${baseUrl.replace(/\/$/, '')}/${slug}`
 
   // ── Period toggle ─────────────────────────────────────────────────────────
 
@@ -489,13 +489,6 @@ export function PublishingClient({
           </div>
           <MiniChart daily={analytics.daily} period={period} />
         </div>
-      </Card>
-
-      {/* SEO, favicon, analytics tags → Page Builder → Global Settings (Chủ đề) */}
-      <Card className="bg-gray-50 border-dashed">
-        <p className="text-sm text-gray-600">
-          {t('publishing.seoMovedHint')}
-        </p>
       </Card>
 
       {/* ── Quick Actions ── */}

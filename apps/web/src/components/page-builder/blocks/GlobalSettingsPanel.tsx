@@ -13,15 +13,32 @@ import { uploadImageToStorage, validateImageDimensions } from '@/lib/image-utils
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type { ThemeSettings, PublishingSettings, SeoI18nStore } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { getLocalizedField, setLocalizedField } from '@/i18n/locale'
+import { getLocalizedFieldForEdit, setLocalizedField } from '@/i18n/locale'
+import { DEFAULT_ENABLED_LOCALES, LOCALE_CREDIT_COST_PER_MONTH, OPTIONAL_LOCALES } from '@/i18n/locale-content'
+import { LOCALE_LABELS, type SupportedLocale } from '@/i18n/locale'
 import { useLocaleEdit } from '@/components/i18n/LocaleEditContext'
 import { LocaleFieldLabel } from '@/components/i18n/LocaleFieldLabel'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Plus, Trash2 } from 'lucide-react'
 
 interface GlobalSettingsPanelProps {
   theme: ThemeSettings | null
   publishing: PublishingSettings | null
   onThemeChange: (updated: Partial<ThemeSettings>) => void
   onPublishingChange: (updated: Partial<PublishingSettings>) => void
+  onAddLocale?: (locale: string) => void
+  onRemoveLocale?: (locale: string) => void
 }
 
 const FONTS = ['Inter', 'Outfit', 'Playfair Display', 'Lora', 'Space Grotesk', 'Roboto Mono']
@@ -41,7 +58,7 @@ function readSeoField(
   enabledLocales: string[],
 ): string {
   const map = seoI18n?.[field]
-  if (map) return getLocalizedField(map, locale, enabledLocales)
+  if (map) return getLocalizedFieldForEdit(map, locale)
   return locale === enabledLocales[0] ? (legacy ?? '') : ''
 }
 
@@ -50,12 +67,17 @@ export function GlobalSettingsPanel({
   publishing,
   onThemeChange,
   onPublishingChange,
+  onAddLocale,
+  onRemoveLocale,
 }: GlobalSettingsPanelProps) {
   const { t } = useTranslation()
   const { editLocale, enabledLocales, primaryLocale } = useLocaleEdit()
   const thm = theme || {} as ThemeSettings
   const p = publishing || {} as PublishingSettings
   const seoI18n = p.seo_i18n ?? {}
+  const [localeToDelete, setLocaleToDelete] = useState<string | null>(null)
+
+  const availableToAdd = OPTIONAL_LOCALES.filter(o => !enabledLocales.includes(o.code))
 
   const faviconRef = useRef<HTMLInputElement>(null)
   const webclipRef = useRef<HTMLInputElement>(null)
@@ -151,7 +173,70 @@ export function GlobalSettingsPanel({
   const ogImageUrl = readSeoField(seoI18n, 'og_image_url', p.og_image_url, editLocale, enabledLocales)
 
   return (
+    <>
     <div className="space-y-8 p-4">
+      {/* ── Content languages ── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-sm">{t('pageBuilder.languages')}</h3>
+        <p className="text-[11px] text-muted-foreground leading-snug">{t('pageBuilder.languagesHint')}</p>
+        <ul className="space-y-1.5">
+          {enabledLocales.map(code => {
+            const label = LOCALE_LABELS[code as SupportedLocale]
+              ?? OPTIONAL_LOCALES.find(o => o.code === code)?.label
+              ?? code.toUpperCase()
+            const isDefault = DEFAULT_ENABLED_LOCALES.includes(code as typeof DEFAULT_ENABLED_LOCALES[number])
+            const canDelete = enabledLocales.length > 1 && onRemoveLocale
+            return (
+              <li
+                key={code}
+                className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs"
+              >
+                <span className="font-medium">{label}</span>
+                <div className="flex items-center gap-1">
+                  {isDefault && (
+                    <span className="text-[10px] text-muted-foreground">{t('pageBuilder.defaultLanguage')}</span>
+                  )}
+                  {canDelete && !isDefault && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => setLocaleToDelete(code)}
+                      aria-label={t('pageBuilder.removeLanguage')}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+        {availableToAdd.length > 0 && onAddLocale && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs gap-1">
+                <Plus className="size-3" />
+                {t('pageBuilder.addLanguage')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <p className="px-2 py-1.5 text-[10px] text-muted-foreground leading-snug">
+                {t('pageBuilder.addLanguageCreditNote').replace('{{credits}}', String(LOCALE_CREDIT_COST_PER_MONTH))}
+              </p>
+              {availableToAdd.map(o => (
+                <DropdownMenuItem key={o.code} onClick={() => onAddLocale(o.code)}>
+                  {o.label} ({o.code})
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      <Separator />
+
       {/* ── SEO & Meta (per content locale) ── */}
       <div className="space-y-4">
         <h3 className="font-semibold text-sm">{t('pageBuilder.globalSeo')}</h3>
@@ -405,5 +490,31 @@ export function GlobalSettingsPanel({
         </div>
       </div>
     </div>
+
+    <Dialog open={!!localeToDelete} onOpenChange={o => !o && setLocaleToDelete(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('pageBuilder.removeLanguageTitle')}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {t('pageBuilder.removeLanguageConfirm')}
+        </p>
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={() => setLocaleToDelete(null)}>
+            {t('pageBuilder.cancel')}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (localeToDelete && onRemoveLocale) onRemoveLocale(localeToDelete)
+              setLocaleToDelete(null)
+            }}
+          >
+            {t('pageBuilder.removeLanguage')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
