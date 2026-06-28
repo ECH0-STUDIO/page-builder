@@ -7,10 +7,12 @@ import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 
 interface PaymentDrawerProps {
   paymentSettings?: PaymentSettings
+  contained?: boolean
 }
 
-export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
+export function PaymentDrawer({ paymentSettings, contained }: PaymentDrawerProps) {
   const [open, setOpen] = useState(false)
+  const position = contained ? 'absolute' : 'fixed'
 
   if (!paymentSettings || !paymentSettings.vietqr) return null
 
@@ -23,7 +25,7 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100"
+          className={`${position} bottom-6 left-4 z-[100] flex items-center gap-2 bg-white text-gray-900 pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/20 hover:bg-gray-50 active:scale-95 transition-all border border-gray-100`}
           aria-label="Thanh toán"
         >
           <CreditCard className="size-5 text-gray-700" />
@@ -35,13 +37,13 @@ export function PaymentDrawer({ paymentSettings }: PaymentDrawerProps) {
 
       {open && (
         <div
-          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm`}
           onClick={() => setOpen(false)}
         />
       )}
 
       <div
-        className={`fixed top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 left-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
           open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >

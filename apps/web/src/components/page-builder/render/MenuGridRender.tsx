@@ -24,6 +24,12 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 import { useCart, type CartVariantSelection } from './CartContext'
 import { getTypography } from './typography'
 import { cn } from '@/lib/utils'
+import {
+  type PreviewLayout,
+  isForcedMobileLayout,
+  menuGridColClass,
+  sectionPaddingClass,
+} from './preview-layout'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -402,7 +408,17 @@ function ItemRowList({
 
 // ─── Inner render (needs CartProvider as ancestor) ────────────────────────────
 
-function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & { isMobilePreview?: boolean }) {
+function MenuGridInner({
+  config,
+  data,
+  previewLayout,
+  isMobilePreview,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  const layout: PreviewLayout | undefined =
+    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const mobileLayout = isForcedMobileLayout(layout)
+  const desktopLayout = layout === 'desktop'
+
   const { t } = useTranslation()
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
@@ -423,7 +439,7 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
   const bgColor = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
 
-  const typography = getTypography(isMobilePreview)
+  const typography = getTypography(mobileLayout)
 
   const isCustomMode = config.selection_mode === 'custom_items'
 
@@ -443,13 +459,9 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
         return true
       })
 
-  const gridCols: Record<string, string> = {
-    '2col': 'grid-cols-1 sm:grid-cols-2',
-    '3col': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    list: 'grid-cols-1',
-  }
-  const colClass = isMobilePreview ? 'grid-cols-1' : (gridCols[config.layout] ?? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')
+  const colClass = menuGridColClass(layout, config.layout)
   const isList = config.layout === 'list'
+  const sideTabs = visibleCats.length > 1 && config.tabs_layout !== 'horizontal' && !mobileLayout
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
@@ -461,7 +473,7 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
 
   return (
     <>
-      <section className="px-4 md:px-6" style={{ backgroundColor: bgColor, paddingTop: 64, paddingBottom: 64 }}>
+      <section className={sectionPaddingClass(layout)} style={{ backgroundColor: bgColor, paddingTop: 64, paddingBottom: 64 }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
@@ -491,15 +503,21 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
           )}
 
           {/* Main Layout Container */}
-          <div className={visibleCats.length > 1 && config.tabs_layout !== 'horizontal' && !isMobilePreview ? "flex flex-col md:flex-row gap-6 md:gap-10 md:items-start" : ""}>
+          <div className={sideTabs
+            ? desktopLayout
+              ? 'flex flex-row gap-10 items-start'
+              : 'flex flex-col md:flex-row gap-6 md:gap-10 md:items-start'
+            : ''}>
             {/* Category tabs */}
             {visibleCats.length > 1 && (
               <div 
                 className={cn(
-                  "flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full",
-                  config.tabs_layout !== 'horizontal' && !isMobilePreview
-                    ? "mb-2 md:mb-0 md:border-b-0 md:pb-0 md:flex-col md:w-56 md:shrink-0 md:sticky md:top-[100px]"
-                    : "mb-8 md:mb-8"
+                  'flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full',
+                  config.tabs_layout !== 'horizontal' && !mobileLayout
+                    ? desktopLayout
+                      ? 'mb-0 border-b-0 pb-0 flex-col w-56 shrink-0 sticky top-[100px]'
+                      : 'mb-2 md:mb-0 md:border-b-0 md:pb-0 md:flex-col md:w-56 md:shrink-0 md:sticky md:top-[100px]'
+                    : 'mb-8 md:mb-8'
                 )}
                 style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
               >
@@ -523,8 +541,12 @@ function MenuGridInner({ config, data, isMobilePreview }: MenuGridRenderProps & 
                       }, 10)
                     }}
                     className={cn(
-                      "px-4 py-1.5 shrink-0 rounded-full text-sm font-medium transition-all",
-                      config.tabs_layout !== 'horizontal' && !isMobilePreview ? "md:w-full md:text-left md:px-4 md:py-2.5 md:rounded-xl" : ""
+                      'px-4 py-1.5 shrink-0 rounded-full text-sm font-medium transition-all',
+                      config.tabs_layout !== 'horizontal' && !mobileLayout
+                        ? desktopLayout
+                          ? 'w-full text-left px-4 py-2.5 rounded-xl'
+                          : 'md:w-full md:text-left md:px-4 md:py-2.5 md:rounded-xl'
+                        : ''
                     )}
                     style={
                       activeCat === cat.id
@@ -598,6 +620,18 @@ interface MenuGridRenderProps {
   data: MenuGridData
 }
 
-export function MenuGridRender({ config, data, isMobilePreview }: MenuGridRenderProps & { isMobilePreview?: boolean }) {
-  return <MenuGridInner config={config} data={data} isMobilePreview={isMobilePreview} />
+export function MenuGridRender({
+  config,
+  data,
+  previewLayout,
+  isMobilePreview,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  return (
+    <MenuGridInner
+      config={config}
+      data={data}
+      previewLayout={previewLayout}
+      isMobilePreview={isMobilePreview}
+    />
+  )
 }

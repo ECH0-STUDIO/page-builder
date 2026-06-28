@@ -58,9 +58,9 @@ import { MenuGridRender } from './render/MenuGridRender'
 import type { MenuGridData } from './render/MenuGridRender'
 import { QRCodeRender } from './render/QRCodeRender'
 import { CartProvider } from './render/CartContext'
-import { CartDrawer } from './render/CartDrawer'
-import { PaymentDrawer } from './render/PaymentDrawer'
+import { LiveStoreCart } from './render/LiveStoreCart'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import type { PreviewLayout } from './render/preview-layout'
 
 import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
@@ -179,14 +179,14 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, isMobilePreview, interactive,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive,
 }: {
   block: PageBlock
   isSelected: boolean
   business: Business
   menuGridData: MenuGridData
   onClick: () => void
-  isMobilePreview?: boolean
+  previewLayout?: PreviewLayout
   interactive?: boolean
 }) {
   const { t } = useTranslation()
@@ -260,14 +260,22 @@ function LiveBlockCard({
           userSelect: interactive ? 'auto' : 'none',
         }}
       >
-        {block.type === 'hero' && <HeroRender config={block.config as HeroConfig} businessName={business.name} isMobilePreview={isMobilePreview} />}
-        {block.type === 'text_image' && <TextImageRender config={block.config as TextImageConfig} isMobilePreview={isMobilePreview} />}
+        {block.type === 'hero' && (
+          <HeroRender
+            config={block.config as HeroConfig}
+            businessName={business.name}
+            previewLayout={previewLayout}
+          />
+        )}
+        {block.type === 'text_image' && (
+          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} />
+        )}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
           <MenuGridRender
             config={block.config as MenuGridConfig}
             data={menuGridData}
-            isMobilePreview={isMobilePreview}
+            previewLayout={previewLayout}
           />
         )}
         {block.type === 'qr_code' && (
@@ -527,6 +535,8 @@ export function EditorShell({
   const navbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig = theme?.footer_config ?? defaultFooterConfig
   const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
+
+  const canvasPreviewLayout: PreviewLayout = viewMode === 'mobile' ? 'mobile' : 'desktop'
 
   const fitDesktopZoom = canvasWidth > 0
     ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
@@ -1115,7 +1125,7 @@ export function EditorShell({
                       isSelected={!isPreviewMode && block.id === selectedId}
                       business={business}
                       menuGridData={menuGridData}
-                      isMobilePreview={viewMode === 'mobile'}
+                      previewLayout={canvasPreviewLayout}
                       interactive={isPreviewMode}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
@@ -1129,12 +1139,14 @@ export function EditorShell({
                   inEditor={!isPreviewMode}
                 />
 
-                <CartDrawer
-                  businessId={business.id}
-                  paymentSettings={paymentSettings}
-                  previewMode={isPreviewMode}
-                />
-                {isPreviewMode && <PaymentDrawer paymentSettings={paymentSettings} />}
+                {isPreviewMode && (
+                  <LiveStoreCart
+                    businessId={business.id}
+                    paymentSettings={paymentSettings}
+                    previewMode
+                    contained
+                  />
+                )}
               </div>
               </CartProvider>
             </div>

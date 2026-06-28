@@ -18,6 +18,7 @@ import { ctaHref } from '../cta-utils'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { type PreviewLayout, isForcedMobileLayout, sectionPaddingClass } from './preview-layout'
 
 function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
   const href = ctaHref(cta)
@@ -31,11 +32,28 @@ function CtaLink({ cta, textColor }: { cta: CtaButton; textColor: string }) {
   return <a href={href} className={base} style={styles[cta.style]}>{cta.label}</a>
 }
 
-export function HeroRender({ config, businessName, isMobilePreview }: { config: HeroConfig; businessName?: string; isMobilePreview?: boolean }) {
+export function HeroRender({
+  config,
+  businessName,
+  isMobilePreview,
+  previewLayout,
+}: {
+  config: HeroConfig
+  businessName?: string
+  isMobilePreview?: boolean
+  previewLayout?: PreviewLayout
+}) {
+  const layout: PreviewLayout | undefined =
+    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const mobileLayout = isForcedMobileLayout(layout)
+  const desktopLayout = layout === 'desktop'
+
   const heading   = config.heading || businessName || 'Welcome'
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const padY      = config.section_padding_y ?? 80
-  const typography = getTypography(isMobilePreview)
+  const typography = getTypography(mobileLayout)
+  const sectionPx = sectionPaddingClass(layout)
+  const splitPx = mobileLayout ? 'px-4' : desktopLayout ? 'px-12' : 'px-4 md:px-12'
 
   const objectPos =
     config.image_position === 'top'    ? 'top'
@@ -56,7 +74,7 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
       : `linear-gradient(135deg, ${fromColor} 0%, ${toColor} 100%)`
 
     return (
-      <section className="px-4 md:px-6" style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY }}>
+      <section className={sectionPx} style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {config.tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{config.tagline}</p>}
@@ -79,7 +97,7 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
     const imageOnRight = (config.split_image_side ?? 'right') === 'right'
 
     const contentPane = (
-      <div className={cn(isMobilePreview ? 'px-4' : 'px-4 md:px-12')} style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', paddingTop: padY, paddingBottom: padY, ...heightBase }}>
+      <div className={splitPx} style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', paddingTop: padY, paddingBottom: padY, ...heightBase }}>
         <div>
           <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {config.tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{config.tagline}</p>}
@@ -115,7 +133,7 @@ export function HeroRender({ config, businessName, isMobilePreview }: { config: 
 
   return (
     <section 
-      className="px-4 md:px-6 overflow-hidden"
+      className={cn(sectionPx, 'overflow-hidden')}
       style={{
       position: 'relative',
       display: 'flex', alignItems: 'center', justifyContent: 'center',

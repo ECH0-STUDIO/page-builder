@@ -61,11 +61,13 @@ interface CartDrawerProps {
   paymentSettings?: PaymentSettings
   /** When true, cart UI works but placing orders is blocked. */
   previewMode?: boolean
+  /** Pin overlays inside a relative canvas (page builder) instead of the viewport */
+  contained?: boolean
 }
 
 type DrawerStep = 'cart' | 'payment'
 
-export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDrawerProps) {
+export function CartDrawer({ businessId, paymentSettings, previewMode, contained }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const searchParams = useSearchParams()
   const tableFromUrl = searchParams.get('table') ?? ''
@@ -75,6 +77,15 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
   const [tableNumber, setTableNumber] = useState(tableFromUrl)
   const [isPending, startTransition] = useTransition()
   const [pastOrders, setPastOrders] = useState<any[]>([])
+
+  const effectiveTable = (tableFromUrl || tableNumber).trim()
+  const position = contained ? 'absolute' : 'fixed'
+
+  useEffect(() => {
+    if (previewMode && !tableFromUrl) {
+      setTableNumber('1')
+    }
+  }, [previewMode, tableFromUrl])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && businessId) {
@@ -120,13 +131,15 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
       toast.error('Unable to place order: Business ID missing')
       return
     }
-    if (!tableNumber.trim()) {
+    if (!tableNumber.trim() && !tableFromUrl) {
       toast.error('Please enter your table number')
       return
     }
 
+    const tableForOrder = effectiveTable
+
     startTransition(async () => {
-      const res = await createOrderAction(businessId, tableNumber, items, totalPrice)
+      const res = await createOrderAction(businessId, tableForOrder, items, totalPrice)
       if (res.success) {
         const orderData = { id: res.orderId, items, total: totalPrice, timestamp: Date.now() }
         const updatedOrders = [orderData, ...pastOrders]
@@ -157,7 +170,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
       {!open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all"
+          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all`}
           aria-label="View order"
         >
           <div className="relative">
@@ -177,7 +190,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
       {!open && totalItems === 0 && pastOrders.length > 0 && (
         <button
           onClick={() => { setStep('payment'); setOpen(true); }}
-          className="fixed bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all"
+          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all`}
         >
           <div className="relative">
             <CheckCircle2 className="size-5 text-green-500" />
@@ -192,14 +205,14 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
       {/* ── Backdrop ── */}
       {open && (
         <div
-          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm`}
           onClick={handleClose}
         />
       )}
 
       {/* ── Right side drawer ── */}
       <div
-        className={`fixed top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
           open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
       >
@@ -261,9 +274,9 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center mt-2">
                   <p className="text-sm text-orange-800 font-medium">Please call for a waiter to place your order.</p>
                 </div>
-              ) : !tableFromUrl ? (
+              ) : !effectiveTable ? (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center mt-2">
-                  <p className="text-sm text-gray-600 font-medium">Please scan the QR code on your table to place an order.</p>
+                  <p className="text-sm text-gray-600 font-medium">Enter your table number above, or scan the QR code on your table.</p>
                 </div>
               ) : (
                 <button
@@ -271,7 +284,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode }: CartDra
                   disabled={isPending || items.length === 0}
                   className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-base flex items-center justify-center gap-2.5 hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg shadow-gray-900/20 disabled:opacity-70 disabled:pointer-events-none"
                 >
-                  {isPending ? <Loader2 className="size-5 animate-spin" /> : 'Place Order'}
+                  {isPending ? <Loader2 className="size-5 animate-spin" /> : previewMode ? 'Test Place Order' : 'Place Order'}
                 </button>
               )}
             </div>
