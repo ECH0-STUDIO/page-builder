@@ -72,8 +72,9 @@ export function PublishBar({
         value={editLocale}
         onChange={onEditLocaleChange}
         size="xs"
-        className="hidden sm:inline-flex shrink-0"
+        className="shrink-0"
       />
+      <span className="text-[10px] text-muted-foreground hidden md:inline shrink-0">{t('pageBuilder.editLanguage')}</span>
 
       <div className="flex-1 min-w-0" />
 

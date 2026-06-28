@@ -110,7 +110,7 @@ export function GlobalSettingsPanel({
               className="text-xs min-h-[80px]"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs">{t('pageBuilder.favicon')}</Label>
               <div className="flex flex-col gap-2">

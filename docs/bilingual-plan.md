@@ -11,9 +11,47 @@ Target audience is Vietnam. Visitors and editors work in **one language at a tim
 | Live store `/[slug]` | **Partial** | `[slug]/layout.tsx` has `I18nProvider` but dictionary comes from visitor cookie only. Cart drawer strings are hardcoded English. |
 | Marketing site | English | Nexbet export; not wired to i18n. |
 | Menu items / page blocks | Bilingual JSON | `name_i18n`, `description_i18n`, block `config` fields as `{ vi, en }`; `pickLocale` at render. |
-| Publishing `language` field | Stored | Used for `html[lang]` and schema; not a full content locale system. |
+| Publishing tab | Deduped | SEO, favicon, GSC removed — lives in Page Builder → Global Settings only. |
+| Publishing `language` field | Deprecated in UI | Replaced by locale selection model (Phase 5). |
 
-## Product requirements
+## Phase 5 — Locale URLs & selection (next)
+
+### How other platforms handle multi-language
+
+| Platform | URL pattern | Notes |
+|----------|-------------|-------|
+| **Webflow** | `/en/page`, `/fr/page` or subdomain | Locale subpaths; hreflang in head |
+| **Squarespace** | Separate pages per language | Manual duplication; no shared blocks |
+| **Wix** | `domain.com/es` or Multilingual app | Paid add-on; language switcher widget |
+| **Shopify** | `store.com/en`, markets | Shopify Markets; paid on higher plans |
+| **WordPress + WPML** | `/vi/slug/` | Industry standard subpath; plugin ~$39+/yr |
+| **Framer** | `/es/about` | Locale path prefix; one site, multiple locales |
+
+**Recommendation for Eatery:** subpath after business slug — `eateryvn.com/{slug}/vi` and `/{slug}/en` (default locale can omit prefix or use `/en`). Same published blocks JSON; `pickLocale(content, activeLocale)` at render. No duplicate page builder canvases.
+
+### Product model (non-aggressive)
+
+1. **Default included:** Vietnamese + English (2 locales) on every plan.
+2. **Editor:** Top-level **language tabs** on the live page preview / a dedicated “Languages” strip — **not** inside every block settings panel. Switching tab sets `editLocale`; block fields show one language at a time (existing `LocaleToggle` moves here).
+3. **Visitor:** Footer switcher + auto-detect (cookie/IP). Optional direct link `/vi` or `/en`.
+4. **Paid unlock:** Extra locales (Thai, Chinese, …) via credits — stored in `publishing_settings.enabled_locales` or credits feature flag. Server validates locale on publish; no client-only “unlock” (credit check in `savePublishingSettingsAction` / `unlockLocaleAction`).
+5. **SEO:** `hreflang` link cluster per enabled locale; `canonical` per active URL.
+
+### What we are NOT doing
+
+- Separate page builder layouts per language (one block tree, i18n JSON fields).
+- Duplicating SEO/settings between Publishing and Page Builder.
+- Showing two languages on screen at once.
+
+### Implementation order (Phase 5)
+
+1. `enabled_locales: text[]` default `'{vi,en}'` on `publishing_settings`.
+2. Route: `[slug]/[locale]/page.tsx` or middleware rewrite `/{slug}/vi` → same page with `locale=vi`.
+3. Move `LocaleToggle` to a prominent **Language** bar above the canvas (keep PublishBar or new strip).
+4. Credit-gated unlock for `th`, `zh`, etc.
+5. hreflang + sitemap entries per locale.
+
+## Data migration
 
 1. **Single-locale display** — live page shows Vietnamese **or** English for a given visit, based on IP/cookie/switcher. Never side-by-side or stacked dual text.
 2. **Page builder** — locale toggle (🇻🇳 / 🇬🇧) edits **one language at a time** per block and menu item.
@@ -82,9 +120,9 @@ ALTER TABLE menu_categories ADD COLUMN name_i18n jsonb;
 ## Out of scope (later)
 
 - Auto-translate (Google / DeepL API)
-- More than 2 languages
 - Per-locale custom domains
 - Simultaneous bilingual display (rejected — not useful for this product)
+- More than 2 languages without credit unlock (see Phase 5)
 
 ## Suggested order of work
 
