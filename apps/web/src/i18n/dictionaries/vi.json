@@ -682,7 +682,11 @@
     "menu": "Thực đơn",
     "tabsLayout": "Bố cục Tabs (Desktop)",
     "horizontalScroll": "Cuộn ngang",
-    "sidebar": "Thanh bên (Sidebar)"
+    "sidebar": "Thanh bên (Sidebar)",
+    "pagination": "Phân trang",
+    "itemsPerPage": "Số món mỗi trang",
+    "prevPage": "Trước",
+    "nextPage": "Sau"
   },
   "navbarBlock": {
     "logo": "Logo",

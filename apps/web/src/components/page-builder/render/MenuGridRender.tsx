@@ -429,6 +429,7 @@ function MenuGridInner({
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const loadingTimer = useRef<NodeJS.Timeout | null>(null)
   const renderTimer = useRef<NodeJS.Timeout | null>(null)
@@ -464,6 +465,22 @@ function MenuGridInner({
         if (!item.available && !config.show_unavailable_badge) return false
         return true
       })
+
+  const paginationEnabled = config.pagination_enabled === true
+  const itemsPerPage = Math.max(1, config.items_per_page ?? 12)
+  const totalPages = paginationEnabled ? Math.max(1, Math.ceil(displayItems.length / itemsPerPage)) : 1
+  const safePage = Math.min(page, totalPages)
+  const visibleItems = paginationEnabled
+    ? displayItems.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage)
+    : displayItems
+
+  useEffect(() => {
+    setPage(1)
+  }, [activeCat, paginationEnabled, itemsPerPage, isCustomMode, config.item_ids?.join(',')])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const colClass = menuGridColClass(layout, config.layout)
   const isList = config.layout === 'list'
@@ -568,13 +585,14 @@ function MenuGridInner({
 
             {/* Items */}
             <div className="flex-1 min-w-0">
-              {displayItems.length === 0 ? (
+              {visibleItems.length === 0 ? (
                 <p style={{ color: textColor, opacity: 0.4, fontSize: '14px', padding: '32px 0' }}>
                   {isCustomMode ? 'No items selected.' : 'No items in this category.'}
                 </p>
               ) : (
+                <>
                 <div className={`grid gap-4 ${colClass}`}>
-                  {displayItems.map(item => {
+                  {visibleItems.map(item => {
                     const itemGroups = variantGroups.filter(g => g.item_id === item.id)
                     const hasVariants = itemGroups.length > 0
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
@@ -586,6 +604,32 @@ function MenuGridInner({
                     )
                   })}
                 </div>
+                {paginationEnabled && totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={safePage <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 transition-colors"
+                      style={{ color: textColor, borderColor: `${textColor}33` }}
+                    >
+                      {t('menuGridBlock.prevPage')}
+                    </button>
+                    <span className="text-sm tabular-nums" style={{ color: textColor, opacity: 0.7 }}>
+                      {safePage} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 transition-colors"
+                      style={{ color: textColor, borderColor: `${textColor}33` }}
+                    >
+                      {t('menuGridBlock.nextPage')}
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>

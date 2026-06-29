@@ -267,6 +267,10 @@ export interface MenuGridConfig {
   item_ids?: string[]
   /** Layout for tabs on desktop (horizontal scroll vs sidebar) */
   tabs_layout?: 'horizontal' | 'sidebar'
+  /** Paginate items on the live page */
+  pagination_enabled?: boolean
+  /** Items shown per page when pagination is enabled */
+  items_per_page?: number
 }
 
 export const defaultMenuGridConfig: MenuGridConfig = {
@@ -284,6 +288,8 @@ export const defaultMenuGridConfig: MenuGridConfig = {
   selection_mode: 'category',
   item_ids: [],
   tabs_layout: 'sidebar',
+  pagination_enabled: false,
+  items_per_page: 12,
 }
 
 // ─── QR Code Block ────────────────────────────────────────────────────────────

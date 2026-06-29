@@ -372,6 +372,29 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
               />
             </div>
           ))}
+
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="menu-toggle-pagination" className="text-xs cursor-pointer">{t('menuGridBlock.pagination')}</Label>
+            <Switch
+              id="menu-toggle-pagination"
+              checked={!!config.pagination_enabled}
+              onCheckedChange={v => set('pagination_enabled', v)}
+            />
+          </div>
+          {config.pagination_enabled && (
+            <div className="space-y-1.5 pl-1">
+              <Label htmlFor="menu-items-per-page" className="text-xs">{t('menuGridBlock.itemsPerPage')}</Label>
+              <Input
+                id="menu-items-per-page"
+                type="number"
+                min={1}
+                max={100}
+                value={config.items_per_page ?? 12}
+                onChange={e => set('items_per_page', Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 12)))}
+                className="h-8 text-xs"
+              />
+            </div>
+          )}
         </div>
       </div>
 

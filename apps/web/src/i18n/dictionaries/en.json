@@ -682,7 +682,11 @@
     "menu": "Menu",
     "tabsLayout": "Tabs Layout (Desktop)",
     "horizontalScroll": "Horizontal Scroll",
-    "sidebar": "Sidebar"
+    "sidebar": "Sidebar",
+    "pagination": "Pagination",
+    "itemsPerPage": "Items per page",
+    "prevPage": "Previous",
+    "nextPage": "Next"
   },
   "navbarBlock": {
     "logo": "Logo",

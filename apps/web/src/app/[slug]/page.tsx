@@ -14,7 +14,8 @@ import { FooterRender } from '@/components/page-builder/render/FooterRender'
 import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
-import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
+import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
+import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -131,7 +132,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const pageBlocks: PageBlock[] = (pageBlocksRaw ?? []).map(b => ({
     ...b,
-    spacing: b.spacing ?? defaultSpacing,
+    spacing: resolveBlockSpacing(b.type, b.spacing),
     custom_css: b.custom_css ?? '',
     block_anchor_id: b.block_anchor_id ?? null,
   }))
@@ -291,7 +292,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const spacing = block.spacing ?? defaultSpacing
+            const spacing = resolveBlockSpacing(block.type, block.spacing)
             const blockStyle: React.CSSProperties = {
               marginTop: spacing.margin_top,
               marginBottom: spacing.margin_bottom,

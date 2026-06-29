@@ -248,12 +248,28 @@ export function NavbarSettings({
 
         {/* Presets */}
         <div className="flex gap-1.5">
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#ffffff', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.white')}</button>
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#111111', text_color: '#ffffff' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">{t('navbarBlock.dark')}</button>
-          <button type="button" onClick={() => onChange({ ...config, background_color: 'transparent', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.glass')}</button>
+          {([
+            { bg: '#ffffff', text: '#111111', label: t('navbarBlock.white') },
+            { bg: '#111111', text: '#ffffff', label: t('navbarBlock.dark') },
+            { bg: 'transparent', text: '#111111', label: t('navbarBlock.glass') },
+          ] as { bg: string; text: string; label: string }[]).map(preset => {
+            const active = config.background_color === preset.bg && config.text_color === preset.text
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => onChange({ ...config, background_color: preset.bg, text_color: preset.text })}
+                className={cn(
+                  'flex-1 py-1 rounded border text-[11px] transition-colors',
+                  active
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border hover:border-foreground/30'
+                )}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
         </div>
 
         <div className="flex items-center justify-between pt-1">

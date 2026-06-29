@@ -19,11 +19,10 @@ export function resolveCtaColor(cta: CtaButton, brandColor: string): string {
 }
 
 export function getCtaClassName(style: CtaButton['style']): string {
-  const base = 'inline-block px-7 py-3.5 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-90 select-none'
   if (style === 'text') {
-    return `${base} underline underline-offset-4 px-0`
+    return 'inline font-semibold text-sm tracking-wide transition-opacity hover:opacity-90 underline underline-offset-4'
   }
-  return base
+  return 'inline-block px-7 py-3.5 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-90 select-none'
 }
 
 export function getCtaInlineStyle(
