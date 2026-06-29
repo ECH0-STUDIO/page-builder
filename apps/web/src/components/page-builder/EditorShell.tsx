@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings, Layers, X,
+  PanelBottom, Settings, Layers, X, Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -77,7 +77,8 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 
 // ─── Canvas layout ─────────────────────────────────────────────────────────────
 
-const CANVAS_MAX_WIDTH = 1440
+const CANVAS_DESKTOP_WIDTH = 1440
+const CANVAS_MAX_WIDTH = CANVAS_DESKTOP_WIDTH
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -487,7 +488,10 @@ export function EditorShell({
   const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
+  const [desktopZoom, setDesktopZoom] = useState(1)
   const canvasScrollRef = useRef<HTMLDivElement>(null)
+  const [canvasWidth, setCanvasWidth] = useState(0)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
@@ -537,7 +541,41 @@ export function EditorShell({
   const themeTokens = resolveThemeTokens(theme)
   const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
 
-  const canvasPreviewLayout: PreviewLayout = viewMode === 'mobile' ? 'mobile' : 'desktop'
+  const canvasPreviewLayout: PreviewLayout =
+    viewMode === 'mobile'
+      ? 'mobile'
+      : isMobileDevice
+        ? 'desktop'
+        : 'responsive'
+
+  const fitDesktopZoom = canvasWidth > 0
+    ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
+    : 1
+  const displayDesktopZoom = fitDesktopZoom * desktopZoom
+  const useFixedDesktopCanvas = isMobileDevice && viewMode === 'desktop'
+  const showDesktopZoomControls = useFixedDesktopCanvas && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobileDevice(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    const el = canvasScrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      setCanvasWidth(entries[0]?.contentRect.width ?? 0)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    setDesktopZoom(1)
+  }, [viewMode])
 
   // Derive which panel to show on the right
   const activeRightPanel: RightPanel =
@@ -1066,6 +1104,37 @@ export function EditorShell({
                 <Smartphone className="size-3.5" /> {t('pageBuilder.mobile')}
               </button>
             </div>
+
+            {showDesktopZoomControls && (
+              <div className="flex items-center gap-1 bg-white dark:bg-gray-900 rounded-lg px-1 py-0.5 shadow-sm border border-black/5 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.max(0.25, Math.round((z - 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom out"
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <span className="text-xs font-medium tabular-nums min-w-[3rem] text-center">
+                  {Math.round(displayDesktopZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.min(2, Math.round((z + 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom in"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(1)}
+                  className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Canvas scroll — overflow-y-auto (NOT hidden) so sticky navbar works */}
@@ -1077,13 +1146,23 @@ export function EditorShell({
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
                   viewMode === 'mobile'
                     ? 'w-[375px] rounded-[32px]'
-                    : 'w-full rounded-xl',
+                    : useFixedDesktopCanvas
+                      ? 'rounded-xl'
+                      : 'w-full rounded-xl',
                   (isPreviewMode || viewMode === 'mobile') && 'overflow-hidden',
                 )}
                 style={{
                   fontFamily: `'${fontFamily}', sans-serif`,
                   ...buildThemeStyle(theme),
-                  ...(viewMode === 'desktop' ? { maxWidth: CANVAS_MAX_WIDTH } : {}),
+                  ...(viewMode === 'desktop' && useFixedDesktopCanvas
+                    ? {
+                        width: CANVAS_DESKTOP_WIDTH,
+                        maxWidth: 'none',
+                        ...(displayDesktopZoom < 1 ? { zoom: displayDesktopZoom } : {}),
+                      }
+                    : viewMode === 'desktop'
+                      ? { maxWidth: CANVAS_MAX_WIDTH }
+                      : {}),
                   ...(isPreviewMode
                     ? { height: 'min(calc(100dvh - 8.5rem), 860px)' }
                     : {}),
