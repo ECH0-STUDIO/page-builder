@@ -16,6 +16,7 @@ import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
 import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
+import { getBlockSectionSurface } from '@/components/page-builder/block-section-style'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -302,6 +303,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
               paddingRight: spacing.padding_right,
               paddingBottom: spacing.padding_bottom,
               paddingLeft: spacing.padding_left,
+              ...getBlockSectionSurface(block),
             }
 
             return (

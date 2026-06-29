@@ -19,6 +19,7 @@ interface PublishBarProps {
   businessName: string
   slug: string
   published: boolean
+  hasUnpublishedChanges: boolean
   saveStatus: SaveStatus
   onPublish: (state: boolean) => void
   publishing: boolean
@@ -29,6 +30,7 @@ export function PublishBar({
   businessName,
   slug,
   published,
+  hasUnpublishedChanges,
   saveStatus,
   onPublish,
   publishing,
@@ -36,6 +38,8 @@ export function PublishBar({
 }: PublishBarProps) {
   const router = useRouter()
   const { t } = useTranslation()
+
+  const showChanges = published && hasUnpublishedChanges
 
   return (
     <div className="h-12 shrink-0 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-3 gap-2">
@@ -107,17 +111,24 @@ export function PublishBar({
         <span className="hidden md:inline">{t('pageBuilder.preview')}</span>
       </button>
 
-      {/* Live / Draft badge */}
+      {/* Publish state badge */}
       <Badge
         variant="outline"
         className={cn(
           'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
-          published
-            ? 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
-            : 'border-border text-muted-foreground'
+          showChanges
+            ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
+            : published
+              ? 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
+              : 'border-border text-muted-foreground'
         )}
       >
-        {published ? (
+        {showChanges ? (
+          <>
+            <Circle className="size-2 fill-yellow-500 text-yellow-500" />
+            {t('pageBuilder.changes')}
+          </>
+        ) : published ? (
           <>
             <Circle className="size-2 fill-green-600 text-green-600" />
             {t('pageBuilder.live')}

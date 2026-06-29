@@ -66,6 +66,7 @@ import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublish
 import { scopeCSS } from '@/lib/scope-css'
 import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
 import { normalizePageBlock, resolveBlockSpacing } from './spacing-utils'
+import { getBlockSectionSurface } from './block-section-style'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
@@ -79,6 +80,12 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 
 const CANVAS_DESKTOP_WIDTH = 1440
 const CANVAS_MAX_WIDTH = CANVAS_DESKTOP_WIDTH
+const MAX_UNDO_STEPS = 20
+
+type EditorSnapshot = {
+  blocks: PageBlock[]
+  theme: ThemeSettings | null
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -261,6 +268,7 @@ function LiveBlockCard({
           paddingRight: spacing.padding_right,
           paddingBottom: spacing.padding_bottom,
           paddingLeft: spacing.padding_left,
+          ...getBlockSectionSurface(block),
           pointerEvents: interactive ? 'auto' : 'none',
           userSelect: interactive ? 'auto' : 'none',
         }}
@@ -483,6 +491,9 @@ export function EditorShell({
   const [rightPanel, setRightPanel] = useState<RightPanel>('theme')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
+    initialPublishing?.has_unpublished_changes ?? false
+  )
   const [publishing, setPublishing] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
@@ -514,6 +525,7 @@ export function EditorShell({
         return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => normalizePageBlock(b as PageBlock))
       })
       setPublished(data.publishing?.published ?? false)
+      setHasUnpublishedChanges(data.publishing?.has_unpublished_changes ?? false)
       setTheme(data.theme)
       setPublishingSettings(data.publishing)
     }
@@ -533,6 +545,94 @@ export function EditorShell({
 
   const isFirstRender = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blocksRef = useRef(blocks)
+  const themeRef = useRef(theme)
+  const skipHistoryRef = useRef(false)
+  const undoStackRef = useRef<EditorSnapshot[]>([])
+  const redoStackRef = useRef<EditorSnapshot[]>([])
+  const historyBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+  useEffect(() => { themeRef.current = theme }, [theme])
+
+  const cloneSnapshot = useCallback((): EditorSnapshot => ({
+    blocks: structuredClone(blocksRef.current),
+    theme: themeRef.current ? structuredClone(themeRef.current) : null,
+  }), [])
+
+  const pushHistory = useCallback(() => {
+    if (skipHistoryRef.current) return
+    undoStackRef.current = [
+      ...undoStackRef.current.slice(-(MAX_UNDO_STEPS - 1)),
+      cloneSnapshot(),
+    ]
+    redoStackRef.current = []
+  }, [cloneSnapshot])
+
+  /** Coalesce rapid edits (typing, color drag) into one undo step per burst */
+  const scheduleHistorySnapshot = useCallback(() => {
+    if (skipHistoryRef.current) return
+    if (!historyBurstTimerRef.current) {
+      pushHistory()
+    }
+    if (historyBurstTimerRef.current) clearTimeout(historyBurstTimerRef.current)
+    historyBurstTimerRef.current = setTimeout(() => {
+      historyBurstTimerRef.current = null
+    }, 800)
+  }, [pushHistory])
+
+  const applySnapshot = useCallback((snap: EditorSnapshot) => {
+    skipHistoryRef.current = true
+    setBlocks(snap.blocks)
+    setTheme(snap.theme)
+    skipHistoryRef.current = false
+  }, [])
+
+  const markPendingSave = useCallback(() => {
+    setSaveStatus('idle')
+    if (published) setHasUnpublishedChanges(true)
+  }, [published])
+
+  const undo = useCallback(() => {
+    if (undoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToUndo'))
+      return
+    }
+    redoStackRef.current.push(cloneSnapshot())
+    const prev = undoStackRef.current.pop()!
+    applySnapshot(prev)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  const redo = useCallback(() => {
+    if (redoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToRedo'))
+      return
+    }
+    undoStackRef.current.push(cloneSnapshot())
+    const next = redoStackRef.current.pop()!
+    applySnapshot(next)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [undo, redo])
+
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null
   const fontFamily = theme?.font_family ?? 'Inter'
   const headingFont = theme?.heading_font_family ?? 'Inter'
@@ -600,9 +700,8 @@ export function EditorShell({
   const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const markPendingSave = useCallback(() => setSaveStatus('idle'), [])
-
   const handleThemeChange = useCallback((updated: Partial<ThemeSettings>) => {
+    scheduleHistorySnapshot()
     markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, ...updated } : { ...defaultThemeSettings, business_id: business.id, id: '', ...updated } as ThemeSettings
@@ -617,6 +716,7 @@ export function EditorShell({
           heading_font_family: next.heading_font_family || 'Inter',
         }).then(res => {
           setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
           if (!res.success) toast.error('Failed to save theme')
         }).catch(err => {
           setSaveStatus('idle')
@@ -625,9 +725,10 @@ export function EditorShell({
       }, 1000)
       return next
     })
-  }, [business.id, markPendingSave])
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
 
   const handleNavbarChange = useCallback((updated: NavbarConfig) => {
+    scheduleHistorySnapshot()
     markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, navbar_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', navbar_config: updated } as ThemeSettings
@@ -636,6 +737,7 @@ export function EditorShell({
         setSaveStatus('saving')
         saveNavbarAction(business.id, updated).then(res => {
           setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
           if (!res.success) toast.error('Failed to save navbar: ' + res.error)
         }).catch(err => {
           setSaveStatus('idle')
@@ -644,9 +746,10 @@ export function EditorShell({
       }, 1000)
       return next
     })
-  }, [business.id, markPendingSave])
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
 
   const handleFooterChange = useCallback((updated: FooterConfig) => {
+    scheduleHistorySnapshot()
     markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, footer_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings
@@ -655,6 +758,7 @@ export function EditorShell({
         setSaveStatus('saving')
         saveFooterAction(business.id, updated).then(res => {
           setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
           if (!res.success) toast.error('Failed to save footer: ' + res.error)
         }).catch(err => {
           setSaveStatus('idle')
@@ -663,7 +767,7 @@ export function EditorShell({
       }, 1000)
       return next
     })
-  }, [business.id, markPendingSave])
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
 
   const handlePublishingChange = useCallback((updated: Partial<PublishingSettings>) => {
     markPendingSave()
@@ -711,6 +815,7 @@ export function EditorShell({
       const res = await savePageBlocksAction(business.id, blocksToSave)
       if (res.success) {
         setSaveStatus('saved')
+        if (published) setHasUnpublishedChanges(true)
       } else {
         setSaveStatus('idle')
         console.error('Failed to auto-save:', res.error)
@@ -719,7 +824,7 @@ export function EditorShell({
       setSaveStatus('idle')
       console.error('Save error:', e)
     }
-  }, [business.id])
+  }, [business.id, published])
 
   const triggerAutoSave = useCallback((newBlocks: PageBlock[]) => {
     setSaveStatus('idle')
@@ -740,6 +845,8 @@ export function EditorShell({
 
   // ── Block mutations ───────────────────────────────────────────────────────
   function addBlock(type: BlockType) {
+    pushHistory()
+    markPendingSave()
     const blockSpacing = BLOCK_DEFAULT_SPACING[type]
     const newBlock: PageBlock = {
       id: makeId(),
@@ -756,6 +863,8 @@ export function EditorShell({
   }
 
   function deleteBlock(id: string) {
+    pushHistory()
+    markPendingSave()
     const next = blocks.filter(b => b.id !== id)
     setBlocks(next)
     if (selectedId === id) setSelectedId(next[0]?.id ?? null)
@@ -764,6 +873,8 @@ export function EditorShell({
   function duplicateBlock(id: string) {
     const original = blocks.find(b => b.id === id)
     if (!original) return
+    pushHistory()
+    markPendingSave()
     const idx = blocks.findIndex(b => b.id === id)
     const copy: PageBlock = { ...original, id: makeId() }
     setBlocks(prev => [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)])
@@ -771,10 +882,14 @@ export function EditorShell({
   }
 
   function toggleVisible(id: string) {
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
   function updateBlock(updated: PageBlock) {
+    scheduleHistorySnapshot()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b))
   }
 
@@ -787,6 +902,8 @@ export function EditorShell({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => {
       const oldIdx = prev.findIndex(b => b.id === active.id)
       const newIdx = prev.findIndex(b => b.id === over.id)
@@ -798,6 +915,8 @@ export function EditorShell({
   function applyTemplate(templateId: string) {
     const template = PAGE_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
+    pushHistory()
+    markPendingSave()
     const newBlocks: PageBlock[] = template.blocks.map((tb, i) => ({
       id: makeId(),
       business_id: business.id,
@@ -833,6 +952,7 @@ export function EditorShell({
       if (res.success) {
         setPublished(state)
         setPublishingSettings(res.data)
+        setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
         toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
       } else {
         toast.error(res.error)
@@ -1028,6 +1148,7 @@ export function EditorShell({
           businessName={business.name}
           slug={business.slug}
           published={published}
+          hasUnpublishedChanges={hasUnpublishedChanges}
           saveStatus={saveStatus}
           onPublish={handlePublish}
           publishing={publishing}

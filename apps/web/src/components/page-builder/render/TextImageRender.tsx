@@ -71,13 +71,8 @@ export function TextImageRender({
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
 
-  // ── Background ─────────────────────────────────────────────────────────────
-  const bgStyle: React.CSSProperties =
-    config.background === 'solid'
-      ? { backgroundColor: config.background_color }
-      : config.background === 'gradient'
-      ? { background: `linear-gradient(135deg, ${config.gradient_from ?? '#f8f8f8'} 0%, ${config.gradient_to ?? '#e8e8e8'} 100%)` }
-      : { backgroundColor: '#ffffff' }
+  // ── Background (section surface is on the block wrapper) ───────────────────
+  const bgStyle: React.CSSProperties = {}
 
   const isTextOnly = config.layout === 'text_only'
   const isStacked  = config.layout === 'stacked'
@@ -163,7 +158,7 @@ export function TextImageRender({
   }
 
   return (
-    <section style={{ ...bgStyle, ...padStyle }}>
+    <section style={padStyle}>
       <div style={innerStyle}>
         {isReverse ? <>{textEl}{imageEl}</> : <>{imageEl}{textEl}</>}
       </div>

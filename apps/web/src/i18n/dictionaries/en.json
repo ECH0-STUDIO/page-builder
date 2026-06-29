@@ -294,7 +294,7 @@
     "perLocaleBadge": "Per locale",
     "ogImage": "Open Graph image",
     "uploadOgImage": "Upload image",
-    "live": "● Live",
+    "live": "Live",
     "draft": "○ Draft",
     "unpublish": "Unpublish",
     "publish": "Publish",
@@ -402,7 +402,9 @@
     "saveAsDraft": "Save as Draft",
     "publishToLive": "Publish to Live",
     "closePreview": "Close Preview",
-    "changes": "Changes"
+    "changes": "Changes",
+    "nothingToUndo": "Nothing more to undo",
+    "nothingToRedo": "Nothing more to redo"
   },
   "businessProfile": {
     "logo": "Logo",

@@ -105,7 +105,6 @@ export function ContactRender({ config, business }: ContactRenderProps) {
     s => config.socials_shown.includes(s.key) && socials[s.key]
   )
 
-  const bgColor = config.background_color ?? '#f8f8f8'
   const textColor = config.text_color ?? '#111111'
   const labelColor = textColor + 'aa'
 
@@ -115,7 +114,7 @@ export function ContactRender({ config, business }: ContactRenderProps) {
   const contentWidthFlex = (config.layout === 'map_left' && config.show_map) ? '1 1 300px' : '1 1 100%'
 
   return (
-    <section style={{ backgroundColor: bgColor, padding: '0 24px' }}>
+    <section style={{ padding: '0 24px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '48px', alignItems: 'start' }}>
 
         {/* Map */}

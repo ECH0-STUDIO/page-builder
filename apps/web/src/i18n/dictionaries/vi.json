@@ -294,7 +294,7 @@
     "perLocaleBadge": "Theo ngôn ngữ",
     "ogImage": "Ảnh Open Graph",
     "uploadOgImage": "Tải ảnh lên",
-    "live": "● Trực tuyến",
+    "live": "Trực tuyến",
     "draft": "○ Bản nháp",
     "unpublish": "Gỡ xuống",
     "publish": "Xuất bản",
@@ -402,7 +402,9 @@
     "saveAsDraft": "Lưu nháp",
     "publishToLive": "Xuất bản trực tuyến",
     "closePreview": "Đóng xem trước",
-    "changes": "Có thay đổi"
+    "changes": "Có thay đổi",
+    "nothingToUndo": "Không còn thao tác để hoàn tác",
+    "nothingToRedo": "Không còn thao tác để làm lại",
   },
   "businessProfile": {
     "logo": "Logo",

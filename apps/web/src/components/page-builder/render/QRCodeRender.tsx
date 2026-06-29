@@ -80,18 +80,9 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
   }
 
   const alignClass = config.alignment === 'left' ? 'items-start' : config.alignment === 'right' ? 'items-end' : 'items-center'
-  
-  const bgStyle: React.CSSProperties = {
-    backgroundColor: bgColor,
-    ...(config.background_image ? {
-      backgroundImage: `url(${config.background_image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    } : {})
-  }
 
   return (
-    <section style={bgStyle}>
+    <section>
       <div style={{ maxWidth: '800px', margin: '0 auto' }} className={`flex flex-col ${alignClass} gap-4`}>
         {/* Canvas */}
         <div
