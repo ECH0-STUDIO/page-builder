@@ -2,9 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Globe, Loader2, Check, Circle, ArrowLeft, ExternalLink, ChevronDown } from 'lucide-react'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,10 +20,8 @@ interface PublishBarProps {
   slug: string
   published: boolean
   saveStatus: SaveStatus
-  hasUnpublishedChanges: boolean
   onPublish: (state: boolean) => void
   publishing: boolean
-  onSaveNow: () => void
   onTogglePreview: () => void
 }
 
@@ -34,7 +30,6 @@ export function PublishBar({
   slug,
   published,
   saveStatus,
-  hasUnpublishedChanges,
   onPublish,
   publishing,
   onTogglePreview,
@@ -64,7 +59,7 @@ export function PublishBar({
 
       <div className="flex-1 min-w-0" />
 
-      {/* Save status area */}
+      {/* Autosave status */}
       <div className="flex items-center gap-2 shrink-0">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -112,30 +107,21 @@ export function PublishBar({
         <span className="hidden md:inline">{t('pageBuilder.preview')}</span>
       </button>
 
-      {/* Status badge */}
+      {/* Live / Draft badge */}
       <Badge
         variant="outline"
         className={cn(
           'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
           published
-            ? hasUnpublishedChanges
-              ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
-              : 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
+            ? 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400'
             : 'border-border text-muted-foreground'
         )}
       >
         {published ? (
-          hasUnpublishedChanges ? (
-            <>
-              <Circle className="size-2 fill-yellow-500 text-yellow-500" />
-              {t('pageBuilder.changes')}
-            </>
-          ) : (
-            <>
-              <Circle className="size-2 fill-green-600 text-green-600" />
-              {t('pageBuilder.live')}
-            </>
-          )
+          <>
+            <Circle className="size-2 fill-green-600 text-green-600" />
+            {t('pageBuilder.live')}
+          </>
         ) : (
           t('pageBuilder.draft')
         )}

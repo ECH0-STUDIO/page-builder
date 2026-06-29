@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { Download } from 'lucide-react'
 import type { QRCodeConfig } from '../types'
+import { QR_BORDER_RADIUS } from '../cta-styles'
 import { buildVietQRUrl, type PaymentSettings } from '@/lib/vietqr-utils'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
@@ -37,11 +38,8 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
   const bgColor = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
   const px = SIZE_MAP[config.size] ?? 200
-
-  const paddingMap: Record<string, number> = {
-    'none': 0, 'sm': 4, 'md': 8, 'lg': 12, 'xl': 16, '2xl': 20, '3xl': 24, 'full': px * 0.16
-  }
-  const pad = paddingMap[config.border_radius || '2xl'] ?? 20
+  const borderRadius = QR_BORDER_RADIUS[config.border_radius || '2xl'] ?? '20px'
+  const pad = 16
   const innerPx = px - pad * 2
 
   const isPayment = config.target === 'payment'
@@ -85,7 +83,6 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
   
   const bgStyle: React.CSSProperties = {
     backgroundColor: bgColor,
-    padding: '48px 24px',
     ...(config.background_image ? {
       backgroundImage: `url(${config.background_image})`,
       backgroundSize: 'cover',
@@ -98,8 +95,8 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
       <div style={{ maxWidth: '800px', margin: '0 auto' }} className={`flex flex-col ${alignClass} gap-4`}>
         {/* Canvas */}
         <div
-          className={`overflow-hidden shadow-md rounded-${config.border_radius || '2xl'} flex items-center justify-center`}
-          style={{ width: px, height: px, backgroundColor: bgColor, padding: pad }}
+          className="overflow-hidden shadow-md flex items-center justify-center"
+          style={{ width: px, height: px, backgroundColor: bgColor, padding: pad, borderRadius }}
         >
           {isPayment && vietQrUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

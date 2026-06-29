@@ -32,8 +32,10 @@ export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
   hero: { ...defaultSpacing },
   // TextImage outer spacing — compact/normal/spacious controls inner padding via its own setting
   text_image: { ...defaultSpacing },
-  // Contact section has its own internal padding
-  contact: { ...defaultSpacing },
+  // Contact — vertical rhythm via block spacing (render has horizontal padding only)
+  contact: { padding_top: 64, padding_right: 24, padding_bottom: 64, padding_left: 24, margin_top: 0, margin_bottom: 0 },
+  menu_grid: { padding_top: 64, padding_right: 24, padding_bottom: 64, padding_left: 24, margin_top: 0, margin_bottom: 0 },
+  qr_code: { padding_top: 48, padding_right: 24, padding_bottom: 48, padding_left: 24, margin_top: 0, margin_bottom: 0 },
 }
 
 // ─── Google Fonts curated list ────────────────────────────────────────────────
@@ -103,6 +105,8 @@ export interface CtaButton {
   action: CtaAction
   value: string
   style: CtaStyle
+  /** Custom button colour; null/undefined = use brand colour from theme */
+  color?: string | null
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
@@ -326,8 +330,6 @@ export interface NavbarConfig {
   sticky: boolean
   background_color: string
   text_color: string
-  /** px, 0 = sharp */
-  border_radius: number
 }
 
 export const defaultNavbarConfig: NavbarConfig = {
@@ -336,7 +338,6 @@ export const defaultNavbarConfig: NavbarConfig = {
   sticky: true,
   background_color: '#ffffff',
   text_color: '#111111',
-  border_radius: 0,
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -380,6 +381,8 @@ export interface ThemeSettings {
   business_id: string
   primary_color: string
   background_color: string
+  /** Default body/heading text colour for sections that don't override */
+  text_color: string
   font_family: string            // body / paragraph font
   heading_font_family: string | null    // h1, h2, h3 font
   navbar_config?: NavbarConfig | null
@@ -389,6 +392,7 @@ export interface ThemeSettings {
 export const defaultThemeSettings: Omit<ThemeSettings, 'id' | 'business_id'> = {
   primary_color: '#E85D26',
   background_color: '#FFFFFF',
+  text_color: '#111111',
   font_family: 'Inter',
   heading_font_family: 'Inter',
   navbar_config: null,

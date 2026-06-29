@@ -74,12 +74,14 @@ export function HeroSettings({
   config,
   businessId,
   blocks,
+  brandColor = '#E85D26',
   onChange,
 }: {
   config: HeroConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
+  brandColor?: string
   onChange: (c: HeroConfig) => void
 }) {
   const { t } = useTranslation()
@@ -365,6 +367,7 @@ export function HeroSettings({
             label={t('heroBlock.primaryButton')}
             value={config.cta}
             blocks={blocks}
+            brandColor={brandColor}
             onChange={v => set('cta', v)}
             onRemove={() => set('cta', null)}
           />
@@ -381,6 +384,7 @@ export function HeroSettings({
               label={t('heroBlock.secondaryLink')}
               value={config.cta_secondary}
               blocks={blocks}
+              brandColor={brandColor}
               onChange={v => set('cta_secondary', v)}
               onRemove={() => set('cta_secondary', null)}
             />

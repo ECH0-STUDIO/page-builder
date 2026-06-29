@@ -62,14 +62,15 @@ import { LiveStoreCart } from './render/LiveStoreCart'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { PreviewLayout } from './render/preview-layout'
 
-import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction } from '@/app/actions/page-builder'
+import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
+import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
-  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig,
+  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig, FooterConfig,
 } from './types'
-import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings } from './types'
+import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings, BLOCK_DEFAULT_SPACING } from './types'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 
@@ -179,7 +180,7 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, previewLayout, interactive,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, brandColor, defaultTextColor,
 }: {
   block: PageBlock
   isSelected: boolean
@@ -188,6 +189,8 @@ function LiveBlockCard({
   onClick: () => void
   previewLayout?: PreviewLayout
   interactive?: boolean
+  brandColor: string
+  defaultTextColor: string
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
@@ -265,10 +268,16 @@ function LiveBlockCard({
             config={block.config as HeroConfig}
             businessName={business.name}
             previewLayout={previewLayout}
+            brandColor={brandColor}
           />
         )}
         {block.type === 'text_image' && (
-          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} />
+          <TextImageRender
+            config={block.config as TextImageConfig}
+            previewLayout={previewLayout}
+            brandColor={brandColor}
+            defaultTextColor={defaultTextColor}
+          />
         )}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
@@ -294,13 +303,14 @@ function LiveBlockCard({
 // ─── Settings panel ────────────────────────────────────────────────────────────
 
 function BlockSettingsPanel({
-  block, business, blocks, categories, items, onChange,
+  block, business, blocks, categories, items, brandColor, onChange,
 }: {
   block: PageBlock
   business: Business
   blocks: PageBlock[]
   categories: MenuCategory[]
   items: MenuItem[]
+  brandColor: string
   onChange: (b: PageBlock) => void
 }) {
   const { t } = useTranslation()
@@ -320,11 +330,13 @@ function BlockSettingsPanel({
       {block.type === 'hero' && (
         <HeroSettings config={block.config as HeroConfig} businessId={business.id}
           blocks={blocks}
+          brandColor={brandColor}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'text_image' && (
         <TextImageSettings config={block.config as TextImageConfig} businessId={business.id}
           blocks={blocks}
+          brandColor={brandColor}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'contact' && (
@@ -488,7 +500,6 @@ export function EditorShell({
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
   const [_isPreviewMode, setIsPreviewMode] = useState(false)
-  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
 
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
@@ -535,6 +546,7 @@ export function EditorShell({
   const headingFont = theme?.heading_font_family ?? 'Inter'
   const navbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig = theme?.footer_config ?? defaultFooterConfig
+  const themeTokens = resolveThemeTokens(theme)
   const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
 
   const canvasPreviewLayout: PreviewLayout = viewMode === 'mobile' ? 'mobile' : 'desktop'
@@ -584,45 +596,101 @@ export function EditorShell({
     setRightPanel('theme')
   }
 
-  // ── Debounced Theme & Publishing saving ─────────────────────────────────────
+  // ── Debounced Theme, Navbar, Footer & Publishing saving ───────────────────
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveNavbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const markPendingSave = useCallback(() => setSaveStatus('idle'), [])
+
   const handleThemeChange = useCallback((updated: Partial<ThemeSettings>) => {
+    markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, ...updated } : { ...defaultThemeSettings, business_id: business.id, id: '', ...updated } as ThemeSettings
       if (saveThemeTimer.current) clearTimeout(saveThemeTimer.current)
       saveThemeTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         saveThemeAction(business.id, {
           primary_color: next.primary_color,
           background_color: next.background_color,
+          text_color: next.text_color ?? defaultThemeSettings.text_color,
           font_family: next.font_family,
           heading_font_family: next.heading_font_family || 'Inter',
-        }).then(() => {
-          setHasUnpublishedChanges(true)
-        }).catch(err => toast.error('Failed to save theme: ' + String(err)))
+        }).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (!res.success) toast.error('Failed to save theme')
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save theme: ' + String(err))
+        })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave])
 
-  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleNavbarChange = useCallback((updated: NavbarConfig) => {
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, navbar_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', navbar_config: updated } as ThemeSettings
+      if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
+      saveNavbarTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
+        saveNavbarAction(business.id, updated).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (!res.success) toast.error('Failed to save navbar: ' + res.error)
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save navbar: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave])
+
+  const handleFooterChange = useCallback((updated: FooterConfig) => {
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, footer_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings
+      if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
+      saveFooterTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
+        saveFooterAction(business.id, updated).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (!res.success) toast.error('Failed to save footer: ' + res.error)
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save footer: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave])
+
   const handlePublishingChange = useCallback((updated: Partial<PublishingSettings>) => {
+    markPendingSave()
     setPublishingSettings(prev => {
       const next = prev ? { ...prev, ...updated } : { business_id: business.id, ...updated } as PublishingSettings
       if (savePubTimer.current) clearTimeout(savePubTimer.current)
       savePubTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         savePublishingSettingsAction(business.id, updated)
           .then(res => {
             if (res.success) {
-              setHasUnpublishedChanges(true)
+              setSaveStatus('saved')
             } else {
+              setSaveStatus('idle')
               toast.error(res.error)
             }
           })
-          .catch(err => toast.error('Failed to save settings: ' + String(err)))
+          .catch(err => {
+            setSaveStatus('idle')
+            toast.error('Failed to save settings: ' + String(err))
+          })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave])
 
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
@@ -645,7 +713,6 @@ export function EditorShell({
       const res = await savePageBlocksAction(business.id, blocksToSave)
       if (res.success) {
         setSaveStatus('saved')
-        setHasUnpublishedChanges(true)
       } else {
         setSaveStatus('idle')
         console.error('Failed to auto-save:', res.error)
@@ -675,6 +742,7 @@ export function EditorShell({
 
   // ── Block mutations ───────────────────────────────────────────────────────
   function addBlock(type: BlockType) {
+    const blockSpacing = BLOCK_DEFAULT_SPACING[type]
     const newBlock: PageBlock = {
       id: makeId(),
       business_id: business.id,
@@ -682,7 +750,7 @@ export function EditorShell({
       sort_order: blocks.length,
       visible: true,
       config: getDefaultConfig(type) as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      spacing: blockSpacing ? { ...blockSpacing } : { ...defaultSpacing },
       custom_css: '',
     }
     setBlocks(prev => [...prev, newBlock])
@@ -742,7 +810,7 @@ export function EditorShell({
         ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
         ...(tb.config ?? {}),
       } as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      spacing: BLOCK_DEFAULT_SPACING[tb.type] ? { ...BLOCK_DEFAULT_SPACING[tb.type]! } : { ...defaultSpacing },
       custom_css: '',
     }))
     setBlocks(newBlocks)
@@ -767,7 +835,6 @@ export function EditorShell({
       if (res.success) {
         setPublished(state)
         setPublishingSettings(res.data)
-        if (state) setHasUnpublishedChanges(false)
         toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
       } else {
         toast.error(res.error)
@@ -888,7 +955,7 @@ export function EditorShell({
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
+              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} brandColor={themeTokens.brandColor} onChange={updateBlock} />
           </div>
         </>
       ) : activeRightPanel === 'navbar' ? (
@@ -902,7 +969,7 @@ export function EditorShell({
               config={navbarConfig}
               businessId={business.id}
               blocks={blocks}
-              onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
+              onChange={handleNavbarChange}
             />
           </div>
         </>
@@ -915,7 +982,7 @@ export function EditorShell({
           <div className="flex-1 overflow-y-auto p-4">
             <FooterSettings
               config={footerConfig}
-              onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
+              onChange={handleFooterChange}
               businessId={business.id}
             />
           </div>
@@ -963,11 +1030,9 @@ export function EditorShell({
           businessName={business.name}
           slug={business.slug}
           published={published}
-          hasUnpublishedChanges={hasUnpublishedChanges}
           saveStatus={saveStatus}
           onPublish={handlePublish}
           publishing={publishing}
-          onSaveNow={saveNow}
           onTogglePreview={() => setIsPreviewMode(true)}
         />
       )}
@@ -1088,6 +1153,7 @@ export function EditorShell({
                 )}
                 style={{
                   fontFamily: `'${fontFamily}', sans-serif`,
+                  ...buildThemeStyle(theme),
                   ...(viewMode === 'desktop'
                     ? {
                         width: CANVAS_DESKTOP_WIDTH,
@@ -1146,6 +1212,8 @@ export function EditorShell({
                       menuGridData={menuGridData}
                       previewLayout={canvasPreviewLayout}
                       interactive={isPreviewMode}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>

@@ -15,22 +15,20 @@
 
 import type { HeroConfig, CtaButton } from '../types'
 import { ctaHref } from '../cta-utils'
+import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { type PreviewLayout, isForcedMobileLayout, sectionPaddingClass } from './preview-layout'
 
-function CtaLink({ cta, textColor, locale }: { cta: CtaButton; textColor: string; locale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
-  const base = 'inline-block px-7 py-3.5 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-90 select-none'
-  const isLight = textColor === '#ffffff' || textColor === 'white'
-  const styles: Record<typeof cta.style, React.CSSProperties> = {
-    filled:   { backgroundColor: textColor, color: isLight ? '#111' : '#fff' },
-    outlined: { border: `2px solid ${textColor}`, color: textColor, backgroundColor: 'transparent' },
-    text:     { textDecoration: 'underline', textUnderlineOffset: '4px', color: textColor, paddingLeft: 0, paddingRight: 0 },
-  }
-  return <a href={href} className={base} style={styles[cta.style]}>{pickLocale(cta.label, locale)}</a>
+  return (
+    <a href={href} className={getCtaClassName(cta.style)} style={getCtaInlineStyle(cta, brandColor)}>
+      {pickLocale(cta.label, locale)}
+    </a>
+  )
 }
 
 export function HeroRender({
@@ -39,12 +37,14 @@ export function HeroRender({
   isMobilePreview,
   previewLayout,
   locale,
+  brandColor = '#E85D26',
 }: {
   config: HeroConfig
   businessName?: string
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
   locale?: string
+  brandColor?: string
 }) {
   const activeLocale = toSupportedLocale(locale)
   const layout: PreviewLayout | undefined =
@@ -87,8 +87,8 @@ export function HeroRender({
           {body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
-              {config.cta && <CtaLink cta={config.cta} textColor={textColor} locale={activeLocale} />}
-              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} locale={activeLocale} />}
+              {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
+              {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
             </div>
           )}
         </div>
@@ -110,8 +110,8 @@ export function HeroRender({
           {body && <p style={{ color: panelTxt, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap' }}>{body}</p>}
           {(config.cta || config.cta_secondary) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '32px' }}>
-              {config.cta && <CtaLink cta={config.cta} textColor={panelTxt} locale={activeLocale} />}
-              {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={panelTxt} locale={activeLocale} />}
+              {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
+              {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
             </div>
           )}
         </div>
@@ -159,8 +159,8 @@ export function HeroRender({
         {body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{body}</p>}
         {(config.cta || config.cta_secondary) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: 'center' }}>
-            {config.cta && <CtaLink cta={config.cta} textColor={textColor} locale={activeLocale} />}
-            {config.cta_secondary && <CtaLink cta={config.cta_secondary} textColor={textColor} locale={activeLocale} />}
+            {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
+            {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
           </div>
         )}
       </div>

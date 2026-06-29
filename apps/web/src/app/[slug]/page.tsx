@@ -14,7 +14,8 @@ import { FooterRender } from '@/components/page-builder/render/FooterRender'
 import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
-import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, type FooterConfig } from '@/components/page-builder/types'
+import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
+import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
 import {
@@ -99,7 +100,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         .eq('visible', true)
         .order('sort_order', { ascending: true }),
       db.from('theme_settings')
-        .select('font_family, heading_font_family, navbar_config, footer_config')
+        .select('font_family, heading_font_family, primary_color, background_color, text_color, navbar_config, footer_config')
         .eq('business_id', business.id)
         .single(),
     ])
@@ -111,6 +112,12 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const bodyFont: string = themeRaw?.font_family ?? 'Inter'
   const headingFontRaw: string = themeRaw?.heading_font_family ?? 'Inter'
+  const themeForTokens: Partial<ThemeSettings> = {
+    primary_color: themeRaw?.primary_color ?? defaultThemeSettings.primary_color,
+    background_color: themeRaw?.background_color ?? defaultThemeSettings.background_color,
+    text_color: themeRaw?.text_color ?? defaultThemeSettings.text_color,
+  }
+  const themeTokens = resolveThemeTokens(themeForTokens)
   const navbarConfig: NavbarConfig = (themeRaw?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
   const footerConfig: FooterConfig = (themeRaw?.footer_config as FooterConfig | null) ?? defaultFooterConfig
 
@@ -194,8 +201,11 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={visitorLocale}
-      className="min-h-screen bg-white w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
-      style={{ fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined }}
+      className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
+      style={{
+        fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
+        ...buildThemeStyle(themeForTokens),
+      }}
     >
       {/* Silent visit tracker */}
       <ViewTracker slug={slug} />
@@ -306,10 +316,18 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                 )}
                 <div data-live-block={block.id} style={innerStyle}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
+                    <HeroRender
+                      config={block.config as HeroConfig}
+                      businessName={business.name}
+                      brandColor={themeTokens.brandColor}
+                    />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} />
+                    <TextImageRender
+                      config={block.config as TextImageConfig}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
+                    />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender

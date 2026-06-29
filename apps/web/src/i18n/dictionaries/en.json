@@ -341,11 +341,13 @@
     "analytics": "Analytics & Tracking",
     "gaId": "Google Analytics ID",
     "fbPixel": "Facebook Pixel ID",
+    "tiktokPixel": "TikTok Pixel ID",
     "gscTag": "Google Search Console Tag",
     "gscPlaceholder": "HTML tag content...",
     "designTheme": "Design Theme",
     "brandColor": "Brand Color",
     "background": "Background",
+    "textColor": "Text Color",
     "headingFont": "Heading Font",
     "bodyFont": "Body Font",
     "outerPadding": "Outer Padding",
@@ -759,7 +761,10 @@
     "buttonLabel": "Button label",
     "scrollToSection": "Scroll to section",
     "selectSection": "Select a section…",
-    "noAnchorIds": "No sections with an anchor ID yet. Set a <strong>Section ID</strong> on any block using the input below the block settings."
+    "noAnchorIds": "No sections with an anchor ID yet. Set a <strong>Section ID</strong> on any block using the input below the block settings.",
+    "buttonColor": "Button colour",
+    "brandDefault": "brand",
+    "resetToBrand": "Reset to brand"
   },
   "menuBuilder": {
     "addCategory": "Add category",

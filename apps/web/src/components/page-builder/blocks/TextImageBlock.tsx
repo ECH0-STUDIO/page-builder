@@ -81,15 +81,15 @@ export function TextImageSettings({
   config,
   businessId,
   blocks,
+  brandColor = '#E85D26',
   onChange,
-  
 }: {
   config: TextImageConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
+  brandColor?: string
   onChange: (c: TextImageConfig) => void
-  
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -276,7 +276,7 @@ export function TextImageSettings({
               label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
-              
+              brandColor={brandColor}
               onChange={v => set('cta', v)}
               onRemove={() => set('cta', null)}
             />

@@ -115,7 +115,7 @@ export function ContactRender({ config, business }: ContactRenderProps) {
   const contentWidthFlex = (config.layout === 'map_left' && config.show_map) ? '1 1 300px' : '1 1 100%'
 
   return (
-    <section style={{ backgroundColor: bgColor, padding: '72px 24px' }}>
+    <section style={{ backgroundColor: bgColor, padding: '0 24px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '48px', alignItems: 'start' }}>
 
         {/* Map */}

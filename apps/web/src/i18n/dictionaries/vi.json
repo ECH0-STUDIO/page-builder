@@ -341,11 +341,13 @@
     "analytics": "Phân tích & Theo dõi",
     "gaId": "Google Analytics ID",
     "fbPixel": "Facebook Pixel ID",
+    "tiktokPixel": "TikTok Pixel ID",
     "gscTag": "Google Search Console Tag",
     "gscPlaceholder": "Nội dung thẻ HTML...",
     "designTheme": "Chủ đề thiết kế",
     "brandColor": "Màu thương hiệu",
     "background": "Nền",
+    "textColor": "Màu chữ",
     "headingFont": "Phông tiêu đề",
     "bodyFont": "Phông văn bản",
     "outerPadding": "Khoảng đệm ngoài",
@@ -759,7 +761,10 @@
     "buttonLabel": "Nhãn nút",
     "scrollToSection": "Cuộn đến phần",
     "selectSection": "Chọn một phần…",
-    "noAnchorIds": "Chưa có phần nào có ID neo. Đặt <strong>ID Phần</strong> cho khối bất kỳ bằng ô nhập bên dưới cài đặt khối."
+    "noAnchorIds": "Chưa có phần nào có ID neo. Đặt <strong>ID Phần</strong> cho khối bất kỳ bằng ô nhập bên dưới cài đặt khối.",
+    "buttonColor": "Màu nút",
+    "brandDefault": "thương hiệu",
+    "resetToBrand": "Đặt lại màu thương hiệu"
   },
   "menuBuilder": {
     "addCategory": "Thêm danh mục",

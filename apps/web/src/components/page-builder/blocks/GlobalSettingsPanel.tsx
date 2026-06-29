@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { uploadImageToStorage, validateImageDimensions } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type { ThemeSettings, PublishingSettings } from '../types'
+import { GOOGLE_FONTS as FONTS } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
 
 interface GlobalSettingsPanelProps {
@@ -20,8 +21,6 @@ interface GlobalSettingsPanelProps {
   onThemeChange: (updated: Partial<ThemeSettings>) => void
   onPublishingChange: (updated: Partial<PublishingSettings>) => void
 }
-
-const FONTS = ['Inter', 'Outfit', 'Playfair Display', 'Lora', 'Space Grotesk', 'Roboto Mono']
 
 export function GlobalSettingsPanel({
   theme,
@@ -291,6 +290,15 @@ export function GlobalSettingsPanel({
             />
           </div>
           <div className="space-y-1.5">
+            <Label className="text-xs">{t('pageBuilder.tiktokPixel')}</Label>
+            <Input
+              value={p.tiktok_pixel_id || ''}
+              onChange={e => onPublishingChange({ tiktok_pixel_id: e.target.value })}
+              placeholder="CXXXXXXXXXXXXXXXXX"
+              className="text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.gscTag')}</Label>
             <Input
               value={p.gsc_verification || ''}
@@ -333,6 +341,18 @@ export function GlobalSettingsPanel({
                 <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.background_color}</span>
               </div>
             </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs">{t('pageBuilder.textColor')}</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={thm.text_color || '#111111'}
+                  onChange={e => onThemeChange({ text_color: e.target.value })}
+                  className="size-8 rounded border border-border cursor-pointer"
+                />
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.text_color || '#111111'}</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -341,8 +361,8 @@ export function GlobalSettingsPanel({
               <SelectTrigger className="text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {FONTS.map(f => <SelectItem key={f} value={f} className="text-xs">{f}</SelectItem>)}
+              <SelectContent className="max-h-60">
+                {FONTS.map(f => <SelectItem key={f.name} value={f.name} className="text-xs">{f.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -352,8 +372,8 @@ export function GlobalSettingsPanel({
               <SelectTrigger className="text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {FONTS.map(f => <SelectItem key={f} value={f} className="text-xs">{f}</SelectItem>)}
+              <SelectContent className="max-h-60">
+                {FONTS.map(f => <SelectItem key={f.name} value={f.name} className="text-xs">{f.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

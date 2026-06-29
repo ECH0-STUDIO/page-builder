@@ -471,7 +471,7 @@ function MenuGridInner({
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
-      <section style={{ backgroundColor: bgColor, padding: '64px 32px', textAlign: 'center' }}>
+      <section style={{ backgroundColor: bgColor, padding: '0 24px', textAlign: 'center' }}>
         <p style={{ color: textColor, opacity: 0.4, fontSize: '15px' }}>No menu categories yet.</p>
       </section>
     )
@@ -479,7 +479,7 @@ function MenuGridInner({
 
   return (
     <>
-      <section className={sectionPaddingClass(layout)} style={{ backgroundColor: bgColor, paddingTop: 64, paddingBottom: 64 }}>
+      <section className={sectionPaddingClass(layout)} style={{ backgroundColor: bgColor }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
@@ -515,7 +515,7 @@ function MenuGridInner({
               : 'flex flex-col md:flex-row gap-6 md:gap-10 md:items-start'
             : ''}>
             {/* Category tabs */}
-            {visibleCats.length > 1 && (
+            {config.show_category_tabs !== false && visibleCats.length > 1 && (
               <div 
                 className={cn(
                   'flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full',
