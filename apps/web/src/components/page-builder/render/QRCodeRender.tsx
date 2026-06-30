@@ -111,8 +111,7 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
         {config.show_download && (
           <button
             onClick={download}
-            className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border transition-colors hover:opacity-80"
-            style={{ color: textColor, borderColor: `${textColor}40` }}
+            className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border border-gray-200 text-gray-700 transition-colors hover:bg-gray-50"
           >
             <Download className="size-3.5" />
             {downloadLabel}

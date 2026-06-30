@@ -268,10 +268,11 @@ function ItemModal({
 // ─── Item Card (grid layout) ───────────────────────────────────────────────────
 
 function ItemCardGrid({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount
 }: {
   item: MenuItem
   config: MenuGridConfig
+  brandColor: string
   onClick: () => void
   onQuickAdd: () => void
   hasVariants: boolean
@@ -279,7 +280,6 @@ function ItemCardGrid({
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const sectionBg = config.background_color || '#ffffff'
   const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
@@ -332,7 +332,7 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: sectionBg }}>
+            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
               <Plus className="size-4 pointer-events-none" />
             </button>
           </div>
@@ -345,10 +345,11 @@ function ItemCardGrid({
 // ─── Item Row (list layout) ──────────────────────────────────────────────────
 
 function ItemRowList({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount
 }: {
   item: MenuItem
   config: MenuGridConfig
+  brandColor: string
   onClick: () => void
   onQuickAdd: () => void
   hasVariants: boolean
@@ -356,7 +357,6 @@ function ItemRowList({
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const sectionBg = config.background_color || '#ffffff'
   const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
@@ -403,7 +403,7 @@ function ItemRowList({
         {config.show_price && (
           <p className="text-sm font-bold shrink-0" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
         )}
-        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: sectionBg }}>
+        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
           <Plus className="size-4 pointer-events-none" />
         </button>
       </div>
@@ -418,7 +418,8 @@ function MenuGridInner({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  brandColor = '#111111',
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
   const layout: PreviewLayout | undefined =
@@ -444,8 +445,8 @@ function MenuGridInner({
     }
   }, [])
 
-  const sectionBg = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
+  const actionColor = brandColor || '#111111'
 
   const typography = getTypography(mobileLayout)
 
@@ -574,8 +575,8 @@ function MenuGridInner({
                     )}
                     style={
                       activeCat === cat.id
-                        ? { backgroundColor: textColor, color: sectionBg, border: `1.5px solid ${textColor}` }
-                        : { backgroundColor: 'transparent', color: textColor, border: `1.5px solid ${textColor}22`, opacity: 0.7 }
+                        ? { backgroundColor: actionColor, color: '#ffffff', border: `1.5px solid ${actionColor}` }
+                        : { backgroundColor: 'transparent', color: textColor, border: '1.5px solid #e5e7eb' }
                     }
                   >
                     {cat.name}
@@ -599,9 +600,9 @@ function MenuGridInner({
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     ) : (
-                      <ItemCardGrid key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     )
                   })}
                 </div>
@@ -611,8 +612,8 @@ function MenuGridInner({
                       type="button"
                       disabled={safePage <= 1}
                       onClick={() => setPage(p => Math.max(1, p - 1))}
-                      className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 transition-colors"
-                      style={{ color: textColor, borderColor: `${textColor}33` }}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 transition-colors hover:bg-gray-50"
+                      style={{ color: textColor }}
                     >
                       {t('menuGridBlock.prevPage')}
                     </button>
@@ -623,8 +624,8 @@ function MenuGridInner({
                       type="button"
                       disabled={safePage >= totalPages}
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 transition-colors"
-                      style={{ color: textColor, borderColor: `${textColor}33` }}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 transition-colors hover:bg-gray-50"
+                      style={{ color: textColor }}
                     >
                       {t('menuGridBlock.nextPage')}
                     </button>
@@ -676,13 +677,15 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  brandColor = '#111111',
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
       config={config}
       data={data}
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
+      brandColor={brandColor}
     />
   )
 }

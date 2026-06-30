@@ -337,6 +337,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
+                      brandColor={themeTokens.brandColor}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {

@@ -291,6 +291,7 @@ function LiveBlockCard({
             config={block.config as MenuGridConfig}
             data={menuGridData}
             previewLayout={previewLayout}
+            brandColor={brandColor}
           />
         )}
         {block.type === 'qr_code' && (
