@@ -203,7 +203,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={visitorLocale}
-      className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
+      className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col"
       style={{
         fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
         ...buildThemeStyle(themeForTokens),

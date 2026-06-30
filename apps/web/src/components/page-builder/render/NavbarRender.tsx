@@ -35,7 +35,6 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
   const hasLinks = config.links && config.links.length > 0
 
   const containerStyle: React.CSSProperties = {
-    // Sticky must be on the element itself. z-index high enough to sit above all page content.
     position: config.sticky ? 'sticky' : 'relative',
     top: 0,
     zIndex: 9999,
@@ -43,8 +42,6 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
     backdropFilter: isTransparent ? 'blur(12px)' : undefined,
     WebkitBackdropFilter: isTransparent ? 'blur(12px)' : undefined,
     borderBottom: '1px solid rgba(0,0,0,0.06)',
-    // Ensure sticky works even inside overflow:auto containers
-    willChange: 'transform',
   }
 
   const linkStyle: React.CSSProperties = {
@@ -78,7 +75,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
 
   return (
     <nav style={containerStyle} id="page-navbar">
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative' }}>
 
         {/* Main bar */}
         <div style={{
