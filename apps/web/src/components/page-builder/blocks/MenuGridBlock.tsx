@@ -81,9 +81,17 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
   }
 
   const allSelected = config.category_ids.length === 0
+  const isCustomMode = config.selection_mode === 'custom_items'
+  const selectedItemIds = config.item_ids || []
 
   // Number of categories that will actually appear on the live page
-  const activeCatCount = allSelected ? categories.length : config.category_ids.length
+  const activeCatCount = isCustomMode
+    ? new Set(
+        items
+          .filter(item => selectedItemIds.includes(item.id))
+          .map(item => item.category_id),
+      ).size
+    : allSelected ? categories.length : config.category_ids.length
   // Tabs are auto-forced when 2+ categories are displayed (user can't turn them off)
   const tabsAutoForced = activeCatCount >= 2
 

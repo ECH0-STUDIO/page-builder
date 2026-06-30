@@ -451,22 +451,30 @@ function MenuGridInner({
   const typography = getTypography(mobileLayout)
 
   const isCustomMode = config.selection_mode === 'custom_items'
+  const selectedItemIds = new Set(config.item_ids || [])
 
-  const visibleCats = isCustomMode 
-    ? [] 
+  const visibleCats = isCustomMode
+    ? categories.filter(c => {
+        if (!c.visible) return false
+        return items.some(item => selectedItemIds.has(item.id) && item.category_id === c.id)
+      })
     : categories.filter(c => c.visible && (
         config.category_ids.length === 0 || config.category_ids.includes(c.id)
       ))
 
-  const activeCat = activeCatId ?? visibleCats[0]?.id ?? null
+  const tabsEnabled = config.show_category_tabs !== false && visibleCats.length > 1
+  const activeCat = tabsEnabled ? (activeCatId ?? visibleCats[0]?.id ?? null) : null
 
-  const displayItems = isCustomMode
-    ? items.filter(item => (config.item_ids || []).includes(item.id))
-    : items.filter(item => {
-        if (item.category_id !== activeCat) return false
-        if (!item.available && !config.show_unavailable_badge) return false
-        return true
-      })
+  const displayItems = items.filter(item => {
+    if (isCustomMode) {
+      if (!selectedItemIds.has(item.id)) return false
+    } else if (!visibleCats.some(c => c.id === item.category_id)) {
+      return false
+    }
+    if (tabsEnabled && activeCat && item.category_id !== activeCat) return false
+    if (!item.available && !config.show_unavailable_badge) return false
+    return true
+  })
 
   const paginationEnabled = config.pagination_enabled === true
   const itemsPerPage = Math.max(1, config.items_per_page ?? 12)
@@ -534,7 +542,7 @@ function MenuGridInner({
               : 'flex flex-col md:flex-row gap-6 md:gap-10 md:items-start'
             : ''}>
             {/* Category tabs */}
-            {config.show_category_tabs !== false && visibleCats.length > 1 && (
+            {tabsEnabled && (
               <div 
                 className={cn(
                   'flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full',
