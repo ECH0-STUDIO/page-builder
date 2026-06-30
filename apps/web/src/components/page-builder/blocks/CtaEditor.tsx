@@ -12,6 +12,7 @@
 import { X, LinkIcon, Phone, Anchor, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -182,16 +183,30 @@ export function CtaEditor({
           </div>
         )
       ) : (
-        <Input
-          placeholder={
-            value.action === 'tel' ? '+84 9xx xxx xxx'
-            : value.action === 'email' ? 'hello@example.com'
-            : 'https://…'
-          }
-          value={value.value}
-          onChange={e => onChange({ ...value, value: e.target.value })}
-          className="h-8 text-sm"
-        />
+        <div className="space-y-2">
+          <Input
+            placeholder={
+              value.action === 'tel' ? '+84 9xx xxx xxx'
+              : value.action === 'email' ? 'hello@example.com'
+              : t('ctaEditor.urlPlaceholder')
+            }
+            value={value.value}
+            onChange={e => onChange({ ...value, value: e.target.value })}
+            className="h-8 text-sm"
+          />
+          {value.action === 'url' && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cta-open-new-tab" className="text-xs font-normal cursor-pointer text-muted-foreground">
+                {t('ctaEditor.openInNewTab')}
+              </Label>
+              <Switch
+                id="cta-open-new-tab"
+                checked={value.open_in_new_tab ?? false}
+                onCheckedChange={v => onChange({ ...value, open_in_new_tab: v })}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

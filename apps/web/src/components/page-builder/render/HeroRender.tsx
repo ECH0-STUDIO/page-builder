@@ -14,7 +14,7 @@
  */
 
 import type { HeroConfig, CtaButton } from '../types'
-import { ctaHref } from '../cta-utils'
+import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
@@ -24,8 +24,14 @@ import { type PreviewLayout, isForcedMobileLayout, sectionPaddingClass } from '.
 
 function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
+  const newTab = ctaOpensNewTab(cta)
   return (
-    <a href={href} className={getCtaClassName(cta.style)} style={getCtaInlineStyle(cta, brandColor)}>
+    <a
+      href={href}
+      className={getCtaClassName(cta.style)}
+      style={getCtaInlineStyle(cta, brandColor)}
+      {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       {pickLocale(cta.label, locale)}
     </a>
   )

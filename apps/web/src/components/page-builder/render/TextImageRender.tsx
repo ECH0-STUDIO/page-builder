@@ -9,7 +9,7 @@
  */
 
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
-import { ctaHref } from '../cta-utils'
+import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
@@ -18,24 +18,33 @@ import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 
 function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
+  const newTab = ctaOpensNewTab(cta)
   return (
-    <a href={href} className={`${getCtaClassName(cta.style)} mt-6`} style={getCtaInlineStyle(cta, brandColor)}>
+    <a
+      href={href}
+      className={`${getCtaClassName(cta.style)} mt-6`}
+      style={getCtaInlineStyle(cta, brandColor)}
+      {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       {pickLocale(cta.label, locale)}
     </a>
   )
-}
-
-const PADDING: Record<string, React.CSSProperties> = {
-  compact:  { paddingTop: '32px', paddingBottom: '32px' },
-  normal:   { paddingTop: '64px', paddingBottom: '64px' },
-  spacious: { paddingTop: '100px', paddingBottom: '100px' },
 }
 
 const ASPECT: Record<string, string> = {
   square: '1/1',
   '4_3':  '4/3',
   '16_9': '16/9',
-  free:   'auto',
+}
+
+function resolveAspectRatio(config: TextImageConfig): string {
+  if (config.aspect_ratio !== 'free') {
+    return ASPECT[config.aspect_ratio] ?? '4/3'
+  }
+  const w = config.aspect_ratio_width ?? 4
+  const h = config.aspect_ratio_height ?? 3
+  if (w <= 0 || h <= 0) return '4/3'
+  return `${w}/${h}`
 }
 
 const RADIUS: Record<BorderRadius, string> = {
@@ -67,7 +76,6 @@ export function TextImageRender({
   const body = pickLocale(config.body, activeLocale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
-  const padStyle = PADDING[config.padding] ?? PADDING.normal
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
 
@@ -84,7 +92,7 @@ export function TextImageRender({
       flex: '0 0 auto',
       width: isStacked || isImgOnly ? '100%' : 'min(45%, 480px)',
       // Use the chosen aspect ratio — NOT a fixed height — to avoid whitespace
-      aspectRatio: isImgOnly ? '16/6' : (ASPECT[config.aspect_ratio] ?? '4/3'),
+      aspectRatio: isImgOnly ? '16/6' : resolveAspectRatio(config),
       overflow: 'hidden',
       borderRadius: radius,
       background: '#f0f0f0',
@@ -157,7 +165,7 @@ export function TextImageRender({
   }
 
   return (
-    <section style={padStyle}>
+    <section>
       <div style={innerStyle}>
         {isReverse ? <>{textEl}{imageEl}</> : <>{imageEl}{textEl}</>}
       </div>

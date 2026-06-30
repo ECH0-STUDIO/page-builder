@@ -590,6 +590,9 @@
     "4_3": "4:3",
     "16_9": "16:9",
     "free": "Tự do",
+    "customAspectRatio": "Tỷ lệ tùy chỉnh",
+    "aspectRatioWidth": "Chiều rộng",
+    "aspectRatioHeight": "Chiều cao",
     "padding": "Khoảng đệm",
     "compact": "Nhỏ",
     "normal": "Bình thường",
@@ -774,7 +777,9 @@
     "noAnchorIds": "Chưa có phần nào có ID neo. Đặt <strong>ID Phần</strong> cho khối bất kỳ bằng ô nhập bên dưới cài đặt khối.",
     "buttonColor": "Màu nút",
     "brandDefault": "thương hiệu",
-    "resetToBrand": "Đặt lại màu thương hiệu"
+    "resetToBrand": "Đặt lại màu thương hiệu",
+    "urlPlaceholder": "google.com hoặc https://…",
+    "openInNewTab": "Mở tab mới"
   },
   "menuBuilder": {
     "addCategory": "Thêm danh mục",

@@ -590,6 +590,9 @@
     "4_3": "4:3",
     "16_9": "16:9",
     "free": "Free",
+    "customAspectRatio": "Custom ratio",
+    "aspectRatioWidth": "Width",
+    "aspectRatioHeight": "Height",
     "padding": "Padding",
     "compact": "Compact",
     "normal": "Normal",
@@ -774,7 +777,9 @@
     "noAnchorIds": "No sections with an anchor ID yet. Set a <strong>Section ID</strong> on any block using the input below the block settings.",
     "buttonColor": "Button colour",
     "brandDefault": "brand",
-    "resetToBrand": "Reset to brand"
+    "resetToBrand": "Reset to brand",
+    "urlPlaceholder": "google.com or https://…",
+    "openInNewTab": "Open in new tab"
   },
   "menuBuilder": {
     "addCategory": "Add category",

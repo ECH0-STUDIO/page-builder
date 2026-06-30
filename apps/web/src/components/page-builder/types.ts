@@ -33,8 +33,7 @@ export const SECTION_SIDE_PADDING = 24
 export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
   // Hero inner vertical padding is via section_padding_y; outer spacing is 0
   hero: { ...defaultSpacing },
-  // Text+image — shell horizontal padding; compact/normal/spacious = vertical rhythm in render
-  text_image: { padding_top: 0, padding_right: SECTION_SIDE_PADDING, padding_bottom: 0, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  text_image: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
   // Contact / menu / QR — vertical + horizontal rhythm on the section shell
   contact: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
   menu_grid: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
@@ -110,6 +109,8 @@ export interface CtaButton {
   style: CtaStyle
   /** Custom button colour; null/undefined = use brand colour from theme */
   color?: string | null
+  /** When action is url, open link in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
@@ -184,6 +185,10 @@ export interface TextImageConfig {
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
+  /** Custom ratio width when aspect_ratio === 'free' */
+  aspect_ratio_width?: number
+  /** Custom ratio height when aspect_ratio === 'free' */
+  aspect_ratio_height?: number
   image_fit: ImageFit
   background: BlockBackground
   background_color: string
@@ -203,6 +208,8 @@ export const defaultTextImageConfig: TextImageConfig = {
   cta: null,
   image_url: '',
   aspect_ratio: '4_3',
+  aspect_ratio_width: 4,
+  aspect_ratio_height: 3,
   image_fit: 'cover',
   background: 'transparent',
   background_color: '#f9f9f9',
