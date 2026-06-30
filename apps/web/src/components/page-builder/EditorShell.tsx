@@ -65,7 +65,7 @@ import type { PreviewLayout } from './render/preview-layout'
 import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
 import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
-import { normalizePageBlock, getInitialBlockSpacing } from './spacing-utils'
+import { normalizePageBlock, getInitialBlockSpacing, resolveBlockSpacing } from './spacing-utils'
 import { getBlockSurfaceLayers } from './block-section-style'
 
 import type {
@@ -323,6 +323,11 @@ function BlockSettingsPanel({
 }) {
   const { t } = useTranslation()
   const anchorId = block.block_anchor_id ?? ''
+  const displaySpacing = resolveBlockSpacing(
+    block.type,
+    block.spacing,
+    block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
+  )
 
   return (
     <div className="space-y-6">
@@ -399,7 +404,7 @@ function BlockSettingsPanel({
       {/* Outer spacing — common */}
       <div className="space-y-3">
         <SpacingControls
-          spacing={block.spacing ?? defaultSpacing}
+          spacing={displaySpacing}
           onChange={s => onChange({ ...block, spacing: s })}
         />
       </div>

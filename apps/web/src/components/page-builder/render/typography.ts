@@ -11,16 +11,16 @@ export interface TypographyToken {
 export function getTypography(isMobilePreview?: boolean) {
   return {
     h1: {
-      fontSize: isMobilePreview ? '32px' : 'clamp(32px, 6vw, 64px)',
+      fontSize: isMobilePreview ? '28px' : 'clamp(28px, 4.5vw, 48px)',
       fontWeight: 800,
-      lineHeight: 1.1,
+      lineHeight: 1.15,
       letterSpacing: '-0.025em',
     } as TypographyToken,
     
     h2: {
-      fontSize: isMobilePreview ? '24px' : 'clamp(24px, 5vw, 48px)',
+      fontSize: isMobilePreview ? '22px' : 'clamp(22px, 3.5vw, 36px)',
       fontWeight: 700,
-      lineHeight: 1.2,
+      lineHeight: 1.25,
       letterSpacing: '-0.015em',
     } as TypographyToken,
     

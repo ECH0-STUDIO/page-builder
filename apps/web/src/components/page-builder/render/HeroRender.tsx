@@ -108,8 +108,8 @@ export function HeroRender({
     const imageOnRight = (config.split_image_side ?? 'right') === 'right'
 
     const contentPane = (
-      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center' }}>
-        <div>
+      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', alignSelf: 'stretch' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', ...inset }}>
           <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{tagline}</p>}
           {body && <p style={{ color: panelTxt, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap' }}>{body}</p>}
@@ -133,7 +133,7 @@ export function HeroRender({
     )
 
     return (
-      <section style={{ display: 'flex', flexWrap: 'wrap', width: '100%', ...heightBase }}>
+      <section style={{ display: 'flex', flexWrap: 'wrap', width: '100%', alignItems: 'stretch', ...heightBase }}>
         {imageOnRight ? <>{contentPane}{imagePane}</> : <>{imagePane}{contentPane}</>}
       </section>
     )
@@ -163,6 +163,8 @@ export function HeroRender({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%',
+        boxSizing: 'border-box',
         ...inset,
       }}>
       <div style={{ textAlign: 'center', maxWidth: '800px', width: '100%' }}>
