@@ -42,7 +42,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     label: 'pageBuilder.templatesData.visual_menu.label',
     description: 'pageBuilder.templatesData.visual_menu.description',
     blocks: [
-      { type: 'hero', config: { layout: 'centered', height: 'medium', heading: 'Our Menu', tagline: 'Order directly from our kitchen to your table.' } },
+      { type: 'hero', config: { layout: 'centered', height: 'custom', heading: 'Our Menu', tagline: 'Order directly from our kitchen to your table.' } },
       { type: 'menu_grid', config: { layout: '3col', show_category_tabs: true, show_description: true } },
       { type: 'contact', config: { show_map: false, show_hours: true } },
     ],
@@ -52,7 +52,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     label: 'pageBuilder.templatesData.link_in_bio.label',
     description: 'pageBuilder.templatesData.link_in_bio.description',
     blocks: [
-      { type: 'hero', config: { layout: 'centered', height: 'custom', section_padding_y: 40, heading: 'Quick Links', tagline: 'Find us online or order for pickup.' } },
+      { type: 'hero', config: { layout: 'centered', height: 'custom', heading: 'Quick Links', tagline: 'Find us online or order for pickup.' } },
       { type: 'text_image', config: { layout: 'text_only', background: 'transparent', heading: 'Order Now', body: 'Tap below to see our full menu.' } },
       { type: 'contact', config: { show_map: false, show_hours: false, show_phone: false, show_email: false, socials_shown: ['instagram', 'tiktok', 'facebook'] } },
     ],

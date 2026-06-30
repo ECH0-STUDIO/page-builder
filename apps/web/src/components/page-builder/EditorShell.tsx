@@ -65,7 +65,7 @@ import type { PreviewLayout } from './render/preview-layout'
 import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
 import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
-import { normalizePageBlock } from './spacing-utils'
+import { normalizePageBlock, getInitialBlockSpacing } from './spacing-utils'
 import { getBlockSurfaceLayers } from './block-section-style'
 
 import type {
@@ -338,7 +338,13 @@ function BlockSettingsPanel({
         <HeroSettings config={block.config as HeroConfig} businessId={business.id}
           blocks={blocks}
           brandColor={brandColor}
-          onChange={c => onChange({ ...block, config: c })} />
+          onChange={c => onChange({ ...block, config: c })}
+          onHeightChange={height => onChange({
+            ...block,
+            config: { ...(block.config as HeroConfig), height },
+            spacing: getInitialBlockSpacing('hero', { ...(block.config as HeroConfig), height }),
+          })}
+        />
       )}
       {block.type === 'text_image' && (
         <TextImageSettings config={block.config as TextImageConfig} businessId={business.id}
@@ -849,15 +855,15 @@ export function EditorShell({
   function addBlock(type: BlockType) {
     pushHistory()
     markPendingSave()
-    const blockSpacing = BLOCK_DEFAULT_SPACING[type]
+    const config = getDefaultConfig(type) as PageBlock['config']
     const newBlock: PageBlock = {
       id: makeId(),
       business_id: business.id,
       type,
       sort_order: blocks.length,
       visible: true,
-      config: getDefaultConfig(type) as PageBlock['config'],
-      spacing: blockSpacing ? { ...blockSpacing } : { ...defaultSpacing },
+      config,
+      spacing: getInitialBlockSpacing(type, config),
       custom_css: '',
     }
     setBlocks(prev => [...prev, newBlock])
@@ -929,7 +935,10 @@ export function EditorShell({
         ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
         ...(tb.config ?? {}),
       } as PageBlock['config'],
-      spacing: BLOCK_DEFAULT_SPACING[tb.type] ? { ...BLOCK_DEFAULT_SPACING[tb.type]! } : { ...defaultSpacing },
+      spacing: getInitialBlockSpacing(tb.type, {
+        ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
+        ...(tb.config ?? {}),
+      } as PageBlock['config']),
       custom_css: '',
     }))
     setBlocks(newBlocks)

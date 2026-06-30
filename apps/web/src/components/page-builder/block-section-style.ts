@@ -10,6 +10,7 @@ import type {
   MenuGridConfig,
   QRCodeConfig,
   TextImageConfig,
+  HeroConfig,
 } from './types'
 import { resolveBlockSpacing } from './spacing-utils'
 
@@ -59,7 +60,11 @@ export function getBlockSurfaceLayers(block: PageBlock): {
   margin: CSSProperties
   shell: CSSProperties
 } {
-  const spacing = resolveBlockSpacing(block.type, block.spacing)
+  const spacing = resolveBlockSpacing(
+    block.type,
+    block.spacing,
+    block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
+  )
   return {
     margin: {
       marginTop: spacing.margin_top,

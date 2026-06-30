@@ -8,19 +8,18 @@
  *  - centered   → Legacy alias for overlay at 40% opacity
  *
  * height:
- *  - custom     → padY drives height (no min-height)
- *  - medium     → min-height 60vh
+ *  - custom     → content height; vertical spacing from outer padding control
  *  - fullscreen → min-height 100vh
  */
 
 import type { HeroConfig, CtaButton } from '../types'
 import { ctaHref, ctaOpensNewTab } from '../cta-utils'
+import { resolveHeroHeight } from '../hero-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
-import { cn } from '@/lib/utils'
-import { type PreviewLayout, isForcedMobileLayout, sectionPaddingClass } from './preview-layout'
+import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 
 function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
@@ -56,26 +55,20 @@ export function HeroRender({
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
-  const desktopLayout = layout === 'desktop'
 
   const heading = pickLocale(config.heading, activeLocale) || businessName || 'Welcome'
   const tagline = pickLocale(config.tagline, activeLocale)
   const body = pickLocale(config.body, activeLocale)
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
-  const padY      = config.section_padding_y ?? 80
   const typography = getTypography(mobileLayout)
-  const sectionPx = sectionPaddingClass(layout)
-  const splitPx = mobileLayout ? 'px-4' : desktopLayout ? 'px-12' : 'px-4 md:px-12'
+  const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
 
   const objectPos =
     config.image_position === 'top'    ? 'top'
     : config.image_position === 'bottom' ? 'bottom'
     : 'center'
 
-  const heightBase: React.CSSProperties =
-    config.height === 'fullscreen' ? { minHeight: '100vh' }
-    : config.height === 'medium'   ? { minHeight: '60vh' }
-    : {}
+  const heightBase: React.CSSProperties = isFullscreen ? { minHeight: '100vh' } : {}
 
   // ── Text only ──────────────────────────────────────────────────────────────
   if (config.layout === 'text_only') {
@@ -86,7 +79,7 @@ export function HeroRender({
       : `linear-gradient(135deg, ${fromColor} 0%, ${toColor} 100%)`
 
     return (
-      <section className={sectionPx} style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, paddingTop: padY, paddingBottom: padY }}>
+      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
@@ -109,7 +102,7 @@ export function HeroRender({
     const imageOnRight = (config.split_image_side ?? 'right') === 'right'
 
     const contentPane = (
-      <div className={splitPx} style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center', paddingTop: padY, paddingBottom: padY, ...heightBase }}>
+      <div style={{ flex: '1 1 320px', background: panelBg, display: 'flex', alignItems: 'center' }}>
         <div>
           <h1 style={{ color: panelTxt, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {tagline && <p style={{ color: panelTxt, ...typography.bodyLg, marginTop: '16px' }}>{tagline}</p>}
@@ -125,7 +118,7 @@ export function HeroRender({
     )
 
     const imagePane = (
-      <div style={{ flex: '1 1 320px', position: 'relative', minHeight: `${Math.max(padY * 2 + 120, 300)}px`, background: '#2a2a3e' }}>
+      <div style={{ flex: '1 1 320px', position: 'relative', minHeight: isFullscreen ? '100%' : '300px', background: '#2a2a3e' }}>
         {config.image_url
           ? <Image src={config.image_url} alt={heading} fill style={{ objectFit: 'cover', objectPosition: objectPos }} sizes="(max-width: 768px) 100vw, 50vw" />
           : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', opacity: 0.2 }}>🖼️</div>
@@ -134,7 +127,7 @@ export function HeroRender({
     )
 
     return (
-      <section style={{ display: 'flex', flexWrap: 'wrap', width: '100%' }}>
+      <section style={{ display: 'flex', flexWrap: 'wrap', width: '100%', ...heightBase }}>
         {imageOnRight ? <>{contentPane}{imagePane}</> : <>{imagePane}{contentPane}</>}
       </section>
     )
@@ -144,17 +137,17 @@ export function HeroRender({
   const overlayOpacity = config.layout === 'overlay' ? config.overlay_opacity / 100 : 0.4
 
   return (
-    <section 
-      className={cn(sectionPx, 'overflow-hidden')}
+    <section
+      className="overflow-hidden"
       style={{
-      position: 'relative',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      ...heightBase,
-      paddingTop: padY, paddingBottom: padY,
-      ...(config.image_url
-        ? {}
-        : { background: 'linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)' }),
-    }}>
+        position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        ...heightBase,
+        ...(config.image_url
+          ? {}
+          : { background: 'linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)' }),
+      }}
+    >
       {config.image_url && (
         <Image src={config.image_url} alt={heading} fill style={{ objectFit: 'cover', objectPosition: objectPos }} sizes="100vw" />
       )}

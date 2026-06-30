@@ -31,8 +31,7 @@ export const SECTION_SIDE_PADDING = 24
 
 /** Natural outer spacing defaults per block type (matches each block's built-in design rhythm) */
 export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
-  // Hero inner vertical padding is via section_padding_y; outer spacing is 0
-  hero: { ...defaultSpacing },
+  hero: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
   text_image: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
   // Contact / menu / QR — vertical + horizontal rhythm on the section shell
   contact: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
@@ -116,7 +115,7 @@ export interface CtaButton {
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 export type HeroLayout = 'centered' | 'split' | 'overlay' | 'text_only'
-export type BlockHeight = 'custom' | 'medium' | 'fullscreen'
+export type BlockHeight = 'custom' | 'fullscreen'
 export type ImagePosition = 'top' | 'center' | 'bottom'
 export type SplitImageSide = 'left' | 'right'
 
@@ -132,8 +131,8 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
-  /** Vertical padding (px) inside the hero's background area — only used when height='custom' */
-  section_padding_y: number
+  /** @deprecated Use block spacing (outer padding) instead */
+  section_padding_y?: number
   /** --- Split layout specific --- */
   /** Which side the image sits on in the Split layout */
   split_image_side: SplitImageSide
@@ -158,8 +157,7 @@ export const defaultHeroConfig: HeroConfig = {
   cta: null,
   cta_secondary: null,
   text_color: 'auto',
-  height: 'medium',
-  section_padding_y: 80,
+  height: 'custom',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',
   split_text_color: '#ffffff',

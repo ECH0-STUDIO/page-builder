@@ -2,12 +2,13 @@
  * Block spacing helpers — apply per-type defaults when spacing was never configured.
  */
 
-import type { BlockType, BlockSpacing, PageBlock } from './types'
+import type { BlockType, BlockSpacing, PageBlock, HeroConfig } from './types'
 import { defaultSpacing, BLOCK_DEFAULT_SPACING, SECTION_SIDE_PADDING } from './types'
+import { heroHeightFromConfig, getHeroSpacingDefaults } from './hero-utils'
 
 export { SECTION_SIDE_PADDING }
 
-const SIDE_PADDING_TYPES = new Set<BlockType>(['text_image', 'contact', 'menu_grid', 'qr_code'])
+const SIDE_PADDING_TYPES = new Set<BlockType>(['hero', 'text_image', 'contact', 'menu_grid', 'qr_code'])
 
 function applySectionSidePadding(type: BlockType, spacing: BlockSpacing): BlockSpacing {
   if (!SIDE_PADDING_TYPES.has(type)) return spacing
@@ -30,8 +31,20 @@ function isUnsetSpacing(spacing: BlockSpacing): boolean {
 }
 
 /** Resolve effective spacing for render — uses type defaults when all values are zero. */
-export function resolveBlockSpacing(type: BlockType, spacing?: BlockSpacing | null): BlockSpacing {
+export function resolveBlockSpacing(
+  type: BlockType,
+  spacing?: BlockSpacing | null,
+  options?: { heroConfig?: Pick<HeroConfig, 'height'> },
+): BlockSpacing {
   const saved = spacing ?? defaultSpacing
+
+  if (type === 'hero' && options?.heroConfig) {
+    const heroHeight = heroHeightFromConfig(options.heroConfig)
+    if (isUnsetSpacing(saved)) {
+      return applySectionSidePadding(type, getHeroSpacingDefaults(heroHeight))
+    }
+  }
+
   const defaults = BLOCK_DEFAULT_SPACING[type]
   if (isUnsetSpacing(saved) && defaults) {
     return applySectionSidePadding(type, { ...defaults })
@@ -52,8 +65,24 @@ export function resolveBlockSpacing(type: BlockType, spacing?: BlockSpacing | nu
 export function normalizePageBlock(block: PageBlock): PageBlock {
   return {
     ...block,
-    spacing: resolveBlockSpacing(block.type, block.spacing),
+    spacing: resolveBlockSpacing(
+      block.type,
+      block.spacing,
+      block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
+    ),
     custom_css: block.custom_css ?? '',
     block_anchor_id: block.block_anchor_id ?? null,
   }
+}
+
+/** Initial spacing when creating a block (respects hero fullscreen = no padding). */
+export function getInitialBlockSpacing(
+  type: BlockType,
+  config?: PageBlock['config'],
+): BlockSpacing {
+  if (type === 'hero') {
+    return getHeroSpacingDefaults(heroHeightFromConfig(config as HeroConfig))
+  }
+  const defaults = BLOCK_DEFAULT_SPACING[type]
+  return defaults ? { ...defaults } : { ...defaultSpacing }
 }
