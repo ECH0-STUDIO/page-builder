@@ -26,16 +26,19 @@ export const defaultSpacing: BlockSpacing = {
   margin_bottom: 0,
 }
 
+/** Default horizontal inset applied on the section shell for content blocks. */
+export const SECTION_SIDE_PADDING = 24
+
 /** Natural outer spacing defaults per block type (matches each block's built-in design rhythm) */
 export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
   // Hero inner vertical padding is via section_padding_y; outer spacing is 0
   hero: { ...defaultSpacing },
-  // TextImage outer spacing — compact/normal/spacious controls inner padding via its own setting
-  text_image: { ...defaultSpacing },
-  // Contact — vertical rhythm via block spacing (render has horizontal padding only)
-  contact: { padding_top: 64, padding_right: 24, padding_bottom: 64, padding_left: 24, margin_top: 0, margin_bottom: 0 },
-  menu_grid: { padding_top: 64, padding_right: 24, padding_bottom: 64, padding_left: 24, margin_top: 0, margin_bottom: 0 },
-  qr_code: { padding_top: 48, padding_right: 24, padding_bottom: 48, padding_left: 24, margin_top: 0, margin_bottom: 0 },
+  // Text+image — shell horizontal padding; compact/normal/spacious = vertical rhythm in render
+  text_image: { padding_top: 0, padding_right: SECTION_SIDE_PADDING, padding_bottom: 0, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  // Contact / menu / QR — vertical + horizontal rhythm on the section shell
+  contact: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  menu_grid: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  qr_code: { padding_top: 48, padding_right: SECTION_SIDE_PADDING, padding_bottom: 48, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
 }
 
 // ─── Google Fonts curated list ────────────────────────────────────────────────

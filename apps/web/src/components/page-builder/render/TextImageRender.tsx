@@ -26,9 +26,9 @@ function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: stri
 }
 
 const PADDING: Record<string, React.CSSProperties> = {
-  compact:  { paddingTop: '32px', paddingBottom: '32px', paddingLeft: '24px', paddingRight: '24px' },
-  normal:   { paddingTop: '64px', paddingBottom: '64px', paddingLeft: '24px', paddingRight: '24px' },
-  spacious: { paddingTop: '100px', paddingBottom: '100px', paddingLeft: '24px', paddingRight: '24px' },
+  compact:  { paddingTop: '32px', paddingBottom: '32px' },
+  normal:   { paddingTop: '64px', paddingBottom: '64px' },
+  spacious: { paddingTop: '100px', paddingBottom: '100px' },
 }
 
 const ASPECT: Record<string, string> = {
