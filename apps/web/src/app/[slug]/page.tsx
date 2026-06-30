@@ -102,9 +102,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         .eq('visible', true)
         .order('sort_order', { ascending: true }),
       db.from('theme_settings')
-        .select('font_family, heading_font_family, primary_color, background_color, text_color, navbar_config, footer_config')
+        .select('*')
         .eq('business_id', business.id)
-        .single(),
+        .maybeSingle(),
     ])
     pageBlocksRaw = (blocksRes.data as PageBlock[]) ?? []
     themeRaw = themeRes.data

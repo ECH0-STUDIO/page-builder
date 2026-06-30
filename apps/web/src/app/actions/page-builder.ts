@@ -270,7 +270,12 @@ export async function saveFooterAction(
   await supabase.from('publishing_settings')
     .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
 
-  if (error) return { success: false, error: error.message }
+  if (error) {
+    const message = error.message.includes('footer_config')
+      ? 'Footer settings could not be saved. Run database migration 034_footer_config.sql on your Supabase project, then retry.'
+      : error.message
+    return { success: false, error: message }
+  }
   revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data }

@@ -769,13 +769,10 @@ export function EditorShell({
       const next = prev ? { ...prev, footer_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings
       if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
       saveFooterTimer.current = setTimeout(() => {
-        setSaveStatus('saving')
         saveFooterAction(business.id, updated).then(res => {
-          setSaveStatus(res.success ? 'saved' : 'idle')
           if (res.success) setHasUnpublishedChanges(true)
           if (!res.success) toast.error('Failed to save footer: ' + res.error)
         }).catch(err => {
-          setSaveStatus('idle')
           toast.error('Failed to save footer: ' + String(err))
         })
       }, 1000)
