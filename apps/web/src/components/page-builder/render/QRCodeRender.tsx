@@ -36,6 +36,7 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'
+  const qrColor = config.qr_color ?? config.text_color ?? '#111111'
   const textColor = config.text_color || '#111111'
   const px = SIZE_MAP[config.size] ?? 200
   const borderRadius = QR_BORDER_RADIUS[config.border_radius || '2xl'] ?? '20px'
@@ -53,10 +54,10 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
     QRCode.toCanvas(canvasRef.current, finalTargetUrl, {
       width: innerPx,
       margin: 1,
-      color: { dark: textColor, light: bgColor },
+      color: { dark: qrColor, light: bgColor },
       errorCorrectionLevel: 'H',
     }, () => setRendered(true))
-  }, [finalTargetUrl, innerPx, textColor, bgColor, isPayment, vietQrUrl])
+  }, [finalTargetUrl, innerPx, qrColor, bgColor, isPayment, vietQrUrl])
 
   async function download() {
     let dataUrl = ''
@@ -69,7 +70,7 @@ export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel
       dataUrl = await QRCode.toDataURL(finalTargetUrl, {
         width: 1000,
         margin: 2,
-        color: { dark: textColor, light: '#ffffff' },
+        color: { dark: qrColor, light: bgColor },
         errorCorrectionLevel: 'H',
       })
     }

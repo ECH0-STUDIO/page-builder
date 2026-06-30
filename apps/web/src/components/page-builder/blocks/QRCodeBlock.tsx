@@ -268,6 +268,18 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
             <div className="flex items-center gap-2">
               <input
                 type="color"
+                value={config.qr_color ?? config.text_color ?? '#111111'}
+                onChange={e => set('qr_color', e.target.value)}
+                className="size-8 rounded border border-border cursor-pointer"
+              />
+              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.qr_color ?? config.text_color ?? '#111111'}</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">{t('qrCodeBlock.textColour')}</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
                 value={config.text_color}
                 onChange={e => set('text_color', e.target.value)}
                 className="size-8 rounded border border-border cursor-pointer"

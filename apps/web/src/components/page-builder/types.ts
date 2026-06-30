@@ -306,6 +306,9 @@ export interface QRCodeConfig {
   show_download: boolean
   background_color: string
   background_image?: string
+  /** QR module (foreground) colour */
+  qr_color: string
+  /** Label text colour */
   text_color: string
   alignment: 'left' | 'center' | 'right'
   border_radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
@@ -318,6 +321,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
   label: 'Scan to pay',
   show_download: true,
   background_color: '#ffffff',
+  qr_color: '#111111',
   text_color: '#111111',
   alignment: 'center',
   border_radius: '2xl',

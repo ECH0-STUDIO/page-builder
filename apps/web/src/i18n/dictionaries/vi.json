@@ -754,6 +754,7 @@
     "colours": "Màu sắc",
     "background": "Nền",
     "qrColour": "Màu QR",
+    "textColour": "Màu chữ",
     "saveQrCode": "Lưu mã QR"
   },
   "ctaEditor": {

@@ -754,6 +754,7 @@
     "colours": "Colours",
     "background": "Background",
     "qrColour": "QR colour",
+    "textColour": "Text colour",
     "saveQrCode": "Save QR Code"
   },
   "ctaEditor": {
