@@ -366,14 +366,24 @@ export interface FooterConfig {
   show_business_name: boolean
   copyright_text: string
   background_color: string
+  background_image?: string
   text_color: string
+  padding_top: number
+  padding_right: number
+  padding_bottom: number
+  padding_left: number
 }
 
 export const defaultFooterConfig: FooterConfig = {
   show_business_name: true,
   copyright_text: 'All rights reserved.',
   background_color: '#111111',
+  background_image: '',
   text_color: '#ffffff',
+  padding_top: 32,
+  padding_right: 24,
+  padding_bottom: 32,
+  padding_left: 24,
 }
 
 // ─── Publishing / Theme ───────────────────────────────────────────────────────

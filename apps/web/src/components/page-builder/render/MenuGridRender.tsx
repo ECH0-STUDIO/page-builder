@@ -285,6 +285,7 @@ function ItemCardGrid({
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    if (!item.available) return
     if (hasVariants) {
       onClick()
     } else {
@@ -296,7 +297,7 @@ function ItemCardGrid({
     <div
       onClick={onClick}
       className={`group rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer`}
-      style={{ backgroundColor: cardBg }}
+      style={{ backgroundColor: cardBg, opacity: item.available ? 1 : 0.85 }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -318,7 +319,12 @@ function ItemCardGrid({
         </div>
       )}
       <div className="p-3">
-        <p className="font-semibold text-sm leading-snug line-clamp-1" style={{ color: textColor }}>{item.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm leading-snug line-clamp-1" style={{ color: textColor }}>{item.name}</p>
+          {!item.available && config.show_unavailable_badge && !config.show_image && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+          )}
+        </div>
         {config.show_description && item.description && (
           <p className="text-xs mt-0.5 line-clamp-2 leading-relaxed" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
@@ -332,9 +338,13 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
-              <Plus className="size-4 pointer-events-none" />
-            </button>
+            {item.available ? (
+              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+                <Plus className="size-4 pointer-events-none" />
+              </button>
+            ) : (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+            )}
           </div>
         </div>
       </div>
@@ -362,6 +372,7 @@ function ItemRowList({
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    if (!item.available) return
     if (hasVariants) {
       onClick()
     } else {
@@ -373,6 +384,7 @@ function ItemRowList({
     <div
       onClick={onClick}
       className={`flex gap-4 items-center py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors`}
+      style={{ opacity: item.available ? 1 : 0.85 }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -403,9 +415,13 @@ function ItemRowList({
         {config.show_price && (
           <p className="text-sm font-bold shrink-0" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
         )}
-        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
-          <Plus className="size-4 pointer-events-none" />
-        </button>
+        {item.available ? (
+          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+            <Plus className="size-4 pointer-events-none" />
+          </button>
+        ) : (
+          <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+        )}
       </div>
     </div>
   )
@@ -472,7 +488,6 @@ function MenuGridInner({
       return false
     }
     if (tabsEnabled && activeCat && item.category_id !== activeCat) return false
-    if (!item.available && !config.show_unavailable_badge) return false
     return true
   })
 
