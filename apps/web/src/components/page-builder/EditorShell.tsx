@@ -65,8 +65,8 @@ import type { PreviewLayout } from './render/preview-layout'
 import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
 import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
-import { normalizePageBlock, resolveBlockSpacing } from './spacing-utils'
-import { getBlockSectionSurface } from './block-section-style'
+import { normalizePageBlock } from './spacing-utils'
+import { getBlockSurfaceLayers } from './block-section-style'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
@@ -203,7 +203,7 @@ function LiveBlockCard({
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const spacing = resolveBlockSpacing(block.type, block.spacing)
+  const { margin, surface, padding } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -231,7 +231,7 @@ function LiveBlockCard({
   return (
     <div
       onClick={interactive ? undefined : onClick}
-      style={{ marginTop: spacing.margin_top, marginBottom: spacing.margin_bottom }}
+      style={margin}
       className={cn('relative group', interactive ? '' : 'cursor-pointer')}
     >
       {/* Scoped custom CSS */}
@@ -260,19 +260,15 @@ function LiveBlockCard({
         </div>
       )}
 
-      {/* Actual rendered content */}
-      <div
-        data-block-id={block.id}
-        style={{
-          paddingTop: spacing.padding_top,
-          paddingRight: spacing.padding_right,
-          paddingBottom: spacing.padding_bottom,
-          paddingLeft: spacing.padding_left,
-          ...getBlockSectionSurface(block),
-          pointerEvents: interactive ? 'auto' : 'none',
-          userSelect: interactive ? 'auto' : 'none',
-        }}
-      >
+      {/* Section surface (full width) + padding inside */}
+      <div data-block-id={block.id} style={surface}>
+        <div
+          style={{
+            ...padding,
+            pointerEvents: interactive ? 'auto' : 'none',
+            userSelect: interactive ? 'auto' : 'none',
+          }}
+        >
         {block.type === 'hero' && (
           <HeroRender
             config={block.config as HeroConfig}
@@ -305,6 +301,7 @@ function LiveBlockCard({
             downloadLabel={t('qrCodeBlock.saveQrCode')}
           />
         )}
+        </div>
       </div>
     </div>
   )
@@ -519,13 +516,17 @@ export function EditorShell({
     }
   }, [])
 
+  const dirtySinceSyncRef = useRef(false)
+
   useEffect(() => {
     if (data) {
       setBlocks(prev => {
         return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => normalizePageBlock(b as PageBlock))
       })
       setPublished(data.publishing?.published ?? false)
-      setHasUnpublishedChanges(data.publishing?.has_unpublished_changes ?? false)
+      if (!dirtySinceSyncRef.current) {
+        setHasUnpublishedChanges(data.publishing?.has_unpublished_changes ?? false)
+      }
       setTheme(data.theme)
       setPublishingSettings(data.publishing)
     }
@@ -589,6 +590,7 @@ export function EditorShell({
   }, [])
 
   const markPendingSave = useCallback(() => {
+    dirtySinceSyncRef.current = true
     setSaveStatus('idle')
     if (published) setHasUnpublishedChanges(true)
   }, [published])
@@ -952,6 +954,7 @@ export function EditorShell({
       if (res.success) {
         setPublished(state)
         setPublishingSettings(res.data)
+        dirtySinceSyncRef.current = false
         setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
         toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
       } else {

@@ -11,6 +11,7 @@ import type {
   QRCodeConfig,
   TextImageConfig,
 } from './types'
+import { resolveBlockSpacing } from './spacing-utils'
 
 export function getBlockSectionSurface(block: PageBlock): CSSProperties {
   const config = block.config
@@ -47,5 +48,31 @@ export function getBlockSectionSurface(block: PageBlock): CSSProperties {
     }
     default:
       return {}
+  }
+}
+
+/** Full-width section surface + inner padding layer (background outside padding). */
+export function getBlockSurfaceLayers(block: PageBlock): {
+  margin: CSSProperties
+  surface: CSSProperties
+  padding: CSSProperties
+} {
+  const spacing = resolveBlockSpacing(block.type, block.spacing)
+  return {
+    margin: {
+      marginTop: spacing.margin_top,
+      marginBottom: spacing.margin_bottom,
+    },
+    surface: {
+      width: '100%',
+      boxSizing: 'border-box',
+      ...getBlockSectionSurface(block),
+    },
+    padding: {
+      paddingTop: spacing.padding_top,
+      paddingRight: spacing.padding_right,
+      paddingBottom: spacing.padding_bottom,
+      paddingLeft: spacing.padding_left,
+    },
   }
 }

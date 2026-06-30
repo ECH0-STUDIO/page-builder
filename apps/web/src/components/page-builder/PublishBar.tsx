@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Globe, Loader2, Check, Circle, ArrowLeft, ExternalLink, ChevronDown } from 'lucide-react'
+import { Globe, Loader2, Check, ArrowLeft, ExternalLink, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -67,7 +67,7 @@ export function PublishBar({
       <div className="flex items-center gap-2 shrink-0">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Circle className="size-2 fill-muted-foreground text-muted-foreground" />
+            <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
             <span>{t('pageBuilder.unsaved')}</span>
           </span>
         )}
@@ -125,12 +125,12 @@ export function PublishBar({
       >
         {showChanges ? (
           <>
-            <Circle className="size-2 fill-yellow-500 text-yellow-500" />
+            <span className="size-1.5 rounded-full bg-yellow-500 shrink-0" aria-hidden />
             {t('pageBuilder.changes')}
           </>
         ) : published ? (
           <>
-            <Circle className="size-2 fill-green-600 text-green-600" />
+            <span className="size-1.5 rounded-full bg-green-600 shrink-0" aria-hidden />
             {t('pageBuilder.live')}
           </>
         ) : (

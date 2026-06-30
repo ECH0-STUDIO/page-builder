@@ -16,7 +16,7 @@ import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
 import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
-import { getBlockSectionSurface } from '@/components/page-builder/block-section-style'
+import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -293,31 +293,21 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const spacing = resolveBlockSpacing(block.type, block.spacing)
-            const blockStyle: React.CSSProperties = {
-              marginTop: spacing.margin_top,
-              marginBottom: spacing.margin_bottom,
-            }
-            const innerStyle: React.CSSProperties = {
-              paddingTop: spacing.padding_top,
-              paddingRight: spacing.padding_right,
-              paddingBottom: spacing.padding_bottom,
-              paddingLeft: spacing.padding_left,
-              ...getBlockSectionSurface(block),
-            }
+            const { margin, surface, padding } = getBlockSurfaceLayers(block)
 
             return (
               <div
                 key={block.id}
                 id={block.block_anchor_id ?? `block-${block.id}`}
-                style={blockStyle}
+                style={margin}
               >
                 {block.custom_css && (
                   <style dangerouslySetInnerHTML={{
                     __html: scopeCSS(block.custom_css, `[data-live-block="${block.id}"]`),
                   }} />
                 )}
-                <div data-live-block={block.id} style={innerStyle}>
+                <div data-live-block={block.id} style={surface}>
+                  <div style={padding}>
                   {block.type === 'hero' && (
                     <HeroRender
                       config={block.config as HeroConfig}
@@ -357,6 +347,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                       : `${baseUrl}/${slug}`
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
+                  </div>
                 </div>
               </div>
             )

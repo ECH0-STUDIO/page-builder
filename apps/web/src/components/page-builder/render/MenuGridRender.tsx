@@ -280,7 +280,8 @@ function ItemCardGrid({
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const bgColor = config.background_color || '#ffffff'
+  const sectionBg = config.background_color || '#ffffff'
+  const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -296,7 +297,7 @@ function ItemCardGrid({
     <div
       onClick={onClick}
       className={`group rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer`}
-      style={{ backgroundColor: bgColor }}
+      style={{ backgroundColor: cardBg }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -332,7 +333,7 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: bgColor }}>
+            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: sectionBg }}>
               <Plus className="size-4 pointer-events-none" />
             </button>
           </div>
@@ -356,7 +357,8 @@ function ItemRowList({
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const bgColor = config.background_color || '#ffffff'
+  const sectionBg = config.background_color || '#ffffff'
+  const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -402,7 +404,7 @@ function ItemRowList({
         {config.show_price && (
           <p className="text-sm font-bold shrink-0" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
         )}
-        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: bgColor }}>
+        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: sectionBg }}>
           <Plus className="size-4 pointer-events-none" />
         </button>
       </div>
@@ -443,7 +445,7 @@ function MenuGridInner({
     }
   }, [])
 
-  const bgColor = config.background_color || '#ffffff'
+  const sectionBg = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
 
   const typography = getTypography(mobileLayout)
@@ -573,7 +575,7 @@ function MenuGridInner({
                     )}
                     style={
                       activeCat === cat.id
-                        ? { backgroundColor: textColor, color: bgColor, border: `1.5px solid ${textColor}` }
+                        ? { backgroundColor: textColor, color: sectionBg, border: `1.5px solid ${textColor}` }
                         : { backgroundColor: 'transparent', color: textColor, border: `1.5px solid ${textColor}22`, opacity: 0.7 }
                     }
                   >

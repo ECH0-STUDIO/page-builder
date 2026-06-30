@@ -19,8 +19,19 @@ function isUnsetSpacing(spacing: BlockSpacing): boolean {
 /** Resolve effective spacing for render — uses type defaults when all values are zero. */
 export function resolveBlockSpacing(type: BlockType, spacing?: BlockSpacing | null): BlockSpacing {
   const saved = spacing ?? defaultSpacing
-  if (isUnsetSpacing(saved) && BLOCK_DEFAULT_SPACING[type]) {
-    return { ...BLOCK_DEFAULT_SPACING[type]! }
+  const defaults = BLOCK_DEFAULT_SPACING[type]
+  if (isUnsetSpacing(saved) && defaults) {
+    return { ...defaults }
+  }
+  if (defaults) {
+    return {
+      padding_top: saved.padding_top || defaults.padding_top,
+      padding_right: saved.padding_right || defaults.padding_right,
+      padding_bottom: saved.padding_bottom || defaults.padding_bottom,
+      padding_left: saved.padding_left || defaults.padding_left,
+      margin_top: saved.margin_top,
+      margin_bottom: saved.margin_bottom,
+    }
   }
   return { ...saved }
 }
