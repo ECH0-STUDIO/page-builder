@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -67,7 +67,7 @@ export function NavbarSettings({
   }
 
   function addLink() {
-    set('links', [...config.links, { label: 'Link', href: '#', anchor: false }])
+    set('links', [...config.links, { label: 'Link', href: '', anchor: false, open_in_new_tab: false }])
   }
 
   function updateLink(i: number, patch: Partial<NavLink>) {
@@ -137,12 +137,14 @@ export function NavbarSettings({
               <div className="flex items-center gap-1.5">
                 <div className="flex flex-col shrink-0">
                   <button type="button" onClick={() => moveLink(i, -1)} disabled={i === 0}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
-                    <GripVertical className="size-3 rotate-90" />
+                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                    aria-label={t('navbarBlock.moveUp')}>
+                    <ChevronUp className="size-3.5" />
                   </button>
                   <button type="button" onClick={() => moveLink(i, 1)} disabled={i === config.links.length - 1}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
-                    <GripVertical className="size-3 -rotate-90" />
+                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                    aria-label={t('navbarBlock.moveDown')}>
+                    <ChevronDown className="size-3.5" />
                   </button>
                 </div>
                 <Input
@@ -160,12 +162,12 @@ export function NavbarSettings({
               {/* Anchor toggle */}
               <div className="flex items-center justify-between">
                 <Label htmlFor={`anchor-${i}`} className="text-xs font-normal cursor-pointer text-muted-foreground">
-                  Scroll to section
+                  {t('navbarBlock.scrollToSection')}
                 </Label>
                 <Switch
                   id={`anchor-${i}`}
                   checked={link.anchor}
-                  onCheckedChange={v => updateLink(i, { anchor: v, href: '#' })}
+                  onCheckedChange={v => updateLink(i, { anchor: v, href: v ? (link.href.replace(/^#/, '') || '') : link.href, open_in_new_tab: false })}
                 />
               </div>
 
@@ -197,12 +199,24 @@ export function NavbarSettings({
                   </p>
                 )
               ) : (
-                <Input
-                  value={link.href}
-                  onChange={e => updateLink(i, { href: e.target.value })}
-                  placeholder={t('navbarBlock.urlPlaceholder')}
-                  className="h-7 text-xs font-mono"
-                />
+                <>
+                  <Input
+                    value={link.href}
+                    onChange={e => updateLink(i, { href: e.target.value })}
+                    placeholder={t('navbarBlock.urlPlaceholder')}
+                    className="h-7 text-xs font-mono"
+                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`new-tab-${i}`} className="text-xs font-normal cursor-pointer text-muted-foreground">
+                      {t('navbarBlock.openInNewTab')}
+                    </Label>
+                    <Switch
+                      id={`new-tab-${i}`}
+                      checked={link.open_in_new_tab ?? false}
+                      onCheckedChange={v => updateLink(i, { open_in_new_tab: v })}
+                    />
+                  </div>
+                </>
               )}
             </div>
           ))}

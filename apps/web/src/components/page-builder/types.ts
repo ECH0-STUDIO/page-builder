@@ -335,6 +335,8 @@ export interface NavLink {
   label: string
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
+  /** External URL only — open in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 export interface NavbarConfig {

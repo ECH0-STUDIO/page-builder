@@ -12,7 +12,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import type { NavbarConfig } from '../types'
+import type { NavbarConfig, NavLink } from '../types'
+import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 interface NavbarRenderProps {
@@ -68,8 +69,11 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
   }
 
   function getHref(link: { href: string; anchor: boolean }) {
-    if (link.anchor) return `#${link.href}`
-    return link.href
+    return resolveNavHref(link)
+  }
+
+  function linkTarget(link: NavLink) {
+    return navLinkOpensNewTab(link) ? '_blank' : undefined
   }
 
   return (
@@ -124,6 +128,8 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               <a
                 key={i}
                 href={getHref(link)}
+                target={linkTarget(link)}
+                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
                 style={{ ...linkStyle, opacity: 0.85 }}
                 onClick={e => {
                   if (link.anchor && !inEditor) {
@@ -193,6 +199,8 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               <a
                 key={i}
                 href={getHref(link)}
+                target={linkTarget(link)}
+                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
                 onClick={e => {
                   if (link.anchor && !inEditor) {
                     e.preventDefault()
