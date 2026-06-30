@@ -203,7 +203,7 @@ function LiveBlockCard({
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const { margin, shell } = getBlockSurfaceLayers(block)
+  const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -275,6 +275,7 @@ function LiveBlockCard({
             businessName={business.name}
             previewLayout={previewLayout}
             brandColor={brandColor}
+            contentInset={contentInset}
           />
         )}
         {block.type === 'text_image' && (

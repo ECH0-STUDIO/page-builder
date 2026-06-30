@@ -293,7 +293,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const { margin, shell } = getBlockSurfaceLayers(block)
+            const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
 
             return (
               <div
@@ -312,6 +312,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                       config={block.config as HeroConfig}
                       businessName={business.name}
                       brandColor={themeTokens.brandColor}
+                      contentInset={contentInset}
                     />
                   )}
                   {block.type === 'text_image' && (

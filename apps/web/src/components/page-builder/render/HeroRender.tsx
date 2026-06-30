@@ -13,6 +13,8 @@
  */
 
 import type { HeroConfig, CtaButton } from '../types'
+import type { BlockContentInset } from '../block-section-style'
+import { contentInsetStyle } from '../block-section-style'
 import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { resolveHeroHeight } from '../hero-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
@@ -43,6 +45,7 @@ export function HeroRender({
   previewLayout,
   locale,
   brandColor = '#E85D26',
+  contentInset,
 }: {
   config: HeroConfig
   businessName?: string
@@ -50,6 +53,8 @@ export function HeroRender({
   previewLayout?: PreviewLayout
   locale?: string
   brandColor?: string
+  /** Outer padding — applied inside render so backgrounds stay full-bleed */
+  contentInset?: BlockContentInset
 }) {
   const activeLocale = toSupportedLocale(locale)
   const layout: PreviewLayout | undefined =
@@ -69,6 +74,7 @@ export function HeroRender({
     : 'center'
 
   const heightBase: React.CSSProperties = isFullscreen ? { minHeight: '100vh' } : {}
+  const inset = contentInsetStyle(contentInset ?? { padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0 })
 
   // ── Text only ──────────────────────────────────────────────────────────────
   if (config.layout === 'text_only') {
@@ -79,7 +85,7 @@ export function HeroRender({
       : `linear-gradient(135deg, ${fromColor} 0%, ${toColor} 100%)`
 
     return (
-      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase }}>
+      <section style={{ background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', ...heightBase, ...inset }}>
         <div style={{ textAlign: 'center', maxWidth: '760px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
           {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
@@ -141,7 +147,6 @@ export function HeroRender({
       className="overflow-hidden"
       style={{
         position: 'relative',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
         ...heightBase,
         ...(config.image_url
           ? {}
@@ -152,7 +157,15 @@ export function HeroRender({
         <Image src={config.image_url} alt={heading} fill style={{ objectFit: 'cover', objectPosition: objectPos }} sizes="100vw" />
       )}
       <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlayOpacity})` }} />
-      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '800px', width: '100%' }}>
+      <div style={{
+        position: 'relative',
+        zIndex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...inset,
+      }}>
+      <div style={{ textAlign: 'center', maxWidth: '800px', width: '100%' }}>
         <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
         {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
         {body && <p style={{ color: textColor, ...typography.bodyMd, marginTop: '12px', whiteSpace: 'pre-wrap', maxWidth: '600px', margin: '12px auto 0' }}>{body}</p>}
@@ -162,6 +175,7 @@ export function HeroRender({
             {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
           </div>
         )}
+      </div>
       </div>
     </section>
   )
