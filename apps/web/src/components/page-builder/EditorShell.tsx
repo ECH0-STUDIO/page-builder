@@ -203,7 +203,7 @@ function LiveBlockCard({
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const { margin, surface, padding } = getBlockSurfaceLayers(block)
+  const { margin, shell } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -260,15 +260,15 @@ function LiveBlockCard({
         </div>
       )}
 
-      {/* Section surface (full width) + padding inside */}
-      <div data-block-id={block.id} style={surface}>
-        <div
-          style={{
-            ...padding,
-            pointerEvents: interactive ? 'auto' : 'none',
-            userSelect: interactive ? 'auto' : 'none',
-          }}
-        >
+      {/* Full-width section shell: background + padding */}
+      <div
+        data-block-id={block.id}
+        style={{
+          ...shell,
+          pointerEvents: interactive ? 'auto' : 'none',
+          userSelect: interactive ? 'auto' : 'none',
+        }}
+      >
         {block.type === 'hero' && (
           <HeroRender
             config={block.config as HeroConfig}
@@ -301,7 +301,6 @@ function LiveBlockCard({
             downloadLabel={t('qrCodeBlock.saveQrCode')}
           />
         )}
-        </div>
       </div>
     </div>
   )

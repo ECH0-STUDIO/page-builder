@@ -1,6 +1,6 @@
 /**
- * Section surface (background) applied on the block wrapper so padding
- * and background colour share the same box.
+ * Section surface (background) on the block shell so padding and background
+ * share one full-width box — edge to edge of the page/canvas.
  */
 
 import type { CSSProperties } from 'react'
@@ -37,7 +37,7 @@ export function getBlockSectionSurface(block: PageBlock): CSSProperties {
     case 'text_image': {
       const c = config as TextImageConfig
       if (c.background === 'solid') {
-        return { backgroundColor: c.background_color }
+        return { backgroundColor: c.background_color || '#f9f9f9' }
       }
       if (c.background === 'gradient') {
         return {
@@ -46,16 +46,18 @@ export function getBlockSectionSurface(block: PageBlock): CSSProperties {
       }
       return {}
     }
+    // Hero paints its own full-bleed visuals inside the shell
+    case 'hero':
+      return {}
     default:
       return {}
   }
 }
 
-/** Full-width section surface + inner padding layer (background outside padding). */
+/** Margin outside the section; shell = full-width background + padding in one box. */
 export function getBlockSurfaceLayers(block: PageBlock): {
   margin: CSSProperties
-  surface: CSSProperties
-  padding: CSSProperties
+  shell: CSSProperties
 } {
   const spacing = resolveBlockSpacing(block.type, block.spacing)
   return {
@@ -63,12 +65,11 @@ export function getBlockSurfaceLayers(block: PageBlock): {
       marginTop: spacing.margin_top,
       marginBottom: spacing.margin_bottom,
     },
-    surface: {
+    shell: {
       width: '100%',
+      display: 'block',
       boxSizing: 'border-box',
       ...getBlockSectionSurface(block),
-    },
-    padding: {
       paddingTop: spacing.padding_top,
       paddingRight: spacing.padding_right,
       paddingBottom: spacing.padding_bottom,

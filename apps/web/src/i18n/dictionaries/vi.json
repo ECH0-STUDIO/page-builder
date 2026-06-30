@@ -351,7 +351,7 @@
     "headingFont": "Phông tiêu đề",
     "bodyFont": "Phông văn bản",
     "outerPadding": "Khoảng đệm ngoài",
-    "paddingHint": "Khoảng cách bên trong khối, bên ngoài nền riêng của khối.",
+    "paddingHint": "Khoảng cách bên trong nền của section, bao quanh nội dung.",
     "content": "nội dung",
     "marginTitle": "Lề (khoảng cách giữa các khối)",
     "marginTop": "Trên",
@@ -404,7 +404,7 @@
     "closePreview": "Đóng xem trước",
     "changes": "Có thay đổi",
     "nothingToUndo": "Không còn thao tác để hoàn tác",
-    "nothingToRedo": "Không còn thao tác để làm lại",
+    "nothingToRedo": "Không còn thao tác để làm lại"
   },
   "businessProfile": {
     "logo": "Logo",

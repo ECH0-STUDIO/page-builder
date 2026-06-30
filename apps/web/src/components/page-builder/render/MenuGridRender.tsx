@@ -29,7 +29,6 @@ import {
   type PreviewLayout,
   isForcedMobileLayout,
   menuGridColClass,
-  sectionPaddingClass,
 } from './preview-layout'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -490,7 +489,7 @@ function MenuGridInner({
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
-      <section style={{ padding: '0 24px', textAlign: 'center' }}>
+      <section style={{ textAlign: 'center' }}>
         <p style={{ color: textColor, opacity: 0.4, fontSize: '15px' }}>No menu categories yet.</p>
       </section>
     )
@@ -498,7 +497,7 @@ function MenuGridInner({
 
   return (
     <>
-      <section className={sectionPaddingClass(layout)}>
+      <section>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}

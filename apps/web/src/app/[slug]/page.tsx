@@ -293,7 +293,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const { margin, surface, padding } = getBlockSurfaceLayers(block)
+            const { margin, shell } = getBlockSurfaceLayers(block)
 
             return (
               <div
@@ -306,8 +306,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                     __html: scopeCSS(block.custom_css, `[data-live-block="${block.id}"]`),
                   }} />
                 )}
-                <div data-live-block={block.id} style={surface}>
-                  <div style={padding}>
+                <div data-live-block={block.id} style={shell}>
                   {block.type === 'hero' && (
                     <HeroRender
                       config={block.config as HeroConfig}
@@ -347,7 +346,6 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                       : `${baseUrl}/${slug}`
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
-                  </div>
                 </div>
               </div>
             )

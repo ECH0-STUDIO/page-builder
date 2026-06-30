@@ -26,9 +26,9 @@ function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: stri
 }
 
 const PADDING: Record<string, React.CSSProperties> = {
-  compact:  { padding: '32px 24px' },
-  normal:   { padding: '64px 24px' },
-  spacious: { padding: '100px 24px' },
+  compact:  { paddingTop: '32px', paddingBottom: '32px' },
+  normal:   { paddingTop: '64px', paddingBottom: '64px' },
+  spacious: { paddingTop: '100px', paddingBottom: '100px' },
 }
 
 const ASPECT: Record<string, string> = {
@@ -71,8 +71,7 @@ export function TextImageRender({
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
 
-  // ── Background (section surface is on the block wrapper) ───────────────────
-  const bgStyle: React.CSSProperties = {}
+  // ── Background lives on the block shell wrapper ─────────────────────────────
 
   const isTextOnly = config.layout === 'text_only'
   const isStacked  = config.layout === 'stacked'

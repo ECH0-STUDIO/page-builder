@@ -351,7 +351,7 @@
     "headingFont": "Heading Font",
     "bodyFont": "Body Font",
     "outerPadding": "Outer Padding",
-    "paddingHint": "Space inside the block wrapper, outside the block's own background.",
+    "paddingHint": "Space inside the section background, around the block content.",
     "content": "content",
     "marginTitle": "Margin (space between blocks)",
     "marginTop": "Top",
