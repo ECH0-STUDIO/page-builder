@@ -477,7 +477,7 @@ for (const [vi, en] of Object.entries(existing)) {
 const filled = fillNullTranslations(pairs)
 const stillNull = Object.entries(pairs).filter(([, en]) => !en)
 
-const manifest = { version: 1, pairs }
+const manifest = { version: 2, pairs }
 fs.writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n')
 console.log(`Seeded ${Object.keys(pairs).length} translation pairs → ${outPath}`)
 if (filled) console.log(`Filled ${filled} null entry(ies) via normalized key match.`)

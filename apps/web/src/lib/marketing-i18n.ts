@@ -3,6 +3,40 @@ import manifest from '@/lib/marketing-i18n-manifest.json'
 
 const VI_CHAR_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
 
+/** Never replace these as substrings inside longer Vietnamese phrases. */
+const EXACT_ONLY_KEYS = new Set([
+  'Chi phí',
+  'CHI PHÍ',
+  'Tính năng',
+  'TÍNH NĂNG',
+  'Bắt đầu',
+  'tháng',
+  '/ tháng',
+  'Lưu',
+  'Khám phá',
+  'Miễn phí',
+  'Lượt xem',
+  'Khách hàng',
+  'Nổi bật',
+  'credit',
+  'Credit',
+  'credits',
+  'Tin tức',
+  'TIN TỨC',
+  'Liên hệ',
+  'LIÊN HỆ',
+  'Bước 1',
+  'Bước 2',
+  'Bước 3',
+  'Mới',
+  'Phổ biến',
+  'Email',
+  'Hủy',
+  'Xóa',
+  'Bởi',
+  'Đọc thêm',
+])
+
 function getPairs(): [string, string][] {
   return Object.entries(manifest.pairs).filter(
     (entry): entry is [string, string] => Boolean(entry[0] && entry[1]),
@@ -24,9 +58,10 @@ function escapeRegExp(value: string): string {
 }
 
 /** Short keys like "Bắt đầu" or "tháng" corrupt longer phrases if applied as substrings. */
-const MIN_SUBSTRING_KEY_LENGTH = 10
+const MIN_SUBSTRING_KEY_LENGTH = 12
 
 function shouldSubstringReplace(key: string, haystack: string): boolean {
+  if (EXACT_ONLY_KEYS.has(key)) return haystack.trim() === key.trim()
   if (key.length >= MIN_SUBSTRING_KEY_LENGTH) return true
   if (key.includes('\n') || key.includes('<') || key.includes('&')) return true
   return haystack.trim() === key.trim()

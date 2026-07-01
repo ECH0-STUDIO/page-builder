@@ -25,6 +25,7 @@ pnpm-debug.log*
 
 # Marketing extract reports (generated)
 design/webflow-export/.marketing-strings-extract.json
+apps/web/public/marketing/.marketing-strings-extract.json
 
 .vscode/
 .idea/
