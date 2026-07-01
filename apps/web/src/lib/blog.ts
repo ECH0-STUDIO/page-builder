@@ -75,7 +75,7 @@ function toDisplayDate(publishedOn: string, date: string): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
     const d = new Date(`${parsed}T12:00:00`)
     if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })
     }
   }
   return parsed

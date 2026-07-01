@@ -96,27 +96,20 @@ export function injectBlogCollection(html: string, posts: BlogPost[]): string {
   )
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function fillContentItem(html: string, label: string, value: string): string {
-  const labelRe = escapeRegExp(label)
-  const blockRe = new RegExp(
-    `<div cms="content-item"([^>]*)>\\s*<div class="text-base">${labelRe}<\\/div>\\s*<div class="spacer-tiny"><\\/div>\\s*<div class="text-sm w-dyn-bind-empty">[^<]*<\\/div>\\s*<\\/div>`,
-    'i',
-  )
-
-  if (!value) {
-    return html.replace(
-      new RegExp(`(<div cms="content-item")([^>]*)(>\\s*<div class="text-base">${labelRe})`, 'i'),
-      `$1$2 hide$3`,
-    )
-  }
+function fillMetadataRow(html: string, post: BlogPost): string {
+  const values = [post.date, post.category, post.reading]
+  let index = 0
 
   return html.replace(
-    blockRe,
-    `<div cms="content-item"$1><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm">${escapeHtml(value)}</div></div>`,
+    /<div cms="content-item"([^>]*)>\s*<div class="text-base">[^<]*<\/div>\s*<div class="spacer-tiny"><\/div>\s*<div class="text-sm w-dyn-bind-empty">[^<]*<\/div>\s*<\/div>/g,
+    (full, attrs: string) => {
+      const label = full.match(/<div class="text-base">([^<]*)<\/div>/)?.[1] ?? ''
+      const value = values[index++] ?? ''
+      if (!value) {
+        return `<div cms="content-item"${attrs} class="hide"><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm"></div></div>`
+      }
+      return `<div cms="content-item"${attrs}><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm">${escapeHtml(value)}</div></div>`
+    },
   )
 }
 
@@ -160,7 +153,7 @@ function replaceHeroImageBlock(html: string, post: BlogPost): string {
 
 export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts: BlogPost[]): string {
   let out = html
-  const pageTitle = `${post.title} | Eatery`
+  const pageTitle = `${post.title} | Eatery VN`
 
   out = out.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`)
   out = setMetaContent(out, 'name', 'description', post.summary)
@@ -210,10 +203,8 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
 
   out = setSocialLinks(out, [post.socialFirst, post.socialSecond, post.socialThird])
 
-  // Metadata row + body
-  out = fillContentItem(out, 'Date', post.date)
-  out = fillContentItem(out, 'Category', post.category)
-  out = fillContentItem(out, 'Reading time', post.reading)
+  // Metadata row + body (fill by row order so EN/VI template labels both work)
+  out = fillMetadataRow(out, post)
 
   out = out.replace(
     /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext"><\/div>/,
