@@ -93,7 +93,12 @@ for (const file of pages) {
 
 const nullCount = Object.values(manifest.pairs).filter((v) => !v).length
 if (nullCount) {
-  console.warn(`\nWARN: ${nullCount} manifest entry(ies) still have null English text.`)
+  console.error(
+    `\nFAIL: ${nullCount} manifest entry(ies) still have null English text.`,
+  )
+  console.error('Run: pnpm seed:marketing-i18n')
+  console.error('Or pull latest and re-run: pnpm sync:marketing')
+  failed = true
 }
 
 process.exit(failed ? 1 : 0)

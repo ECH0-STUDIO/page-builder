@@ -8,6 +8,11 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  decodeEntities,
+  fillNullTranslations,
+  resolveTranslation,
+} from './marketing-i18n-normalize.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -17,19 +22,12 @@ const VI_CHAR_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽ
 const SKIP_RE =
   /^(https?:|\/marketing\/|\/logo|w-mod|function |var |@|\.|\d+$|#[0-9a-f]{3,8}$|\{|\}|M[\d.LCZ])/i
 
-function decodeEntities(s) {
-  return s
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .trim()
+function decodeEntitiesLocal(s) {
+  return decodeEntities(s).trim()
 }
 
 function normalize(text) {
-  return decodeEntities(text).replace(/\s+/g, ' ').trim()
+  return decodeEntitiesLocal(text).replace(/\s+/g, ' ').trim()
 }
 
 function isTranslatable(text) {
@@ -101,10 +99,19 @@ if (fs.existsSync(manifestPath)) {
 
 const missing = []
 for (const vi of [...all].sort((a, b) => b.length - a.length)) {
-  if (manifest.pairs[vi] === undefined) {
-    missing.push(vi)
-    manifest.pairs[vi] = null
+  if (manifest.pairs[vi]) continue
+  const resolved = resolveTranslation(vi, manifest.pairs)
+  if (resolved) {
+    manifest.pairs[vi] = resolved
+    continue
   }
+  missing.push(vi)
+  manifest.pairs[vi] = null
+}
+
+const filled = fillNullTranslations(manifest.pairs)
+if (filled) {
+  console.log(`\nFilled ${filled} null entry(ies) via normalized key match.`)
 }
 
 fs.writeFileSync(

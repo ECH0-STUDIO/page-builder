@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { fillNullTranslations } from './marketing-i18n-normalize.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const outPath = path.join(__dirname, '../apps/web/src/lib/marketing-i18n-manifest.json')
@@ -324,6 +325,140 @@ const PAIRS = [
   ['Nổi bật', 'Featured'],
   ['Đối tác', 'Partners'],
   ['Khách hàng tin dùng', 'Trusted by customers'],
+
+  // ═══ Eatery Marketing Website export (features / pricing / homepage) ═══
+  [
+    'Nếu cửa hàng của bạn chưa có website, bạn đang bỏ lỡ tới 50% khả năng tiếp cận khách hàng. Website cũng là công cụ giúp tăng uy tín của cửa hàng hiệu quả. Tuy nhiên website yêu cầu một chút về kỹ thuật và nếu tiếp cận không đúng, có thể khiến cửa hàng của bạn lãng phí một phần chi phí không đáng có.',
+    'If your store does not have a website yet, you may be missing up to 50% of potential customer reach. A website also helps build credibility effectively. However, websites require some technical know-how — and if approached the wrong way, you can waste money that did not need to be spent.',
+  ],
+  [
+    'Hầu hết các nền tảng và công cụ thu phí hàng tháng kể cả khi nhà hàng đã đóng hoặc tạm ngưng hoạt động. Eatery cho phép bạn bắt đầu hoàn toàn miễn phí và chỉ phải trả phí cho các tính năng mà bạn thực sự sử dụng thông qua hệ thống điểm tín dụng.',
+    'Most platforms and tools charge monthly fees even when your restaurant is closed or temporarily shut down. Eatery lets you start completely free and pay only for the features you actually use through a credit-point system.',
+  ],
+  [
+    'Eatery ghi rõ chi phí cho những tính năng cần trả phí. Với tính năng tra phí theo số lượng lượt xem, Eatery thể hiện rõ thông tin đo lường để bạn biết rõ cửa hàng đã sử dụng bao nhiêu, cần trả bao nhiêu.',
+    'Eatery clearly lists costs for paid features. With usage-based page-view pricing, Eatery shows transparent metrics so you know exactly how much your store has used and what you owe.',
+  ],
+  [
+    'Bạn đã trải nghiệm và rất thích các cửa hàng có hệ thống Menu và Order tại bàn nhưng các hệ thống này thường tốn chi phí cao và yêu cầu POS để lắp đặt. Điều này vượt quá ngân sách của bạn.',
+    'You have seen stores with menu and table-order systems and loved the experience — but those systems are often expensive and require POS hardware to install. That is beyond your budget.',
+  ],
+  [
+    'Bạn có thể có nhiều chi nhánh, cửa hàng khác nhau cần quản lý. Mỗi cửa hàng, mỗi chi nhánh lại cần website và tài nguyên khác nhau. Thậm chí mỗi cửa hàng lại thuộc 1 tài khoản khác nhau.',
+    'You may run multiple branches or stores that each need their own website and resources. Sometimes each location even sits under a separate account.',
+  ],
+  [
+    'Tín dụng tại Eatery không có thời hạn sử dụng. Bạn có thể nạp, sử dụng đúng những gì bạn cần, đúng thời điểm bạn cần mà yên tâm, số dư của bạn vẫn luôn ở đó cho những lần sử dụng sau.',
+    'Credits on Eatery never expire. Top up, use exactly what you need when you need it — your balance stays available for next time.',
+  ],
+  [
+    'Eatery giúp tạo nhanh mã QR từng bàn, qua đó, khách hàng của bạn có thể tạo order ngay tại bàn với số bàn được đánh dấu. Qua đó cũng giúp bạn quản lý order và quy trình hiệu quả hơn.',
+    'Eatery quickly generates QR codes for each table so guests can place orders right at their seat with the table number attached — helping you manage orders and workflow more efficiently.',
+  ],
+  [
+    'Eatery hỗ trợ QR code tới website, QR code từng bàn, và QR code cho từng món ăn. Giúp bạn có thêm nhiều sự lựa chọn trong việc quảng bá, thúc đẩy chuyển đổi cho cửa hàng của bạn.',
+    'Eatery supports QR codes for your website, individual tables, and individual menu items — giving you more ways to promote your store and drive conversions.',
+  ],
+  [
+    'Bạn có thể tạo nhiều cửa hàng trong 1 tài khoản Eatery. Đặc biệt phù hợp cho các cửa hàng nhiều chi nhánh, các cửa hàng nhiều nhánh con, hoặc các online dropshipping vendor.',
+    'You can create multiple stores under one Eatery account — ideal for multi-branch businesses, franchise-style setups, or online dropshipping vendors.',
+  ],
+  [
+    'Số lượng order tăng nhanh chóng và bạn bắt đầu cảm thấy khó khăn trong việc kiểm soát số lượng order. Bạn cần một cách tốt hơn để nhận order, thực hiện và quản lý.',
+    'Orders pick up fast and it gets hard to keep track. You need a better way to receive, fulfill, and manage them.',
+  ],
+  [
+    'Không cần phải thuê thiết kế riêng, không cần phải mày mò Photoshop hay Canva. Tạo Menu đơn giản và nhanh chóng. Hỗ trợ tải PDF cho in ấn và nhập từ file CSV.',
+    'No need to hire a designer or wrestle with Photoshop or Canva. Build your menu quickly and easily. Export PDF for printing and import from CSV.',
+  ],
+  [
+    'Eatery hiểu rõ nỗi lo chi phí của các cửa hàng vừa và nhỏ. Do đó Eatery chọn cách tiếp cận khác, giúp cửa hàng tối ưu được chi phí và hiệu quả đạt được.',
+    'Eatery understands cost concerns for small and medium stores. That is why we take a different approach — helping you optimize spend and get real results.',
+  ],
+  [
+    'Tạo website chuẩn SEO và kết nối với Menu của bạn. Giúp khách hàng dễ dàng xem thông tin cửa hàng và quy trình chọn và order nhanh hơn.',
+    'Build an SEO-friendly website linked to your menu so customers can browse your store info and order faster.',
+  ],
+  [
+    'Bạn cần thêm hoặc chỉnh sửa Menu của mình để phù hợp với chiến lược kinh doanh mới. Một số vấn đề thường gặp phải:',
+    'You need to add or update your menu for a new business strategy. Common challenges include:',
+  ],
+  [
+    'Nhập thông tin ngân hàng của bạn và có ngay QR thanh toán qua VietQR. Tải xuống PDF để in và sử dụng thực tế.',
+    'Enter your bank details and get a VietQR payment code instantly. Download a PDF to print and use in-store.',
+  ],
+  [
+    'Bạn đã chuẩn bị Menu, quy trình, và bắt đầu bán. Nhưng trong quá trình vận hành, bạn nhận ra một số hạn chế.',
+    'You prepared your menu, workflow, and started selling — but along the way you hit some limits.',
+  ],
+  [
+    'Tạo Landing Page, Menu, Mã QR, thanh toán. Tất cả đã bao gồm mà không cần phải trả phí hàng tháng.',
+    'Landing page, menu, QR codes, and payments — all included with no monthly subscription.',
+  ],
+  [
+    'Nhờ vào hệ thống tín dụng. Bạn có thể ngưng và tiếp tục sử dụng sau bất cứ khi nào bạn mong muốn.',
+    'Thanks to the credit system, you can pause anytime and pick back up whenever you want.',
+  ],
+  [
+    'Khám phá các tính năng nổi bật của Eatery mà bạn có thể tận dụng cho cửa hàng của bạn',
+    'Explore standout Eatery features you can use for your store',
+  ],
+  [
+    'Không giới hạn lượt xem trang, bạn chỉ trả cho đúng số lượt xem đạt được.',
+    'No page-view cap — you pay only for the views you actually get.',
+  ],
+  [
+    'Kết nối tên miền của bạn và bắt đầu đưa cửa hàng của bạn tiếp cận xa hơn.',
+    'Connect your domain and start reaching customers beyond your doorstep.',
+  ],
+  ['Số điểm tín dụng bạn cần để kết nối với tên miền của bạn', 'Credits needed to connect your custom domain'],
+  [
+    'Trung bình chỉ mất 10 - 30 phút tạo Menu và QR thanh toán để bắt đầu',
+    'On average it takes just 10–30 minutes to create your menu and payment QR to get started',
+  ],
+  ['Đăng ký ngay tài khoản của bạn với Eatery, tạo cửa hàng của bạn.', 'Sign up for Eatery and create your store.'],
+  ['Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.', 'Tools and solutions for small and medium stores.'],
+  ['Tất cả những gì bạn cần cho cửa hàng nhỏ của bạn', 'Everything your small store needs'],
+  ['Chỉ 3 bước để bạn có thể bắt đầu với Eatery', 'Just 3 steps to get started with Eatery'],
+  ['Là chi phí mà bạn cần để bắt đầu với Eatery', 'What it costs to get started with Eatery'],
+  ['Nhập một vài thông tin cơ bản của cửa hàng.', 'Enter a few basic details about your store.'],
+  ['Tín dụng cho mỗi 500 lượt xem (1.000 VNĐ)', 'Credits per 500 page views (1,000 VND)'],
+  ['Chi phí đội thêm nếu nhờ thiết kế ngoài', 'Extra cost if you hire external design help'],
+  ['Thay đổi nằm ngoài khả năng tự thiết kế', 'Changes beyond what you can design yourself'],
+  ['Eatery nói không với thu phí hàng tháng', 'Eatery says no to monthly fees'],
+  ['File thiết kế thất lạc khi tự thiết kế', 'Design files get lost when you DIY'],
+  ['Kết nối tên miền: 50 tín dụng/tháng', 'Custom domain: 50 credits/month'],
+  ['Cửa hàng của bạn cần nhiều hơn thế', 'Your store needs more than that'],
+  ['Lưu trữ hình ảnh: 1 tín dụng/20MB', 'Image storage: 1 credit/20MB'],
+  ['Lượt xem: 1 tín dụng/500 lượt xem', 'Page views: 1 credit/500 views'],
+  ['Kết quả thực tế. Tránh lãng phí.', 'Real results. No waste.'],
+  ['© 2026 Eatery. Một sản phẩm bởi', '© 2026 Eatery. A product by'],
+  ['© 2026 Eatery. Một Product By', '© 2026 Eatery. A product by'],
+  ['1 tài khoản, nhiều cửa hàng', 'One account, many stores'],
+  ['Hệ thống QR Code chuyên sâu', 'Advanced QR code system'],
+  ['Cập nhật mới nhất từ Eatery', 'Latest updates from Eatery'],
+  ['Không Thu phí hàng tháng', 'No monthly fees'],
+  ['Quản lý nhiều cửa hàng', 'Manage multiple stores'],
+  ['Menu và order tại bàn', 'Menu and table ordering'],
+  ['Tạo và quản lý Menu', 'Create and manage your menu'],
+  ['Bắt đầu trải nghiệm', 'Start exploring'],
+  ['Tin tức & hướng dẫn', 'News & guides'],
+  ['Dừng bất cứ lúc nào', 'Pause anytime'],
+  ['Nhận order tại bàn', 'Accept table orders'],
+  ['Tạo website cơ bản', 'Build a basic website'],
+  ['(50.000 VNĐ/tháng)', '(50,000 VND/month)'],
+  ['Thông tin cửa hàng', 'Store information'],
+  ['Trải nghiệm Eatery', 'Experience Eatery'],
+  ['Đà Nẵng, Việt Nam', 'Da Nang, Vietnam'],
+  ['Menu cần thay đổi', 'Menu needs updating'],
+  ['Tạo QR thanh toán', 'Create payment QR'],
+  ['Chi phí minh bạch', 'Transparent pricing'],
+  ['Hệ thống tín dụng', 'Credit system'],
+  ['Cập nhật website', 'Update your website'],
+  ['Thử Eatery ngay', 'Try Eatery now'],
+  ['Quản lý order', 'Order management'],
+  ['Theo dõi', 'Follow'],
+  ['Khám phá Eatery và các tính năng mà Eatery cung cấp.', 'Explore Eatery and the features it offers.'],
 ]
 
 const pairs = {}
@@ -334,11 +469,18 @@ const existing = fs.existsSync(outPath)
 for (const [vi, en] of PAIRS) {
   pairs[vi] = en
 }
-// Keep extracted strings awaiting translation
+// Keep custom translated strings from extract (skip null placeholders)
 for (const [vi, en] of Object.entries(existing)) {
-  if (!(vi in pairs)) pairs[vi] = en
+  if (!(vi in pairs) && en) pairs[vi] = en
 }
+
+const filled = fillNullTranslations(pairs)
+const stillNull = Object.entries(pairs).filter(([, en]) => !en)
 
 const manifest = { version: 1, pairs }
 fs.writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n')
 console.log(`Seeded ${Object.keys(pairs).length} translation pairs → ${outPath}`)
+if (filled) console.log(`Filled ${filled} null entry(ies) via normalized key match.`)
+if (stillNull.length) {
+  console.warn(`${stillNull.length} entry(ies) still need English — run extract then add translations.`)
+}
