@@ -355,7 +355,7 @@ function ItemCardGrid({
 // ─── Item Row (list layout) ──────────────────────────────────────────────────
 
 function ItemRowList({
-  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount, isMobile = false,
 }: {
   item: MenuItem
   config: MenuGridConfig
@@ -364,6 +364,7 @@ function ItemRowList({
   onQuickAdd: () => void
   hasVariants: boolean
   optionCount: number
+  isMobile?: boolean
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
@@ -383,7 +384,10 @@ function ItemRowList({
   return (
     <div
       onClick={onClick}
-      className={`flex gap-4 items-center py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors`}
+      className={cn(
+        'flex gap-4 py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors',
+        isMobile ? 'items-start' : 'items-center',
+      )}
       style={{ opacity: item.available ? 1 : 0.85 }}
       id={`item-${item.id}`}
     >
@@ -396,31 +400,46 @@ function ItemRowList({
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2 flex-wrap">
           <p className="font-semibold text-sm" style={{ color: textColor }}>{item.name}</p>
           {!item.available && config.show_unavailable_badge && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
           )}
         </div>
         {config.show_description && item.description && (
-          <p className="text-xs mt-0.5 line-clamp-1" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
+          <p className="text-xs mt-0.5 line-clamp-2 md:line-clamp-1" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
         {hasVariants && optionCount > 0 && (
           <p className="text-[10px] mt-1 font-semibold text-amber-600 uppercase tracking-wider">
             {optionCount} {optionCount === 1 ? t('cart.option') : t('cart.options')} {t('cart.availableLabel')}
           </p>
         )}
-      </div>
-      <div className="flex items-center gap-3 ml-2">
         {config.show_price && (
-          <p className="text-sm font-bold shrink-0" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
+          <p
+            className={cn('text-sm font-bold mt-1', isMobile ? 'block' : 'md:hidden')}
+            style={{ color: textColor }}
+          >
+            {formatCurrency(item.price)}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-3 ml-2 shrink-0 self-center">
+        {config.show_price && (
+          <p
+            className={cn('text-sm font-bold shrink-0', isMobile ? 'hidden' : 'hidden md:block')}
+            style={{ color: textColor }}
+          >
+            {formatCurrency(item.price)}
+          </p>
         )}
         {item.available ? (
           <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
             <Plus className="size-4 pointer-events-none" />
           </button>
         ) : (
-          <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+          !config.show_unavailable_badge && (
+            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+          )
         )}
       </div>
     </div>
@@ -623,7 +642,7 @@ function MenuGridInner({
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} />
                     ) : (
                       <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     )

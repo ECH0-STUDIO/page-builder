@@ -119,8 +119,8 @@ export function TextImageRender({
   // ── Text element ───────────────────────────────────────────────────────────
   const textEl = !isImgOnly && (
     <div style={{
-      // text_only: shrink to content; stacked/side-by-side: flex grow
-      flex: isTextOnly ? '0 1 auto' : '1 1 280px',
+      // text_only / stacked: shrink to content; side-by-side: flex grow
+      flex: isTextOnly || isStacked ? '0 1 auto' : '1 1 280px',
       minWidth: 0,
       textAlign: isTextOnly ? 'center' : 'left',
     }}>
