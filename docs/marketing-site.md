@@ -25,14 +25,28 @@ The marketing homepage is served from a **Webflow HTML export**, not hand-built 
 
 1. In Webflow: **Export code** (or use the Designer export).
 2. Replace the contents of `design/webflow-export/` with your export folder (e.g. copy from `Eatery Marketing Website` on your Mac).
-3. From the repo root:
+### Local dev (marketing + app)
+
+From the repo root:
 
 ```bash
+git pull origin cursor/replace-marketing-webflow-ffbe
+pnpm install
 pnpm sync:marketing
+rm -rf apps/web/.next
+pnpm dev
 ```
 
-4. Commit `design/webflow-export/` and `apps/web/public/marketing/` (or run sync in CI before build).
-5. Restart the dev server and open `http://localhost:3000/`.
+Open the URL printed in the terminal (usually `http://localhost:3000`; if the port is busy, Next.js picks `3001`, etc.).
+
+To use your full Webflow export (including the real `blog.html`):
+
+```bash
+cp -R "/path/to/Eatery Marketing Website/"* design/webflow-export/
+pnpm sync:marketing
+rm -rf apps/web/.next
+pnpm dev
+```
 
 ### Route mapping
 

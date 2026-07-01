@@ -62,7 +62,7 @@ export async function marketingIndexHtmlResponse(request: Request): Promise<Resp
 
 export async function marketingBlogListHtmlResponse(request: Request): Promise<Response> {
   const locale = getMarketingLocaleFromRequest(request)
-  const html = loadMarketingHtmlDocument('blog')
+  const html = loadMarketingHtmlDocument('blog') ?? loadMarketingHtmlDocument('index')
   if (!html) {
     return new Response('Not found', { status: 404 })
   }

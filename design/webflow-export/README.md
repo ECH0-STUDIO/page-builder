@@ -13,4 +13,4 @@ Expected top-level HTML pages:
 
 Plus `css/`, `js/`, and `images/` folders.
 
-If `blog.html` (or other pages) are missing, `/blog` will fall back to `/#blog` on the homepage instead of serving a dedicated listing page.
+If `blog.html` is missing from the export, `pnpm sync:marketing` auto-generates a fallback from `index.html`.

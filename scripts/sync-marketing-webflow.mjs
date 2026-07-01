@@ -9,6 +9,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { ensureBlogHtml } from './generate-blog-fallback.mjs'
 import { postprocessMarketingHtmlFiles } from './marketing-html-postprocess.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -25,6 +26,7 @@ function copyRecursive(src, dest) {
     }
     return
   }
+  if (path.basename(src).toLowerCase() === 'readme.md') return
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.copyFileSync(src, dest)
 }
@@ -42,9 +44,14 @@ if (missingPages.length > 0) {
   console.warn(
     `Webflow export is missing: ${missingPages.map((s) => `${s}.html`).join(', ')}`,
   )
-  console.warn(
-    'Copy the full export folder (e.g. "Eatery Marketing Website" from Webflow) into design/webflow-export/, then re-run pnpm sync:marketing',
-  )
+  if (missingPages.includes('blog')) {
+    ensureBlogHtml(source)
+  }
+  if (missingPages.some((s) => s !== 'blog')) {
+    console.warn(
+      'Copy the full export folder (e.g. "Eatery Marketing Website" from Webflow) into design/webflow-export/, then re-run pnpm sync:marketing',
+    )
+  }
 }
 
 if (fs.existsSync(target)) {

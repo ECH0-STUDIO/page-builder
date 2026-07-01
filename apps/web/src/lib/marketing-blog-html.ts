@@ -41,20 +41,26 @@ function buildBlogCard(post: BlogPost, itemClass: string): string {
 </div>`
 }
 
-const CAROUSEL_LIST_RE = /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>/
+const BLOG_CAROUSEL_LIST_RE =
+  /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>(?=\s*<\/div>\s*<div class="arrows_group)/
 
 export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
+  if (!BLOG_CAROUSEL_LIST_RE.test(html)) {
+    return html
+  }
+
   if (posts.length === 0) {
     return html.replace(
-      /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>/,
+      BLOG_CAROUSEL_LIST_RE,
       '<div role="list" class="blog_list swiper-wrapper w-dyn-items"></div>',
     )
   }
+
   const items = posts
     .map((post) => buildBlogCard(post, 'blog-slide swiper-slide w-dyn-item'))
     .join('\n                    ')
   return html.replace(
-    CAROUSEL_LIST_RE,
+    BLOG_CAROUSEL_LIST_RE,
     `<div role="list" class="blog_list swiper-wrapper w-dyn-items">\n                    ${items}\n                  </div>`,
   )
 }
