@@ -118,6 +118,7 @@ Share the sheet: **Anyone with the link can view**.
 | URL | Template |
 |-----|----------|
 | `/` | Homepage blog carousel filled from sheet |
+| `/blog` | `blog.html` collection list filled from sheet |
 | `/blog/{slug}` | `detail_blog.html` filled per post |
 
 Sync Webflow export after design changes:

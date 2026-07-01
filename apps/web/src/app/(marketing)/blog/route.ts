@@ -1,7 +1,11 @@
-import { marketingHtmlOrRedirect } from '@/lib/marketing-html-response'
+import { marketingBlogListHtmlResponse, marketingHtmlOrRedirect } from '@/lib/marketing-html-response'
+import { marketingPageExists } from '@/lib/marketing-webflow'
 
 export const dynamic = 'force-dynamic'
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  if (marketingPageExists('blog')) {
+    return marketingBlogListHtmlResponse()
+  }
   return marketingHtmlOrRedirect('blog', '/#blog', request)
 }

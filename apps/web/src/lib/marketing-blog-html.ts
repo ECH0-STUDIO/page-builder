@@ -39,9 +39,9 @@ function replaceFirst(
   return html.replace(pattern, (_match, open: string, _inner: string, close: string) => `${open}${content}${close}`)
 }
 
-function buildBlogCarouselItem(post: BlogPost): string {
+function buildBlogCard(post: BlogPost, itemClass: string): string {
   const pillLabel = post.category || post.date
-  return `<div role="listitem" class="blog-slide swiper-slide w-dyn-item">
+  return `<div role="listitem" class="${itemClass}">
   <a href="/blog/${escapeHtml(post.slug)}" class="blog-item w-inline-block">
     <div class="blog_img${hideClass(!post.thumbnail)}">
       <img src="${escapeHtml(post.thumbnail)}" loading="lazy" alt="${escapeHtml(post.title)}" class="img">
@@ -62,11 +62,43 @@ function buildBlogCarouselItem(post: BlogPost): string {
 const CAROUSEL_LIST_RE = /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>/
 
 export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
-  if (posts.length === 0) return html
-  const items = posts.map(buildBlogCarouselItem).join('\n                    ')
+  if (posts.length === 0) {
+    return html.replace(
+      /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>/,
+      '<div role="list" class="blog_list swiper-wrapper w-dyn-items"></div>',
+    )
+  }
+  const items = posts
+    .map((post) => buildBlogCard(post, 'blog-slide swiper-slide w-dyn-item'))
+    .join('\n                    ')
   return html.replace(
     CAROUSEL_LIST_RE,
     `<div role="list" class="blog_list swiper-wrapper w-dyn-items">\n                    ${items}\n                  </div>`,
+  )
+}
+
+/** Inject posts into any Webflow CMS collection list that uses blog-item cards. */
+export function injectBlogCollection(html: string, posts: BlogPost[]): string {
+  if (html.includes('blog_list swiper-wrapper')) {
+    return injectBlogCarousel(html, posts)
+  }
+
+  let replaced = false
+  return html.replace(
+    /<div role="list" class="([^"]*w-dyn-items[^"]*)">([\s\S]*?)<\/div>/g,
+    (full, listClass: string, inner: string) => {
+      if (replaced || !inner.includes('w-dyn-item')) return full
+      replaced = true
+
+      const itemClassMatch = inner.match(/<div role="listitem" class="([^"]*)"/)
+      const itemClass = itemClassMatch?.[1] ?? 'w-dyn-item'
+      if (posts.length === 0) {
+        return `<div role="list" class="${listClass}"></div>`
+      }
+
+      const items = posts.map((post) => buildBlogCard(post, itemClass)).join('\n                    ')
+      return `<div role="list" class="${listClass}">\n                    ${items}\n                  </div>`
+    },
   )
 }
 
@@ -201,4 +233,10 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
 
 export function renderMarketingIndexHtml(html: string, posts: BlogPost[]): string {
   return injectBlogCarousel(html, posts)
+}
+
+export function renderBlogListHtml(html: string, posts: BlogPost[]): string {
+  let out = injectBlogCollection(html, posts)
+  out = out.replace(/<div class="w-dyn-empty">[\s\S]*?<\/div>/gi, '')
+  return out
 }

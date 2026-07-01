@@ -23,6 +23,9 @@ export type BlogPost = {
 
 type GvizCell = { v: string | number | null; f?: string } | null
 
+/** Default sheet for Eatery marketing blog (override with BLOG_GOOGLE_SHEET_ID). */
+export const DEFAULT_BLOG_SHEET_ID = '1tZQ1YEW-NnShU7yTZqNYRhO13EpBxwyOqAVqLvgNdUg'
+
 /**
  * Google Sheet: Webflow CMS export (row 1 = header).
  *
@@ -31,52 +34,11 @@ type GvizCell = { v: string | number | null; f?: string } | null
  * Category, Reading, Overview
  *
  * Share sheet: Anyone with the link can view.
- * Set BLOG_GOOGLE_SHEET_ID in env (ID from the sheet URL).
+ * Set BLOG_GOOGLE_SHEET_ID in env to override the default sheet.
  */
-const FALLBACK_POSTS: BlogPost[] = [
-  {
-    slug: 'why-credit-based-pricing-works-for-restaurants',
-    title: 'Why credit-based pricing works for restaurants',
-    summary:
-      'No monthly plans you do not use. Buy credits when you need premium features — custom domains, extra storage — and spend only what your business needs.',
-    excerpt:
-      'No monthly plans you do not use. Buy credits when you need premium features — custom domains, extra storage — and spend only what your business needs.',
-    publishedAt: '2026-03-01',
-    date: 'Mar 1, 2026',
-    author: 'Eatery Team',
-    role: '',
-    avatar: '',
-    thumbnail: '',
-    category: 'Product',
-    reading: '3 Min',
-    socialFirst: '',
-    socialSecond: '',
-    socialThird: '',
-    body: `<p>Traditional SaaS charges every restaurant the same monthly fee — whether you publish once a year or run five locations.</p>
-<p>Eatery flips that model. The page builder, QR menus, and publishing tools are free to start. When you want premium add-ons, you buy credits and spend them only on what you use.</p>`,
-  },
-  {
-    slug: 'launch-your-digital-menu-in-a-weekend',
-    title: 'Launch your digital menu in a weekend',
-    summary:
-      'A practical checklist: photos, menu items, one hero block, and a QR code on every table.',
-    excerpt:
-      'A practical checklist: photos, menu items, one hero block, and a QR code on every table.',
-    publishedAt: '2026-02-15',
-    date: 'Feb 15, 2026',
-    author: 'Eatery Team',
-    role: '',
-    avatar: '',
-    thumbnail: '',
-    category: 'Guides',
-    reading: '4 Min',
-    socialFirst: '',
-    socialSecond: '',
-    socialThird: '',
-    body: `<p>You do not need an agency to go digital. Here is a weekend plan that works for most cafes and restaurants.</p>
-<p>By Monday lunch service, guests can scan and browse without waiting for a printed menu.</p>`,
-  },
-]
+function getSheetId(): string {
+  return process.env.BLOG_GOOGLE_SHEET_ID?.trim() || DEFAULT_BLOG_SHEET_ID
+}
 
 function cellValue(cell: GvizCell): string {
   if (!cell) return ''
@@ -165,12 +127,11 @@ function parseGvizRows(json: {
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  const sheetId = process.env.BLOG_GOOGLE_SHEET_ID
-  if (!sheetId) return FALLBACK_POSTS
+  const sheetId = getSheetId()
 
   try {
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
-    const res = await fetch(url, { next: { revalidate: 300 } })
+    const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`)
 
     const text = await res.text()
@@ -179,11 +140,10 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
       .replace(/^.*google\.visualization\.Query\.setResponse\(/, '')
       .replace(/\);?\s*$/, '')
     const json = JSON.parse(jsonText)
-    const posts = parseGvizRows(json)
-    return posts.length > 0 ? posts : FALLBACK_POSTS
+    return parseGvizRows(json)
   } catch (err) {
-    console.error('getBlogPosts:', err)
-    return FALLBACK_POSTS
+    console.error('getBlogPosts: failed to load sheet', sheetId, err)
+    return []
   }
 }
 
