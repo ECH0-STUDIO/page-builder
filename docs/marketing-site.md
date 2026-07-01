@@ -101,7 +101,9 @@ Share the sheet: **Anyone with the link can view**.
 | Name | Post title |
 | Slug | URL: `/blog/{slug}` |
 | Archived / Draft | Rows with `TRUE` are skipped |
-| Published On / Date | Sort order and display date |
+| Published On | **Required** — only rows with a publish date appear on the site |
+| Item ID | Stable identifier from Webflow (stored on each post) |
+| Date / Published On | Display date in the metadata row |
 | Thumbnail | Hero + card image (absolute URL) |
 | Summary | Excerpt and meta description |
 | Avatar / Author / Role | Author block on post page |
@@ -111,7 +113,7 @@ Share the sheet: **Anyone with the link can view**.
 
 **Empty fields:** the connected UI block is hidden (Webflow `.hide` class).
 
-**Images on Bunny CDN:** use full URLs like `https://ech0studio.b-cdn.net/...` or your custom CDN domain (`https://eateryvn.com/...`). Absolute URLs load on the dev server — the custom domain only matters if your sheet URLs use it.
+**Images on Bunny CDN:** use full URLs like `https://ech0studio.b-cdn.net/...`. If images fail to load on localhost, open the URL directly in your browser. A 403 usually means Bunny security settings (hotlink protection or geo block) — allow your pull zone to serve without referrer restrictions for dev, or add `localhost` to allowed referrers in the Bunny dashboard.
 
 ### Routes
 

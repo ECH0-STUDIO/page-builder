@@ -1,5 +1,7 @@
 export type BlogPost = {
   slug: string
+  /** Webflow Item ID — stable identifier from the sheet export. */
+  itemId: string
   title: string
   /** Short summary (Webflow "Summary" column). */
   summary: string
@@ -102,10 +104,12 @@ function parseGvizRows(json: {
     .filter((row) => row.Slug && row.Name)
     .filter((row) => row.Archived?.toUpperCase() !== 'TRUE')
     .filter((row) => row.Draft?.toUpperCase() !== 'TRUE')
+    .filter((row) => Boolean(row['Published On']?.trim()))
     .map((row) => {
       const summary = row.Summary ?? ''
       return {
         slug: row.Slug.trim(),
+        itemId: row['Item ID']?.trim() ?? '',
         title: row.Name.trim(),
         summary,
         excerpt: summary,

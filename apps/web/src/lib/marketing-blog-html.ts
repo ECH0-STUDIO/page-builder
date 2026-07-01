@@ -12,6 +12,10 @@ function hideClass(empty: boolean): string {
   return empty ? ' hide' : ''
 }
 
+function imgTag(src: string, alt: string, className = 'img'): string {
+  return `<img src="${escapeHtml(src)}" loading="lazy" alt="${escapeHtml(alt)}" class="${className}">`
+}
+
 function setMetaContent(html: string, attr: 'name' | 'property', key: string, value: string): string {
   if (!value) return html
   const escaped = escapeHtml(value)
@@ -29,22 +33,12 @@ function setMetaContent(html: string, attr: 'name' | 'property', key: string, va
   return html.replace(/<\/head>/i, `  ${replacement}\n</head>`)
 }
 
-function replaceFirst(
-  html: string,
-  pattern: RegExp,
-  value: string,
-  { raw = false }: { raw?: boolean } = {},
-): string {
-  const content = raw ? value : escapeHtml(value)
-  return html.replace(pattern, (_match, open: string, _inner: string, close: string) => `${open}${content}${close}`)
-}
-
 function buildBlogCard(post: BlogPost, itemClass: string): string {
   const pillLabel = post.category || post.date
   return `<div role="listitem" class="${itemClass}">
   <a href="/blog/${escapeHtml(post.slug)}" class="blog-item w-inline-block">
     <div class="blog_img${hideClass(!post.thumbnail)}">
-      <img src="${escapeHtml(post.thumbnail)}" loading="lazy" alt="${escapeHtml(post.title)}" class="img">
+      ${post.thumbnail ? imgTag(post.thumbnail, post.title) : ''}
       <div class="hero-cms_date${hideClass(!pillLabel)}">
         <div class="pill-item">
           <div>${escapeHtml(pillLabel)}</div>
@@ -102,18 +96,28 @@ export function injectBlogCollection(html: string, posts: BlogPost[]): string {
   )
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function fillContentItem(html: string, label: string, value: string): string {
-  const re = new RegExp(
-    `(<div cms="content-item")([^>]*)(>\\s*<div class="text-base">${label}<\\/div>\\s*<div class="spacer-tiny"><\\/div>\\s*<div class="text-sm w-dyn-bind-empty">)([\\s\S]*?)(<\\/div>\\s*<\\/div>)`,
+  const labelRe = escapeRegExp(label)
+  const blockRe = new RegExp(
+    `<div cms="content-item"([^>]*)>\\s*<div class="text-base">${labelRe}<\\/div>\\s*<div class="spacer-tiny"><\\/div>\\s*<div class="text-sm w-dyn-bind-empty">[^<]*<\\/div>\\s*<\\/div>`,
     'i',
   )
-  return html.replace(re, (_match, open: string, attrs: string, middle: string, _old: string, close: string) => {
-    const hide = !value ? ' hide' : ''
-    const classAttr = attrs.includes('class=')
-      ? attrs.replace(/class="([^"]*)"/, `class="$1${hide}"`)
-      : `${attrs} class="${hide.trim()}"`
-    return `${open}${classAttr}${middle}${value ? escapeHtml(value) : ''}${close}`
-  })
+
+  if (!value) {
+    return html.replace(
+      new RegExp(`(<div cms="content-item")([^>]*)(>\\s*<div class="text-base">${labelRe})`, 'i'),
+      `$1$2 hide$3`,
+    )
+  }
+
+  return html.replace(
+    blockRe,
+    `<div cms="content-item"$1><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm">${escapeHtml(value)}</div></div>`,
+  )
 }
 
 function setSocialLinks(html: string, links: [string, string, string]): string {
@@ -135,6 +139,25 @@ function setSocialLinks(html: string, links: [string, string, string]): string {
   return out
 }
 
+function replaceHeroImageBlock(html: string, post: BlogPost): string {
+  const heroPill = post.category || post.date
+  const block = post.thumbnail
+    ? `<div cms="item" class="hero-cms_img">
+                ${imgTag(post.thumbnail, post.title)}
+                  <div class="hero-cms_date${hideClass(!heroPill)}">
+                    <div class="pill-item">
+                      <div>${escapeHtml(heroPill)}</div>
+                    </div>
+                  </div>
+                </div>`
+    : `<div cms="item" class="hero-cms_img hide"></div>`
+
+  return html.replace(
+    /<div cms="item" class="hero-cms_img">[\s\S]*?<\/div>\s*(?=<div cms="item" class="hero-cms_data-author">)/,
+    block,
+  )
+}
+
 export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts: BlogPost[]): string {
   let out = html
   const pageTitle = `${post.title} | Eatery`
@@ -150,38 +173,17 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
     out = setMetaContent(out, 'name', 'twitter:image', post.thumbnail)
   }
 
-  // Hero header: title + summary
-  out = replaceFirst(
-    out,
-    /(<div cms="item" class="hero-cms_header">\s*<h1 class="h5 w-dyn-bind-empty">)([\s\S]*?)(<\/h1>)/,
-    post.title,
-  )
+  // Hero header: title + summary (remove w-dyn-bind-empty so Webflow CSS does not hide them)
   out = out.replace(
-    /(<div cms="item" class="hero-cms_header">[\s\S]*?<div class="text-color-secondary w-dyn-bind-empty)([^"]*)(">)([\s\S]*?)(<\/div>)/,
-    (_m, open: string, classes: string, end: string, _inner: string, close: string) =>
-      `${open}${classes}${post.summary ? '' : ' hide'}${end}${post.summary ? escapeHtml(post.summary) : ''}${close}`,
+    /<div cms="item" class="hero-cms_header">[\s\S]*?<\/div>\s*(?=<div cms="item" class="hero-cms_img">)/,
+    `<div cms="item" class="hero-cms_header">
+                  <h1 class="h5">${escapeHtml(post.title)}</h1>
+                  <div class="text-color-secondary${hideClass(!post.summary)}">${post.summary ? escapeHtml(post.summary) : ''}</div>
+                </div>
+                `,
   )
 
-  // Hero thumbnail
-  if (post.thumbnail) {
-    out = out.replace(
-      /(<div cms="item" class="hero-cms_img"><img[^>]*class="[^"]*w-dyn-bind-empty[^"]*"[^>]*)/,
-      `<div cms="item" class="hero-cms_img"><img src="${escapeHtml(post.thumbnail)}" loading="lazy" alt="${escapeHtml(post.title)}" class="img`,
-    )
-  } else {
-    out = out.replace(/<div cms="item" class="hero-cms_img"/, `<div cms="item" class="hero-cms_img hide"`)
-  }
-
-  const heroPill = post.category || post.date
-  out = replaceFirst(
-    out,
-    /(<div cms="item" class="hero-cms_img">[\s\S]*?<div class="hero-cms_date">\s*<div class="pill-item">\s*<div>)([\s\S]*?)(<\/div>)/,
-    heroPill,
-  )
-  out = out.replace(
-    /(<div cms="item" class="hero-cms_img">[\s\S]*?<div class="hero-cms_date)([^"]*)(")/,
-    `$1${heroPill ? '$2' : '$2 hide'}$3`,
-  )
+  out = replaceHeroImageBlock(out, post)
 
   // Author block
   const hasAuthor = Boolean(post.author || post.avatar)
@@ -191,21 +193,19 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
   )
   if (post.avatar) {
     out = out.replace(
-      /(<div class="author-avatar"><img[^>]*class="[^"]*w-dyn-bind-empty[^"]*"[^>]*)/,
-      `<div class="author-avatar"><img src="${escapeHtml(post.avatar)}" loading="lazy" alt="${escapeHtml(post.author || post.title)}" class="`,
+      /<div class="author-avatar"><img[^>]*>/,
+      `<div class="author-avatar">${imgTag(post.avatar, post.author || post.title, '')}`,
     )
   } else {
     out = out.replace(/<div class="author-avatar">/, `<div class="author-avatar hide">`)
   }
-  out = replaceFirst(
-    out,
-    /(<div class="hero-cms_author">[\s\S]*?<div>\s*<div class="w-dyn-bind-empty">)([\s\S]*?)(<\/div>)/,
-    post.author,
+  out = out.replace(
+    /(<div class="hero-cms_author">[\s\S]*?<div>\s*)<div class="w-dyn-bind-empty">[^<]*<\/div>/,
+    `$1<div>${post.author ? escapeHtml(post.author) : ''}</div>`,
   )
   out = out.replace(
-    /(<div class="hero-cms_author">[\s\S]*?<div class="text-sm text-color-secondary w-dyn-bind-empty)([^"]*)(">)([\s\S]*?)(<\/div>)/,
-    (_m, open: string, classes: string, end: string, _inner: string, close: string) =>
-      `${open}${classes}${post.role ? '' : ' hide'}${end}${post.role ? escapeHtml(post.role) : ''}${close}`,
+    /(<div class="hero-cms_author">[\s\S]*?<div class="text-sm text-color-secondary) w-dyn-bind-empty("[^>]*>)[^<]*(<\/div>)/,
+    `$1${post.role ? '"' : ' hide"'}>${post.role ? escapeHtml(post.role) : ''}$3`,
   )
 
   out = setSocialLinks(out, [post.socialFirst, post.socialSecond, post.socialThird])
@@ -216,13 +216,15 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
   out = fillContentItem(out, 'Reading time', post.reading)
 
   out = out.replace(
-    /(<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext">)([\s\S]*?)(<\/div>)/,
-    `$1${post.body}$3`,
+    /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext"><\/div>/,
+    `<div cms="content-item" class="text-rich-text w-richtext">${post.body}</div>`,
   )
-  out = out.replace(
-    /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext/,
-    `<div cms="content-item" class="text-rich-text w-richtext${hideClass(!post.body)}`,
-  )
+  if (!post.body) {
+    out = out.replace(
+      /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext"><\/div>/,
+      `<div cms="content-item" class="text-rich-text w-richtext hide"></div>`,
+    )
+  }
 
   // Related posts carousel (exclude current)
   const related = relatedPosts.filter((p) => p.slug !== post.slug)
