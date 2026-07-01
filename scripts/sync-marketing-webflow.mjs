@@ -14,7 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const source = path.join(root, 'design/webflow-export')
 const target = path.join(root, 'apps/web/public/marketing')
-const stylesTarget = path.join(root, 'apps/web/src/styles/marketing')
 
 function copyRecursive(src, dest) {
   const stat = fs.statSync(src)
@@ -29,16 +28,6 @@ function copyRecursive(src, dest) {
   fs.copyFileSync(src, dest)
 }
 
-function copyCssToStyles() {
-  const cssSource = path.join(source, 'css')
-  if (!fs.existsSync(cssSource)) return
-  fs.mkdirSync(stylesTarget, { recursive: true })
-  for (const file of fs.readdirSync(cssSource)) {
-    if (!file.endsWith('.css')) continue
-    fs.copyFileSync(path.join(cssSource, file), path.join(stylesTarget, file))
-  }
-}
-
 if (!fs.existsSync(source)) {
   console.error(`Missing Webflow export at ${source}`)
   process.exit(1)
@@ -49,6 +38,4 @@ if (fs.existsSync(target)) {
 }
 
 copyRecursive(source, target)
-copyCssToStyles()
 console.log(`Synced ${source} → ${target}`)
-console.log(`Synced CSS → ${stylesTarget}`)

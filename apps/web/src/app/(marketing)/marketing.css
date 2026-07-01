@@ -1,6 +1,5 @@
-@import '../../styles/marketing/normalize.css';
-@import '../../styles/marketing/webflow.css';
-@import '../../styles/marketing/thais-fantabulous-site-defac5.webflow.css';
+/* Webflow CSS is loaded via <link> tags in layout.tsx from /marketing/css/
+   so url(../images/...) paths resolve correctly at runtime. */
 
 /* Webflow hides animated elements until GSAP runs — reveal after Next hydrates */
 .marketing-site .marketing-webflow [animation],
