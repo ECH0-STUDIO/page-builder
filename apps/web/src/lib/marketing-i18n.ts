@@ -23,6 +23,15 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** Short keys like "Bắt đầu" or "tháng" corrupt longer phrases if applied as substrings. */
+const MIN_SUBSTRING_KEY_LENGTH = 10
+
+function shouldSubstringReplace(key: string, haystack: string): boolean {
+  if (key.length >= MIN_SUBSTRING_KEY_LENGTH) return true
+  if (key.includes('\n') || key.includes('<') || key.includes('&')) return true
+  return haystack.trim() === key.trim()
+}
+
 function translateString(text: string, pairs: [string, string][]): string {
   let out = text
   const sorted = [...pairs].sort((a, b) => b[0].length - a[0].length)
@@ -32,6 +41,7 @@ function translateString(text: string, pairs: [string, string][]): string {
       if (out.includes(from)) out = out.split(from).join(to)
       continue
     }
+    if (!shouldSubstringReplace(from, out)) continue
     const re = new RegExp(escapeRegExp(from), 'gi')
     out = out.replace(re, (match) => preserveCase(match, to))
   }

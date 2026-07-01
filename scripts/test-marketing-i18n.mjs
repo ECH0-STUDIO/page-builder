@@ -24,6 +24,14 @@ function getPairs() {
   return Object.entries(manifest.pairs).filter(([, en]) => en)
 }
 
+const MIN_SUBSTRING_KEY_LENGTH = 10
+
+function shouldSubstringReplace(key, haystack) {
+  if (key.length >= MIN_SUBSTRING_KEY_LENGTH) return true
+  if (key.includes('\n') || key.includes('<') || key.includes('&')) return true
+  return haystack.trim() === key.trim()
+}
+
 function translateString(text, pairs) {
   let out = text
   const sorted = [...pairs].sort((a, b) => b[0].length - a[0].length)
@@ -33,6 +41,7 @@ function translateString(text, pairs) {
       out = out.split(from).join(to)
       continue
     }
+    if (!shouldSubstringReplace(from, out)) continue
     const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     out = out.replace(new RegExp(escaped, 'gi'), to)
   }
