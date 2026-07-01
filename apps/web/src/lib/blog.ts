@@ -108,15 +108,14 @@ function rowToPost(row: Record<string, string>): BlogPost {
 
 function parseAllPosts(json: {
   table: {
+    cols: { label?: string | null }[]
     rows: { c: GvizCell[] }[]
   }
 }): BlogPost[] {
   const rows = json.table.rows
   if (rows.length < 1) return []
 
-  const { headers, dataStart } = resolveSheetHeaders(
-    rows as { c: ({ v?: unknown; f?: string } | null)[] | null }[],
-  )
+  const { headers, dataStart } = resolveSheetHeaders(json.table.cols, rows)
 
   return rows
     .slice(dataStart)

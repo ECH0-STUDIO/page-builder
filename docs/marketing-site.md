@@ -39,7 +39,7 @@ pnpm sync:marketing
 | URL | Behavior |
 |-----|----------|
 | `/` | Webflow `index.html` |
-| `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` file when present in the export; otherwise fallback redirect |
+| `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` file when present in the export; otherwise fallback redirect to `/#section` on the homepage |
 | `/blog/[slug]` | `detail_blog.html` template when present |
 
 Navbar links in the export should use `features.html`, `pricing.html`, etc. — they are rewritten to `/features`, `/pricing`, etc. automatically.

@@ -34,6 +34,19 @@ if (!fs.existsSync(source)) {
   process.exit(1)
 }
 
+const EXPECTED_PAGES = ['blog', 'features', 'pricing', 'contact']
+const missingPages = EXPECTED_PAGES.filter(
+  (slug) => !fs.existsSync(path.join(source, `${slug}.html`)),
+)
+if (missingPages.length > 0) {
+  console.warn(
+    `Webflow export is missing: ${missingPages.map((s) => `${s}.html`).join(', ')}`,
+  )
+  console.warn(
+    'Copy the full export folder (e.g. "Eatery Marketing Website" from Webflow) into design/webflow-export/, then re-run pnpm sync:marketing',
+  )
+}
+
 if (fs.existsSync(target)) {
   fs.rmSync(target, { recursive: true, force: true })
 }
