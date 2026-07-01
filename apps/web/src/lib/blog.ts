@@ -1,4 +1,5 @@
 import type { SupportedLocale } from '@/i18n/locale'
+import { isPublishedBlogRow, resolveSheetHeaders } from '@/lib/blog-sheet'
 import { collectionIdToLocale } from '@/lib/marketing-locale'
 
 export type BlogPost = {
@@ -111,12 +112,14 @@ function parseAllPosts(json: {
   }
 }): BlogPost[] {
   const rows = json.table.rows
-  if (rows.length < 2) return []
+  if (rows.length < 1) return []
 
-  const headers = rows[0].c.map((c) => cellValue(c))
+  const { headers, dataStart } = resolveSheetHeaders(
+    rows as { c: ({ v?: unknown; f?: string } | null)[] | null }[],
+  )
 
   return rows
-    .slice(1)
+    .slice(dataStart)
     .map((row) => {
       const record: Record<string, string> = {}
       row.c.forEach((cell, index) => {
@@ -125,10 +128,7 @@ function parseAllPosts(json: {
       })
       return record
     })
-    .filter((row) => row.Slug && row.Name)
-    .filter((row) => row.Archived?.toUpperCase() !== 'TRUE')
-    .filter((row) => row.Draft?.toUpperCase() !== 'TRUE')
-    .filter((row) => Boolean(row['Published On']?.trim()))
+    .filter(isPublishedBlogRow)
     .map(rowToPost)
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
 }

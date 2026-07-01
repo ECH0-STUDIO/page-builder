@@ -48,7 +48,7 @@ Navbar links in the export should use `features.html`, `pricing.html`, etc. — 
 
 Webflow `srcset` paths and filenames with spaces are rewritten to `/marketing/images/...`. If a hero image is missing after sync, confirm the file exists under `design/webflow-export/images/` and re-run `pnpm sync:marketing`. Export typos (hyphen vs space in filenames) are auto-corrected for the known hero asset pattern.
 
-Blog posts from Google Sheets are **paused** while we decide the blog approach. Old React marketing components were removed.
+Blog posts are loaded from a **Google Sheet** CMS (see `BLOG_GOOGLE_SHEET_ID`). The homepage blog carousel and `/blog/[slug]` detail pages are injected at runtime.
 
 ## Vercel setup
 

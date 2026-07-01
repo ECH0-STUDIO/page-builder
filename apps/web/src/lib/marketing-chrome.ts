@@ -65,15 +65,18 @@ export function injectMarketingChrome(
     }
   }
 
-  // Shared favicon with the main app
+  // Shared favicon with the main app (replace Webflow / Nexbet assets)
+  const favicon = '/logo-icon.png'
+  out = out.replace(/href="[^"]*(?:favicon|webclip)\.png[^"]*"/gi, `href="${favicon}"`)
   out = out.replace(
-    /href="[^"]*favicon\.png"/gi,
-    'href="/logo-icon.png"',
+    /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]*>/gi,
+    '',
   )
-  out = out.replace(
-    /href="[^"]*webclip\.png"/gi,
-    'href="/logo-icon.png"',
-  )
+  out = out.replace(/<link[^>]+rel=["']apple-touch-icon["'][^>]*>/gi, '')
+  const iconTags = `<link rel="icon" href="${favicon}" type="image/png">
+  <link rel="shortcut icon" href="${favicon}" type="image/png">
+  <link rel="apple-touch-icon" href="${favicon}">`
+  out = out.replace(/<\/head>/i, `  ${iconTags}\n</head>`)
 
   // App auth links — locale travels via shared NEXT_LOCALE cookie on .eateryvn.com
   const loginUrl = appPath('/login')

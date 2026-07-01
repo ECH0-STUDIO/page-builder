@@ -3,7 +3,6 @@ import type { SupportedLocale } from '@/i18n/locale'
 import {
   BLOG_META_LABELS,
   BLOG_SECTION_COPY,
-  MARKETING_BRAND_SUFFIX,
 } from '@/lib/marketing-locale'
 
 export function escapeHtml(text: string): string {
@@ -20,23 +19,6 @@ function hideClass(empty: boolean): string {
 
 function imgTag(src: string, alt: string, className = 'img'): string {
   return `<img src="${escapeHtml(src)}" loading="lazy" alt="${escapeHtml(alt)}" class="${className}">`
-}
-
-function setMetaContent(html: string, attr: 'name' | 'property', key: string, value: string): string {
-  if (!value) return html
-  const escaped = escapeHtml(value)
-  const primary = new RegExp(
-    `<meta[^>]+${attr}=["']${key}["'][^>]+content=["'][^"']*["'][^>]*>`,
-    'i',
-  )
-  const alt = new RegExp(
-    `<meta[^>]+content=["'][^"']*["'][^>]+${attr}=["']${key}["'][^>]*>`,
-    'i',
-  )
-  const replacement = `<meta ${attr}="${key}" content="${escaped}">`
-  if (primary.test(html)) return html.replace(primary, replacement)
-  if (alt.test(html)) return html.replace(alt, replacement)
-  return html.replace(/<\/head>/i, `  ${replacement}\n</head>`)
 }
 
 function buildBlogCard(post: BlogPost, itemClass: string): string {
@@ -196,19 +178,7 @@ export function renderBlogDetailHtml(
   locale: SupportedLocale,
 ): string {
   let out = injectBlogSectionCopy(html, locale)
-  const pageTitle = `${post.title} | ${MARKETING_BRAND_SUFFIX[locale]}`
   const shareLabel = BLOG_SECTION_COPY[locale].shareArticle
-
-  out = out.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`)
-  out = setMetaContent(out, 'name', 'description', post.summary)
-  out = setMetaContent(out, 'property', 'og:title', pageTitle)
-  out = setMetaContent(out, 'property', 'og:description', post.summary)
-  out = setMetaContent(out, 'name', 'twitter:title', pageTitle)
-  out = setMetaContent(out, 'name', 'twitter:description', post.summary)
-  if (post.thumbnail) {
-    out = setMetaContent(out, 'property', 'og:image', post.thumbnail)
-    out = setMetaContent(out, 'name', 'twitter:image', post.thumbnail)
-  }
 
   // Hero header: title + summary (remove w-dyn-bind-empty so Webflow CSS does not hide them)
   out = out.replace(

@@ -8,6 +8,7 @@ import {
   renderMarketingIndexHtml,
 } from '@/lib/marketing-blog-html'
 import { getMarketingLocaleFromRequest } from '@/lib/marketing-locale'
+import { applyMarketingSeo, resolveMarketingPageSlug, type MarketingSeoOverrides } from '@/lib/marketing-seo'
 import { loadMarketingHtmlDocument, marketingPageExists } from '@/lib/marketing-webflow'
 
 const HTML_HEADERS = {
@@ -19,13 +20,24 @@ function pathnameFromRequest(request: Request): string {
   return new URL(request.url).pathname
 }
 
+type FinalizeOptions = {
+  localePaths?: Partial<Record<SupportedLocale, string>>
+  seo?: MarketingSeoOverrides
+}
+
 function finalizeMarketingHtml(
   html: string,
   request: Request,
   locale: SupportedLocale,
-  localePaths?: Partial<Record<SupportedLocale, string>>,
+  options?: FinalizeOptions,
 ): string {
-  return injectMarketingChrome(html, locale, pathnameFromRequest(request), localePaths)
+  const pathname = pathnameFromRequest(request)
+  const pageSlug = resolveMarketingPageSlug(pathname)
+  const withSeo = applyMarketingSeo(html, pageSlug, locale, {
+    canonicalPath: options?.seo?.canonicalPath ?? pathname,
+    ...options?.seo,
+  })
+  return injectMarketingChrome(withSeo, locale, pathname, options?.localePaths)
 }
 
 export function marketingHtmlResponse(slug: string, request: Request): Response {
@@ -95,9 +107,16 @@ export async function marketingBlogDetailHtmlResponse(
     ? { [otherLocale]: `/blog/${alternate.slug}` }
     : undefined
 
-  return new Response(finalizeMarketingHtml(rendered, request, locale, localePaths), {
-    headers: HTML_HEADERS,
-  })
+  return new Response(
+    finalizeMarketingHtml(rendered, request, locale, {
+      localePaths,
+      seo: {
+        blogPost: post,
+        canonicalPath: `/blog/${post.slug}`,
+      },
+    }),
+    { headers: HTML_HEADERS },
+  )
 }
 
 export function marketingHtmlOrRedirect(slug: string, fallbackPath: string, request: Request): Response {
