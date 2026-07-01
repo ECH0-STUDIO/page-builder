@@ -36,9 +36,9 @@ if (!fs.existsSync(source)) {
   process.exit(1)
 }
 
-const EXPECTED_PAGES = ['blog', 'features', 'pricing', 'contact']
+const EXPECTED_PAGES = ['blog', 'detail_blog', 'features', 'pricing', 'contact']
 const missingPages = EXPECTED_PAGES.filter(
-  (slug) => !fs.existsSync(path.join(source, `${slug}.html`)),
+  (slug) => !fs.existsSync(path.join(source, `${slug === 'detail_blog' ? 'detail_blog' : slug}.html`)),
 )
 if (missingPages.length > 0) {
   console.warn(
@@ -49,7 +49,19 @@ if (missingPages.length > 0) {
   }
   if (missingPages.some((s) => s !== 'blog')) {
     console.warn(
-      'Copy the full export folder (e.g. "Eatery Marketing Website" from Webflow) into design/webflow-export/, then re-run pnpm sync:marketing',
+      'Import the full Eatery export: pnpm import:eatery-export "~/Downloads/Eatery Marketing Website"',
+    )
+  }
+}
+
+const indexPath = path.join(source, 'index.html')
+if (fs.existsSync(indexPath)) {
+  const indexHtml = fs.readFileSync(indexPath, 'utf8')
+  if (/Nexbet|Temlis|nexbit-temlis/i.test(indexHtml)) {
+    console.warn(
+      '\nWARNING: design/webflow-export looks like the OLD Nexbet template.\n' +
+        'Replace with your Eatery export:\n' +
+        '  pnpm import:eatery-export "/Users/mac/Downloads/Eatery Marketing Website"\n',
     )
   }
 }

@@ -9,160 +9,61 @@ Production layout:
 
 Both hosts point to the **same Vercel project**. Routing is handled in `apps/web/src/proxy.ts`.
 
-## Marketing site source (Webflow export)
+## Marketing site = Webflow HTML only
 
-The marketing homepage is served from a **Webflow HTML export**, not hand-built React sections.
+There are **no React marketing pages**. Every marketing URL is served by a `route.ts` handler that returns your Webflow export HTML with:
+
+- Blog posts injected from Google Sheets (by locale)
+- VI | EN language switcher in the navbar
+- English copy via `marketing-i18n.ts` when `?lang=en`
+- Vietnamese = export HTML as-is (clean URLs)
 
 | Path | Role |
 |------|------|
-| `design/webflow-export/` | Source of truth — drop your Webflow zip contents here |
+| `design/webflow-export/` | Source of truth — your **Eatery Marketing Website** Webflow export |
 | `apps/web/public/marketing/` | Synced static assets (generated; do not edit by hand) |
-| `apps/web/src/lib/marketing-webflow.ts` | Loads HTML, rewrites asset paths for Next.js |
-| `apps/web/src/app/(marketing)/route.ts` | Serves full Webflow HTML for `/` (no React) |
-| `scripts/marketing-html-postprocess.mjs` | Fixes paths, links, hero image at sync time |
+| `apps/web/src/app/(marketing)/**/route.ts` | Serves HTML for `/`, `/blog`, `/features`, etc. |
+| `apps/web/src/lib/marketing-html-response.ts` | Blog injection, SEO, locale switcher, EN translation |
 
-### Local dev (marketing + app)
-
-**Use your real repo path** — e.g. `cd ~/page-builder` (not `~/path/to/page-builder`).
-
-If `git pull` fails with “local changes would be overwritten”, your Webflow export files conflict with the branch. Reset to the remote branch, then copy your export back:
+### Import your Webflow export (required once)
 
 ```bash
 cd ~/page-builder
-git fetch origin cursor/replace-marketing-webflow-ffbe
-git checkout cursor/replace-marketing-webflow-ffbe
-git reset --hard origin/cursor/replace-marketing-webflow-ffbe
-
-# Optional: copy your full Webflow export from Downloads
-cp -R ~/Downloads/Eatery\ Marketing\ Website/* design/webflow-export/
-
-pnpm install
-pnpm sync:marketing
+git pull origin cursor/replace-marketing-webflow-ffbe
+pnpm import:eatery-export "/Users/mac/Downloads/Eatery Marketing Website"
 rm -rf apps/web/.next
 pnpm dev
 ```
 
-If `pnpm dev` says “Command dev not found”, you are on an old commit — run `git reset --hard` above, or use `pnpm dev:web`.
-
-Open the URL printed in the terminal (usually `http://localhost:3000`; if the port is busy, Next.js picks `3001`, etc.). Hard-refresh (Cmd+Shift+R) if the favicon looks cached.
-
-To update only the Webflow export later:
-
-```bash
-cp -R ~/Downloads/Eatery\ Marketing\ Website/* design/webflow-export/
-pnpm sync:marketing
-rm -rf apps/web/.next
-pnpm dev
-```
+If the site still shows **Nexbet** or English hero text, the wrong export is in `design/webflow-export/`. Re-run the import command above.
 
 ### Route mapping
 
-| URL | Behavior |
+| URL | Template |
 |-----|----------|
-| `/` | Webflow `index.html` |
-| `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` file when present in the export; otherwise fallback redirect to `/#section` on the homepage |
-| `/blog/[slug]` | `detail_blog.html` template when present |
+| `/` | `index.html` + blog carousel from sheet |
+| `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` when present; else `/#section` on homepage |
+| `/blog/[slug]` | `detail_blog.html` + sheet post body |
 
-Navbar links in the export should use `features.html`, `pricing.html`, etc. — they are rewritten to `/features`, `/pricing`, etc. automatically.
+## Language
 
-### Hero / image assets
-
-Webflow `srcset` paths and filenames with spaces are rewritten to `/marketing/images/...`. If a hero image is missing after sync, confirm the file exists under `design/webflow-export/images/` and re-run `pnpm sync:marketing`. Export typos (hyphen vs space in filenames) are auto-corrected for the known hero asset pattern.
-
-Blog posts are loaded from a **Google Sheet** CMS (see `BLOG_GOOGLE_SHEET_ID`). The homepage blog carousel and `/blog/[slug]` detail pages are injected at runtime.
-
-## Vercel setup
-
-1. **Domains** → add both:
-   - `eateryvn.com` (+ `www` redirect to apex if you prefer)
-   - `app.eateryvn.com`
-
-2. **Environment variables** (Production):
-
-```env
-NEXT_PUBLIC_MARKETING_URL=https://eateryvn.com
-NEXT_PUBLIC_APP_URL=https://app.eateryvn.com
-NEXT_PUBLIC_SITE_URL=https://eateryvn.com
-```
-
-**Critical:** `NEXT_PUBLIC_APP_URL` must be `https://app.eateryvn.com` — never `eateryvn.com` or `www.eateryvn.com`. If misconfigured, `www.eateryvn.com` redirects in a loop (`/` → `/login` → `/login` …).
-
-3. Redeploy after changing env vars.
-
-## Supabase Auth URLs
-
-[URL Configuration](https://supabase.com/dashboard/project/lwupkuhygzybnkoaoenr/auth/url-configuration):
-
-- **Site URL:** `https://app.eateryvn.com` (auth lives on the app)
-- **Redirect URLs:**
-  ```
-  https://app.eateryvn.com/api/auth/callback
-  https://app.eateryvn.com/**
-  http://localhost:3000/api/auth/callback
-  ```
-
-## Local development
-
-Leave both URLs as `http://localhost:3000` — marketing and app routes work on one host. No subdomain split locally.
+- **Vietnamese (default):** clean URLs (`/`, `/blog`, …)
+- **English:** add `?lang=en` (switcher in navbar sets this)
+- First visit from outside Vietnam → redirect to `?lang=en` (except localhost → VI)
+- Blog posts filtered by sheet **Collection ID** (`vi` / `en`)
 
 ## Blog (Google Sheets CMS)
-
-The marketing blog is driven by a **Webflow CMS export** in Google Sheets. Export your Blog collection from Webflow (or maintain the sheet manually) and set:
 
 ```env
 BLOG_GOOGLE_SHEET_ID=1tZQ1YEW-NnShU7yTZqNYRhO13EpBxwyOqAVqLvgNdUg
 ```
 
-Share the sheet: **Anyone with the link can view**.
+See sheet column docs in the previous version of this file — Name, Slug, Collection ID, Item ID, Overview (HTML body), etc.
 
-### Sheet columns (row 1 = header)
+## Vercel / Supabase
 
-| Column | Used for |
-|--------|----------|
-| Name | Post title |
-| Slug | URL: `/blog/{slug}` |
-| Archived / Draft | Rows with `TRUE` are skipped |
-| Collection ID | `vi` or `en` — language variant for the row |
-| Item ID | Same ID links translations of one post |
-| Published On | **Required** — only rows with a publish date appear on the site |
-| Date / Published On | Display date in the metadata row |
-| Thumbnail | Hero + card image (absolute URL) |
-| Summary | Excerpt and meta description |
-| Avatar / Author / Role | Author block on post page |
-| Social First / Second / Third | Share links (hidden if empty) |
-| Category / Reading | Metadata row + card pill |
-| Overview | Rich HTML body |
+Unchanged — see env vars in repo `.env.example`.
 
-**Language:** Marketing uses the shared `NEXT_LOCALE` cookie (`vi` / `en`). A **VI | EN** switcher appears in the navbar. The same cookie is set on `.eateryvn.com` so `app.eateryvn.com` inherits the marketing language when users sign in.
+## Local development
 
-Sheet rows with the same **Item ID** are translations. **Collection ID** must be `vi` or `en`. The blog language switcher jumps to the matching slug in the other language when available.
-
-**Empty fields:** the connected UI block is hidden (Webflow `.hide` class).
-
-**Images on Bunny CDN:** use full URLs like `https://ech0studio.b-cdn.net/...`. If images fail to load on localhost, open the URL directly in your browser. A 403 usually means Bunny security settings (hotlink protection or geo block) — allow your pull zone to serve without referrer restrictions for dev, or add `localhost` to allowed referrers in the Bunny dashboard.
-
-### Routes
-
-| URL | Template |
-|-----|----------|
-| `/` | Homepage blog carousel filled from sheet |
-| `/blog` | `blog.html` collection list filled from sheet |
-| `/blog/{slug}` | `detail_blog.html` filled per post |
-
-Sync Webflow export after design changes:
-
-```bash
-pnpm sync:marketing
-```
-
-## Contact form
-
-Set where messages go:
-
-```env
-CONTACT_EMAIL=hello@eateryvn.com
-RESEND_API_KEY=re_...
-NEXT_PUBLIC_SENDER_EMAIL=noreply@eateryvn.com
-```
-
-Uses Resend (same as team invites). Without `RESEND_API_KEY`, submissions log to the server console in dev.
+Single host `http://localhost:3000` — marketing and app routes together. No subdomain split locally.

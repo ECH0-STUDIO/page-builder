@@ -3,6 +3,7 @@ import type { SupportedLocale } from '@/i18n/locale'
 import {
   BLOG_META_LABELS,
   BLOG_SECTION_COPY,
+  marketingPathForLocale,
 } from '@/lib/marketing-locale'
 
 export function escapeHtml(text: string): string {
@@ -21,10 +22,11 @@ function imgTag(src: string, alt: string, className = 'img'): string {
   return `<img src="${escapeHtml(src)}" loading="lazy" alt="${escapeHtml(alt)}" class="${className}">`
 }
 
-function buildBlogCard(post: BlogPost, itemClass: string): string {
+function buildBlogCard(post: BlogPost, itemClass: string, locale: SupportedLocale): string {
   const pillLabel = post.category || post.date
+  const href = marketingPathForLocale(`/blog/${post.slug}`, locale)
   return `<div role="listitem" class="${itemClass}">
-  <a href="/blog/${escapeHtml(post.slug)}" class="blog-item w-inline-block">
+  <a href="${escapeHtml(href)}" class="blog-item w-inline-block">
     <div class="blog_img${hideClass(!post.thumbnail)}">
       ${post.thumbnail ? imgTag(post.thumbnail, post.title) : ''}
       <div class="hero-cms_date${hideClass(!pillLabel)}">
@@ -57,7 +59,7 @@ function replaceBlogCarouselList(html: string, replacement: string): string {
   return html
 }
 
-export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
+export function injectBlogCarousel(html: string, posts: BlogPost[], locale: SupportedLocale): string {
   if (!BLOG_CAROUSEL_LIST_RE.test(html) && !BLOG_CAROUSEL_LIST_RE_ALT.test(html)) {
     return html
   }
@@ -70,7 +72,7 @@ export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
   }
 
   const items = posts
-    .map((post) => buildBlogCard(post, 'blog-slide swiper-slide w-dyn-item'))
+    .map((post) => buildBlogCard(post, 'blog-slide swiper-slide w-dyn-item', locale))
     .join('\n                    ')
   return replaceBlogCarouselList(
     html,
@@ -79,9 +81,9 @@ export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
 }
 
 /** Inject posts into any Webflow CMS collection list that uses blog-item cards. */
-export function injectBlogCollection(html: string, posts: BlogPost[]): string {
+export function injectBlogCollection(html: string, posts: BlogPost[], locale: SupportedLocale): string {
   if (html.includes('blog_list swiper-wrapper')) {
-    return injectBlogCarousel(html, posts)
+    return injectBlogCarousel(html, posts, locale)
   }
 
   let replaced = false
@@ -97,7 +99,7 @@ export function injectBlogCollection(html: string, posts: BlogPost[]): string {
         return `<div role="list" class="${listClass}"></div>`
       }
 
-      const items = posts.map((post) => buildBlogCard(post, itemClass)).join('\n                    ')
+      const items = posts.map((post) => buildBlogCard(post, itemClass, locale)).join('\n                    ')
       return `<div role="list" class="${listClass}">\n                    ${items}\n                  </div>`
     },
   )
@@ -259,7 +261,7 @@ export function renderBlogDetailHtml(
 
   // Related posts carousel (exclude current)
   const related = relatedPosts.filter((p) => p.slug !== post.slug)
-  out = injectBlogCarousel(out, related)
+  out = injectBlogCarousel(out, related, locale)
 
   return out
 }
@@ -269,7 +271,7 @@ export function renderMarketingIndexHtml(
   posts: BlogPost[],
   locale: SupportedLocale,
 ): string {
-  return injectBlogCarousel(injectBlogSectionCopy(html, locale), posts)
+  return injectBlogCarousel(injectBlogSectionCopy(html, locale), posts, locale)
 }
 
 export function renderBlogListHtml(
@@ -278,7 +280,7 @@ export function renderBlogListHtml(
   locale: SupportedLocale,
 ): string {
   let out = injectBlogSectionCopy(html, locale)
-  out = injectBlogCollection(out, posts)
+  out = injectBlogCollection(out, posts, locale)
   out = out.replace(/<div class="w-dyn-empty">[\s\S]*?<\/div>/gi, '')
   return out
 }

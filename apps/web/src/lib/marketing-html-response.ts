@@ -8,6 +8,7 @@ import {
   renderMarketingIndexHtml,
 } from '@/lib/marketing-blog-html'
 import { getMarketingLocaleFromRequest, marketingCanonicalPath, marketingPathForLocale, marketingRedirectUrl } from '@/lib/marketing-locale'
+import { applyMarketingI18n } from '@/lib/marketing-i18n'
 import { applyMarketingSeo, resolveMarketingPageSlug, type MarketingSeoOverrides } from '@/lib/marketing-seo'
 import { loadMarketingHtmlDocument, marketingPageExists } from '@/lib/marketing-webflow'
 
@@ -38,7 +39,8 @@ function finalizeMarketingHtml(
     canonicalPath,
     ...options?.seo,
   })
-  return injectMarketingChrome(withSeo, locale, pathname, options?.localePaths)
+  const withChrome = injectMarketingChrome(withSeo, locale, pathname, options?.localePaths)
+  return applyMarketingI18n(withChrome, locale)
 }
 
 export function marketingHtmlResponse(slug: string, request: Request): Response {

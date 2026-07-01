@@ -1,16 +1,36 @@
-# Webflow marketing export
+# Eatery Webflow export (source of truth)
 
-Drop the **full** Webflow code export here before running `pnpm sync:marketing`.
+**Do not edit files here by hand** unless you are updating the Webflow design.
 
-Expected top-level HTML pages:
+The marketing site is served as **raw Webflow HTML** — not React components.
 
-- `index.html`
-- `blog.html`
-- `detail_blog.html`
-- `features.html`
-- `pricing.html`
-- `contact.html`
+## First-time setup (required)
 
-Plus `css/`, `js/`, and `images/` folders.
+Copy your Webflow export from Downloads, then sync:
 
-If `blog.html` is missing from the export, `pnpm sync:marketing` auto-generates a fallback from `index.html`.
+```bash
+pnpm import:eatery-export "/Users/mac/Downloads/Eatery Marketing Website"
+```
+
+Or manually:
+
+```bash
+rm -rf design/webflow-export/*
+cp -R ~/Downloads/Eatery\ Marketing\ Website/* design/webflow-export/
+pnpm sync:marketing
+rm -rf apps/web/.next
+pnpm dev
+```
+
+## Expected pages
+
+- `index.html` — homepage (Vietnamese default content)
+- `blog.html`, `detail_blog.html`
+- `features.html`, `pricing.html`, `contact.html`
+- `css/`, `js/`, `images/`
+
+If you see **Nexbet** or **Temlis** branding, you have the wrong export folder.
+
+## After Webflow design changes
+
+Re-export from Webflow, then run `pnpm import:eatery-export` again.
