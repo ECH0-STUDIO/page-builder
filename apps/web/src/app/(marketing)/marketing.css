@@ -1,6 +1,6 @@
-@import url('/marketing/css/normalize.css');
-@import url('/marketing/css/webflow.css');
-@import url('/marketing/css/thais-fantabulous-site-defac5.webflow.css');
+@import '../../styles/marketing/normalize.css';
+@import '../../styles/marketing/webflow.css';
+@import '../../styles/marketing/thais-fantabulous-site-defac5.webflow.css';
 
 /* Webflow hides animated elements until GSAP runs — reveal after Next hydrates */
 .marketing-site .marketing-webflow [animation],
