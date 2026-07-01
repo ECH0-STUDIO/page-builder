@@ -12,7 +12,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import type { NavbarConfig } from '../types'
+import type { NavbarConfig, NavLink } from '../types'
+import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 interface NavbarRenderProps {
@@ -34,7 +35,6 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
   const hasLinks = config.links && config.links.length > 0
 
   const containerStyle: React.CSSProperties = {
-    // Sticky must be on the element itself. z-index high enough to sit above all page content.
     position: config.sticky ? 'sticky' : 'relative',
     top: 0,
     zIndex: 9999,
@@ -42,8 +42,6 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
     backdropFilter: isTransparent ? 'blur(12px)' : undefined,
     WebkitBackdropFilter: isTransparent ? 'blur(12px)' : undefined,
     borderBottom: '1px solid rgba(0,0,0,0.06)',
-    // Ensure sticky works even inside overflow:auto containers
-    willChange: 'transform',
   }
 
   const linkStyle: React.CSSProperties = {
@@ -68,13 +66,16 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
   }
 
   function getHref(link: { href: string; anchor: boolean }) {
-    if (link.anchor) return `#${link.href}`
-    return link.href
+    return resolveNavHref(link)
+  }
+
+  function linkTarget(link: NavLink) {
+    return navLinkOpensNewTab(link) ? '_blank' : undefined
   }
 
   return (
     <nav style={containerStyle} id="page-navbar">
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative' }}>
 
         {/* Main bar */}
         <div style={{
@@ -124,6 +125,8 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               <a
                 key={i}
                 href={getHref(link)}
+                target={linkTarget(link)}
+                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
                 style={{ ...linkStyle, opacity: 0.85 }}
                 onClick={e => {
                   if (link.anchor && !inEditor) {
@@ -193,6 +196,8 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               <a
                 key={i}
                 href={getHref(link)}
+                target={linkTarget(link)}
+                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
                 onClick={e => {
                   if (link.anchor && !inEditor) {
                     e.preventDefault()

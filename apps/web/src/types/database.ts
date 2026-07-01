@@ -656,6 +656,7 @@ export interface Database {
           business_id: string
           primary_color: string
           background_color: string
+          text_color: string
           font_family: string
           updated_at: string
           heading_font_family: string | null
@@ -668,6 +669,7 @@ export interface Database {
           business_id: string
           primary_color?: string
           background_color?: string
+          text_color?: string
           font_family?: string
           updated_at?: string
           heading_font_family?: string | null
@@ -679,6 +681,7 @@ export interface Database {
           business_id?: string
           primary_color?: string
           background_color?: string
+          text_color?: string
           font_family?: string
           updated_at?: string
           heading_font_family?: string | null

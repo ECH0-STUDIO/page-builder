@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Trash2, GripVertical, Check, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -14,7 +12,6 @@ import {
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
-import { saveNavbarAction } from '@/app/actions/page-builder'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
 
 // ─── Canvas preview ────────────────────────────────────────────────────────────
@@ -39,41 +36,38 @@ export function NavbarPreview({ config }: { config: NavbarConfig }) {
   )
 }
 
-// ─── Derive anchor options from blocks list ────────────────────────────────────
+// ─── Derive anchor options from blocks with explicit anchor IDs ────────────────
 
 function getAnchorOptions(blocks: PageBlock[]) {
-  return blocks.map((b, i) => ({
-    id: b.id,
-    label: `${b.type.replace('_', ' ')} — block ${i + 1}`,
-    anchor: b.block_anchor_id ?? `block-${b.id}`,
-  }))
+  return blocks
+    .filter(b => b.block_anchor_id && b.block_anchor_id.trim() !== '')
+    .map(b => ({
+      id: b.block_anchor_id!.trim(),
+      label: `#${b.block_anchor_id!.trim()} — ${b.type.replace('_', ' ')}`,
+    }))
 }
 
 // ─── Settings form ─────────────────────────────────────────────────────────────
 
 export function NavbarSettings({
   config,
-  businessId,
   blocks,
   onChange,
-  
 }: {
   config: NavbarConfig
   businessId: string
   /** Current page blocks so anchors can reference them */
   blocks: PageBlock[]
   onChange: (c: NavbarConfig) => void
-  
 }) {
   const { t } = useTranslation()
-  const [saving, setSaving] = useState(false)
 
   function set<K extends keyof NavbarConfig>(key: K, value: NavbarConfig[K]) {
     onChange({ ...config, [key]: value })
   }
 
   function addLink() {
-    set('links', [...config.links, { label: 'Link', href: '#', anchor: false }])
+    set('links', [...config.links, { label: 'Link', href: '', anchor: false, open_in_new_tab: false }])
   }
 
   function updateLink(i: number, patch: Partial<NavLink>) {
@@ -93,33 +87,10 @@ export function NavbarSettings({
     set('links', links)
   }
 
-  async function handleSave() {
-    setSaving(true)
-    const result = await saveNavbarAction(businessId, config)
-    if (result.success) {
-      toast.success(t('navbarBlock.navbarSaved'))
-    } else {
-      toast.error(t('navbarBlock.saveFailed') + ' ' + result.error)
-    }
-    setSaving(false)
-  }
-
   const anchorOptions = getAnchorOptions(blocks)
 
   return (
     <div className="space-y-5">
-
-      {/* Save button */}
-      <Button
-        type="button"
-        size="sm"
-        className="w-full"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Check className="size-3.5 mr-1.5" />}
-        {saving ? t('navbarBlock.saving') : t('navbarBlock.saveNavbar')}
-      </Button>
 
       {/* Logo / Brand */}
       <div className="space-y-2">
@@ -166,12 +137,14 @@ export function NavbarSettings({
               <div className="flex items-center gap-1.5">
                 <div className="flex flex-col shrink-0">
                   <button type="button" onClick={() => moveLink(i, -1)} disabled={i === 0}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
-                    <GripVertical className="size-3 rotate-90" />
+                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                    aria-label={t('navbarBlock.moveUp')}>
+                    <ChevronUp className="size-3.5" />
                   </button>
                   <button type="button" onClick={() => moveLink(i, 1)} disabled={i === config.links.length - 1}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
-                    <GripVertical className="size-3 -rotate-90" />
+                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                    aria-label={t('navbarBlock.moveDown')}>
+                    <ChevronDown className="size-3.5" />
                   </button>
                 </div>
                 <Input
@@ -189,12 +162,12 @@ export function NavbarSettings({
               {/* Anchor toggle */}
               <div className="flex items-center justify-between">
                 <Label htmlFor={`anchor-${i}`} className="text-xs font-normal cursor-pointer text-muted-foreground">
-                  Scroll to section
+                  {t('navbarBlock.scrollToSection')}
                 </Label>
                 <Switch
                   id={`anchor-${i}`}
                   checked={link.anchor}
-                  onCheckedChange={v => updateLink(i, { anchor: v, href: '#' })}
+                  onCheckedChange={v => updateLink(i, { anchor: v, href: v ? (link.href.replace(/^#/, '') || '') : link.href, open_in_new_tab: false })}
                 />
               </div>
 
@@ -204,7 +177,7 @@ export function NavbarSettings({
                   <div className="space-y-1">
                     <Label className="text-[11px] text-muted-foreground">{t('navbarBlock.scrollToBlock')}</Label>
                     <Select
-                      value={link.href}
+                      value={link.href.replace(/^#/, '')}
                       onValueChange={v => updateLink(i, { href: v })}
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -212,7 +185,7 @@ export function NavbarSettings({
                       </SelectTrigger>
                       <SelectContent>
                         {anchorOptions.map(opt => (
-                          <SelectItem key={opt.anchor} value={opt.anchor} className="text-xs">
+                          <SelectItem key={opt.id} value={opt.id} className="text-xs">
                             {opt.label}
                           </SelectItem>
                         ))}
@@ -226,12 +199,24 @@ export function NavbarSettings({
                   </p>
                 )
               ) : (
-                <Input
-                  value={link.href}
-                  onChange={e => updateLink(i, { href: e.target.value })}
-                  placeholder={t('navbarBlock.urlPlaceholder')}
-                  className="h-7 text-xs font-mono"
-                />
+                <>
+                  <Input
+                    value={link.href}
+                    onChange={e => updateLink(i, { href: e.target.value })}
+                    placeholder={t('navbarBlock.urlPlaceholder')}
+                    className="h-7 text-xs font-mono"
+                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`new-tab-${i}`} className="text-xs font-normal cursor-pointer text-muted-foreground">
+                      {t('navbarBlock.openInNewTab')}
+                    </Label>
+                    <Switch
+                      id={`new-tab-${i}`}
+                      checked={link.open_in_new_tab ?? false}
+                      onCheckedChange={v => updateLink(i, { open_in_new_tab: v })}
+                    />
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -277,12 +262,28 @@ export function NavbarSettings({
 
         {/* Presets */}
         <div className="flex gap-1.5">
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#ffffff', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.white')}</button>
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#111111', text_color: '#ffffff' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">{t('navbarBlock.dark')}</button>
-          <button type="button" onClick={() => onChange({ ...config, background_color: 'transparent', text_color: '#111111' })}
-            className="flex-1 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('navbarBlock.glass')}</button>
+          {([
+            { bg: '#ffffff', text: '#111111', label: t('navbarBlock.white') },
+            { bg: '#111111', text: '#ffffff', label: t('navbarBlock.dark') },
+            { bg: 'transparent', text: '#111111', label: t('navbarBlock.glass') },
+          ] as { bg: string; text: string; label: string }[]).map(preset => {
+            const active = config.background_color === preset.bg && config.text_color === preset.text
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => onChange({ ...config, background_color: preset.bg, text_color: preset.text })}
+                className={cn(
+                  'flex-1 py-1 rounded border text-[11px] transition-colors',
+                  active
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border hover:border-foreground/30'
+                )}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
         </div>
 
         <div className="flex items-center justify-between pt-1">

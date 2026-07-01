@@ -26,14 +26,17 @@ export const defaultSpacing: BlockSpacing = {
   margin_bottom: 0,
 }
 
+/** Default horizontal inset applied on the section shell for content blocks. */
+export const SECTION_SIDE_PADDING = 24
+
 /** Natural outer spacing defaults per block type (matches each block's built-in design rhythm) */
 export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
-  // Hero inner vertical padding is via section_padding_y; outer spacing is 0
-  hero: { ...defaultSpacing },
-  // TextImage outer spacing — compact/normal/spacious controls inner padding via its own setting
-  text_image: { ...defaultSpacing },
-  // Contact section has its own internal padding
-  contact: { ...defaultSpacing },
+  hero: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  text_image: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  // Contact / menu / QR — vertical + horizontal rhythm on the section shell
+  contact: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  menu_grid: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  qr_code: { padding_top: 48, padding_right: SECTION_SIDE_PADDING, padding_bottom: 48, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
 }
 
 // ─── Google Fonts curated list ────────────────────────────────────────────────
@@ -103,12 +106,16 @@ export interface CtaButton {
   action: CtaAction
   value: string
   style: CtaStyle
+  /** Custom button colour; null/undefined = use brand colour from theme */
+  color?: string | null
+  /** When action is url, open link in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 export type HeroLayout = 'centered' | 'split' | 'overlay' | 'text_only'
-export type BlockHeight = 'custom' | 'medium' | 'fullscreen'
+export type BlockHeight = 'custom' | 'fullscreen'
 export type ImagePosition = 'top' | 'center' | 'bottom'
 export type SplitImageSide = 'left' | 'right'
 
@@ -124,8 +131,8 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
-  /** Vertical padding (px) inside the hero's background area — only used when height='custom' */
-  section_padding_y: number
+  /** @deprecated Use block spacing (outer padding) instead */
+  section_padding_y?: number
   /** --- Split layout specific --- */
   /** Which side the image sits on in the Split layout */
   split_image_side: SplitImageSide
@@ -150,8 +157,7 @@ export const defaultHeroConfig: HeroConfig = {
   cta: null,
   cta_secondary: null,
   text_color: 'auto',
-  height: 'medium',
-  section_padding_y: 80,
+  height: 'custom',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',
   split_text_color: '#ffffff',
@@ -177,6 +183,10 @@ export interface TextImageConfig {
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
+  /** Custom ratio width when aspect_ratio === 'free' */
+  aspect_ratio_width?: number
+  /** Custom ratio height when aspect_ratio === 'free' */
+  aspect_ratio_height?: number
   image_fit: ImageFit
   background: BlockBackground
   background_color: string
@@ -196,6 +206,8 @@ export const defaultTextImageConfig: TextImageConfig = {
   cta: null,
   image_url: '',
   aspect_ratio: '4_3',
+  aspect_ratio_width: 4,
+  aspect_ratio_height: 3,
   image_fit: 'cover',
   background: 'transparent',
   background_color: '#f9f9f9',
@@ -263,6 +275,10 @@ export interface MenuGridConfig {
   item_ids?: string[]
   /** Layout for tabs on desktop (horizontal scroll vs sidebar) */
   tabs_layout?: 'horizontal' | 'sidebar'
+  /** Paginate items on the live page */
+  pagination_enabled?: boolean
+  /** Items shown per page when pagination is enabled */
+  items_per_page?: number
 }
 
 export const defaultMenuGridConfig: MenuGridConfig = {
@@ -280,6 +296,8 @@ export const defaultMenuGridConfig: MenuGridConfig = {
   selection_mode: 'category',
   item_ids: [],
   tabs_layout: 'sidebar',
+  pagination_enabled: false,
+  items_per_page: 12,
 }
 
 // ─── QR Code Block ────────────────────────────────────────────────────────────
@@ -293,6 +311,9 @@ export interface QRCodeConfig {
   show_download: boolean
   background_color: string
   background_image?: string
+  /** QR module (foreground) colour */
+  qr_color: string
+  /** Label text colour */
   text_color: string
   alignment: 'left' | 'center' | 'right'
   border_radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
@@ -305,6 +326,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
   label: 'Scan to pay',
   show_download: true,
   background_color: '#ffffff',
+  qr_color: '#111111',
   text_color: '#111111',
   alignment: 'center',
   border_radius: '2xl',
@@ -318,6 +340,8 @@ export interface NavLink {
   label: string
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
+  /** External URL only — open in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 export interface NavbarConfig {
@@ -326,8 +350,6 @@ export interface NavbarConfig {
   sticky: boolean
   background_color: string
   text_color: string
-  /** px, 0 = sharp */
-  border_radius: number
 }
 
 export const defaultNavbarConfig: NavbarConfig = {
@@ -336,7 +358,6 @@ export const defaultNavbarConfig: NavbarConfig = {
   sticky: true,
   background_color: '#ffffff',
   text_color: '#111111',
-  border_radius: 0,
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -345,14 +366,24 @@ export interface FooterConfig {
   show_business_name: boolean
   copyright_text: string
   background_color: string
+  background_image?: string
   text_color: string
+  padding_top: number
+  padding_right: number
+  padding_bottom: number
+  padding_left: number
 }
 
 export const defaultFooterConfig: FooterConfig = {
   show_business_name: true,
   copyright_text: 'All rights reserved.',
   background_color: '#111111',
+  background_image: '',
   text_color: '#ffffff',
+  padding_top: 32,
+  padding_right: 24,
+  padding_bottom: 32,
+  padding_left: 24,
 }
 
 // ─── Publishing / Theme ───────────────────────────────────────────────────────
@@ -380,6 +411,8 @@ export interface ThemeSettings {
   business_id: string
   primary_color: string
   background_color: string
+  /** Default body/heading text colour for sections that don't override */
+  text_color: string
   font_family: string            // body / paragraph font
   heading_font_family: string | null    // h1, h2, h3 font
   navbar_config?: NavbarConfig | null
@@ -389,6 +422,7 @@ export interface ThemeSettings {
 export const defaultThemeSettings: Omit<ThemeSettings, 'id' | 'business_id'> = {
   primary_color: '#E85D26',
   background_color: '#FFFFFF',
+  text_color: '#111111',
   font_family: 'Inter',
   heading_font_family: 'Inter',
   navbar_config: null,

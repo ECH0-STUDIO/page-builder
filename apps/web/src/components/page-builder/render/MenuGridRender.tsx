@@ -29,7 +29,6 @@ import {
   type PreviewLayout,
   isForcedMobileLayout,
   menuGridColClass,
-  sectionPaddingClass,
 } from './preview-layout'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -269,10 +268,11 @@ function ItemModal({
 // ─── Item Card (grid layout) ───────────────────────────────────────────────────
 
 function ItemCardGrid({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount
 }: {
   item: MenuItem
   config: MenuGridConfig
+  brandColor: string
   onClick: () => void
   onQuickAdd: () => void
   hasVariants: boolean
@@ -280,11 +280,12 @@ function ItemCardGrid({
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const bgColor = config.background_color || '#ffffff'
+  const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    if (!item.available) return
     if (hasVariants) {
       onClick()
     } else {
@@ -296,7 +297,7 @@ function ItemCardGrid({
     <div
       onClick={onClick}
       className={`group rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer`}
-      style={{ backgroundColor: bgColor }}
+      style={{ backgroundColor: cardBg, opacity: item.available ? 1 : 0.85 }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -318,7 +319,12 @@ function ItemCardGrid({
         </div>
       )}
       <div className="p-3">
-        <p className="font-semibold text-sm leading-snug line-clamp-1" style={{ color: textColor }}>{item.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm leading-snug line-clamp-1" style={{ color: textColor }}>{item.name}</p>
+          {!item.available && config.show_unavailable_badge && !config.show_image && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+          )}
+        </div>
         {config.show_description && item.description && (
           <p className="text-xs mt-0.5 line-clamp-2 leading-relaxed" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
@@ -332,9 +338,13 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: bgColor }}>
-              <Plus className="size-4 pointer-events-none" />
-            </button>
+            {item.available ? (
+              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+                <Plus className="size-4 pointer-events-none" />
+              </button>
+            ) : (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+            )}
           </div>
         </div>
       </div>
@@ -345,22 +355,25 @@ function ItemCardGrid({
 // ─── Item Row (list layout) ──────────────────────────────────────────────────
 
 function ItemRowList({
-  item, config, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount, isMobile = false,
 }: {
   item: MenuItem
   config: MenuGridConfig
+  brandColor: string
   onClick: () => void
   onQuickAdd: () => void
   hasVariants: boolean
   optionCount: number
+  isMobile?: boolean
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
-  const bgColor = config.background_color || '#ffffff'
+  const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    if (!item.available) return
     if (hasVariants) {
       onClick()
     } else {
@@ -371,7 +384,11 @@ function ItemRowList({
   return (
     <div
       onClick={onClick}
-      className={`flex gap-4 items-center py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors`}
+      className={cn(
+        'flex gap-4 py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors',
+        isMobile ? 'items-start' : 'items-center',
+      )}
+      style={{ opacity: item.available ? 1 : 0.85 }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -383,28 +400,47 @@ function ItemRowList({
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2 flex-wrap">
           <p className="font-semibold text-sm" style={{ color: textColor }}>{item.name}</p>
           {!item.available && config.show_unavailable_badge && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
           )}
         </div>
         {config.show_description && item.description && (
-          <p className="text-xs mt-0.5 line-clamp-1" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
+          <p className="text-xs mt-0.5 line-clamp-2 md:line-clamp-1" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
         {hasVariants && optionCount > 0 && (
           <p className="text-[10px] mt-1 font-semibold text-amber-600 uppercase tracking-wider">
             {optionCount} {optionCount === 1 ? t('cart.option') : t('cart.options')} {t('cart.availableLabel')}
           </p>
         )}
-      </div>
-      <div className="flex items-center gap-3 ml-2">
         {config.show_price && (
-          <p className="text-sm font-bold shrink-0" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
+          <p
+            className={cn('text-sm font-bold mt-1', isMobile ? 'block' : 'md:hidden')}
+            style={{ color: textColor }}
+          >
+            {formatCurrency(item.price)}
+          </p>
         )}
-        <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform" style={{ backgroundColor: textColor, color: bgColor }}>
-          <Plus className="size-4 pointer-events-none" />
-        </button>
+      </div>
+      <div className="flex items-center gap-3 ml-2 shrink-0 self-center">
+        {config.show_price && (
+          <p
+            className={cn('text-sm font-bold shrink-0', isMobile ? 'hidden' : 'hidden md:block')}
+            style={{ color: textColor }}
+          >
+            {formatCurrency(item.price)}
+          </p>
+        )}
+        {item.available ? (
+          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+            <Plus className="size-4 pointer-events-none" />
+          </button>
+        ) : (
+          !config.show_unavailable_badge && (
+            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
+          )
+        )}
       </div>
     </div>
   )
@@ -417,7 +453,8 @@ function MenuGridInner({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  brandColor = '#111111',
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
   const layout: PreviewLayout | undefined =
@@ -429,6 +466,7 @@ function MenuGridInner({
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const loadingTimer = useRef<NodeJS.Timeout | null>(null)
   const renderTimer = useRef<NodeJS.Timeout | null>(null)
@@ -442,28 +480,51 @@ function MenuGridInner({
     }
   }, [])
 
-  const bgColor = config.background_color || '#ffffff'
   const textColor = config.text_color || '#111111'
+  const actionColor = brandColor || '#111111'
 
   const typography = getTypography(mobileLayout)
 
   const isCustomMode = config.selection_mode === 'custom_items'
+  const selectedItemIds = new Set(config.item_ids || [])
 
-  const visibleCats = isCustomMode 
-    ? [] 
+  const visibleCats = isCustomMode
+    ? categories.filter(c => {
+        if (!c.visible) return false
+        return items.some(item => selectedItemIds.has(item.id) && item.category_id === c.id)
+      })
     : categories.filter(c => c.visible && (
         config.category_ids.length === 0 || config.category_ids.includes(c.id)
       ))
 
-  const activeCat = activeCatId ?? visibleCats[0]?.id ?? null
+  const tabsEnabled = config.show_category_tabs !== false && visibleCats.length > 1
+  const activeCat = tabsEnabled ? (activeCatId ?? visibleCats[0]?.id ?? null) : null
 
-  const displayItems = isCustomMode
-    ? items.filter(item => (config.item_ids || []).includes(item.id))
-    : items.filter(item => {
-        if (item.category_id !== activeCat) return false
-        if (!item.available && !config.show_unavailable_badge) return false
-        return true
-      })
+  const displayItems = items.filter(item => {
+    if (isCustomMode) {
+      if (!selectedItemIds.has(item.id)) return false
+    } else if (!visibleCats.some(c => c.id === item.category_id)) {
+      return false
+    }
+    if (tabsEnabled && activeCat && item.category_id !== activeCat) return false
+    return true
+  })
+
+  const paginationEnabled = config.pagination_enabled === true
+  const itemsPerPage = Math.max(1, config.items_per_page ?? 12)
+  const totalPages = paginationEnabled ? Math.max(1, Math.ceil(displayItems.length / itemsPerPage)) : 1
+  const safePage = Math.min(page, totalPages)
+  const visibleItems = paginationEnabled
+    ? displayItems.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage)
+    : displayItems
+
+  useEffect(() => {
+    setPage(1)
+  }, [activeCat, paginationEnabled, itemsPerPage, isCustomMode, config.item_ids?.join(',')])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const colClass = menuGridColClass(layout, config.layout)
   const isList = config.layout === 'list'
@@ -471,7 +532,7 @@ function MenuGridInner({
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
-      <section style={{ backgroundColor: bgColor, padding: '64px 32px', textAlign: 'center' }}>
+      <section style={{ textAlign: 'center' }}>
         <p style={{ color: textColor, opacity: 0.4, fontSize: '15px' }}>No menu categories yet.</p>
       </section>
     )
@@ -479,7 +540,7 @@ function MenuGridInner({
 
   return (
     <>
-      <section className={sectionPaddingClass(layout)} style={{ backgroundColor: bgColor, paddingTop: 64, paddingBottom: 64 }}>
+      <section>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Header */}
@@ -515,7 +576,7 @@ function MenuGridInner({
               : 'flex flex-col md:flex-row gap-6 md:gap-10 md:items-start'
             : ''}>
             {/* Category tabs */}
-            {visibleCats.length > 1 && (
+            {tabsEnabled && (
               <div 
                 className={cn(
                   'flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full',
@@ -556,8 +617,8 @@ function MenuGridInner({
                     )}
                     style={
                       activeCat === cat.id
-                        ? { backgroundColor: textColor, color: bgColor, border: `1.5px solid ${textColor}` }
-                        : { backgroundColor: 'transparent', color: textColor, border: `1.5px solid ${textColor}22`, opacity: 0.7 }
+                        ? { backgroundColor: actionColor, color: '#ffffff', border: `1.5px solid ${actionColor}` }
+                        : { backgroundColor: 'transparent', color: textColor, border: '1.5px solid #e5e7eb' }
                     }
                   >
                     {cat.name}
@@ -568,24 +629,51 @@ function MenuGridInner({
 
             {/* Items */}
             <div className="flex-1 min-w-0">
-              {displayItems.length === 0 ? (
+              {visibleItems.length === 0 ? (
                 <p style={{ color: textColor, opacity: 0.4, fontSize: '14px', padding: '32px 0' }}>
                   {isCustomMode ? 'No items selected.' : 'No items in this category.'}
                 </p>
               ) : (
+                <>
                 <div className={`grid gap-4 ${colClass}`}>
-                  {displayItems.map(item => {
+                  {visibleItems.map(item => {
                     const itemGroups = variantGroups.filter(g => g.item_id === item.id)
                     const hasVariants = itemGroups.length > 0
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} />
                     ) : (
-                      <ItemCardGrid key={item.id} item={item} config={config} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
                     )
                   })}
                 </div>
+                {paginationEnabled && totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={safePage <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 transition-colors hover:bg-gray-50"
+                      style={{ color: textColor }}
+                    >
+                      {t('menuGridBlock.prevPage')}
+                    </button>
+                    <span className="text-sm tabular-nums" style={{ color: textColor, opacity: 0.7 }}>
+                      {safePage} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 transition-colors hover:bg-gray-50"
+                      style={{ color: textColor }}
+                    >
+                      {t('menuGridBlock.nextPage')}
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>
@@ -631,13 +719,15 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean }) {
+  brandColor = '#111111',
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
       config={config}
       data={data}
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
+      brandColor={brandColor}
     />
   )
 }

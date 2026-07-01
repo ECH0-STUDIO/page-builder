@@ -12,6 +12,7 @@
 import { X, LinkIcon, Phone, Anchor, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
 import { ctaHref } from '../cta-utils'
+import { resolveCtaColor } from '../cta-styles'
 import { plainText } from '@/i18n/locale'
 // Re-export so existing client-side imports from CtaEditor still resolve
 export { ctaHref } from '../cta-utils'
@@ -52,6 +54,7 @@ export function CtaEditor({
   value,
   label: fieldLabel,
   blocks,
+  brandColor = '#E85D26',
   onChange,
   onRemove,
 }: {
@@ -59,6 +62,8 @@ export function CtaEditor({
   label: string
   /** Full block list — used to populate the 'scroll to' section dropdown */
   blocks: PageBlock[]
+  /** Theme brand colour — used when CTA has no custom colour override */
+  brandColor?: string
   onChange: (v: CtaButton) => void
   onRemove: () => void
 }) {
@@ -76,6 +81,8 @@ export function CtaEditor({
   ]
   const anchorOptions = getAnchorOptions(blocks)
   const isAnchor = value.action === 'anchor'
+  const effectiveColor = resolveCtaColor(value, brandColor)
+  const hasCustomColor = value.color != null && value.color !== ''
 
   return (
     <div className="space-y-2 p-3 rounded-lg border border-border/60 bg-muted/20">
@@ -122,6 +129,31 @@ export function CtaEditor({
         </Select>
       </div>
 
+      {/* Button colour — brand default with optional override */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground">{t('ctaEditor.buttonColor')}</Label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={effectiveColor}
+            onChange={e => onChange({ ...value, color: e.target.value })}
+            className="size-8 rounded border border-border cursor-pointer shrink-0"
+          />
+          <span className="text-[11px] font-mono text-muted-foreground truncate flex-1">
+            {hasCustomColor ? effectiveColor : `${effectiveColor} (${t('ctaEditor.brandDefault')})`}
+          </span>
+          {hasCustomColor && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...value, color: null })}
+              className="text-[11px] text-primary hover:underline shrink-0"
+            >
+              {t('ctaEditor.resetToBrand')}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Value input — changes based on action */}
       {isAnchor ? (
         anchorOptions.length > 0 ? (
@@ -151,16 +183,30 @@ export function CtaEditor({
           </div>
         )
       ) : (
-        <Input
-          placeholder={
-            value.action === 'tel' ? '+84 9xx xxx xxx'
-            : value.action === 'email' ? 'hello@example.com'
-            : 'https://…'
-          }
-          value={value.value}
-          onChange={e => onChange({ ...value, value: e.target.value })}
-          className="h-8 text-sm"
-        />
+        <div className="space-y-2">
+          <Input
+            placeholder={
+              value.action === 'tel' ? '+84 9xx xxx xxx'
+              : value.action === 'email' ? 'hello@example.com'
+              : t('ctaEditor.urlPlaceholder')
+            }
+            value={value.value}
+            onChange={e => onChange({ ...value, value: e.target.value })}
+            className="h-8 text-sm"
+          />
+          {value.action === 'url' && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor="cta-open-new-tab" className="text-xs font-normal cursor-pointer text-muted-foreground">
+                {t('ctaEditor.openInNewTab')}
+              </Label>
+              <Switch
+                id="cta-open-new-tab"
+                checked={value.open_in_new_tab ?? false}
+                onCheckedChange={v => onChange({ ...value, open_in_new_tab: v })}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

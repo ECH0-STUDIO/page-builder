@@ -9,34 +9,42 @@
  */
 
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
-import { ctaHref } from '../cta-utils'
+import { ctaHref, ctaOpensNewTab } from '../cta-utils'
+import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 
-function CtaLink({ cta, locale }: { cta: CtaButton; locale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
-  const base = 'inline-block mt-6 px-6 py-3 rounded-full font-semibold text-sm tracking-wide transition-opacity hover:opacity-80 select-none'
-  const styles: Record<typeof cta.style, string> = {
-    filled:   'bg-gray-900 text-white',
-    outlined: 'border-2 border-gray-900 text-gray-900',
-    text:     'underline underline-offset-4 text-gray-900 px-0',
-  }
-  return <a href={href} className={`${base} ${styles[cta.style]}`}>{pickLocale(cta.label, locale)}</a>
-}
-
-const PADDING: Record<string, React.CSSProperties> = {
-  compact:  { padding: '32px 24px' },
-  normal:   { padding: '64px 24px' },
-  spacious: { padding: '100px 24px' },
+  const newTab = ctaOpensNewTab(cta)
+  return (
+    <a
+      href={href}
+      className={`${getCtaClassName(cta.style)} mt-6`}
+      style={getCtaInlineStyle(cta, brandColor)}
+      {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
+      {pickLocale(cta.label, locale)}
+    </a>
+  )
 }
 
 const ASPECT: Record<string, string> = {
   square: '1/1',
   '4_3':  '4/3',
   '16_9': '16/9',
-  free:   'auto',
+}
+
+function resolveAspectRatio(config: TextImageConfig): string {
+  if (config.aspect_ratio !== 'free') {
+    return ASPECT[config.aspect_ratio] ?? '4/3'
+  }
+  const w = config.aspect_ratio_width ?? 4
+  const h = config.aspect_ratio_height ?? 3
+  if (w <= 0 || h <= 0) return '4/3'
+  return `${w}/${h}`
 }
 
 const RADIUS: Record<BorderRadius, string> = {
@@ -55,23 +63,23 @@ interface TextImageRenderProps {
   locale?: string
 }
 
-export function TextImageRender({ config, isMobilePreview, previewLayout, locale }: TextImageRenderProps) {
+export function TextImageRender({
+  config,
+  isMobilePreview,
+  previewLayout,
+  locale,
+  brandColor = '#E85D26',
+  defaultTextColor = '#111111',
+}: TextImageRenderProps & { brandColor?: string; defaultTextColor?: string }) {
   const activeLocale = toSupportedLocale(locale)
   const heading = pickLocale(config.heading, activeLocale)
   const body = pickLocale(config.body, activeLocale)
   const layout: PreviewLayout | undefined =
     previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
-  const padStyle = PADDING[config.padding] ?? PADDING.normal
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
 
-  // ── Background ─────────────────────────────────────────────────────────────
-  const bgStyle: React.CSSProperties =
-    config.background === 'solid'
-      ? { backgroundColor: config.background_color }
-      : config.background === 'gradient'
-      ? { background: `linear-gradient(135deg, ${config.gradient_from ?? '#f8f8f8'} 0%, ${config.gradient_to ?? '#e8e8e8'} 100%)` }
-      : { backgroundColor: '#ffffff' }
+  // ── Background lives on the block shell wrapper ─────────────────────────────
 
   const isTextOnly = config.layout === 'text_only'
   const isStacked  = config.layout === 'stacked'
@@ -84,7 +92,7 @@ export function TextImageRender({ config, isMobilePreview, previewLayout, locale
       flex: '0 0 auto',
       width: isStacked || isImgOnly ? '100%' : 'min(45%, 480px)',
       // Use the chosen aspect ratio — NOT a fixed height — to avoid whitespace
-      aspectRatio: isImgOnly ? '16/6' : (ASPECT[config.aspect_ratio] ?? '4/3'),
+      aspectRatio: isImgOnly ? '16/6' : resolveAspectRatio(config),
       overflow: 'hidden',
       borderRadius: radius,
       background: '#f0f0f0',
@@ -111,15 +119,15 @@ export function TextImageRender({ config, isMobilePreview, previewLayout, locale
   // ── Text element ───────────────────────────────────────────────────────────
   const textEl = !isImgOnly && (
     <div style={{
-      // text_only: shrink to content; stacked/side-by-side: flex grow
-      flex: isTextOnly ? '0 1 auto' : '1 1 280px',
+      // text_only / stacked: shrink to content; side-by-side: flex grow
+      flex: isTextOnly || isStacked ? '0 1 auto' : '1 1 280px',
       minWidth: 0,
       textAlign: isTextOnly ? 'center' : 'left',
     }}>
       {heading && (
         <h2 style={{
           ...typography.h2,
-          color: '#111',
+          color: defaultTextColor,
           margin: 0,
         }}>
           {heading}
@@ -128,7 +136,7 @@ export function TextImageRender({ config, isMobilePreview, previewLayout, locale
       {body && (
         <p style={{
           ...typography.bodyMd,
-          color: '#555',
+          color: `${defaultTextColor}99`,
           marginTop: heading ? '16px' : 0,
           whiteSpace: 'pre-wrap',
         }}>
@@ -138,7 +146,7 @@ export function TextImageRender({ config, isMobilePreview, previewLayout, locale
       {!heading && !body && (
         <p style={{ color: '#ccc', fontSize: '15px', fontStyle: 'italic' }}>Add heading or body text in the settings panel.</p>
       )}
-      {config.cta && <CtaLink cta={config.cta} locale={activeLocale} />}
+      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
     </div>
   )
 
@@ -157,7 +165,7 @@ export function TextImageRender({ config, isMobilePreview, previewLayout, locale
   }
 
   return (
-    <section style={{ ...bgStyle, ...padStyle }}>
+    <section>
       <div style={innerStyle}>
         {isReverse ? <>{textEl}{imageEl}</> : <>{imageEl}{textEl}</>}
       </div>

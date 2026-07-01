@@ -8,6 +8,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 interface SpacingControlsProps {
   spacing: BlockSpacing
   onChange: (s: BlockSpacing) => void
+  paddingOnly?: boolean
 }
 
 function NumInput({
@@ -33,7 +34,7 @@ function NumInput({
   )
 }
 
-export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
+export function SpacingControls({ spacing, onChange, paddingOnly = false }: SpacingControlsProps) {
   const { t } = useTranslation()
 
   function set<K extends keyof BlockSpacing>(key: K, value: number) {
@@ -67,7 +68,7 @@ export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
         </div>
       </div>
 
-      {/* Margin — top + bottom only */}
+      {!paddingOnly && (
       <div>
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('pageBuilder.marginTitle')}
@@ -83,6 +84,7 @@ export function SpacingControls({ spacing, onChange }: SpacingControlsProps) {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

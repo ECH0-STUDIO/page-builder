@@ -14,7 +14,10 @@ import { FooterRender } from '@/components/page-builder/render/FooterRender'
 import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
-import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, type FooterConfig } from '@/components/page-builder/types'
+import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
+import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
+import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
+import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
 import {
@@ -99,9 +102,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         .eq('visible', true)
         .order('sort_order', { ascending: true }),
       db.from('theme_settings')
-        .select('font_family, heading_font_family, navbar_config, footer_config')
+        .select('*')
         .eq('business_id', business.id)
-        .single(),
+        .maybeSingle(),
     ])
     pageBlocksRaw = (blocksRes.data as PageBlock[]) ?? []
     themeRaw = themeRes.data
@@ -111,6 +114,12 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const bodyFont: string = themeRaw?.font_family ?? 'Inter'
   const headingFontRaw: string = themeRaw?.heading_font_family ?? 'Inter'
+  const themeForTokens: Partial<ThemeSettings> = {
+    primary_color: themeRaw?.primary_color ?? defaultThemeSettings.primary_color,
+    background_color: themeRaw?.background_color ?? defaultThemeSettings.background_color,
+    text_color: themeRaw?.text_color ?? defaultThemeSettings.text_color,
+  }
+  const themeTokens = resolveThemeTokens(themeForTokens)
   const navbarConfig: NavbarConfig = (themeRaw?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
   const footerConfig: FooterConfig = (themeRaw?.footer_config as FooterConfig | null) ?? defaultFooterConfig
 
@@ -124,7 +133,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const pageBlocks: PageBlock[] = (pageBlocksRaw ?? []).map(b => ({
     ...b,
-    spacing: b.spacing ?? defaultSpacing,
+    spacing: resolveBlockSpacing(b.type, b.spacing),
     custom_css: b.custom_css ?? '',
     block_anchor_id: b.block_anchor_id ?? null,
   }))
@@ -194,8 +203,11 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={visitorLocale}
-      className="min-h-screen bg-white w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
-      style={{ fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined }}
+      className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col"
+      style={{
+        fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
+        ...buildThemeStyle(themeForTokens),
+      }}
     >
       {/* Silent visit tracker */}
       <ViewTracker slug={slug} />
@@ -281,35 +293,34 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const spacing = block.spacing ?? defaultSpacing
-            const blockStyle: React.CSSProperties = {
-              marginTop: spacing.margin_top,
-              marginBottom: spacing.margin_bottom,
-            }
-            const innerStyle: React.CSSProperties = {
-              paddingTop: spacing.padding_top,
-              paddingRight: spacing.padding_right,
-              paddingBottom: spacing.padding_bottom,
-              paddingLeft: spacing.padding_left,
-            }
+            const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
 
             return (
               <div
                 key={block.id}
                 id={block.block_anchor_id ?? `block-${block.id}`}
-                style={blockStyle}
+                style={margin}
               >
                 {block.custom_css && (
                   <style dangerouslySetInnerHTML={{
                     __html: scopeCSS(block.custom_css, `[data-live-block="${block.id}"]`),
                   }} />
                 )}
-                <div data-live-block={block.id} style={innerStyle}>
+                <div data-live-block={block.id} style={shell}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
+                    <HeroRender
+                      config={block.config as HeroConfig}
+                      businessName={business.name}
+                      brandColor={themeTokens.brandColor}
+                      contentInset={contentInset}
+                    />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} />
+                    <TextImageRender
+                      config={block.config as TextImageConfig}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
+                    />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender
@@ -327,6 +338,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
+                      brandColor={themeTokens.brandColor}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {

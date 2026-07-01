@@ -18,7 +18,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
-  BlockBackground, PaddingSize, CtaButton, BorderRadius, PageBlock,
+  BlockBackground, CtaButton, BorderRadius, PageBlock,
 } from '../types'
 import { CtaEditor } from './CtaEditor'
 
@@ -69,7 +69,7 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
         )}
       </div>
       <div className="px-3 pb-2">
-        <p className="text-[10px] text-muted-foreground/60">{layoutLabels[config.layout]} · {config.padding} padding</p>
+        <p className="text-[10px] text-muted-foreground/60">{layoutLabels[config.layout]}</p>
       </div>
     </div>
   )
@@ -81,15 +81,15 @@ export function TextImageSettings({
   config,
   businessId,
   blocks,
+  brandColor = '#E85D26',
   onChange,
-  
 }: {
   config: TextImageConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
+  brandColor?: string
   onChange: (c: TextImageConfig) => void
-  
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -110,11 +110,6 @@ export function TextImageSettings({
     { value: 'free', label: t('textImageBlock.free') },
   ]
 
-  const PADDINGS: { value: PaddingSize; label: string }[] = [
-    { value: 'compact', label: t('textImageBlock.compact') },
-    { value: 'normal', label: t('textImageBlock.normal') },
-    { value: 'spacious', label: t('textImageBlock.spacious') },
-  ]
 
   const BACKGROUNDS: { value: BlockBackground; label: string }[] = [
     { value: 'transparent', label: t('textImageBlock.transparent') },
@@ -239,6 +234,30 @@ export function TextImageSettings({
               </Select>
             </div>
           </div>
+          {config.aspect_ratio === 'free' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('textImageBlock.customAspectRatio')}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.aspect_ratio_width ?? 4}
+                  onChange={e => set('aspect_ratio_width', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="h-8 text-xs text-center"
+                  aria-label={t('textImageBlock.aspectRatioWidth')}
+                />
+                <span className="text-xs text-muted-foreground shrink-0">:</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.aspect_ratio_height ?? 3}
+                  onChange={e => set('aspect_ratio_height', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="h-8 text-xs text-center"
+                  aria-label={t('textImageBlock.aspectRatioHeight')}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -276,7 +295,7 @@ export function TextImageSettings({
               label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
-              
+              brandColor={brandColor}
               onChange={v => set('cta', v)}
               onRemove={() => set('cta', null)}
             />
@@ -354,22 +373,6 @@ export function TextImageSettings({
               <p className="text-[11px] text-muted-foreground">{t('textImageBlock.gradientHelp')}</p>
             </div>
           )}
-        </div>
-
-        {/* Padding */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">{t('textImageBlock.padding')}</Label>
-          <div className="flex gap-1.5">
-            {PADDINGS.map(p => (
-              <button key={p.value} type="button" onClick={() => set('padding', p.value)}
-                className={cn('flex-1 py-1.5 rounded border text-xs transition-colors',
-                  config.padding === p.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-foreground/30'
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Roundness */}

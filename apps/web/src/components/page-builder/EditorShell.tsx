@@ -62,20 +62,30 @@ import { LiveStoreCart } from './render/LiveStoreCart'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { PreviewLayout } from './render/preview-layout'
 
-import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction } from '@/app/actions/page-builder'
+import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
+import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
+import { normalizePageBlock, getInitialBlockSpacing, resolveBlockSpacing } from './spacing-utils'
+import { getBlockSurfaceLayers } from './block-section-style'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
-  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig,
+  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig, FooterConfig,
 } from './types'
-import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings } from './types'
+import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings, BLOCK_DEFAULT_SPACING } from './types'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 
 // ─── Canvas layout ─────────────────────────────────────────────────────────────
 
 const CANVAS_DESKTOP_WIDTH = 1440
+const CANVAS_MAX_WIDTH = CANVAS_DESKTOP_WIDTH
+const MAX_UNDO_STEPS = 20
+
+type EditorSnapshot = {
+  blocks: PageBlock[]
+  theme: ThemeSettings | null
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -179,7 +189,7 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, previewLayout, interactive,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, brandColor, defaultTextColor,
 }: {
   block: PageBlock
   isSelected: boolean
@@ -188,10 +198,12 @@ function LiveBlockCard({
   onClick: () => void
   previewLayout?: PreviewLayout
   interactive?: boolean
+  brandColor: string
+  defaultTextColor: string
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const spacing = block.spacing ?? defaultSpacing
+  const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -219,7 +231,7 @@ function LiveBlockCard({
   return (
     <div
       onClick={interactive ? undefined : onClick}
-      style={{ marginTop: spacing.margin_top, marginBottom: spacing.margin_bottom }}
+      style={margin}
       className={cn('relative group', interactive ? '' : 'cursor-pointer')}
     >
       {/* Scoped custom CSS */}
@@ -248,14 +260,11 @@ function LiveBlockCard({
         </div>
       )}
 
-      {/* Actual rendered content */}
+      {/* Full-width section shell: background + padding */}
       <div
         data-block-id={block.id}
         style={{
-          paddingTop: spacing.padding_top,
-          paddingRight: spacing.padding_right,
-          paddingBottom: spacing.padding_bottom,
-          paddingLeft: spacing.padding_left,
+          ...shell,
           pointerEvents: interactive ? 'auto' : 'none',
           userSelect: interactive ? 'auto' : 'none',
         }}
@@ -265,10 +274,17 @@ function LiveBlockCard({
             config={block.config as HeroConfig}
             businessName={business.name}
             previewLayout={previewLayout}
+            brandColor={brandColor}
+            contentInset={contentInset}
           />
         )}
         {block.type === 'text_image' && (
-          <TextImageRender config={block.config as TextImageConfig} previewLayout={previewLayout} />
+          <TextImageRender
+            config={block.config as TextImageConfig}
+            previewLayout={previewLayout}
+            brandColor={brandColor}
+            defaultTextColor={defaultTextColor}
+          />
         )}
         {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
         {block.type === 'menu_grid' && (
@@ -276,6 +292,7 @@ function LiveBlockCard({
             config={block.config as MenuGridConfig}
             data={menuGridData}
             previewLayout={previewLayout}
+            brandColor={brandColor}
           />
         )}
         {block.type === 'qr_code' && (
@@ -294,17 +311,23 @@ function LiveBlockCard({
 // ─── Settings panel ────────────────────────────────────────────────────────────
 
 function BlockSettingsPanel({
-  block, business, blocks, categories, items, onChange,
+  block, business, blocks, categories, items, brandColor, onChange,
 }: {
   block: PageBlock
   business: Business
   blocks: PageBlock[]
   categories: MenuCategory[]
   items: MenuItem[]
+  brandColor: string
   onChange: (b: PageBlock) => void
 }) {
   const { t } = useTranslation()
   const anchorId = block.block_anchor_id ?? ''
+  const displaySpacing = resolveBlockSpacing(
+    block.type,
+    block.spacing,
+    block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
+  )
 
   return (
     <div className="space-y-6">
@@ -320,11 +343,19 @@ function BlockSettingsPanel({
       {block.type === 'hero' && (
         <HeroSettings config={block.config as HeroConfig} businessId={business.id}
           blocks={blocks}
-          onChange={c => onChange({ ...block, config: c })} />
+          brandColor={brandColor}
+          onChange={c => onChange({ ...block, config: c })}
+          onHeightChange={height => onChange({
+            ...block,
+            config: { ...(block.config as HeroConfig), height },
+            spacing: getInitialBlockSpacing('hero', { ...(block.config as HeroConfig), height }),
+          })}
+        />
       )}
       {block.type === 'text_image' && (
         <TextImageSettings config={block.config as TextImageConfig} businessId={business.id}
           blocks={blocks}
+          brandColor={brandColor}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'contact' && (
@@ -373,7 +404,7 @@ function BlockSettingsPanel({
       {/* Outer spacing — common */}
       <div className="space-y-3">
         <SpacingControls
-          spacing={block.spacing ?? defaultSpacing}
+          spacing={displaySpacing}
           onChange={s => onChange({ ...block, spacing: s })}
         />
       </div>
@@ -452,12 +483,7 @@ export function EditorShell({
   const [blocks, setBlocks] = useState<PageBlock[]>(() =>
     initialBlocks
       .filter(b => (b.type as string) !== 'navbar')
-      .map(b => ({
-        ...b,
-        spacing: b.spacing ?? { ...defaultSpacing },
-        custom_css: b.custom_css ?? '',
-        block_anchor_id: b.block_anchor_id ?? null,
-      }))
+      .map(b => normalizePageBlock(b as PageBlock))
   )
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -474,6 +500,9 @@ export function EditorShell({
   const [rightPanel, setRightPanel] = useState<RightPanel>('theme')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
+    initialPublishing?.has_unpublished_changes ?? false
+  )
   const [publishing, setPublishing] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
@@ -488,7 +517,6 @@ export function EditorShell({
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
   const [_isPreviewMode, setIsPreviewMode] = useState(false)
-  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
 
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
@@ -500,17 +528,17 @@ export function EditorShell({
     }
   }, [])
 
+  const dirtySinceSyncRef = useRef(false)
+
   useEffect(() => {
     if (data) {
       setBlocks(prev => {
-        return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => ({
-          ...b,
-          spacing: b.spacing ?? { ...defaultSpacing },
-          custom_css: b.custom_css ?? '',
-          block_anchor_id: b.block_anchor_id ?? null,
-        }))
+        return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => normalizePageBlock(b as PageBlock))
       })
       setPublished(data.publishing?.published ?? false)
+      if (!dirtySinceSyncRef.current) {
+        setHasUnpublishedChanges(data.publishing?.has_unpublished_changes ?? false)
+      }
       setTheme(data.theme)
       setPublishingSettings(data.publishing)
     }
@@ -530,20 +558,116 @@ export function EditorShell({
 
   const isFirstRender = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blocksRef = useRef(blocks)
+  const themeRef = useRef(theme)
+  const skipHistoryRef = useRef(false)
+  const undoStackRef = useRef<EditorSnapshot[]>([])
+  const redoStackRef = useRef<EditorSnapshot[]>([])
+  const historyBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+  useEffect(() => { themeRef.current = theme }, [theme])
+
+  const cloneSnapshot = useCallback((): EditorSnapshot => ({
+    blocks: structuredClone(blocksRef.current),
+    theme: themeRef.current ? structuredClone(themeRef.current) : null,
+  }), [])
+
+  const pushHistory = useCallback(() => {
+    if (skipHistoryRef.current) return
+    undoStackRef.current = [
+      ...undoStackRef.current.slice(-(MAX_UNDO_STEPS - 1)),
+      cloneSnapshot(),
+    ]
+    redoStackRef.current = []
+  }, [cloneSnapshot])
+
+  /** Coalesce rapid edits (typing, color drag) into one undo step per burst */
+  const scheduleHistorySnapshot = useCallback(() => {
+    if (skipHistoryRef.current) return
+    if (!historyBurstTimerRef.current) {
+      pushHistory()
+    }
+    if (historyBurstTimerRef.current) clearTimeout(historyBurstTimerRef.current)
+    historyBurstTimerRef.current = setTimeout(() => {
+      historyBurstTimerRef.current = null
+    }, 800)
+  }, [pushHistory])
+
+  const applySnapshot = useCallback((snap: EditorSnapshot) => {
+    skipHistoryRef.current = true
+    setBlocks(snap.blocks)
+    setTheme(snap.theme)
+    skipHistoryRef.current = false
+  }, [])
+
+  const markPendingSave = useCallback(() => {
+    dirtySinceSyncRef.current = true
+    setSaveStatus('idle')
+    if (published) setHasUnpublishedChanges(true)
+  }, [published])
+
+  const undo = useCallback(() => {
+    if (undoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToUndo'))
+      return
+    }
+    redoStackRef.current.push(cloneSnapshot())
+    const prev = undoStackRef.current.pop()!
+    applySnapshot(prev)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  const redo = useCallback(() => {
+    if (redoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToRedo'))
+      return
+    }
+    undoStackRef.current.push(cloneSnapshot())
+    const next = redoStackRef.current.pop()!
+    applySnapshot(next)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [undo, redo])
+
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null
   const fontFamily = theme?.font_family ?? 'Inter'
   const headingFont = theme?.heading_font_family ?? 'Inter'
   const navbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig = theme?.footer_config ?? defaultFooterConfig
+  const themeTokens = resolveThemeTokens(theme)
   const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
 
-  const canvasPreviewLayout: PreviewLayout = viewMode === 'mobile' ? 'mobile' : 'desktop'
+  const canvasPreviewLayout: PreviewLayout =
+    viewMode === 'mobile'
+      ? 'mobile'
+      : isMobileDevice
+        ? 'desktop'
+        : 'responsive'
 
   const fitDesktopZoom = canvasWidth > 0
     ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
     : 1
   const displayDesktopZoom = fitDesktopZoom * desktopZoom
-  const showDesktopZoomControls = isMobileDevice && viewMode === 'desktop' && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+  const useFixedDesktopCanvas = isMobileDevice && viewMode === 'desktop'
+  const showDesktopZoomControls = useFixedDesktopCanvas && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)')
@@ -584,45 +708,102 @@ export function EditorShell({
     setRightPanel('theme')
   }
 
-  // ── Debounced Theme & Publishing saving ─────────────────────────────────────
+  // ── Debounced Theme, Navbar, Footer & Publishing saving ───────────────────
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveNavbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleThemeChange = useCallback((updated: Partial<ThemeSettings>) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, ...updated } : { ...defaultThemeSettings, business_id: business.id, id: '', ...updated } as ThemeSettings
       if (saveThemeTimer.current) clearTimeout(saveThemeTimer.current)
       saveThemeTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         saveThemeAction(business.id, {
           primary_color: next.primary_color,
           background_color: next.background_color,
+          text_color: next.text_color ?? defaultThemeSettings.text_color,
           font_family: next.font_family,
           heading_font_family: next.heading_font_family || 'Inter',
-        }).then(() => {
-          setHasUnpublishedChanges(true)
-        }).catch(err => toast.error('Failed to save theme: ' + String(err)))
+        }).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save theme')
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save theme: ' + String(err))
+        })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
 
-  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleNavbarChange = useCallback((updated: NavbarConfig) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, navbar_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', navbar_config: updated } as ThemeSettings
+      if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
+      saveNavbarTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
+        saveNavbarAction(business.id, updated).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save navbar: ' + res.error)
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save navbar: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
+
+  const handleFooterChange = useCallback((updated: FooterConfig) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, footer_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings
+      if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
+      saveFooterTimer.current = setTimeout(() => {
+        saveFooterAction(business.id, updated).then(res => {
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save footer: ' + res.error)
+        }).catch(err => {
+          toast.error('Failed to save footer: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
+
   const handlePublishingChange = useCallback((updated: Partial<PublishingSettings>) => {
+    markPendingSave()
     setPublishingSettings(prev => {
       const next = prev ? { ...prev, ...updated } : { business_id: business.id, ...updated } as PublishingSettings
       if (savePubTimer.current) clearTimeout(savePubTimer.current)
       savePubTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         savePublishingSettingsAction(business.id, updated)
           .then(res => {
             if (res.success) {
-              setHasUnpublishedChanges(true)
+              setSaveStatus('saved')
             } else {
+              setSaveStatus('idle')
               toast.error(res.error)
             }
           })
-          .catch(err => toast.error('Failed to save settings: ' + String(err)))
+          .catch(err => {
+            setSaveStatus('idle')
+            toast.error('Failed to save settings: ' + String(err))
+          })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave])
 
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
@@ -645,7 +826,7 @@ export function EditorShell({
       const res = await savePageBlocksAction(business.id, blocksToSave)
       if (res.success) {
         setSaveStatus('saved')
-        setHasUnpublishedChanges(true)
+        if (published) setHasUnpublishedChanges(true)
       } else {
         setSaveStatus('idle')
         console.error('Failed to auto-save:', res.error)
@@ -654,7 +835,7 @@ export function EditorShell({
       setSaveStatus('idle')
       console.error('Save error:', e)
     }
-  }, [business.id])
+  }, [business.id, published])
 
   const triggerAutoSave = useCallback((newBlocks: PageBlock[]) => {
     setSaveStatus('idle')
@@ -675,14 +856,17 @@ export function EditorShell({
 
   // ── Block mutations ───────────────────────────────────────────────────────
   function addBlock(type: BlockType) {
+    pushHistory()
+    markPendingSave()
+    const config = getDefaultConfig(type) as PageBlock['config']
     const newBlock: PageBlock = {
       id: makeId(),
       business_id: business.id,
       type,
       sort_order: blocks.length,
       visible: true,
-      config: getDefaultConfig(type) as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      config,
+      spacing: getInitialBlockSpacing(type, config),
       custom_css: '',
     }
     setBlocks(prev => [...prev, newBlock])
@@ -690,6 +874,8 @@ export function EditorShell({
   }
 
   function deleteBlock(id: string) {
+    pushHistory()
+    markPendingSave()
     const next = blocks.filter(b => b.id !== id)
     setBlocks(next)
     if (selectedId === id) setSelectedId(next[0]?.id ?? null)
@@ -698,6 +884,8 @@ export function EditorShell({
   function duplicateBlock(id: string) {
     const original = blocks.find(b => b.id === id)
     if (!original) return
+    pushHistory()
+    markPendingSave()
     const idx = blocks.findIndex(b => b.id === id)
     const copy: PageBlock = { ...original, id: makeId() }
     setBlocks(prev => [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)])
@@ -705,10 +893,14 @@ export function EditorShell({
   }
 
   function toggleVisible(id: string) {
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
   function updateBlock(updated: PageBlock) {
+    scheduleHistorySnapshot()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b))
   }
 
@@ -721,6 +913,8 @@ export function EditorShell({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => {
       const oldIdx = prev.findIndex(b => b.id === active.id)
       const newIdx = prev.findIndex(b => b.id === over.id)
@@ -732,6 +926,8 @@ export function EditorShell({
   function applyTemplate(templateId: string) {
     const template = PAGE_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
+    pushHistory()
+    markPendingSave()
     const newBlocks: PageBlock[] = template.blocks.map((tb, i) => ({
       id: makeId(),
       business_id: business.id,
@@ -742,7 +938,10 @@ export function EditorShell({
         ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
         ...(tb.config ?? {}),
       } as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      spacing: getInitialBlockSpacing(tb.type, {
+        ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
+        ...(tb.config ?? {}),
+      } as PageBlock['config']),
       custom_css: '',
     }))
     setBlocks(newBlocks)
@@ -767,7 +966,8 @@ export function EditorShell({
       if (res.success) {
         setPublished(state)
         setPublishingSettings(res.data)
-        if (state) setHasUnpublishedChanges(false)
+        dirtySinceSyncRef.current = false
+        setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
         toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
       } else {
         toast.error(res.error)
@@ -888,7 +1088,7 @@ export function EditorShell({
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
+              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} brandColor={themeTokens.brandColor} onChange={updateBlock} />
           </div>
         </>
       ) : activeRightPanel === 'navbar' ? (
@@ -902,7 +1102,7 @@ export function EditorShell({
               config={navbarConfig}
               businessId={business.id}
               blocks={blocks}
-              onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
+              onChange={handleNavbarChange}
             />
           </div>
         </>
@@ -915,7 +1115,7 @@ export function EditorShell({
           <div className="flex-1 overflow-y-auto p-4">
             <FooterSettings
               config={footerConfig}
-              onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
+              onChange={handleFooterChange}
               businessId={business.id}
             />
           </div>
@@ -967,7 +1167,6 @@ export function EditorShell({
           saveStatus={saveStatus}
           onPublish={handlePublish}
           publishing={publishing}
-          onSaveNow={saveNow}
           onTogglePreview={() => setIsPreviewMode(true)}
         />
       )}
@@ -1083,18 +1282,23 @@ export function EditorShell({
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
                   viewMode === 'mobile'
                     ? 'w-[375px] rounded-[32px]'
-                    : 'rounded-xl',
+                    : useFixedDesktopCanvas
+                      ? 'rounded-xl'
+                      : 'w-full rounded-xl',
                   (isPreviewMode || viewMode === 'mobile') && 'overflow-hidden',
                 )}
                 style={{
                   fontFamily: `'${fontFamily}', sans-serif`,
-                  ...(viewMode === 'desktop'
+                  ...buildThemeStyle(theme),
+                  ...(viewMode === 'desktop' && useFixedDesktopCanvas
                     ? {
                         width: CANVAS_DESKTOP_WIDTH,
                         maxWidth: 'none',
                         ...(displayDesktopZoom < 1 ? { zoom: displayDesktopZoom } : {}),
                       }
-                    : {}),
+                    : viewMode === 'desktop'
+                      ? { maxWidth: CANVAS_MAX_WIDTH }
+                      : {}),
                   ...(isPreviewMode
                     ? { height: 'min(calc(100dvh - 8.5rem), 860px)' }
                     : {}),
@@ -1146,6 +1350,8 @@ export function EditorShell({
                       menuGridData={menuGridData}
                       previewLayout={canvasPreviewLayout}
                       interactive={isPreviewMode}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>

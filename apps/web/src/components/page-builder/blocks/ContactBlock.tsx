@@ -168,10 +168,27 @@ export function ContactSettings({
           </div>
         </div>
         <div className="flex gap-1.5">
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#f8f8f8', text_color: '#111111' })}
-            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors">{t('contactBlock.light')}</button>
-          <button type="button" onClick={() => onChange({ ...config, background_color: '#1a1a2e', text_color: '#ffffff' })}
-            className="px-2 py-1 rounded border border-border text-[11px] hover:border-foreground/30 transition-colors bg-gray-900 text-white">{t('contactBlock.dark')}</button>
+          {([
+            { bg: '#f8f8f8', text: '#111111', label: t('contactBlock.light') },
+            { bg: '#1a1a2e', text: '#ffffff', label: t('contactBlock.dark') },
+          ] as { bg: string; text: string; label: string }[]).map(preset => {
+            const active = config.background_color === preset.bg && config.text_color === preset.text
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => onChange({ ...config, background_color: preset.bg, text_color: preset.text })}
+                className={cn(
+                  'px-2 py-1 rounded border text-[11px] transition-colors',
+                  active
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border hover:border-foreground/30'
+                )}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 

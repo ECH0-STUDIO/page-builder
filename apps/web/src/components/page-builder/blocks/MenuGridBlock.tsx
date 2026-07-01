@@ -81,9 +81,17 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
   }
 
   const allSelected = config.category_ids.length === 0
+  const isCustomMode = config.selection_mode === 'custom_items'
+  const selectedItemIds = config.item_ids || []
 
   // Number of categories that will actually appear on the live page
-  const activeCatCount = allSelected ? categories.length : config.category_ids.length
+  const activeCatCount = isCustomMode
+    ? new Set(
+        items
+          .filter(item => selectedItemIds.includes(item.id))
+          .map(item => item.category_id),
+      ).size
+    : allSelected ? categories.length : config.category_ids.length
   // Tabs are auto-forced when 2+ categories are displayed (user can't turn them off)
   const tabsAutoForced = activeCatCount >= 2
 
@@ -372,6 +380,29 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
               />
             </div>
           ))}
+
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="menu-toggle-pagination" className="text-xs cursor-pointer">{t('menuGridBlock.pagination')}</Label>
+            <Switch
+              id="menu-toggle-pagination"
+              checked={!!config.pagination_enabled}
+              onCheckedChange={v => set('pagination_enabled', v)}
+            />
+          </div>
+          {config.pagination_enabled && (
+            <div className="space-y-1.5 pl-1">
+              <Label htmlFor="menu-items-per-page" className="text-xs">{t('menuGridBlock.itemsPerPage')}</Label>
+              <Input
+                id="menu-items-per-page"
+                type="number"
+                min={1}
+                max={100}
+                value={config.items_per_page ?? 12}
+                onChange={e => set('items_per_page', Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 12)))}
+                className="h-8 text-xs"
+              />
+            </div>
+          )}
         </div>
       </div>
 
