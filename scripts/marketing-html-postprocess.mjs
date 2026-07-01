@@ -70,6 +70,9 @@ export function rewriteMarketingHtml(html, pageSlugs) {
   out = out.replace(/<div class="w-dyn-empty">\s*<div>No items found\.<\/div>\s*<\/div>/gi, '')
   out = out.replace(/<div class="temlis_component">[\s\S]*?<\/div>\s*<\/div>\s*(?=<\/div>\s*<script)/i, '')
 
+  out = out.replace(/\/marketing\/images\/favicon\.png/g, '/logo-icon.png')
+  out = out.replace(/\/marketing\/images\/webclip\.png/g, '/logo-icon.png')
+
   return out
 }
 

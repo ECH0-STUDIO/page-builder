@@ -101,8 +101,9 @@ Share the sheet: **Anyone with the link can view**.
 | Name | Post title |
 | Slug | URL: `/blog/{slug}` |
 | Archived / Draft | Rows with `TRUE` are skipped |
+| Collection ID | `vi` or `en` — language variant for the row |
+| Item ID | Same ID links translations of one post |
 | Published On | **Required** — only rows with a publish date appear on the site |
-| Item ID | Stable identifier from Webflow (stored on each post) |
 | Date / Published On | Display date in the metadata row |
 | Thumbnail | Hero + card image (absolute URL) |
 | Summary | Excerpt and meta description |
@@ -110,6 +111,10 @@ Share the sheet: **Anyone with the link can view**.
 | Social First / Second / Third | Share links (hidden if empty) |
 | Category / Reading | Metadata row + card pill |
 | Overview | Rich HTML body |
+
+**Language:** Marketing uses the shared `NEXT_LOCALE` cookie (`vi` / `en`). A **VI | EN** switcher appears in the navbar. The same cookie is set on `.eateryvn.com` so `app.eateryvn.com` inherits the marketing language when users sign in.
+
+Sheet rows with the same **Item ID** are translations. **Collection ID** must be `vi` or `en`. The blog language switcher jumps to the matching slug in the other language when available.
 
 **Empty fields:** the connected UI block is hidden (Webflow `.hide` class).
 

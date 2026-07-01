@@ -1,7 +1,12 @@
+import type { SupportedLocale } from '@/i18n/locale'
+import { collectionIdToLocale } from '@/lib/marketing-locale'
+
 export type BlogPost = {
   slug: string
-  /** Webflow Item ID — stable identifier from the sheet export. */
+  /** Webflow Item ID — stable identifier across language variants. */
   itemId: string
+  /** Webflow Collection ID locale: vi | en */
+  locale: SupportedLocale
   title: string
   /** Short summary (Webflow "Summary" column). */
   summary: string
@@ -28,16 +33,6 @@ type GvizCell = { v: string | number | null; f?: string } | null
 /** Default sheet for Eatery marketing blog (override with BLOG_GOOGLE_SHEET_ID). */
 export const DEFAULT_BLOG_SHEET_ID = '1tZQ1YEW-NnShU7yTZqNYRhO13EpBxwyOqAVqLvgNdUg'
 
-/**
- * Google Sheet: Webflow CMS export (row 1 = header).
- *
- * Expected columns: Name, Slug, Archived, Draft, Published On, Date,
- * Thumbnail, Summary, Avatar, Author, Role, Social First/Second/Third,
- * Category, Reading, Overview
- *
- * Share sheet: Anyone with the link can view.
- * Set BLOG_GOOGLE_SHEET_ID in env to override the default sheet.
- */
 function getSheetId(): string {
   return process.env.BLOG_GOOGLE_SHEET_ID?.trim() || DEFAULT_BLOG_SHEET_ID
 }
@@ -68,20 +63,49 @@ function toIsoDate(publishedOn: string, date: string): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function toDisplayDate(publishedOn: string, date: string): string {
+function toDisplayDate(publishedOn: string, date: string, locale: SupportedLocale): string {
   const raw = date || publishedOn
   if (!raw) return ''
   const parsed = parseGvizDate(raw)
   if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
     const d = new Date(`${parsed}T12:00:00`)
     if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })
+      return d.toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
     }
   }
   return parsed
 }
 
-function parseGvizRows(json: {
+function rowToPost(row: Record<string, string>): BlogPost {
+  const summary = row.Summary ?? ''
+  const locale = collectionIdToLocale(row['Collection ID'] ?? '') ?? 'vi'
+  return {
+    slug: row.Slug.trim(),
+    itemId: row['Item ID']?.trim() ?? '',
+    locale,
+    title: row.Name.trim(),
+    summary,
+    excerpt: summary,
+    publishedAt: toIsoDate(row['Published On'] ?? '', row.Date ?? ''),
+    date: toDisplayDate(row['Published On'] ?? '', row.Date ?? '', locale),
+    author: row.Author?.trim() ?? '',
+    role: row.Role?.trim() ?? '',
+    avatar: row.Avatar?.trim() ?? '',
+    thumbnail: row.Thumbnail?.trim() ?? '',
+    category: row.Category?.trim() ?? '',
+    reading: row.Reading?.trim() ?? '',
+    socialFirst: row['Social First']?.trim() ?? '',
+    socialSecond: row['Social Second']?.trim() ?? '',
+    socialThird: row['Social Third']?.trim() ?? '',
+    body: row.Overview?.trim() ?? '',
+  }
+}
+
+function parseAllPosts(json: {
   table: {
     rows: { c: GvizCell[] }[]
   }
@@ -105,53 +129,63 @@ function parseGvizRows(json: {
     .filter((row) => row.Archived?.toUpperCase() !== 'TRUE')
     .filter((row) => row.Draft?.toUpperCase() !== 'TRUE')
     .filter((row) => Boolean(row['Published On']?.trim()))
-    .map((row) => {
-      const summary = row.Summary ?? ''
-      return {
-        slug: row.Slug.trim(),
-        itemId: row['Item ID']?.trim() ?? '',
-        title: row.Name.trim(),
-        summary,
-        excerpt: summary,
-        publishedAt: toIsoDate(row['Published On'] ?? '', row.Date ?? ''),
-        date: toDisplayDate(row['Published On'] ?? '', row.Date ?? ''),
-        author: row.Author?.trim() ?? '',
-        role: row.Role?.trim() ?? '',
-        avatar: row.Avatar?.trim() ?? '',
-        thumbnail: row.Thumbnail?.trim() ?? '',
-        category: row.Category?.trim() ?? '',
-        reading: row.Reading?.trim() ?? '',
-        socialFirst: row['Social First']?.trim() ?? '',
-        socialSecond: row['Social Second']?.trim() ?? '',
-        socialThird: row['Social Third']?.trim() ?? '',
-        body: row.Overview?.trim() ?? '',
-      }
-    })
+    .map(rowToPost)
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
 }
 
-export async function getBlogPosts(): Promise<BlogPost[]> {
+let cachedPosts: BlogPost[] | null = null
+let cacheTime = 0
+const CACHE_MS = 60_000
+
+async function fetchAllPosts(): Promise<BlogPost[]> {
+  const now = Date.now()
+  if (cachedPosts && now - cacheTime < CACHE_MS) return cachedPosts
+
   const sheetId = getSheetId()
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`)
 
+  const text = await res.text()
+  const jsonText = text
+    .replace(/^\/\*[\s\S]*?\*\/\s*/, '')
+    .replace(/^.*google\.visualization\.Query\.setResponse\(/, '')
+    .replace(/\);?\s*$/, '')
+  const json = JSON.parse(jsonText)
+  cachedPosts = parseAllPosts(json)
+  cacheTime = now
+  return cachedPosts
+}
+
+export async function getBlogPosts(locale: SupportedLocale): Promise<BlogPost[]> {
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`)
-
-    const text = await res.text()
-    const jsonText = text
-      .replace(/^\/\*[\s\S]*?\*\/\s*/, '')
-      .replace(/^.*google\.visualization\.Query\.setResponse\(/, '')
-      .replace(/\);?\s*$/, '')
-    const json = JSON.parse(jsonText)
-    return parseGvizRows(json)
+    const posts = await fetchAllPosts()
+    return posts.filter((post) => post.locale === locale)
   } catch (err) {
-    console.error('getBlogPosts: failed to load sheet', sheetId, err)
+    console.error('getBlogPosts: failed to load sheet', getSheetId(), err)
     return []
   }
 }
 
-export async function getBlogPost(slug: string): Promise<BlogPost | null> {
-  const posts = await getBlogPosts()
+export async function getAllBlogPosts(): Promise<BlogPost[]> {
+  try {
+    return await fetchAllPosts()
+  } catch (err) {
+    console.error('getAllBlogPosts: failed to load sheet', getSheetId(), err)
+    return []
+  }
+}
+
+export async function getBlogPost(slug: string, locale: SupportedLocale): Promise<BlogPost | null> {
+  const posts = await getBlogPosts(locale)
   return posts.find((p) => p.slug === slug) ?? null
+}
+
+export async function getBlogPostByItemId(
+  itemId: string,
+  locale: SupportedLocale,
+): Promise<BlogPost | null> {
+  if (!itemId) return null
+  const posts = await getBlogPosts(locale)
+  return posts.find((p) => p.itemId === itemId) ?? null
 }

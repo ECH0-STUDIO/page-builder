@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { isSupportedLocale } from '@/i18n/locale'
+import { currencyForLocale, localeCookieOptions } from '@/lib/locale-cookie'
 import {
   appPath,
   getAppHostname,
@@ -39,6 +41,17 @@ export async function proxy(request: NextRequest) {
   const country = request.headers.get('x-vercel-ip-country') || 'US'
   const langCookie = request.cookies.get('NEXT_LOCALE')?.value
   const currencyCookie = request.cookies.get('NEXT_CURRENCY')?.value
+  const cookieOptions = localeCookieOptions()
+
+  const langParam = request.nextUrl.searchParams.get('lang')
+  if (isSupportedLocale(langParam)) {
+    const cleanUrl = request.nextUrl.clone()
+    cleanUrl.searchParams.delete('lang')
+    const response = NextResponse.redirect(cleanUrl)
+    response.cookies.set('NEXT_LOCALE', langParam, cookieOptions)
+    response.cookies.set('NEXT_CURRENCY', currencyForLocale(langParam), cookieOptions)
+    return response
+  }
 
   if (!langCookie) {
     const countryLangMap: Record<string, string> = {
@@ -54,10 +67,14 @@ export async function proxy(request: NextRequest) {
       MY: 'ms', SG: 'ms', BN: 'ms',
     }
     const defaultLang = countryLangMap[country] ?? 'en'
-    supabaseResponse.cookies.set('NEXT_LOCALE', defaultLang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+    const locale = isSupportedLocale(defaultLang) ? defaultLang : 'en'
+    supabaseResponse.cookies.set('NEXT_LOCALE', locale, cookieOptions)
+    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale(locale), cookieOptions)
   }
 
-  if (!currencyCookie) {
+  if (!currencyCookie && langCookie && isSupportedLocale(langCookie)) {
+    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale(langCookie), cookieOptions)
+  } else if (!currencyCookie) {
     const countryCurrencyMap: Record<string, string> = {
       VN: 'VND', TH: 'THB', JP: 'JPY', KR: 'KRW',
       ID: 'IDR', MY: 'MYR', SG: 'SGD',
@@ -65,7 +82,7 @@ export async function proxy(request: NextRequest) {
       FR: 'EUR', DE: 'EUR', ES: 'EUR', AT: 'EUR', BE: 'EUR',
     }
     const defaultCurrency = countryCurrencyMap[country] ?? 'USD'
-    supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+    supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, cookieOptions)
   }
 
   supabaseResponse.headers.set('x-user-country', country)

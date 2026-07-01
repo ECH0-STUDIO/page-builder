@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { getAppBaseUrl, getMarketingBaseUrl } from '@/lib/site-urls'
-import { getBlogPosts } from '@/lib/blog'
+import { getAllBlogPosts } from '@/lib/blog'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const marketingBase = getMarketingBaseUrl()
@@ -17,13 +17,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let blogPages: MetadataRoute.Sitemap = []
   try {
-    const posts = await getBlogPosts()
-    blogPages = posts.map((post) => ({
-      url: `${marketingBase}/blog/${post.slug}`,
-      lastModified: new Date(post.publishedAt),
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    }))
+    const posts = await getAllBlogPosts()
+    const seen = new Set<string>()
+    for (const post of posts) {
+      if (seen.has(post.slug)) continue
+      seen.add(post.slug)
+      blogPages.push({
+        url: `${marketingBase}/blog/${post.slug}`,
+        lastModified: new Date(post.publishedAt),
+        changeFrequency: 'monthly' as const,
+        priority: 0.6,
+      })
+    }
   } catch {
     /* ignore */
   }

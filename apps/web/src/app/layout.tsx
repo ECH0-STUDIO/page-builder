@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   },
   description:
     'Build a beautiful digital menu page, generate QR codes, and export print menus — all in minutes.',
+  icons: {
+    icon: '/logo-icon.png',
+    apple: '/logo-icon.png',
+  },
 }
 
 export default function RootLayout({

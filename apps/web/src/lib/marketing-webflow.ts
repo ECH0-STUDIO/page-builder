@@ -118,6 +118,10 @@ export function rewriteMarketingHtml(html: string): string {
   // Remove Temlis widget bundled in template exports
   out = out.replace(/<div class="temlis_component">[\s\S]*?<\/div>\s*<\/div>\s*(?=<\/div>\s*<script)/i, '')
 
+  // Use the same favicon as the main app
+  out = out.replace(/\/marketing\/images\/favicon\.png/g, '/logo-icon.png')
+  out = out.replace(/\/marketing\/images\/webclip\.png/g, '/logo-icon.png')
+
   return out
 }
 

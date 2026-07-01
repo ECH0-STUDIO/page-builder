@@ -8,7 +8,7 @@ type Props = { params: Promise<{ slug: string }> }
 export async function GET(request: Request, { params }: Props) {
   const { slug } = await params
   if (marketingPageExists('detail_blog')) {
-    return marketingBlogDetailHtmlResponse(slug)
+    return marketingBlogDetailHtmlResponse(slug, request)
   }
   return marketingHtmlOrRedirect('blog', '/#blog', request)
 }

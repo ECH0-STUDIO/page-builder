@@ -1,4 +1,10 @@
 import type { BlogPost } from '@/lib/blog'
+import type { SupportedLocale } from '@/i18n/locale'
+import {
+  BLOG_META_LABELS,
+  BLOG_SECTION_COPY,
+  MARKETING_BRAND_SUFFIX,
+} from '@/lib/marketing-locale'
 
 export function escapeHtml(text: string): string {
   return text
@@ -96,21 +102,53 @@ export function injectBlogCollection(html: string, posts: BlogPost[]): string {
   )
 }
 
-function fillMetadataRow(html: string, post: BlogPost): string {
+function fillMetadataRow(html: string, post: BlogPost, locale: SupportedLocale): string {
+  const labels = BLOG_META_LABELS[locale]
   const values = [post.date, post.category, post.reading]
-  let index = 0
+  const items = labels
+    .map((label, index) => {
+      const value = values[index] ?? ''
+      if (!value) {
+        return `<div cms="content-item" class="hide"><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm"></div></div>`
+      }
+      return `<div cms="content-item"><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm">${escapeHtml(value)}</div></div>`
+    })
+    .join('\n                  ')
 
   return html.replace(
-    /<div cms="content-item"([^>]*)>\s*<div class="text-base">[^<]*<\/div>\s*<div class="spacer-tiny"><\/div>\s*<div class="text-sm w-dyn-bind-empty">[^<]*<\/div>\s*<\/div>/g,
-    (full, attrs: string) => {
-      const label = full.match(/<div class="text-base">([^<]*)<\/div>/)?.[1] ?? ''
-      const value = values[index++] ?? ''
-      if (!value) {
-        return `<div cms="content-item"${attrs} class="hide"><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm"></div></div>`
-      }
-      return `<div cms="content-item"${attrs}><div class="text-base">${label}</div><div class="spacer-tiny"></div><div class="text-sm">${escapeHtml(value)}</div></div>`
-    },
+    /<div class="hero-cms_data">[\s\S]*?<\/div>\s*(?=<div cms="content-item" class="text-rich-text)/,
+    `<div class="hero-cms_data">\n                  ${items}\n                </div>\n                `,
   )
+}
+
+function injectBlogSectionCopy(html: string, locale: SupportedLocale): string {
+  const copy = BLOG_SECTION_COPY[locale]
+  let out = html
+  out = out.replace(
+    /<section id="blog"[\s\S]*?<div animation="badge"[^>]*>\s*<div>[^<]*<\/div>/,
+    (match) => match.replace(/<div>[^<]*<\/div>/, `<div>${copy.badge}</div>`),
+  )
+  out = out.replace(
+    /(<section id="blog"[\s\S]*?<h2[^>]*>)[^<]*(<\/h2>)/,
+    `$1${escapeHtml(copy.title)}$2`,
+  )
+  out = out.replace(
+    /(<section id="blog"[\s\S]*?animation="description"[^>]*>)[^<]*(<\/div>)/,
+    `$1${escapeHtml(copy.description)}$2`,
+  )
+  out = out.replace(
+    /(<section class="section_blog">[\s\S]*?<div animation="badge"[^>]*>\s*<div>)[^<]*(<\/div>)/,
+    `$1${copy.badge}$2`,
+  )
+  out = out.replace(
+    /(<section class="section_blog">[\s\S]*?<h2[^>]*>)[^<]*(<\/h2>)/,
+    `$1${escapeHtml(copy.title)}$2`,
+  )
+  out = out.replace(
+    /(<section class="section_blog">[\s\S]*?animation="description"[^>]*>)[^<]*(<\/div>)/,
+    `$1${escapeHtml(copy.description)}$2`,
+  )
+  return out
 }
 
 function setSocialLinks(html: string, links: [string, string, string]): string {
@@ -151,9 +189,15 @@ function replaceHeroImageBlock(html: string, post: BlogPost): string {
   )
 }
 
-export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts: BlogPost[]): string {
-  let out = html
-  const pageTitle = `${post.title} | Eatery VN`
+export function renderBlogDetailHtml(
+  html: string,
+  post: BlogPost,
+  relatedPosts: BlogPost[],
+  locale: SupportedLocale,
+): string {
+  let out = injectBlogSectionCopy(html, locale)
+  const pageTitle = `${post.title} | ${MARKETING_BRAND_SUFFIX[locale]}`
+  const shareLabel = BLOG_SECTION_COPY[locale].shareArticle
 
   out = out.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(pageTitle)}</title>`)
   out = setMetaContent(out, 'name', 'description', post.summary)
@@ -202,9 +246,12 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
   )
 
   out = setSocialLinks(out, [post.socialFirst, post.socialSecond, post.socialThird])
+  out = out.replace(
+    /<div class="text-sm text-color-secondary">(?:Share article|Chia sẻ bài viết)<\/div>/,
+    `<div class="text-sm text-color-secondary">${escapeHtml(shareLabel)}</div>`,
+  )
 
-  // Metadata row + body (fill by row order so EN/VI template labels both work)
-  out = fillMetadataRow(out, post)
+  out = fillMetadataRow(out, post, locale)
 
   out = out.replace(
     /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext"><\/div>/,
@@ -224,12 +271,21 @@ export function renderBlogDetailHtml(html: string, post: BlogPost, relatedPosts:
   return out
 }
 
-export function renderMarketingIndexHtml(html: string, posts: BlogPost[]): string {
-  return injectBlogCarousel(html, posts)
+export function renderMarketingIndexHtml(
+  html: string,
+  posts: BlogPost[],
+  locale: SupportedLocale,
+): string {
+  return injectBlogCarousel(injectBlogSectionCopy(html, locale), posts)
 }
 
-export function renderBlogListHtml(html: string, posts: BlogPost[]): string {
-  let out = injectBlogCollection(html, posts)
+export function renderBlogListHtml(
+  html: string,
+  posts: BlogPost[],
+  locale: SupportedLocale,
+): string {
+  let out = injectBlogSectionCopy(html, locale)
+  out = injectBlogCollection(out, posts)
   out = out.replace(/<div class="w-dyn-empty">[\s\S]*?<\/div>/gi, '')
   return out
 }
