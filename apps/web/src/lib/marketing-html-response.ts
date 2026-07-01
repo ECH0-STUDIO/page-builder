@@ -7,7 +7,7 @@ import {
   renderBlogListHtml,
   renderMarketingIndexHtml,
 } from '@/lib/marketing-blog-html'
-import { getMarketingLocaleFromRequest } from '@/lib/marketing-locale'
+import { getMarketingLocaleFromRequest, marketingCanonicalPath, marketingPathForLocale, marketingRedirectUrl } from '@/lib/marketing-locale'
 import { applyMarketingSeo, resolveMarketingPageSlug, type MarketingSeoOverrides } from '@/lib/marketing-seo'
 import { loadMarketingHtmlDocument, marketingPageExists } from '@/lib/marketing-webflow'
 
@@ -33,8 +33,9 @@ function finalizeMarketingHtml(
 ): string {
   const pathname = pathnameFromRequest(request)
   const pageSlug = resolveMarketingPageSlug(pathname)
+  const canonicalPath = options?.seo?.canonicalPath ?? marketingCanonicalPath(pathname, locale)
   const withSeo = applyMarketingSeo(html, pageSlug, locale, {
-    canonicalPath: options?.seo?.canonicalPath ?? pathname,
+    canonicalPath,
     ...options?.seo,
   })
   return injectMarketingChrome(withSeo, locale, pathname, options?.localePaths)
@@ -87,7 +88,12 @@ export async function marketingBlogDetailHtmlResponse(
     if (match?.itemId) {
       const localized = await getBlogPostByItemId(match.itemId, locale)
       if (localized) {
-        return NextResponse.redirect(new URL(`/blog/${localized.slug}`, request.url))
+        return NextResponse.redirect(
+          marketingRedirectUrl(
+            request,
+            marketingPathForLocale(`/blog/${localized.slug}`, locale),
+          ),
+        )
       }
     }
     return new Response('Not found', { status: 404 })
@@ -103,16 +109,19 @@ export async function marketingBlogDetailHtmlResponse(
 
   const otherLocale: SupportedLocale = locale === 'vi' ? 'en' : 'vi'
   const alternate = post.itemId ? await getBlogPostByItemId(post.itemId, otherLocale) : null
-  const localePaths = alternate
-    ? { [otherLocale]: `/blog/${alternate.slug}` }
-    : undefined
+  const viSlug = locale === 'vi' ? post.slug : alternate?.slug ?? post.slug
+  const enSlug = locale === 'en' ? post.slug : alternate?.slug ?? post.slug
+  const localePaths = {
+    vi: marketingPathForLocale(`/blog/${viSlug}`, 'vi'),
+    en: marketingPathForLocale(`/blog/${enSlug}`, 'en'),
+  }
 
   return new Response(
     finalizeMarketingHtml(rendered, request, locale, {
       localePaths,
       seo: {
         blogPost: post,
-        canonicalPath: `/blog/${post.slug}`,
+        canonicalPath: marketingPathForLocale(`/blog/${post.slug}`, locale),
       },
     }),
     { headers: HTML_HEADERS },

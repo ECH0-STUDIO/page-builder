@@ -44,14 +44,27 @@ function buildBlogCard(post: BlogPost, itemClass: string): string {
 const BLOG_CAROUSEL_LIST_RE =
   /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>(?=\s*<\/div>\s*<div class="arrows_group)/
 
+const BLOG_CAROUSEL_LIST_RE_ALT =
+  /<div role="list" class="blog_list swiper-wrapper w-dyn-items">[\s\S]*?<\/div>(?=\s*<\/div>\s*<\/div>\s*<div class="arrows_group)/
+
+function replaceBlogCarouselList(html: string, replacement: string): string {
+  if (BLOG_CAROUSEL_LIST_RE.test(html)) {
+    return html.replace(BLOG_CAROUSEL_LIST_RE, replacement)
+  }
+  if (BLOG_CAROUSEL_LIST_RE_ALT.test(html)) {
+    return html.replace(BLOG_CAROUSEL_LIST_RE_ALT, replacement)
+  }
+  return html
+}
+
 export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
-  if (!BLOG_CAROUSEL_LIST_RE.test(html)) {
+  if (!BLOG_CAROUSEL_LIST_RE.test(html) && !BLOG_CAROUSEL_LIST_RE_ALT.test(html)) {
     return html
   }
 
   if (posts.length === 0) {
-    return html.replace(
-      BLOG_CAROUSEL_LIST_RE,
+    return replaceBlogCarouselList(
+      html,
       '<div role="list" class="blog_list swiper-wrapper w-dyn-items"></div>',
     )
   }
@@ -59,8 +72,8 @@ export function injectBlogCarousel(html: string, posts: BlogPost[]): string {
   const items = posts
     .map((post) => buildBlogCard(post, 'blog-slide swiper-slide w-dyn-item'))
     .join('\n                    ')
-  return html.replace(
-    BLOG_CAROUSEL_LIST_RE,
+  return replaceBlogCarouselList(
+    html,
     `<div role="list" class="blog_list swiper-wrapper w-dyn-items">\n                    ${items}\n                  </div>`,
   )
 }
@@ -112,6 +125,8 @@ function fillMetadataRow(html: string, post: BlogPost, locale: SupportedLocale):
 function injectBlogSectionCopy(html: string, locale: SupportedLocale): string {
   const copy = BLOG_SECTION_COPY[locale]
   let out = html
+
+  // Homepage blog section (`id="blog"`)
   out = out.replace(
     /<section id="blog"[\s\S]*?<div animation="badge"[^>]*>\s*<div>[^<]*<\/div>/,
     (match) => match.replace(/<div>[^<]*<\/div>/, `<div>${copy.badge}</div>`),
@@ -121,19 +136,21 @@ function injectBlogSectionCopy(html: string, locale: SupportedLocale): string {
     `$1${escapeHtml(copy.title)}$2`,
   )
   out = out.replace(
-    /(<section id="blog"[\s\S]*?animation="description"[^>]*>)[^<]*(<\/div>)/,
+    /(<section id="blog"[\s\S]*?<div animation="description"[^>]*>)[^<]*(<\/div>)/,
     `$1${escapeHtml(copy.description)}$2`,
   )
+
+  // Related-posts carousel on article pages (`section_blog` without `id="blog"`)
   out = out.replace(
-    /(<section class="section_blog">[\s\S]*?<div animation="badge"[^>]*>\s*<div>)[^<]*(<\/div>)/,
-    `$1${copy.badge}$2`,
+    /<section class="section_blog">[\s\S]*?<div animation="badge"[^>]*>\s*<div>[^<]*<\/div>/,
+    (match) => match.replace(/<div>[^<]*<\/div>/, `<div>${copy.badge}</div>`),
   )
   out = out.replace(
     /(<section class="section_blog">[\s\S]*?<h2[^>]*>)[^<]*(<\/h2>)/,
     `$1${escapeHtml(copy.title)}$2`,
   )
   out = out.replace(
-    /(<section class="section_blog">[\s\S]*?animation="description"[^>]*>)[^<]*(<\/div>)/,
+    /(<section class="section_blog">[\s\S]*?<div animation="description"[^>]*>)[^<]*(<\/div>)/,
     `$1${escapeHtml(copy.description)}$2`,
   )
   return out

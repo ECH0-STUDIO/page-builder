@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers'
 import type { SupportedLocale } from '@/i18n/locale'
 import { isSupportedLocale, LOCALE_LABELS } from '@/i18n/locale'
+import { isMarketingPath } from '@/lib/site-urls'
 
 export const MARKETING_LOCALE_COOKIE = 'NEXT_LOCALE'
+export const MARKETING_LANG_PARAM = 'lang'
 
 export const BLOG_META_LABELS: Record<SupportedLocale, [string, string, string]> = {
   vi: ['Ngày đăng', 'Danh mục', 'Thời gian đọc'],
@@ -34,8 +36,46 @@ export const MARKETING_BRAND_SUFFIX: Record<SupportedLocale, string> = {
   en: 'Eatery',
 }
 
+export function isMarketingRoute(pathname: string): boolean {
+  return pathname === '/' || isMarketingPath(pathname)
+}
+
 export function resolveMarketingLocale(value: string | null | undefined): SupportedLocale {
   return isSupportedLocale(value) ? value : 'vi'
+}
+
+export function inferMarketingLocaleFromCountry(
+  country: string | null | undefined,
+  hostname?: string | null,
+): SupportedLocale {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'vi'
+  }
+  return country?.toUpperCase() === 'VN' ? 'vi' : 'en'
+}
+
+/** Vietnamese uses clean URLs; English uses `?lang=en`. */
+export function marketingPathForLocale(pathname: string, locale: SupportedLocale): string {
+  const basePath = pathname.split('?')[0] || '/'
+  if (locale === 'en') {
+    return `${basePath}?${MARKETING_LANG_PARAM}=en`
+  }
+  return basePath
+}
+
+export function marketingCanonicalPath(pathname: string, locale: SupportedLocale): string {
+  return marketingPathForLocale(pathname, locale)
+}
+
+export function resolveMarketingLocaleFromRequest(request: Request): SupportedLocale {
+  const url = new URL(request.url)
+  const langParam = url.searchParams.get(MARKETING_LANG_PARAM)
+  if (langParam === 'en') return 'en'
+  return 'vi'
+}
+
+export function getMarketingLocaleFromRequest(request: Request): SupportedLocale {
+  return resolveMarketingLocaleFromRequest(request)
 }
 
 export async function getMarketingLocaleFromCookies(): Promise<SupportedLocale> {
@@ -43,10 +83,17 @@ export async function getMarketingLocaleFromCookies(): Promise<SupportedLocale> 
   return resolveMarketingLocale(cookieStore.get(MARKETING_LOCALE_COOKIE)?.value)
 }
 
-export function getMarketingLocaleFromRequest(request: Request): SupportedLocale {
-  const cookie = request.headers.get('cookie') ?? ''
-  const match = cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)
-  return resolveMarketingLocale(match?.[1] ? decodeURIComponent(match[1]) : null)
+/** Build redirect URL using the browser host (avoids 0.0.0.0 in local dev). */
+export function marketingRedirectUrl(request: Request, pathWithQuery: string): URL {
+  const incoming = new URL(request.url)
+  const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  if (hostHeader) {
+    incoming.host = hostHeader.split(',')[0].trim()
+  }
+  if (incoming.hostname === '0.0.0.0') {
+    incoming.hostname = 'localhost'
+  }
+  return new URL(pathWithQuery.startsWith('/') ? pathWithQuery : `/${pathWithQuery}`, incoming.origin)
 }
 
 export function collectionIdToLocale(collectionId: string): SupportedLocale | null {

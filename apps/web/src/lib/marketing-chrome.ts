@@ -1,6 +1,6 @@
 import type { SupportedLocale } from '@/i18n/locale'
 import { appPath } from '@/lib/site-urls'
-import { LOCALE_LABELS } from '@/lib/marketing-locale'
+import { LOCALE_LABELS, marketingPathForLocale } from '@/lib/marketing-locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
 
 const LOCALE_SWITCHER_CSS = `<style id="marketing-locale-styles">
@@ -11,8 +11,8 @@ const LOCALE_SWITCHER_CSS = `<style id="marketing-locale-styles">
 </style>`
 
 function localeSwitchHref(locale: SupportedLocale, pathname: string): string {
-  const redirect = pathname && pathname.startsWith('/') ? pathname : '/'
-  return `/api/marketing/locale?lang=${locale}&redirect=${encodeURIComponent(redirect)}`
+  const path = pathname?.startsWith('/') ? pathname.split('?')[0] : '/'
+  return marketingPathForLocale(path, locale)
 }
 
 export function buildLocaleSwitcher(
@@ -27,7 +27,7 @@ export function buildLocaleSwitcher(
       const short = locale.toUpperCase()
       const title = LOCALE_LABELS[locale]
       const targetPath = localePaths?.[locale] ?? pathname
-      return `<a href="${localeSwitchHref(locale, targetPath)}" class="marketing-locale-link${active}" aria-label="${escapeHtml(title)}" hreflang="${locale}">${short}</a>`
+      return `<a href="${escapeHtml(localeSwitchHref(locale, targetPath))}" class="marketing-locale-link${active}" aria-label="${escapeHtml(title)}" hreflang="${locale}">${short}</a>`
     })
     .join('')
   return `<div class="marketing-locale-switcher" data-marketing-locale>${links}</div>`

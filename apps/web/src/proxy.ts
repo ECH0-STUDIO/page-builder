@@ -3,6 +3,11 @@ import { createServerClient } from '@supabase/ssr'
 import { isSupportedLocale } from '@/i18n/locale'
 import { currencyForLocale, localeCookieOptions } from '@/lib/locale-cookie'
 import {
+  inferMarketingLocaleFromCountry,
+  isMarketingRoute,
+  MARKETING_LANG_PARAM,
+} from '@/lib/marketing-locale'
+import {
   appPath,
   getAppHostname,
   getMarketingHostname,
@@ -43,33 +48,40 @@ export async function proxy(request: NextRequest) {
   const currencyCookie = request.cookies.get('NEXT_CURRENCY')?.value
   const cookieOptions = localeCookieOptions()
 
-  const langParam = request.nextUrl.searchParams.get('lang')
-  if (isSupportedLocale(langParam)) {
-    const cleanUrl = request.nextUrl.clone()
-    cleanUrl.searchParams.delete('lang')
-    const response = NextResponse.redirect(cleanUrl)
-    response.cookies.set('NEXT_LOCALE', langParam, cookieOptions)
-    response.cookies.set('NEXT_CURRENCY', currencyForLocale(langParam), cookieOptions)
-    return response
-  }
+  const { pathname, search } = request.nextUrl
+  const langParam = request.nextUrl.searchParams.get(MARKETING_LANG_PARAM)
+  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
 
-  if (!langCookie) {
-    const countryLangMap: Record<string, string> = {
-      VN: 'vi',
-      TH: 'th',
-      CN: 'zh', HK: 'zh', TW: 'zh', MO: 'zh',
-      JP: 'ja',
-      KR: 'ko',
-      FR: 'fr', BE: 'fr', CH: 'fr',
-      DE: 'de', AT: 'de',
-      ES: 'es', MX: 'es', AR: 'es', CO: 'es',
-      ID: 'id',
-      MY: 'ms', SG: 'ms', BN: 'ms',
+  if (isMarketingRoute(pathname)) {
+    if (langParam === 'en') {
+      supabaseResponse.cookies.set('NEXT_LOCALE', 'en', cookieOptions)
+      supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('en'), cookieOptions)
+    } else if (langParam === 'vi') {
+      const cleanUrl = request.nextUrl.clone()
+      cleanUrl.searchParams.delete(MARKETING_LANG_PARAM)
+      const response = NextResponse.redirect(cleanUrl)
+      response.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+      response.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
+      return response
+    } else {
+      // Clean URL (no ?lang=) is always Vietnamese.
+      if (!langCookie || langCookie !== 'vi') {
+        supabaseResponse.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+        supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
+      }
+      // First visit from outside Vietnam → send to English URL.
+      if (!langCookie && inferMarketingLocaleFromCountry(country, host) === 'en') {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.searchParams.set(MARKETING_LANG_PARAM, 'en')
+        const response = NextResponse.redirect(redirectUrl)
+        response.cookies.set('NEXT_LOCALE', 'en', cookieOptions)
+        response.cookies.set('NEXT_CURRENCY', currencyForLocale('en'), cookieOptions)
+        return response
+      }
     }
-    const defaultLang = countryLangMap[country] ?? 'en'
-    const locale = isSupportedLocale(defaultLang) ? defaultLang : 'en'
-    supabaseResponse.cookies.set('NEXT_LOCALE', locale, cookieOptions)
-    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale(locale), cookieOptions)
+  } else if (!langCookie) {
+    supabaseResponse.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
   }
 
   if (!currencyCookie && langCookie && isSupportedLocale(langCookie)) {
@@ -90,9 +102,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const { pathname, search } = request.nextUrl
-  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
 
   const marketingHost = getMarketingHostname()
   const appHost = getAppHostname()
