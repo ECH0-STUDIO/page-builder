@@ -72,6 +72,8 @@ export function rewriteMarketingInternalLinks(html: string, locale: SupportedLoc
     if (!href.startsWith('/')) return full
     if (href.startsWith('//')) return full
     if (href.startsWith('/marketing/')) return full
+    // Never strip an explicit locale query (e.g. locale switcher EN link).
+    if (href.includes(`${MARKETING_LANG_PARAM}=`)) return full
 
     const hashIdx = href.indexOf('#')
     const hash = hashIdx >= 0 ? href.slice(hashIdx) : ''

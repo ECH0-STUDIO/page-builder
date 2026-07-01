@@ -51,18 +51,21 @@ export function injectMarketingChrome(
   }
 
   const switcher = buildLocaleSwitcher(pathname, locale, localePaths)
-  if (!out.includes('data-marketing-locale')) {
-    if (out.includes('class="nav_buttons-wrap"')) {
-      out = out.replace(
-        /(<div class="nav_buttons-wrap">)/,
-        `$1\n              ${switcher}`,
-      )
-    } else if (out.includes('class="navbar_content"')) {
-      out = out.replace(
-        /(<div class="navbar_content">[\s\S]*?)(<div class="menu-button)/,
-        `$1${switcher}$2`,
-      )
-    }
+  if (out.includes('data-marketing-locale')) {
+    out = out.replace(
+      /<div class="marketing-locale-switcher"[^>]*data-marketing-locale[^>]*>[\s\S]*?<\/div>/i,
+      switcher,
+    )
+  } else if (out.includes('class="nav_buttons-wrap"')) {
+    out = out.replace(
+      /(<div class="nav_buttons-wrap">)/,
+      `$1\n              ${switcher}`,
+    )
+  } else if (out.includes('class="navbar_content"')) {
+    out = out.replace(
+      /(<div class="navbar_content">[\s\S]*?)(<div class="menu-button)/,
+      `$1${switcher}$2`,
+    )
   }
 
   // Shared favicon with the main app (replace Webflow / Nexbet assets)

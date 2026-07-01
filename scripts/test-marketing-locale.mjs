@@ -32,6 +32,7 @@ function isMarketingRoute(pathname) {
 function rewriteMarketingInternalLinks(html, locale) {
   return html.replace(/\bhref=(["'])([^"']+)\1/gi, (full, quote, href) => {
     if (!href.startsWith('/') || href.startsWith('//') || href.startsWith('/marketing/')) return full
+    if (href.includes(`${MARKETING_LANG_PARAM}=`)) return full
     const hashIdx = href.indexOf('#')
     const hash = hashIdx >= 0 ? href.slice(hashIdx) : ''
     const pathPart = hashIdx >= 0 ? href.slice(0, hashIdx) : href
@@ -85,6 +86,16 @@ if (out.includes('ngay') || out.includes('Bắt đầu')) {
   failed = true
 } else {
   console.log('OK   Bắt đầu ngay → Get started now')
+}
+
+// Switcher EN link must survive rewrite when page locale is vi
+const switcher = '<a href="/?lang=en" class="marketing-locale-link">EN</a>'
+const kept = rewriteMarketingInternalLinks(switcher, 'vi')
+if (!kept.includes('lang=en')) {
+  console.error('FAIL: EN switcher link lost ?lang=en after rewrite')
+  failed = true
+} else {
+  console.log('OK   EN switcher link keeps ?lang=en on Vietnamese page')
 }
 
 process.exit(failed ? 1 : 0)

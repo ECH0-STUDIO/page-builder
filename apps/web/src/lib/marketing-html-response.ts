@@ -39,9 +39,10 @@ function finalizeMarketingHtml(
     canonicalPath,
     ...options?.seo,
   })
-  const withChrome = injectMarketingChrome(withSeo, locale, pathname, options?.localePaths)
-  const translated = applyMarketingI18n(withChrome, locale)
-  return rewriteMarketingInternalLinks(translated, locale)
+  const translated = applyMarketingI18n(withSeo, locale)
+  const withLinks = rewriteMarketingInternalLinks(translated, locale)
+  // Inject switcher last so rewrite step cannot strip ?lang=en from EN links.
+  return injectMarketingChrome(withLinks, locale, pathname, options?.localePaths)
 }
 
 export function marketingHtmlResponse(slug: string, request: Request): Response {
