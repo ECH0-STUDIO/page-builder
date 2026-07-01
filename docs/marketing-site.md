@@ -84,23 +84,47 @@ NEXT_PUBLIC_SITE_URL=https://eateryvn.com
 
 Leave both URLs as `http://localhost:3000` — marketing and app routes work on one host. No subdomain split locally.
 
-## Blog (future)
+## Blog (Google Sheets CMS)
 
-Options to decide later:
+The marketing blog is driven by a **Webflow CMS export** in Google Sheets. Export your Blog collection from Webflow (or maintain the sheet manually) and set:
 
-- Keep Webflow CMS export + `detail_blog.html` template
-- Google Sheets (see previous setup below)
-- MDX in the repo
+```env
+BLOG_GOOGLE_SHEET_ID=1tZQ1YEW-NnShU7yTZqNYRhO13EpBxwyOqAVqLvgNdUg
+```
 
-### Google Sheets blog (optional, currently disabled)
+Share the sheet: **Anyone with the link can view**.
 
-Create a Google Sheet with a tab named **Posts** and columns:
+### Sheet columns (row 1 = header)
 
-| slug | title | excerpt | date | author | body | published |
-|------|-------|---------|------|--------|------|-----------|
-| my-first-post | Hello | Short summary | 2026-03-01 | Eatery Team | Paragraph one...\n\nParagraph two | TRUE |
+| Column | Used for |
+|--------|----------|
+| Name | Post title |
+| Slug | URL: `/blog/{slug}` |
+| Archived / Draft | Rows with `TRUE` are skipped |
+| Published On / Date | Sort order and display date |
+| Thumbnail | Hero + card image (absolute URL) |
+| Summary | Excerpt and meta description |
+| Avatar / Author / Role | Author block on post page |
+| Social First / Second / Third | Share links (hidden if empty) |
+| Category / Reading | Metadata row + card pill |
+| Overview | Rich HTML body |
 
-Set `BLOG_GOOGLE_SHEET_ID` in Vercel when re-enabling.
+**Empty fields:** the connected UI block is hidden (Webflow `.hide` class).
+
+**Images on Bunny CDN:** use full URLs like `https://ech0studio.b-cdn.net/...` or your custom CDN domain (`https://eateryvn.com/...`). Absolute URLs load on the dev server — the custom domain only matters if your sheet URLs use it.
+
+### Routes
+
+| URL | Template |
+|-----|----------|
+| `/` | Homepage blog carousel filled from sheet |
+| `/blog/{slug}` | `detail_blog.html` filled per post |
+
+Sync Webflow export after design changes:
+
+```bash
+pnpm sync:marketing
+```
 
 ## Contact form
 

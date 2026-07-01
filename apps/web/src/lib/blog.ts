@@ -1,84 +1,166 @@
 export type BlogPost = {
   slug: string
   title: string
+  /** Short summary (Webflow "Summary" column). */
+  summary: string
+  /** Alias for summary — used by sitemap and legacy callers. */
   excerpt: string
   publishedAt: string
+  /** Display date from the "Date" column (falls back to Published On). */
+  date: string
   author: string
+  role: string
+  avatar: string
+  thumbnail: string
+  category: string
+  reading: string
+  socialFirst: string
+  socialSecond: string
+  socialThird: string
+  /** Rich HTML body (Webflow "Overview" column). */
   body: string
 }
 
+type GvizCell = { v: string | number | null; f?: string } | null
+
 /**
- * Google Sheet columns (row 1 = header):
- * slug | title | excerpt | date | author | body | published
+ * Google Sheet: Webflow CMS export (row 1 = header).
  *
- * - published: TRUE or FALSE
- * - body: paragraphs separated by blank lines (use Alt+Enter in Sheets)
- * - Share sheet: File → Share → Anyone with the link can view
+ * Expected columns: Name, Slug, Archived, Draft, Published On, Date,
+ * Thumbnail, Summary, Avatar, Author, Role, Social First/Second/Third,
+ * Category, Reading, Overview
  *
- * Set BLOG_GOOGLE_SHEET_ID in env (the ID from the sheet URL).
+ * Share sheet: Anyone with the link can view.
+ * Set BLOG_GOOGLE_SHEET_ID in env (ID from the sheet URL).
  */
 const FALLBACK_POSTS: BlogPost[] = [
   {
     slug: 'why-credit-based-pricing-works-for-restaurants',
     title: 'Why credit-based pricing works for restaurants',
+    summary:
+      'No monthly plans you do not use. Buy credits when you need premium features — custom domains, extra storage — and spend only what your business needs.',
     excerpt:
       'No monthly plans you do not use. Buy credits when you need premium features — custom domains, extra storage — and spend only what your business needs.',
     publishedAt: '2026-03-01',
+    date: 'Mar 1, 2026',
     author: 'Eatery Team',
-    body: `Traditional SaaS charges every restaurant the same monthly fee — whether you publish once a year or run five locations.
-
-Eatery flips that model. The page builder, QR menus, and publishing tools are free to start. When you want premium add-ons, you buy credits and spend them only on what you use.
-
-Custom domain? 50 credits per month while it is connected. Extra gallery storage? About 1 credit per 20 MB. No credits spent means no surprise bills.
-
-That is especially important for seasonal businesses, new openings, and owners who want to test digital menus before committing to a big subscription.`,
+    role: '',
+    avatar: '',
+    thumbnail: '',
+    category: 'Product',
+    reading: '3 Min',
+    socialFirst: '',
+    socialSecond: '',
+    socialThird: '',
+    body: `<p>Traditional SaaS charges every restaurant the same monthly fee — whether you publish once a year or run five locations.</p>
+<p>Eatery flips that model. The page builder, QR menus, and publishing tools are free to start. When you want premium add-ons, you buy credits and spend them only on what you use.</p>`,
   },
   {
     slug: 'launch-your-digital-menu-in-a-weekend',
     title: 'Launch your digital menu in a weekend',
+    summary:
+      'A practical checklist: photos, menu items, one hero block, and a QR code on every table.',
     excerpt:
       'A practical checklist: photos, menu items, one hero block, and a QR code on every table.',
     publishedAt: '2026-02-15',
+    date: 'Feb 15, 2026',
     author: 'Eatery Team',
-    body: `You do not need an agency to go digital. Here is a weekend plan that works for most cafes and restaurants.
-
-Friday evening: gather your best dish photos and export your current menu as a simple list with prices.
-
-Saturday morning: create your Eatery account, add your business, and pick a page template. Drop in your hero image and top sellers first.
-
-Saturday afternoon: build your menu categories in the dashboard and link them to your public page.
-
-Sunday: generate table QR codes, print them, and test ordering or payment flows on your phone.
-
-By Monday lunch service, guests can scan and browse without waiting for a printed menu.`,
+    role: '',
+    avatar: '',
+    thumbnail: '',
+    category: 'Guides',
+    reading: '4 Min',
+    socialFirst: '',
+    socialSecond: '',
+    socialThird: '',
+    body: `<p>You do not need an agency to go digital. Here is a weekend plan that works for most cafes and restaurants.</p>
+<p>By Monday lunch service, guests can scan and browse without waiting for a printed menu.</p>`,
   },
 ]
 
+function cellValue(cell: GvizCell): string {
+  if (!cell) return ''
+  if (cell.f) return String(cell.f).trim()
+  if (cell.v != null) return String(cell.v).trim()
+  return ''
+}
+
+function parseGvizDate(value: string): string {
+  const match = value.match(/^Date\((\d+),(\d+),(\d+)\)$/)
+  if (!match) return value
+  const year = match[1]
+  const month = String(Number(match[2]) + 1).padStart(2, '0')
+  const day = String(Number(match[3])).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function toIsoDate(publishedOn: string, date: string): string {
+  const raw = publishedOn || date
+  if (!raw) return new Date().toISOString().slice(0, 10)
+  const parsed = parseGvizDate(raw)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) return parsed
+  const d = new Date(parsed)
+  if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10)
+}
+
+function toDisplayDate(publishedOn: string, date: string): string {
+  const raw = date || publishedOn
+  if (!raw) return ''
+  const parsed = parseGvizDate(raw)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
+    const d = new Date(`${parsed}T12:00:00`)
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+  }
+  return parsed
+}
+
 function parseGvizRows(json: {
   table: {
-    cols: { label: string }[]
-    rows: { c: ({ v: string | number | null } | null)[] }[]
+    rows: { c: GvizCell[] }[]
   }
 }): BlogPost[] {
   const rows = json.table.rows
   if (rows.length < 2) return []
 
+  const headers = rows[0].c.map((c) => cellValue(c))
+
   return rows
     .slice(1)
     .map((row) => {
-      const cells = row.c.map((c) => (c?.v != null ? String(c.v) : ''))
-      const [slug, title, excerpt, date, author, body, published] = cells
-      return { slug, title, excerpt, date, author, body, published }
+      const record: Record<string, string> = {}
+      row.c.forEach((cell, index) => {
+        const key = headers[index]
+        if (key) record[key] = cellValue(cell)
+      })
+      return record
     })
-    .filter((row) => row.slug && row.title && row.published?.toUpperCase() === 'TRUE')
-    .map((row) => ({
-      slug: row.slug.trim(),
-      title: row.title.trim(),
-      excerpt: row.excerpt.trim(),
-      publishedAt: row.date.trim() || new Date().toISOString().slice(0, 10),
-      author: row.author.trim() || 'Eatery Team',
-      body: row.body.trim(),
-    }))
+    .filter((row) => row.Slug && row.Name)
+    .filter((row) => row.Archived?.toUpperCase() !== 'TRUE')
+    .filter((row) => row.Draft?.toUpperCase() !== 'TRUE')
+    .map((row) => {
+      const summary = row.Summary ?? ''
+      return {
+        slug: row.Slug.trim(),
+        title: row.Name.trim(),
+        summary,
+        excerpt: summary,
+        publishedAt: toIsoDate(row['Published On'] ?? '', row.Date ?? ''),
+        date: toDisplayDate(row['Published On'] ?? '', row.Date ?? ''),
+        author: row.Author?.trim() ?? '',
+        role: row.Role?.trim() ?? '',
+        avatar: row.Avatar?.trim() ?? '',
+        thumbnail: row.Thumbnail?.trim() ?? '',
+        category: row.Category?.trim() ?? '',
+        reading: row.Reading?.trim() ?? '',
+        socialFirst: row['Social First']?.trim() ?? '',
+        socialSecond: row['Social Second']?.trim() ?? '',
+        socialThird: row['Social Third']?.trim() ?? '',
+        body: row.Overview?.trim() ?? '',
+      }
+    })
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
 }
 
@@ -87,12 +169,16 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   if (!sheetId) return FALLBACK_POSTS
 
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=Posts`
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
     const res = await fetch(url, { next: { revalidate: 300 } })
     if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`)
 
     const text = await res.text()
-    const json = JSON.parse(text.replace(/^.*google\.visualization\.Query\.setResponse\(/, '').replace(/\);?\s*$/, ''))
+    const jsonText = text
+      .replace(/^\/\*[\s\S]*?\*\/\s*/, '')
+      .replace(/^.*google\.visualization\.Query\.setResponse\(/, '')
+      .replace(/\);?\s*$/, '')
+    const json = JSON.parse(jsonText)
     const posts = parseGvizRows(json)
     return posts.length > 0 ? posts : FALLBACK_POSTS
   } catch (err) {
@@ -104,11 +190,4 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPost(slug: string): Promise<BlogPost | null> {
   const posts = await getBlogPosts()
   return posts.find((p) => p.slug === slug) ?? null
-}
-
-export function renderBlogBody(body: string): string[] {
-  return body
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
 }
