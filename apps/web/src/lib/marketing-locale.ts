@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import type { SupportedLocale } from '@/i18n/locale'
 import { isSupportedLocale, LOCALE_LABELS } from '@/i18n/locale'
 import { isMarketingPath } from '@/lib/site-urls'
@@ -76,11 +75,6 @@ export function resolveMarketingLocaleFromRequest(request: Request): SupportedLo
 
 export function getMarketingLocaleFromRequest(request: Request): SupportedLocale {
   return resolveMarketingLocaleFromRequest(request)
-}
-
-export async function getMarketingLocaleFromCookies(): Promise<SupportedLocale> {
-  const cookieStore = await cookies()
-  return resolveMarketingLocale(cookieStore.get(MARKETING_LOCALE_COOKIE)?.value)
 }
 
 /** Build redirect URL using the browser host (avoids 0.0.0.0 in local dev). */
