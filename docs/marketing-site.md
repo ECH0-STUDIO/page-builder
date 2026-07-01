@@ -21,28 +21,35 @@ The marketing homepage is served from a **Webflow HTML export**, not hand-built 
 | `apps/web/src/app/(marketing)/route.ts` | Serves full Webflow HTML for `/` (no React) |
 | `scripts/marketing-html-postprocess.mjs` | Fixes paths, links, hero image at sync time |
 
-### Update the marketing site from Webflow
-
-1. In Webflow: **Export code** (or use the Designer export).
-2. Replace the contents of `design/webflow-export/` with your export folder (e.g. copy from `Eatery Marketing Website` on your Mac).
 ### Local dev (marketing + app)
 
-From the repo root:
+**Use your real repo path** — e.g. `cd ~/page-builder` (not `~/path/to/page-builder`).
+
+If `git pull` fails with “local changes would be overwritten”, your Webflow export files conflict with the branch. Reset to the remote branch, then copy your export back:
 
 ```bash
-git pull origin cursor/replace-marketing-webflow-ffbe
+cd ~/page-builder
+git fetch origin cursor/replace-marketing-webflow-ffbe
+git checkout cursor/replace-marketing-webflow-ffbe
+git reset --hard origin/cursor/replace-marketing-webflow-ffbe
+
+# Optional: copy your full Webflow export from Downloads
+cp -R ~/Downloads/Eatery\ Marketing\ Website/* design/webflow-export/
+
 pnpm install
 pnpm sync:marketing
 rm -rf apps/web/.next
 pnpm dev
 ```
 
-Open the URL printed in the terminal (usually `http://localhost:3000`; if the port is busy, Next.js picks `3001`, etc.).
+If `pnpm dev` says “Command dev not found”, you are on an old commit — run `git reset --hard` above, or use `pnpm dev:web`.
 
-To use your full Webflow export (including the real `blog.html`):
+Open the URL printed in the terminal (usually `http://localhost:3000`; if the port is busy, Next.js picks `3001`, etc.). Hard-refresh (Cmd+Shift+R) if the favicon looks cached.
+
+To update only the Webflow export later:
 
 ```bash
-cp -R "/path/to/Eatery Marketing Website/"* design/webflow-export/
+cp -R ~/Downloads/Eatery\ Marketing\ Website/* design/webflow-export/
 pnpm sync:marketing
 rm -rf apps/web/.next
 pnpm dev
