@@ -17,16 +17,25 @@ export type WebflowPageData = {
   scripts: WebflowScript[]
 }
 
-const HTML_FILES: Record<string, string> = {
-  index: 'index.html',
-  home: 'index.html',
-  'detail_blog': 'detail_blog.html',
-  '404': '404.html',
-  '401': '401.html',
+const RESERVED_SLUGS = new Set(['template', '401', '404'])
+
+/** Slugs with a top-level .html file in public/marketing (e.g. features → features.html). */
+export function listMarketingHtmlSlugs(): string[] {
+  if (!fs.existsSync(MARKETING_PUBLIC)) return []
+  return fs
+    .readdirSync(MARKETING_PUBLIC)
+    .filter((name) => name.endsWith('.html') && name !== 'index.html')
+    .map((name) => name.replace(/\.html$/i, ''))
+    .filter((slug) => !RESERVED_SLUGS.has(slug))
+}
+
+export function marketingPageExists(slug: string): boolean {
+  if (slug === 'index' || slug === 'home') return fs.existsSync(path.join(MARKETING_PUBLIC, 'index.html'))
+  return fs.existsSync(path.join(MARKETING_PUBLIC, `${slug}.html`))
 }
 
 export function getWebflowHtmlFile(slug: string): string | null {
-  const file = HTML_FILES[slug] ?? `${slug}.html`
+  const file = slug === 'index' || slug === 'home' ? 'index.html' : `${slug}.html`
   const full = path.join(MARKETING_PUBLIC, file)
   if (!fs.existsSync(full)) return null
   return file
@@ -39,26 +48,74 @@ export function loadWebflowPage(slug: string): WebflowPageData | null {
   return parseWebflowHtml(html)
 }
 
+function encodeMarketingImagePath(imagePath: string): string {
+  const clean = imagePath.replace(/^\.\/?images\//, '')
+  return `/marketing/images/${clean.split('/').map(encodeURIComponent).join('/')}`
+}
+
+function rewriteSrcset(value: string): string {
+  return value
+    .split(',')
+    .map((part) => {
+      const trimmed = part.trim()
+      const space = trimmed.indexOf(' ')
+      const url = space === -1 ? trimmed : trimmed.slice(0, space)
+      const descriptor = space === -1 ? '' : trimmed.slice(space + 1)
+      if (url.startsWith('images/') || url.startsWith('./images/')) {
+        const next = encodeMarketingImagePath(url)
+        return descriptor ? `${next} ${descriptor}` : next
+      }
+      return part
+    })
+    .join(', ')
+}
+
+/** Webflow exports sometimes use hyphens where filenames contain spaces. */
+function fixKnownImageFilenameTypos(html: string): string {
+  return html.replace(/Frame-2147227617_1Frame-2147227617/g, 'Frame-2147227617_1Frame 2147227617')
+}
+
 export function rewriteMarketingHtml(html: string): string {
-  let out = html
+  let out = fixKnownImageFilenameTypos(html)
+  const pageSlugs = new Set(listMarketingHtmlSlugs())
 
   // Asset paths → /marketing/...
   out = out.replace(/((?:href|src)=["'])(?:\.\/)?css\//g, '$1/marketing/css/')
   out = out.replace(/((?:href|src)=["'])(?:\.\/)?js\//g, '$1/marketing/js/')
-  out = out.replace(/((?:href|src)=["'])(?:\.\/)?images\//g, '$1/marketing/images/')
+  out = out.replace(
+    /((?:href|src)=["'])(?:\.\/)?images\/([^"']+)["']/g,
+    (_m, prefix: string, imgPath: string) => `${prefix}${encodeMarketingImagePath(imgPath)}"`,
+  )
+  out = out.replace(/srcset=["']([^"']+)["']/gi, (_m, value: string) => `srcset="${rewriteSrcset(value)}"`)
 
-  // Internal page links
+  // Internal page links: features.html → /features
   out = out.replace(/href=["']index\.html(?:#[^"']*)?["']/gi, 'href="/"')
-  out = out.replace(/href=["']([^"'#?]+\.html)(#[^"']*)?["']/gi, (_m, page: string, hash = '') => {
-    const name = page.replace(/\.html$/i, '')
-    if (name === 'index') return `href="/${hash}"`
-    return `href="/${name}${hash}"`
+  out = out.replace(/href=["']([^"'#?/][^"']*)\.html(#[^"']*)?["']/gi, (_m, page: string, hash = '') => {
+    const slug = page.replace(/^\.\//, '').toLowerCase()
+    if (slug === 'index') return `href="/${hash}"`
+    return `href="/${slug}${hash}"`
   })
 
-  // Webflow preview / external host anchor links → same-site anchors
+  // Webflow preview host: map section anchors to real routes when a page exists
+  out = out.replace(
+    /href=["']https?:\/\/[^/"']+\.webflow\.io\/#([a-z0-9-]+)["']/gi,
+    (_m, section: string) => {
+      if (pageSlugs.has(section)) return `href="/${section}"`
+      return `href="/#${section}"`
+    },
+  )
+  out = out.replace(
+    /href=["']https?:\/\/[^/"']+\.webflow\.io\/([a-z0-9-]+)["']/gi,
+    (_m, section: string) => `href="/${section}"`,
+  )
+
+  // Same-site hash links from other hosts (e.g. custom domain in export)
   out = out.replace(/href=["']https?:\/\/[^/"']+\/(#[^"']+)["']/gi, 'href="/$1"')
 
-  // Hide Temlis widget bundled in template exports
+  // Remove empty Webflow CMS placeholder on homepage
+  out = out.replace(/<div class="w-dyn-empty">\s*<div>No items found\.<\/div>\s*<\/div>/gi, '')
+
+  // Remove Temlis widget bundled in template exports
   out = out.replace(/<div class="temlis_component">[\s\S]*?<\/div>\s*<\/div>\s*(?=<\/div>\s*<script)/i, '')
 
   return out
@@ -108,7 +165,6 @@ export function parseWebflowHtml(html: string): WebflowPageData {
   const bodyMatch = rewritten.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
   const bodyHtml = bodyMatch?.[1] ?? rewritten
 
-  // Head scripts (fonts, w-mod) run first; body scripts stay in DOM order for GSAP/Webflow
   const scripts = parseScripts(headHtml)
 
   return { title, description, bodyHtml, headHtml, scripts }

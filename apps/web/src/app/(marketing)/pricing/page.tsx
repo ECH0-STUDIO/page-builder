@@ -1,5 +1,7 @@
-import { permanentRedirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import { createWebflowMarketingPage } from '@/components/marketing/create-webflow-marketing-page'
 
-export default function PricingPage() {
-  permanentRedirect('/')
-}
+const page = createWebflowMarketingPage('pricing', '/')
+
+export const generateMetadata = page.generateMetadata
+export default page.Page

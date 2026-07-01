@@ -10,7 +10,8 @@
 }
 
 .marketing-site .temlis_component,
-.marketing-site .t-temlis-component {
+.marketing-site .t-temlis-component,
+.marketing-site .w-dyn-empty {
   display: none !important;
 }
 

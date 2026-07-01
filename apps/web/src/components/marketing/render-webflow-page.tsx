@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import { loadWebflowPage } from '@/lib/marketing-webflow'
+import { WebflowBody } from '@/components/marketing/WebflowBody'
 import { WebflowHead } from '@/components/marketing/WebflowHead'
-import { WebflowPage } from '@/components/marketing/WebflowPage'
+import { WebflowScriptBoot } from '@/components/marketing/WebflowScriptBoot'
 
 export function renderWebflowMarketingPage(slug: string) {
   const page = loadWebflowPage(slug)
@@ -10,7 +11,8 @@ export function renderWebflowMarketingPage(slug: string) {
   return (
     <>
       <WebflowHead headHtml={page.headHtml} />
-      <WebflowPage page={page} />
+      <WebflowBody bodyHtml={page.bodyHtml} />
+      <WebflowScriptBoot page={page} />
     </>
   )
 }
