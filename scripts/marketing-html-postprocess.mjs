@@ -9,7 +9,7 @@ import path from 'path'
 const RESERVED = new Set(['template', '401', '404'])
 
 function encodeMarketingImagePath(imagePath) {
-  const clean = imagePath.replace(/^\.\/?images\//, '')
+  const clean = imagePath.replace(/^\.?\/?images\//, '')
   return `/marketing/images/${clean.split('/').map(encodeURIComponent).join('/')}`
 }
 
@@ -18,9 +18,9 @@ function rewriteSrcset(value) {
     .split(',')
     .map((part) => {
       const trimmed = part.trim()
-      const space = trimmed.indexOf(' ')
-      const url = space === -1 ? trimmed : trimmed.slice(0, space)
-      const descriptor = space === -1 ? '' : trimmed.slice(space + 1)
+      const match = trimmed.match(/^(.+)\s+(\d+w)$/)
+      const url = match ? match[1] : trimmed
+      const descriptor = match ? match[2] : ''
       if (url.startsWith('images/') || url.startsWith('./images/')) {
         const next = encodeMarketingImagePath(url)
         return descriptor ? `${next} ${descriptor}` : next
