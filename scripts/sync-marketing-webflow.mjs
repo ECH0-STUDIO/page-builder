@@ -74,3 +74,10 @@ copyRecursive(source, target)
 const htmlCount = postprocessMarketingHtmlFiles(target)
 console.log(`Synced ${source} → ${target}`)
 console.log(`Post-processed ${htmlCount} HTML file(s)`)
+
+import { spawnSync } from 'child_process'
+const extract = spawnSync('node', ['scripts/extract-marketing-strings.mjs'], {
+  cwd: root,
+  stdio: 'inherit',
+})
+if (extract.status !== 0) process.exit(extract.status ?? 1)

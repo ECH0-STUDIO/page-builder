@@ -23,7 +23,9 @@ Thumbs.db
 npm-debug.log*
 pnpm-debug.log*
 
-# Editor
+# Marketing extract reports (generated)
+design/webflow-export/.marketing-strings-extract.json
+
 .vscode/
 .idea/
 *.swp

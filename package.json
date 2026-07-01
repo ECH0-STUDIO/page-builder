@@ -10,8 +10,10 @@
     "lint": "pnpm --filter web lint",
     "sync:marketing": "node scripts/sync-marketing-webflow.mjs",
     "import:eatery-export": "node scripts/import-eatery-export.mjs",
+    "seed:marketing-i18n": "node scripts/seed-marketing-i18n-manifest.mjs",
+    "extract:marketing-strings": "node scripts/extract-marketing-strings.mjs",
     "test:marketing-locale": "node scripts/test-marketing-locale.mjs",
-    "extract:marketing-vi": "node scripts/extract-marketing-vi-strings.mjs"
+    "test:marketing-i18n": "node scripts/test-marketing-i18n.mjs"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

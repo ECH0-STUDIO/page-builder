@@ -1,0 +1,344 @@
+#!/usr/bin/env node
+/** Seeds marketing-i18n-manifest.json with full Eatery VN → EN pairs. */
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const outPath = path.join(__dirname, '../apps/web/src/lib/marketing-i18n-manifest.json')
+
+/** @type {[string, string][]} */
+const PAIRS = [
+  // ═══ Homepage hero ═══
+  ['Dành cho các cửa hàng vừa và nhỏ', 'For small & medium stores'],
+  ['DÀNH CHO CÁC CỬA HÀNG VỪA VÀ NHỎ', 'FOR SMALL & MEDIUM STORES'],
+  ['Nâng tầm cửa hàng của bạn', 'Elevate your store'],
+  ['Nâng tầm cửa hàng của bạn.', 'Elevate your store.'],
+  [
+    'Nhanh chóng tạo Menu, QR thanh toán, tạo website và nhận order chỉ trong vài bước đơn giản. Không chi phí hàng tháng.',
+    'Quickly create your menu, payment QR codes, and website — start taking orders in a few simple steps. No monthly fees.',
+  ],
+  [
+    'Nhanh chóng tạo menu, QR thanh toán, website và nhận đơn chỉ trong vài bước đơn giản. Không chi phí hàng tháng.',
+    'Quickly create your menu, payment QR codes, and website — start taking orders in a few simple steps. No monthly fees.',
+  ],
+  ['Bắt đầu ngay', 'Get started now'],
+  ['BẮT ĐẦU NGAY', 'GET STARTED NOW'],
+  ['Bắt đầu miễn phí ngay', 'Start free now'],
+  ['Bắt đầu miễn phí', 'Start for free'],
+  ['BẮT ĐẦU MIỄN PHÍ', 'START FOR FREE'],
+  ['Dùng thử miễn phí', 'Try for free'],
+  ['Xem demo', 'View demo'],
+  ['Tìm hiểu thêm', 'Learn more'],
+  ['Được tin dùng bởi<br>quán ăn & cafe', 'Trusted by<br>restaurants & cafes'],
+  ['Được tin dùng bởi<br>quán ăn &amp; cafe', 'Trusted by<br>restaurants & cafes'],
+  ['Được tin dùng bởi quán ăn & cafe', 'Trusted by restaurants & cafes'],
+  ['Được tin dùng bởi các quán ăn & cafe', 'Trusted by restaurants & cafes'],
+  ['Được tin dùng bởi các cửa hàng F&B', 'Trusted by food & beverage businesses'],
+
+  // ═══ Nav ═══
+  ['Tại sao Eatery', 'Why Eatery'],
+  ['Vì sao Eatery', 'Why Eatery'],
+  ['Tại sao chọn Eatery', 'Why choose Eatery'],
+  ['Chi phí', 'Pricing'],
+  ['CHI PHÍ', 'PRICING'],
+  ['Tính năng', 'Features'],
+  ['TÍNH NĂNG', 'FEATURES'],
+  ['Bảng giá', 'Pricing'],
+  ['BẢNG GIÁ', 'PRICING'],
+  ['Tin tức', 'Blog'],
+  ['TIN TỨC', 'BLOG'],
+  ['Liên hệ', 'Contact'],
+  ['LIÊN HỆ', 'CONTACT'],
+  ['Đăng nhập', 'Sign in'],
+  ['Đăng ký', 'Sign up'],
+  ['Bắt đầu', 'Get started'],
+
+  // ═══ Hero (credit / menu variant) ═══
+  ['Trang số cho quán ăn', 'Restaurant page builder'],
+  ['Thực đơn online. Không mắc kẹt gói tháng.', 'Your menu online. Without the monthly trap.'],
+  [
+    'Tạo trang thực đơn đẹp, mã QR bàn, và nhận thanh toán PayOS. Bắt đầu miễn phí — chỉ mua credit khi cần tên miền riêng hoặc dung lượng thêm.',
+    'Build a beautiful digital menu, generate QR codes, and accept PayOS payments. Start free — buy credits only when you need a custom domain or extra storage.',
+  ],
+  ['Cách dùng credit', 'How credits work'],
+  ['Trình tạo trang miễn phí · Trả theo nhu cầu', 'Free page builder · Pay-as-you-go credits'],
+
+  // ═══ Impacts / why ═══
+  ['Kết quả thật.\nKhông lãng phí gói tháng.', 'Real results.\nNo wasted subscription.'],
+  ['Kết quả thật.<br>Không lãng phí gói tháng.', 'Real results.<br>No wasted subscription.'],
+  [
+    'Nhiều nền tảng thu phí hàng tháng dù quán đông hay vắng. Eatery cho bạn khởi động miễn phí và chỉ dùng credit cho tính năng premium khi thực sự cần.',
+    'Most tools charge monthly whether your restaurant is busy or closed. Eatery lets you launch for free and spend credits only on premium add-ons you actually use.',
+  ],
+  ['Dành cho chủ quán ăn', 'Built for restaurant owners'],
+  ['Dành cho chủ cửa hàng', 'Built for store owners'],
+  [
+    'Trình tạo trang, thực đơn, QR và xuất bản — không cần gói tháng.',
+    'Page builder, menus, QR codes, and publishing — included without a monthly plan.',
+  ],
+  ['Để bắt đầu xây và xuất bản trang thực đơn', 'To start building and publishing your menu page'],
+  [
+    'Credit dùng cho tên miền riêng, dung lượng ảnh — trả khi cần, không mặc định hàng tháng.',
+    'Credits are for add-ons: custom domains, extra gallery storage — spend when you need them, not every month by default.',
+  ],
+  ['Credit/tháng khi kết nối tên miền riêng', 'Credits/month while custom domain is connected'],
+  ['Không chi phí hàng tháng', 'No monthly fees'],
+  ['Không gói tháng', 'No monthly plans'],
+  ['Không mắc kẹt gói tháng', 'No monthly trap'],
+  ['Trả theo nhu cầu', 'Pay as you go'],
+  ['Lợi ích', 'Benefits'],
+  ['Tại sao chúng tôi', 'Why us'],
+
+  // ═══ Features section ═══
+  ['Mọi thứ quán bạn cần trên mạng.', 'Everything your restaurant needs online.'],
+  ['Mọi thứ để vận hành quán trên mạng.', 'Everything to run your restaurant online.'],
+  ['Mọi thứ cửa hàng bạn cần trên mạng.', 'Everything your store needs online.'],
+  [
+    'Một nền tảng cho trang thực đơn, dashboard, thanh toán và đội ngũ.',
+    'One platform for your public menu page, dashboard, payments, and team.',
+  ],
+  [
+    'Một nền tảng cho trang thực đơn, dashboard, thanh toán và đội ngũ — không cần ghép nhiều công cụ.',
+    'One platform for your public menu page, dashboard, payments, and team — without stitching five tools together.',
+  ],
+  ['Trình tạo trang trực quan', 'Visual page builder'],
+  ['Trình tạo trang kéo thả', 'Drag-and-drop page builder'],
+  [
+    'Hero, lưới món, gallery, liên hệ và thanh toán — kéo thả và xuất bản.',
+    'Hero, menu grid, gallery, contact, and payment blocks — drag, drop, publish.',
+  ],
+  ['Mã QR thực đơn', 'QR menu codes'],
+  ['Mã QR bàn', 'Table QR codes'],
+  ['Tạo QR cho từng bàn — khách mở thực đơn trên điện thoại.', 'Generate table QR codes so guests open your live menu on their phone.'],
+  ['Thanh toán PayOS', 'PayOS payments'],
+  ['Giỏ hàng trên trang công khai, tối ưu cho Việt Nam.', 'Checkout drawer on your public page, built for Vietnam.'],
+  ['Đội ngũ & tên miền riêng', 'Team & custom domains'],
+  [
+    'Mời nhân viên, kết nối tên miền thương hiệu với hướng dẫn DNS.',
+    'Invite staff, connect your brand domain with guided DNS setup.',
+  ],
+  ['Xem tất cả tính năng', 'See all features'],
+  ['Xem chi tiết', 'View details'],
+  ['Xem bảng giá credit', 'See credit-based pricing'],
+  ['Menu trực tuyến', 'Online menu'],
+  ['Trang đích', 'Landing page'],
+  ['Quản lý đơn hàng', 'Order management'],
+  ['In thực đơn', 'Print menu'],
+  ['Lưu trữ ảnh', 'Image storage'],
+  ['Gallery ảnh', 'Photo gallery'],
+  ['Thống kê truy cập', 'Traffic analytics'],
+  ['Tùy chỉnh giao diện', 'Customize design'],
+  ['Xuất bản một chạm', 'One-click publish'],
+  ['Không cần code', 'No code required'],
+  ['Không cần WordPress', 'No WordPress'],
+  ['Không cần agency', 'No agency'],
+
+  // ═══ How it works ═══
+  ['Cách hoạt động', 'How it works'],
+  ['Ra mắt chỉ với 3 bước.', 'Launch in 3 simple steps.'],
+  ['Ra mắt trong 3 bước đơn giản.', 'Launch in 3 simple steps.'],
+  ['Không cần agency. Không WordPress. Đăng ký và bắt đầu.', 'No agency. No WordPress. Just sign up and start building.'],
+  ['Bước 1', 'Step 1'],
+  ['Bước 2', 'Step 2'],
+  ['Bước 3', 'Step 3'],
+  ['Tạo tài khoản', 'Create your account'],
+  ['Đăng ký miễn phí trên app và thêm quán hoặc cafe của bạn.', 'Sign up free on the app and add your restaurant or cafe.'],
+  ['Đăng ký miễn phí và thêm cửa hàng của bạn.', 'Sign up free and add your store.'],
+  ['Xây trang của bạn', 'Build your page'],
+  ['Xây dựng trang của bạn', 'Build your page'],
+  [
+    'Thêm món, ảnh và khối liên hệ bằng trình chỉnh sửa trực quan.',
+    'Add your menu, photos, and contact blocks with the visual editor.',
+  ],
+  ['Xuất bản & chia sẻ', 'Publish & share'],
+  [
+    'Đưa trang lên mạng với link, QR trên bàn hoặc tên miền riêng.',
+    'Go live with a link, QR codes on every table, or your custom domain.',
+  ],
+
+  // ═══ Blog UI ═══
+  ['Tin tức và cập nhật', 'News & updates'],
+  [
+    'Khám phá thông tin cập nhật, mẹo và thủ thuật để sử dụng Eatery một cách hiệu quả nhất.',
+    'Explore updates, tips, and workflows to get the most out of Eatery for your business.',
+  ],
+  ['Mẹo đi số hóa', 'Tips for going digital'],
+  ['Thực đơn, mã QR và giá credit cho quán hiện đại.', 'Menus, QR codes, and credit-based pricing for modern restaurants.'],
+  ['Xem tất cả bài viết', 'View all posts'],
+  ['Chia sẻ bài viết', 'Share article'],
+  ['Quay lại tin tức', 'Back to blog'],
+  ['← Quay lại tin tức', '← Back to blog'],
+  ['Ngày đăng', 'Date'],
+  ['Danh mục', 'Category'],
+  ['Thời gian đọc', 'Reading time'],
+  ['Bởi', 'By'],
+  ['Đọc thêm', 'Read more'],
+  ['Bài viết liên quan', 'Related posts'],
+  ['Bài viết mới nhất', 'Latest posts'],
+
+  // ═══ CTA / footer ═══
+  ['Sẵn sàng đưa thực đơn lên mạng?', 'Ready to launch your menu online?'],
+  ['Sẵn sàng nâng tầm cửa hàng?', 'Ready to elevate your store?'],
+  [
+    'Bắt đầu miễn phí trên app. Chỉ mua credit khi cần tính năng premium.',
+    'Start free on the app. Buy credits only when you need premium features.',
+  ],
+  ['Tạo tài khoản miễn phí', 'Create free account'],
+  ['Xem bảng giá', 'See pricing'],
+  [
+    'Xây trang thực đơn số, nhận thanh toán và kết nối tên miền — chỉ trả cho tính năng premium bằng credit.',
+    'Build your digital menu page, accept payments, and connect your domain — pay only for premium add-ons with credits.',
+  ],
+  [
+    'Xây trang số, nhận thanh toán và kết nối tên miền — chỉ trả cho tính năng premium bằng credit.',
+    'Build your digital page, accept payments, and connect your domain — pay only for premium add-ons with credits.',
+  ],
+  ['Sản phẩm', 'Product'],
+  ['Hỗ trợ', 'Support'],
+  ['Công ty', 'Company'],
+  ['Theo dõi chúng tôi', 'Follow us'],
+  ['Liên hệ với chúng tôi', 'Contact us'],
+  ['Bản quyền', 'Copyright'],
+  ['© 2026 Eatery VN', '© 2026 Eatery'],
+  ['eateryvn.com', 'eateryvn.com'],
+
+  // ═══ Features page ═══
+  ['Mọi thứ để vận hành cửa hàng trên mạng.', 'Everything to run your store online.'],
+  ['Từ trang công khai đến dashboard, thanh toán và quản lý đội ngũ.', 'From your public page to dashboard, payments, and team management.'],
+  ['Tính năng sản phẩm', 'Product'],
+  ['Khám phá tính năng', 'Explore features'],
+  ['Công cụ cho quán ăn', 'Tools for restaurants'],
+  ['Công cụ cho cửa hàng F&B', 'Tools for F&B businesses'],
+
+  // ═══ Pricing page ═══
+  ['Giá theo credit', 'Credit-based pricing'],
+  ['Giá linh hoạt theo credit', 'Flexible credit-based pricing'],
+  ['Không gói cố định. Trả đúng những gì bạn dùng.', 'No packages. Pay only for what you use.'],
+  [
+    'Trình tạo trang, thực đơn QR và xuất bản miễn phí để bắt đầu. Credit dùng cho tính năng premium — mua khi cần.',
+    'The page builder, QR menus, and publishing are free to start. Credits are for premium add-ons — buy them when you need them.',
+  ],
+  ['Xây và xuất bản trang thực đơn không cần đăng ký gói. Không cần thẻ tín dụng.', 'Build and publish your menu page without a subscription. No credit card required.'],
+  ['Mua credit', 'Buy credits'],
+  [
+    'Nạp khi cần tên miền riêng hoặc dung lượng ảnh thêm. Credit chưa dùng vẫn trong ví.',
+    'Top up when you want a custom domain or extra gallery storage. Unused credits stay in your balance.',
+  ],
+  ['Credit dùng để làm gì', 'What credits are for'],
+  ['Credit là gì?', 'What are credits?'],
+  ['Gói credit tùy chọn', 'Optional credit packs'],
+  ['Số tiền nạp trong app — không phải gói bắt buộc.', 'Top-up amounts inside the app — not mandatory plans.'],
+  ['Tên miền riêng', 'Custom domain'],
+  ['Tên miền riêng kết nối', 'Custom domain connected'],
+  ['50 credit / tháng', '50 credits / month'],
+  ['Tính khi tên miền đang kết nối', 'Billed while your domain is live'],
+  ['Lưu trữ gallery', 'Gallery storage'],
+  ['1 credit / 20 MB', '1 credit per 20 MB'],
+  ['Theo dung lượng — giảm khi xóa ảnh', 'Renews based on usage — drops if you delete images'],
+  ['50.000₫', '50,000₫'],
+  ['90.000₫', '90,000₫'],
+  ['400.000₫', '400,000₫'],
+  ['50,000₫', '50,000₫'],
+  ['90,000₫', '90,000₫'],
+  ['400,000₫', '400,000₫'],
+  ['Thử tính năng premium', 'Try premium features'],
+  ['Phù hợp hầu hết quán', 'Best value for most cafes'],
+  ['Phù hợp hầu hết cửa hàng', 'Best value for most stores'],
+  ['Mùa cao điểm hoặc nhiều add-on', 'Busy seasons or multiple add-ons'],
+  ['Mùa cao điểm', 'Busy seasons'],
+  ['Gói phổ biến', 'Popular plan'],
+  ['Lựa chọn tốt nhất', 'Best value'],
+  ['Miễn phí', 'Free'],
+  ['0₫', '$0'],
+  ['credit', 'credits'],
+  ['Credit', 'Credits'],
+  ['credits', 'credits'],
+  ['tháng', 'month'],
+  ['/ tháng', '/ month'],
+
+  // ═══ Contact page ═══
+  ['Chúng tôi có thể giúp gì?', 'How can we help?'],
+  ['Nói chuyện với đội ngũ Eatery', 'Talk to the Eatery team'],
+  [
+    'Gửi tin nhắn — đội ngũ Eatery sẽ phản hồi qua email.',
+    'Send a message — the Eatery team will reply by email.',
+  ],
+  [
+    'Câu hỏi về thiết lập, credit hoặc hợp tác? Chúng tôi thường phản hồi trong 1–2 ngày làm việc.',
+    'Questions about setup, credits, or partnerships? We typically reply within 1–2 business days.',
+  ],
+  ['Họ tên', 'Name'],
+  ['Họ và tên', 'Full name'],
+  ['Email', 'Email'],
+  ['Số điện thoại', 'Phone number'],
+  ['Nội dung', 'Message'],
+  ['Tin nhắn', 'Message'],
+  ['Tin nhắn của bạn', 'Your message'],
+  ['Gửi tin nhắn', 'Send message'],
+  ['Gửi yêu cầu', 'Send request'],
+  ['Đang gửi…', 'Sending…'],
+  ['Đang gửi...', 'Sending...'],
+  ['Đã gửi! Chúng tôi sẽ liên hệ sớm.', 'Sent! We will get back to you soon.'],
+  ['Đã gửi tin nhắn', 'Message sent'],
+  ['Gửi lại', 'Send another'],
+  ['Cảm ơn bạn đã liên hệ.', 'Thanks for reaching out.'],
+
+  // ═══ App mockup / dashboard labels (hero image) ═══
+  ['Tổng quan', 'Overview'],
+  ['Chào mừng đến bảng điều khiển của bạn', 'Welcome to your dashboard'],
+  ['Chào mừng đến bảng điều khiển', 'Welcome to the dashboard'],
+  ['Chào mừng', 'Welcome'],
+  ['Chủ nhật', 'Sunday'],
+  ['Thứ hai', 'Monday'],
+  ['Thứ ba', 'Tuesday'],
+  ['Thứ tư', 'Wednesday'],
+  ['Thứ năm', 'Thursday'],
+  ['Thứ sáu', 'Friday'],
+  ['Thứ bảy', 'Saturday'],
+  ['Chay', 'Vegetarian'],
+  ['Bữa sáng', 'Breakfast'],
+  ['Bữa trưa', 'Lunch'],
+  ['Bữa tối', 'Dinner'],
+  ['7 ngày qua', 'Last 7 days'],
+  ['30 ngày qua', 'Last 30 days'],
+  ['Đơn hàng', 'Orders'],
+  ['Doanh thu', 'Revenue'],
+  ['Lượt xem', 'Views'],
+  ['Khách hàng', 'Customers'],
+  ['Thêm món', 'Add item'],
+  ['Sửa món', 'Edit item'],
+  ['Xóa', 'Delete'],
+  ['Lưu', 'Save'],
+  ['Hủy', 'Cancel'],
+
+  // ═══ 404 / misc ═══
+  ['Không tìm thấy trang', 'Page not found'],
+  ['Quay về trang chủ', 'Back to home'],
+  ['Trang chủ', 'Home'],
+  ['Xem thêm', 'See more'],
+  ['Khám phá', 'Explore'],
+  ['Thử miễn phí', 'Try for free'],
+  ['Phổ biến', 'Popular'],
+  ['Mới', 'New'],
+  ['Nổi bật', 'Featured'],
+  ['Đối tác', 'Partners'],
+  ['Khách hàng tin dùng', 'Trusted by customers'],
+]
+
+const pairs = {}
+const existing = fs.existsSync(outPath)
+  ? JSON.parse(fs.readFileSync(outPath, 'utf8')).pairs ?? {}
+  : {}
+
+for (const [vi, en] of PAIRS) {
+  pairs[vi] = en
+}
+// Keep extracted strings awaiting translation
+for (const [vi, en] of Object.entries(existing)) {
+  if (!(vi in pairs)) pairs[vi] = en
+}
+
+const manifest = { version: 1, pairs }
+fs.writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n')
+console.log(`Seeded ${Object.keys(pairs).length} translation pairs → ${outPath}`)

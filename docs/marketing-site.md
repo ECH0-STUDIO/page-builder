@@ -45,14 +45,25 @@ If the site still shows **Nexbet** or English hero text, the wrong export is in 
 | `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` when present; else `/#section` on homepage |
 | `/blog/[slug]` | `detail_blog.html` + sheet post body |
 
-## Language
+## Language / English translation
 
-- **Vietnamese (default):** clean URLs (`/`, `/blog`, …)
-- **English:** add `?lang=en` (switcher in navbar sets this)
-- First visit from outside Vietnam → redirect to `?lang=en` (except localhost → VI)
-- Blog posts filtered by sheet **Collection ID** (`vi` / `en`)
+Vietnamese is the default (Webflow export HTML). English uses `?lang=en` and a translation manifest:
 
-## Blog (Google Sheets CMS)
+| File | Purpose |
+|------|---------|
+| `apps/web/src/lib/marketing-i18n-manifest.json` | Vietnamese → English string pairs |
+| `scripts/extract-marketing-strings.mjs` | Crawl HTML and find untranslated strings |
+| `scripts/test-marketing-i18n.mjs` | Verify EN pages have no leftover Vietnamese |
+
+After importing your Webflow export:
+
+```bash
+pnpm import:eatery-export "/Users/mac/Downloads/Eatery Marketing Website"
+pnpm test:marketing-i18n
+```
+
+If new Vietnamese strings appear, they are added to the manifest as `null`. Translate them in `marketing-i18n-manifest.json`, then re-run the test.
+
 
 ```env
 BLOG_GOOGLE_SHEET_ID=1tZQ1YEW-NnShU7yTZqNYRhO13EpBxwyOqAVqLvgNdUg
