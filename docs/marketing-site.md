@@ -18,7 +18,8 @@ The marketing homepage is served from a **Webflow HTML export**, not hand-built 
 | `design/webflow-export/` | Source of truth — drop your Webflow zip contents here |
 | `apps/web/public/marketing/` | Synced static assets (generated; do not edit by hand) |
 | `apps/web/src/lib/marketing-webflow.ts` | Loads HTML, rewrites asset paths for Next.js |
-| `apps/web/src/components/marketing/WebflowPage.tsx` | Renders export + runs Webflow/GSAP scripts |
+| `apps/web/src/app/(marketing)/route.ts` | Serves full Webflow HTML for `/` (no React) |
+| `scripts/marketing-html-postprocess.mjs` | Fixes paths, links, hero image at sync time |
 
 ### Update the marketing site from Webflow
 

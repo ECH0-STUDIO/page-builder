@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copy Webflow export → apps/web/public/marketing
+ * Copy Webflow export → apps/web/public/marketing, then post-process HTML.
  *
  * Place your export in design/webflow-export/ (replace folder contents),
  * then run: pnpm sync:marketing
@@ -9,6 +9,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { postprocessMarketingHtmlFiles } from './marketing-html-postprocess.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -38,4 +39,6 @@ if (fs.existsSync(target)) {
 }
 
 copyRecursive(source, target)
+const htmlCount = postprocessMarketingHtmlFiles(target)
 console.log(`Synced ${source} → ${target}`)
+console.log(`Post-processed ${htmlCount} HTML file(s)`)

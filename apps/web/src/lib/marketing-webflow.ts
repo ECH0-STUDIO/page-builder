@@ -154,6 +154,13 @@ function parseScripts(html: string): WebflowScript[] {
   return scripts
 }
 
+export function loadMarketingHtmlDocument(slug: string): string | null {
+  const file = getWebflowHtmlFile(slug)
+  if (!file) return null
+  const raw = fs.readFileSync(path.join(MARKETING_PUBLIC, file), 'utf8')
+  return rewriteMarketingHtml(raw)
+}
+
 export function parseWebflowHtml(html: string): WebflowPageData {
   const rewritten = rewriteMarketingHtml(html)
   const title = extractTag(rewritten, 'title') || 'Eatery'
