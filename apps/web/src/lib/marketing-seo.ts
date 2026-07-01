@@ -20,12 +20,12 @@ type PageSeo = {
 const MARKETING_PAGE_SEO: Record<string, PageSeo> = {
   index: {
     title: {
-      vi: 'Eatery VN — Trang số & thực đơn QR cho quán ăn',
-      en: 'Eatery — Digital menu & QR pages for restaurants',
+      vi: 'Eatery VN — Nâng tầm cửa hàng của bạn',
+      en: 'Eatery — Elevate your store online',
     },
     description: {
-      vi: 'Tạo trang web, thực đơn QR và công cụ quản lý cho quán ăn, cafe và cửa hàng F&B — miễn phí bắt đầu với Eatery VN.',
-      en: 'Build digital menu pages, table QR codes, and lightweight store tools for restaurants and cafes — start free with Eatery.',
+      vi: 'Tạo Menu, QR thanh toán, website và nhận order trong vài bước. Không chi phí hàng tháng — bắt đầu miễn phí với Eatery VN.',
+      en: 'Create your menu, payment QR, website, and take orders in a few steps. No monthly fees — start free with Eatery.',
     },
     schema: 'home',
   },

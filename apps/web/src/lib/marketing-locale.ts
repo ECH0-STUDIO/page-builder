@@ -53,13 +53,36 @@ export function inferMarketingLocaleFromCountry(
   return country?.toUpperCase() === 'VN' ? 'vi' : 'en'
 }
 
-/** Vietnamese uses clean URLs; English uses `?lang=en`. */
+/** Vietnamese uses clean URLs; English uses `?lang=en`. Supports hash fragments. */
 export function marketingPathForLocale(pathname: string, locale: SupportedLocale): string {
-  const basePath = pathname.split('?')[0] || '/'
+  const hashIdx = pathname.indexOf('#')
+  const hash = hashIdx >= 0 ? pathname.slice(hashIdx) : ''
+  const pathAndQuery = hashIdx >= 0 ? pathname.slice(0, hashIdx) : pathname
+  const basePath = pathAndQuery.split('?')[0] || '/'
+
   if (locale === 'en') {
-    return `${basePath}?${MARKETING_LANG_PARAM}=en`
+    return `${basePath}?${MARKETING_LANG_PARAM}=en${hash}`
   }
-  return basePath
+  return `${basePath}${hash}`
+}
+
+/** Rewrite internal marketing links so navigation keeps the active locale. */
+export function rewriteMarketingInternalLinks(html: string, locale: SupportedLocale): string {
+  return html.replace(/\bhref=(["'])([^"']+)\1/gi, (full, quote: string, href: string) => {
+    if (!href.startsWith('/')) return full
+    if (href.startsWith('//')) return full
+    if (href.startsWith('/marketing/')) return full
+
+    const hashIdx = href.indexOf('#')
+    const hash = hashIdx >= 0 ? href.slice(hashIdx) : ''
+    const pathPart = hashIdx >= 0 ? href.slice(0, hashIdx) : href
+    const pathname = pathPart.split('?')[0] || '/'
+
+    if (!isMarketingRoute(pathname)) return full
+
+    const localized = marketingPathForLocale(`${pathname}${hash}`, locale)
+    return `href=${quote}${localized}${quote}`
+  })
 }
 
 export function marketingCanonicalPath(pathname: string, locale: SupportedLocale): string {
