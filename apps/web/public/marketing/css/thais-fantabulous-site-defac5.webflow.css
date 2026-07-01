@@ -1398,7 +1398,7 @@ figcaption {
   grid-column-gap: 1rem;
   grid-row-gap: 1rem;
   text-align: center;
-  background-image: url('/marketing/images/404-image.svg');
+  background-image: url('../images/404-image.svg');
   background-position: 50%;
   background-repeat: no-repeat;
   background-size: contain;
@@ -2212,7 +2212,7 @@ figcaption {
 }
 
 .blog_img {
-  background-image: url('/marketing/images/bg-bolg-1.svg');
+  background-image: url('../images/bg-bolg-1.svg');
   background-position: 50%;
   background-repeat: no-repeat;
   background-size: cover;
@@ -2429,7 +2429,7 @@ figcaption {
 }
 
 .hero-cms_img {
-  background-image: url('/marketing/images/bg-bolg-1.svg');
+  background-image: url('../images/bg-bolg-1.svg');
   background-position: 50%;
   background-repeat: no-repeat;
   background-size: cover;

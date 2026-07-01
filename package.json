@@ -6,7 +6,8 @@
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
-    "lint": "pnpm --filter web lint"
+    "lint": "pnpm --filter web lint",
+    "sync:marketing": "node scripts/sync-marketing-webflow.mjs"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

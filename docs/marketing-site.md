@@ -9,6 +9,41 @@ Production layout:
 
 Both hosts point to the **same Vercel project**. Routing is handled in `apps/web/src/proxy.ts`.
 
+## Marketing site source (Webflow export)
+
+The marketing homepage is served from a **Webflow HTML export**, not hand-built React sections.
+
+| Path | Role |
+|------|------|
+| `design/webflow-export/` | Source of truth — drop your Webflow zip contents here |
+| `apps/web/public/marketing/` | Synced static assets (generated; do not edit by hand) |
+| `apps/web/src/lib/marketing-webflow.ts` | Loads HTML, rewrites asset paths for Next.js |
+| `apps/web/src/components/marketing/WebflowPage.tsx` | Renders export + runs Webflow/GSAP scripts |
+
+### Update the marketing site from Webflow
+
+1. In Webflow: **Export code** (or use the Designer export).
+2. Replace the contents of `design/webflow-export/` with your export folder (e.g. copy from `Eatery Marketing Website` on your Mac).
+3. From the repo root:
+
+```bash
+pnpm sync:marketing
+```
+
+4. Commit `design/webflow-export/` and `apps/web/public/marketing/` (or run sync in CI before build).
+5. Restart the dev server and open `http://localhost:3000/`.
+
+### Route mapping
+
+| URL | Behavior |
+|-----|----------|
+| `/` | Webflow `index.html` |
+| `/features` | Redirect → `/#features` |
+| `/blog` | Redirect → `/#blog` |
+| `/pricing`, `/contact` | Redirect → `/` (until separate Webflow pages exist) |
+
+Blog posts from Google Sheets are **paused** while we decide the blog approach. Old React marketing components were removed.
+
 ## Vercel setup
 
 1. **Domains** → add both:
@@ -43,30 +78,23 @@ NEXT_PUBLIC_SITE_URL=https://eateryvn.com
 
 Leave both URLs as `http://localhost:3000` — marketing and app routes work on one host. No subdomain split locally.
 
-## Blog via Google Sheets (free)
+## Blog (future)
 
-No CMS required. Create a Google Sheet with a tab named **Posts** and columns:
+Options to decide later:
+
+- Keep Webflow CMS export + `detail_blog.html` template
+- Google Sheets (see previous setup below)
+- MDX in the repo
+
+### Google Sheets blog (optional, currently disabled)
+
+Create a Google Sheet with a tab named **Posts** and columns:
 
 | slug | title | excerpt | date | author | body | published |
 |------|-------|---------|------|--------|------|-----------|
 | my-first-post | Hello | Short summary | 2026-03-01 | Eatery Team | Paragraph one...\n\nParagraph two | TRUE |
 
-- **slug:** URL path (`/blog/my-first-post`)
-- **body:** Use blank lines between paragraphs (Alt+Enter in Sheets)
-- **published:** `TRUE` or `FALSE`
-
-Share: **Anyone with the link can view**
-
-Copy the sheet ID from the URL:
-`https://docs.google.com/spreadsheets/d/SHEET_ID_HERE/edit`
-
-Set in Vercel:
-
-```env
-BLOG_GOOGLE_SHEET_ID=your_sheet_id
-```
-
-Without this variable, sample blog posts are shown.
+Set `BLOG_GOOGLE_SHEET_ID` in Vercel when re-enabling.
 
 ## Contact form
 
