@@ -165,6 +165,7 @@ export function HeroRender({
         justifyContent: 'center',
         width: '100%',
         boxSizing: 'border-box',
+        ...(isFullscreen ? { minHeight: '100vh' } : {}),
         ...inset,
       }}>
       <div style={{ textAlign: 'center', maxWidth: '800px', width: '100%' }}>
