@@ -1,33 +1,27 @@
 #!/usr/bin/env node
 /**
- * Extract all user-visible strings from synced marketing HTML.
+ * Extract user-visible Vietnamese strings from synced marketing HTML.
+ * Does NOT modify marketing-i18n-manifest.json (avoids git conflicts).
  * Run: node scripts/extract-marketing-strings.mjs [dir]
- * Default dir: apps/web/public/marketing
  */
 
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import {
-  decodeEntities,
-  fillNullTranslations,
-  resolveTranslation,
-} from './marketing-i18n-normalize.mjs'
+import { decodeEntities, resolveTranslation } from './marketing-i18n-normalize.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const targetDir = path.resolve(root, process.argv[2] || 'apps/web/public/marketing')
+const extractPath = path.join(root, 'design/webflow-export/.marketing-strings-extract.json')
+const manifestPath = path.join(root, 'apps/web/src/lib/marketing-i18n-manifest.json')
 
 const VI_CHAR_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
 const SKIP_RE =
   /^(https?:|\/marketing\/|\/logo|w-mod|function |var |@|\.|\d+$|#[0-9a-f]{3,8}$|\{|\}|M[\d.LCZ])/i
 
-function decodeEntitiesLocal(s) {
-  return decodeEntities(s).trim()
-}
-
 function normalize(text) {
-  return decodeEntitiesLocal(text).replace(/\s+/g, ' ').trim()
+  return decodeEntities(text).replace(/\s+/g, ' ').trim()
 }
 
 function isTranslatable(text) {
@@ -35,7 +29,6 @@ function isTranslatable(text) {
   if (SKIP_RE.test(text)) return false
   if (/^[\d\s.,:;|•·\-–—%$€£₫+()/\\[\]{}]+$/.test(text)) return false
   if (text.length > 500) return false
-  // Vietnamese diacritics OR common Vietnamese words without diacritics
   if (VI_CHAR_RE.test(text)) return true
   const lower = text.toLowerCase()
   const viPhrases = [
@@ -58,25 +51,20 @@ function walkHtmlFiles(dir, files = []) {
 
 function extractFromHtml(html) {
   const found = new Set()
-
   for (const m of html.matchAll(/>([^<]{1,500})</g)) {
     const t = normalize(m[1])
     if (isTranslatable(t)) found.add(t)
   }
-
   for (const m of html.matchAll(
     /\b(?:placeholder|aria-label|title|alt|value|data-wait)=(["'])([^"']{1,300})\1/gi,
   )) {
     const t = normalize(m[2])
     if (isTranslatable(t)) found.add(t)
   }
-
-  // button_text blocks often duplicate — still capture
   for (const m of html.matchAll(/class="button_text[^"]*"[^>]*>([^<]{1,120})</gi)) {
     const t = normalize(m[1])
     if (isTranslatable(t)) found.add(t)
   }
-
   return found
 }
 
@@ -91,45 +79,38 @@ for (const file of walkHtmlFiles(targetDir)) {
   strings.forEach((s) => all.add(s))
 }
 
-const manifestPath = path.join(root, 'apps/web/src/lib/marketing-i18n-manifest.json')
-let manifest = { version: 1, pairs: {} }
-if (fs.existsSync(manifestPath)) {
-  manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-}
+const manifest = fs.existsSync(manifestPath)
+  ? JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  : { version: 2, pairs: {} }
 
 const missing = []
 for (const vi of [...all].sort((a, b) => b.length - a.length)) {
-  if (manifest.pairs[vi]) continue
-  const resolved = resolveTranslation(vi, manifest.pairs)
-  if (resolved) {
-    manifest.pairs[vi] = resolved
-    continue
-  }
+  if (manifest.pairs[vi] || resolveTranslation(vi, manifest.pairs)) continue
   missing.push(vi)
-  manifest.pairs[vi] = null
 }
 
-const filled = fillNullTranslations(manifest.pairs)
-if (filled) {
-  console.log(`\nFilled ${filled} null entry(ies) via normalized key match.`)
-}
-
+fs.mkdirSync(path.dirname(extractPath), { recursive: true })
 fs.writeFileSync(
-  path.join(root, 'design/webflow-export/.marketing-strings-extract.json'),
-  JSON.stringify({ extractedAt: new Date().toISOString(), byFile, all: [...all] }, null, 2),
+  extractPath,
+  JSON.stringify(
+    {
+      extractedAt: new Date().toISOString(),
+      byFile,
+      all: [...all],
+      missing,
+    },
+    null,
+    2,
+  ),
 )
 
 if (missing.length) {
-  console.log(`\n${missing.length} string(s) in HTML not yet translated (added to manifest as null):\n`)
-  missing.forEach((s) => console.log(`  - ${JSON.stringify(s)}`))
+  console.log(`\n${missing.length} string(s) need English translation (see fix:marketing-i18n):\n`)
+  missing.slice(0, 20).forEach((s) => console.log(`  - ${JSON.stringify(s)}`))
+  if (missing.length > 20) console.log(`  … and ${missing.length - 20} more`)
 } else {
   console.log(`All ${all.size} extracted string(s) have translations in manifest.`)
 }
 
-const untranslated = Object.entries(manifest.pairs).filter(([, en]) => !en)
-if (untranslated.length) {
-  console.log(`\n${untranslated.length} manifest entry(ies) still need English text.`)
-}
-
-fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
-console.log(`\nWrote ${manifestPath}`)
+console.log(`\nWrote ${extractPath}`)
+console.log('Manifest unchanged — run pnpm fix:marketing-i18n to apply translations.')

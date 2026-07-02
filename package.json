@@ -13,6 +13,7 @@
     "seed:marketing-i18n": "node scripts/seed-marketing-i18n-manifest.mjs",
     "fix:marketing-i18n": "node scripts/fix-marketing-i18n.mjs",
     "diagnose:marketing-i18n": "node scripts/diagnose-marketing-i18n.mjs",
+    "reset:marketing-manifest": "git checkout HEAD -- apps/web/src/lib/marketing-i18n-manifest.json",
     "extract:marketing-strings": "node scripts/extract-marketing-strings.mjs",
     "test:marketing-locale": "node scripts/test-marketing-locale.mjs",
     "test:marketing-i18n": "node scripts/test-marketing-i18n.mjs"

@@ -82,8 +82,8 @@ const extract = spawnSync('node', ['scripts/extract-marketing-strings.mjs'], {
 })
 if (extract.status !== 0) process.exit(extract.status ?? 1)
 
-const seed = spawnSync('node', ['scripts/seed-marketing-i18n-manifest.mjs'], {
+const fix = spawnSync('node', ['scripts/fix-marketing-i18n.mjs'], {
   cwd: root,
   stdio: 'inherit',
 })
-if (seed.status !== 0) process.exit(seed.status ?? 1)
+if (fix.status !== 0) process.exit(fix.status ?? 1)

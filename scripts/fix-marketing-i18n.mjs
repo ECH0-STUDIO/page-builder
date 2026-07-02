@@ -52,6 +52,19 @@ for (const [vi, en] of Object.entries(manifest.pairs)) {
 manifest.pairs = cleaned
 
 const filled = fillNullTranslations(manifest.pairs)
+
+// Merge any strings found in latest HTML extract (without writing nulls to git)
+const extractPath = path.join(root, 'design/webflow-export/.marketing-strings-extract.json')
+if (fs.existsSync(extractPath)) {
+  const extract = JSON.parse(fs.readFileSync(extractPath, 'utf8'))
+  for (const vi of extract.all ?? []) {
+    if (manifest.pairs[vi]) continue
+    const resolved = resolveTranslation(vi, manifest.pairs)
+    if (resolved) manifest.pairs[vi] = resolved
+  }
+  fillNullTranslations(manifest.pairs)
+}
+
 manifest.version = 2
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
 
