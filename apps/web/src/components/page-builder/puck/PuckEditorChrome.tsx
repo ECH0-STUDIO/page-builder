@@ -223,7 +223,7 @@ export function PuckHeaderActions({
             type="button"
             onClick={() => onPublish(true)}
             disabled={publishing}
-            className="h-7 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-[var(--puck-color-azure-04)] text-white hover:bg-[var(--puck-color-azure-03)] disabled:opacity-50"
+            className="h-7 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
           </button>
@@ -231,7 +231,7 @@ export function PuckHeaderActions({
             <button
               type="button"
               disabled={publishing}
-              className="h-7 px-1.5 flex items-center justify-center bg-[var(--puck-color-azure-04)] text-white hover:bg-[var(--puck-color-azure-03)] disabled:opacity-50 border-l border-white/20"
+              className="h-7 px-1.5 flex items-center justify-center bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 border-l border-primary-foreground/20"
             >
               <ChevronDown className="size-3.5" />
             </button>

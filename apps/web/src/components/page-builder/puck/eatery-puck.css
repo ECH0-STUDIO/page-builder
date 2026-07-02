@@ -1,6 +1,13 @@
-/* Puck editor shell — keep Puck's default interactive colors (azure), not business brand */
+/* Puck editor shell — use Eatery design system tokens, NOT business page brand color */
 .eatery-puck {
-  --puck-font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+  --puck-font-family: var(--font-sans-stack, 'Plus Jakarta Sans', system-ui, sans-serif);
+
+  /* Map Puck interactive UI to platform --primary (emerald green from globals.css) */
+  --puck-color-interactive: var(--primary);
+  --puck-color-interactive-hover: color-mix(in srgb, var(--primary) 88%, black);
+  --puck-color-interactive-active: color-mix(in srgb, var(--primary) 76%, black);
+  --puck-color-interactive-subtle: color-mix(in srgb, var(--primary) 14%, transparent);
+  --puck-color-interactive-soft: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .eatery-puck .Puck {
@@ -42,19 +49,6 @@
 /* Hide any leftover default Puck header chrome if present */
 .eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
   display: none;
-}
-
-/* Neutralize shadcn primary accents inside Puck field panels */
-.eatery-puck .puck-legacy-fields .border-primary {
-  border-color: var(--puck-color-azure-04) !important;
-}
-
-.eatery-puck .puck-legacy-fields .bg-primary\/5 {
-  background-color: var(--puck-color-azure-10) !important;
-}
-
-.eatery-puck .puck-legacy-fields .text-primary {
-  color: var(--puck-color-azure-04) !important;
 }
 
 /* Clickable drawer items */
