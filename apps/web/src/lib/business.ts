@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/supabase/client'
+import { DEFAULT_BUSINESS_CATEGORY } from '@/lib/constants'
 import type { Database } from '@/types/database'
 
 export type Business = Database['public']['Tables']['businesses']['Row'] & { role?: string }
@@ -63,7 +64,7 @@ export async function getBusinessById(id: string): Promise<Business | null> {
 }
 
 /** Create a new business — also creates default theme + publishing settings */
-export async function createBusiness(input: { name: string; slug: string; category: string[] }): Promise<Business> {
+export async function createBusiness(input: { name: string; slug: string }): Promise<Business> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -76,7 +77,7 @@ export async function createBusiness(input: { name: string; slug: string; catego
       owner_id: user.id,
       name: input.name,
       slug: input.slug,
-      category: input.category,
+      category: [...DEFAULT_BUSINESS_CATEGORY],
     })
     .select()
     .single()

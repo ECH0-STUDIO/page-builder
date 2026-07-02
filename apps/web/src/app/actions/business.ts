@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { DEFAULT_BUSINESS_CATEGORY } from '@/lib/constants'
 
 type CreateBusinessResult =
   | { success: true; businessId: string }
@@ -10,7 +11,6 @@ type CreateBusinessResult =
 export async function createBusinessAction(input: {
   name: string
   slug: string
-  category: string[]
 }): Promise<CreateBusinessResult> {
   const supabase = await createClient()
 
@@ -28,7 +28,7 @@ export async function createBusinessAction(input: {
       owner_id: user.id,
       name: input.name,
       slug: input.slug,
-      category: input.category,
+      category: [...DEFAULT_BUSINESS_CATEGORY],
     })
     .select()
     .single()
@@ -49,7 +49,8 @@ export async function createBusinessAction(input: {
   await db.from('publishing_settings').insert({ business_id: business.id, published: false })
   await db.from('payment_settings').insert({ business_id: business.id })
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
+  revalidatePath('/onboarding/new-business')
   return { success: true, businessId: business.id }
 }
 
