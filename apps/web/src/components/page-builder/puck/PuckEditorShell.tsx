@@ -46,6 +46,8 @@ import type { SaveStatus } from '../PublishBar'
 
 type PageSettingsPanel = 'theme' | null
 
+import type { PaymentSettings } from '@/lib/vietqr-utils'
+
 interface PuckEditorShellProps {
   business: Business
   initialBlocks: PageBlock[]
@@ -137,6 +139,8 @@ export function PuckEditorShell({
       categories: initialCategories,
       items: initialItems,
       brandColor,
+      previewInteractive: previewMode,
+      paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -145,6 +149,7 @@ export function PuckEditorShell({
       brandColor,
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+      previewInteractive: previewMode,
     }),
     t,
   })
@@ -159,6 +164,8 @@ export function PuckEditorShell({
       categories: initialCategories,
       items: initialItems,
       brandColor,
+      previewInteractive: previewMode,
+      paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -167,6 +174,7 @@ export function PuckEditorShell({
       brandColor,
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+      previewInteractive: previewMode,
     }),
     t,
   }
@@ -290,6 +298,7 @@ export function PuckEditorShell({
           businessName={business.name}
           pathLabel={t('sidebar.pageBuilder')}
           previewMode={previewMode}
+          onTogglePreview={() => setPreviewMode(p => !p)}
           chrome={actions}
         />
       ),
@@ -379,6 +388,7 @@ export function PuckEditorShell({
           ui={{
             leftSideBarVisible: !previewMode,
             rightSideBarVisible: !previewMode,
+            previewMode: previewMode ? 'interactive' : 'edit',
           }}
         />
       </div>

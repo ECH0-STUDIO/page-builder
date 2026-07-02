@@ -29,6 +29,7 @@ export interface PuckRenderContext {
   brandColor?: string
   defaultTextColor?: string
   qrDownloadLabel?: string
+  previewInteractive?: boolean
 }
 
 function propsToPageBlock(type: BlockType, props: PuckBlockProps, businessId: string): PageBlock {
@@ -166,19 +167,23 @@ export function renderQrCodeBlock(
 
 export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) {
   const config = { ...defaultNavbarConfig, ...(props.config as NavbarConfig) }
+  const inEditor = !ctx.previewInteractive
 
   return (
     <NavbarRender
       config={config}
       businessName={ctx.business.name}
       logoUrl={ctx.business.logo_url ?? undefined}
-      inEditor
+      inEditor={inEditor}
     />
   )
 }
 
 export function renderSiteFooter(props: PuckBlockProps, ctx: PuckRenderContext) {
   const config = { ...defaultFooterConfig, ...(props.config as FooterConfig) }
+  const inEditor = !ctx.previewInteractive
 
-  return <FooterRender config={config} businessName={ctx.business.name} inEditor />
+  return (
+    <FooterRender config={config} businessName={ctx.business.name} inEditor={inEditor} />
+  )
 }

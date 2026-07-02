@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -11,6 +12,8 @@ import {
   PanelLeft,
   PanelRight,
   Settings,
+  Eye,
+  X,
 } from 'lucide-react'
 import { usePuck } from '@puckeditor/core'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +28,25 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
+
+/** Keep Puck's internal previewMode in sync with shell state (ui prop is initial-only). */
+function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
+  const { dispatch } = usePuck()
+
+  useEffect(() => {
+    dispatch({
+      type: 'setUi',
+      ui: {
+        previewMode: previewMode ? 'interactive' : 'edit',
+        leftSideBarVisible: !previewMode,
+        rightSideBarVisible: !previewMode,
+      },
+      recordHistory: false,
+    })
+  }, [previewMode, dispatch])
+
+  return null
+}
 
 interface PuckEditorChromeProps {
   saveStatus: SaveStatus
@@ -94,13 +116,36 @@ export function PuckCustomHeader({
   businessName,
   pathLabel,
   previewMode,
+  onTogglePreview,
   chrome,
 }: {
   businessName: string
   pathLabel: string
   previewMode: boolean
+  onTogglePreview: () => void
   chrome: React.ReactNode
 }) {
+  const { t } = useTranslation()
+
+  if (previewMode) {
+    return (
+      <header className="eatery-puck-header flex items-center justify-center h-12 px-2 shrink-0 w-full min-w-0 border-b border-primary/20 bg-primary text-primary-foreground relative z-50">
+        <span className="text-sm font-medium tracking-wide flex items-center gap-2">
+          <Eye className="size-4 opacity-90" />
+          {t('pageBuilder.preview')}
+        </span>
+        <button
+          type="button"
+          onClick={onTogglePreview}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-primary-foreground/10 rounded-full transition-colors"
+          title={t('pageBuilder.closePreview')}
+        >
+          <X className="size-5" />
+        </button>
+      </header>
+    )
+  }
+
   return (
     <header className="eatery-puck-header flex items-center gap-2 h-12 px-2 shrink-0 w-full min-w-0 border-b border-border bg-background">
       <PuckHeaderBack />
@@ -130,7 +175,9 @@ export function PuckHeaderActions({
   const showChanges = published && hasUnpublishedChanges
 
   return (
-    <div className="flex items-center gap-2 flex-wrap justify-end">
+    <>
+      <PuckPreviewSync previewMode={previewMode} />
+      <div className="flex items-center gap-2 flex-wrap justify-end">
       {/* Autosave */}
       <div className="flex items-center gap-2 shrink-0">
         {saveStatus === 'idle' && (
@@ -178,7 +225,9 @@ export function PuckHeaderActions({
         )}
       >
         <Globe className="size-3.5" />
-        <span className="hidden md:inline">{t('pageBuilder.preview')}</span>
+        <span className="hidden md:inline">
+          {previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
+        </span>
       </button>
 
       <Badge
@@ -249,6 +298,7 @@ export function PuckHeaderActions({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+    </>
   )
 }
 

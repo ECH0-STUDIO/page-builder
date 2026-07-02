@@ -197,7 +197,7 @@ export function PuckOutlineReorder() {
   })
 
   return (
-    <div className="p-3 text-sm">
+    <div className="puck-outline-reorder text-sm">
       <ul className="space-y-0.5">
         {navbarEntry && (
           <FixedRow

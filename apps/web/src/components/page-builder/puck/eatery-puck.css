@@ -51,7 +51,20 @@
   display: none;
 }
 
-/* Clickable drawer items */
-.eatery-puck [data-puck-drawer-item] button {
+/* Clickable drawer items — preserve Puck drawer item padding when wrapping */
+.eatery-puck [data-puck-drawer-item] > button {
   width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: inherit;
+  font: inherit;
+}
+
+/* Sidebar plugin panels (blocks + outline) — restore Puck default inset */
+.eatery-puck .puck-plugin-panel {
+  padding: var(--puck-space-4, 16px);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }

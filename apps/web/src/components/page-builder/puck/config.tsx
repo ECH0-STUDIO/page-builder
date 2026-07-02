@@ -42,6 +42,8 @@ import {
 import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
 import { CartProvider } from '../render/CartContext'
+import { LiveStoreCart } from '../render/LiveStoreCart'
+import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
 
 export interface PuckShellState {
@@ -54,6 +56,8 @@ export interface PuckShellState {
   categories: MenuCategory[]
   items: MenuItem[]
   brandColor: string
+  previewInteractive: boolean
+  paymentSettings: PaymentSettings | null
 }
 
 export interface PuckEditorRefs {
@@ -117,6 +121,14 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                 }}
               />
               {children}
+              {shell.previewInteractive && (
+                <LiveStoreCart
+                  businessId={shell.business.id}
+                  paymentSettings={shell.paymentSettings ?? {}}
+                  previewMode
+                  contained
+                />
+              )}
             </div>
           </CartProvider>
         )
@@ -126,6 +138,11 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       sections: {
         title: t('puck.sections'),
         components: ['hero', 'text_image', 'contact', 'menu_grid', 'qr_code'],
+      },
+      chrome: {
+        title: 'Chrome',
+        components: [SITE_NAVBAR, SITE_FOOTER],
+        visible: false,
       },
     },
     components: {
@@ -337,5 +354,7 @@ export function defaultShellState(business: Business): PuckShellState {
     categories: [],
     items: [],
     brandColor: '#E85D26',
+    previewInteractive: false,
+    paymentSettings: null,
   }
 }
