@@ -474,7 +474,8 @@
       "security": "Bảo mật",
       "team": "Quản lý nhóm",
       "localization": "Khu vực & Ngôn ngữ",
-      "credits": "Thanh toán & Credit"
+      "credits": "Thanh toán & Credit",
+      "business": "Cửa hàng"
     },
     "security": {
       "title": "Bảo mật",
@@ -527,6 +528,23 @@
       "enOption": "Tiếng Anh - USD ($)",
       "viOption": "Tiếng Việt - VND (₫)",
       "save": "Lưu tùy chọn"
+    },
+    "business": {
+      "title": "Cửa hàng",
+      "description": "Quản lý cài đặt cho cửa hàng đang chọn.",
+      "dangerZone": "Vùng nguy hiểm",
+      "dangerDescription": "Xóa vĩnh viễn cửa hàng này và toàn bộ dữ liệu — thực đơn, trang web, đơn hàng và quyền truy cập nhóm. Không thể hoàn tác.",
+      "deleteButton": "Xóa cửa hàng",
+      "deleteTitle": "Xóa cửa hàng này?",
+      "deleteWarning": "Thao tác này sẽ xóa vĩnh viễn cửa hàng, thực đơn, website, đơn hàng, mã QR và thành viên nhóm.",
+      "deleteTypePrompt": "Nhập",
+      "deleteTypeSuffix": "để xác nhận.",
+      "deleteConfirmLabel": "Tên cửa hàng",
+      "deleteConfirm": "Xóa vĩnh viễn",
+      "deleting": "Đang xóa…",
+      "cancel": "Hủy",
+      "deleteSuccess": "Đã xóa cửa hàng",
+      "ownerOnly": "Chỉ chủ sở hữu mới có thể xóa cửa hàng này."
     }
   },
   "heroBlock": {

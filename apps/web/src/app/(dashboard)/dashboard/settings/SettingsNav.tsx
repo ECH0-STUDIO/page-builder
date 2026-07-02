@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Shield, Globe, Users, CreditCard, LogOut } from 'lucide-react'
+import { Shield, Globe, Users, CreditCard, LogOut, Store } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -33,6 +33,11 @@ export function SettingsNav() {
       title: t('settings.tabs.credits'),
       href: '/dashboard/settings/credits',
       icon: CreditCard,
+    },
+    {
+      title: t('settings.tabs.business'),
+      href: '/dashboard/settings/business',
+      icon: Store,
     },
   ]
 

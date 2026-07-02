@@ -1,11 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { ACTIVE_BUSINESS_STORAGE_KEY } from '@/lib/active-business'
 
 export async function getActiveBusiness(supabase: SupabaseClient, userId: string) {
   const adminClient = createAdminClient()
   const cookieStore = await cookies()
-  const currentId = cookieStore.get('eatery_current_business_id')?.value
+  const currentId = cookieStore.get(ACTIVE_BUSINESS_STORAGE_KEY)?.value
 
   if (currentId) {
     // 1. Check if user is owner of this specific business

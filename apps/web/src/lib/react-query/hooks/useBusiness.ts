@@ -10,12 +10,11 @@ export function useBusinesses(initialData?: Awaited<ReturnType<typeof getUserBus
         return await getUserBusinesses()
       } catch (error) {
         console.error('[useBusinesses]', error)
-        // Keep SSR-hydrated list if the background refetch fails (e.g. offline).
         return initialData ?? []
       }
     },
     initialData,
-    staleTime: initialData ? 60_000 : 0,
+    staleTime: 0,
     retry: 1,
   })
 }
