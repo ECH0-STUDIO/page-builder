@@ -1,0 +1,34 @@
+/* Eatery branding overrides for Puck editor chrome */
+.eatery-puck {
+  --puck-color-interactive: #e85d26;
+  --puck-color-interactive-hover: #d14f1c;
+  --puck-color-interactive-active: #b84318;
+  --puck-font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+}
+
+.eatery-puck .Puck {
+  font-family: var(--puck-font-family);
+}
+
+.eatery-puck-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--background, #fff);
+}
+
+.eatery-puck-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.eatery-puck-editor .PuckLayout {
+  height: 100%;
+}
+
+/* Tighter field panel for nested block settings */
+.eatery-puck [class*='Field'] {
+  max-width: 100%;
+}
