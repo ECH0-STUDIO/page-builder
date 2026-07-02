@@ -11,18 +11,13 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
 import { GlobalSettingsPanel } from '../blocks/GlobalSettingsPanel'
-import { NavbarSettings } from '../blocks/NavbarBlock'
-import { FooterSettings } from '../blocks/FooterBlock'
 import { normalizePageBlock } from '../spacing-utils'
 import { resolveThemeTokens } from '../theme-tokens'
-import { pageBlocksToPuckData, puckDataToPageBlocks } from './adapters'
+import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensureChromeBlocks } from './adapters'
 import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
-import {
-  PuckAddBlockButton,
-  PuckCustomHeader,
-  PuckHeaderActions,
-} from './PuckEditorChrome'
+import { PuckCustomHeader, PuckHeaderActions } from './PuckEditorChrome'
+import { createPuckPlugins } from './plugins'
 
 import {
   savePageBlocksAction,
@@ -49,7 +44,7 @@ import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { SaveStatus } from '../PublishBar'
 
-type PageSettingsPanel = 'theme' | 'navbar' | 'footer' | null
+type PageSettingsPanel = 'theme' | null
 
 interface PuckEditorShellProps {
   business: Business
@@ -82,7 +77,12 @@ export function PuckEditorShell({
     [initialBlocks],
   )
 
-  const [puckData, setPuckData] = useState<Data>(() => pageBlocksToPuckData(normalizedInitial))
+  const [puckData, setPuckData] = useState<Data>(() =>
+    pageBlocksToPuckData(normalizedInitial, {
+      navbarConfig: initialTheme?.navbar_config ?? defaultNavbarConfig,
+      footerConfig: initialTheme?.footer_config ?? defaultFooterConfig,
+    }),
+  )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
@@ -172,6 +172,44 @@ export function PuckEditorShell({
   }
 
   const puckConfig = useMemo(() => createStablePuckConfig(editorRefs), [])
+  const puckPlugins = useMemo(() => createPuckPlugins(t), [t])
+
+  const syncChromeFromData = useCallback(
+    (data: Data) => {
+      const chrome = extractChromeFromData(data)
+      setTheme(prev => {
+        const next = prev
+          ? { ...prev, navbar_config: chrome.navbarConfig, footer_config: chrome.footerConfig }
+          : ({
+              ...defaultThemeSettings,
+              business_id: business.id,
+              id: '',
+              navbar_config: chrome.navbarConfig,
+              footer_config: chrome.footerConfig,
+            } as ThemeSettings)
+
+        if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
+        saveNavbarTimer.current = setTimeout(() => {
+          saveNavbarAction(business.id, chrome.navbarConfig).then(res => {
+            if (res.success) setHasUnpublishedChanges(true)
+            else toast.error('Failed to save navbar: ' + res.error)
+          })
+        }, 1000)
+
+        if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
+        saveFooterTimer.current = setTimeout(() => {
+          saveFooterAction(business.id, chrome.footerConfig).then(res => {
+            if (res.success) setHasUnpublishedChanges(true)
+            else toast.error('Failed to save footer: ' + res.error)
+          })
+        }, 1000)
+
+        return next
+      })
+      return chrome
+    },
+    [business.id],
+  )
 
   const performSave = useCallback(
     async (data: Data) => {
@@ -240,7 +278,7 @@ export function PuckEditorShell({
       previewMode,
       onTogglePreview: () => setPreviewMode(p => !p),
       onPublish: handlePublish,
-      onOpenPagePanel: setPagePanel,
+      onOpenGlobalSettings: () => setPagePanel('theme'),
     }),
     [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
   )
@@ -272,15 +310,17 @@ export function PuckEditorShell({
 
   const handlePuckChange = useCallback(
     (data: Data) => {
-      setPuckData(data)
-      blocksRef.current = puckDataToPageBlocks(data, business.id) as PageBlock[]
+      const chrome = syncChromeFromData(data)
+      const ensured = ensureChromeBlocks(data, chrome)
+      setPuckData(ensured)
+      blocksRef.current = puckDataToPageBlocks(ensured, business.id) as PageBlock[]
       if (isFirstRender.current) {
         isFirstRender.current = false
         return
       }
-      triggerAutoSave(data)
+      triggerAutoSave(ensured)
     },
-    [triggerAutoSave, business.id],
+    [triggerAutoSave, business.id, syncChromeFromData],
   )
 
   const handleThemeChange = useCallback(
@@ -308,44 +348,6 @@ export function PuckEditorShell({
     [business.id],
   )
 
-  const handleNavbarChange = useCallback(
-    (updated: NavbarConfig) => {
-      setTheme(prev => {
-        const next = prev
-          ? { ...prev, navbar_config: updated }
-          : ({ ...defaultThemeSettings, business_id: business.id, id: '', navbar_config: updated } as ThemeSettings)
-        if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
-        saveNavbarTimer.current = setTimeout(() => {
-          saveNavbarAction(business.id, updated).then(res => {
-            if (res.success) setHasUnpublishedChanges(true)
-            else toast.error('Failed to save navbar: ' + res.error)
-          })
-        }, 1000)
-        return next
-      })
-    },
-    [business.id],
-  )
-
-  const handleFooterChange = useCallback(
-    (updated: FooterConfig) => {
-      setTheme(prev => {
-        const next = prev
-          ? { ...prev, footer_config: updated }
-          : ({ ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings)
-        if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
-        saveFooterTimer.current = setTimeout(() => {
-          saveFooterAction(business.id, updated).then(res => {
-            if (res.success) setHasUnpublishedChanges(true)
-            else toast.error('Failed to save footer: ' + res.error)
-          })
-        }, 1000)
-        return next
-      })
-    },
-    [business.id],
-  )
-
   const handlePublishingChange = useCallback(
     (updated: Partial<PublishingSettings>) => {
       setPublishingSettings(prev => {
@@ -364,18 +366,14 @@ export function PuckEditorShell({
     [business.id],
   )
 
-  const shellStyle = {
-    '--puck-brand': brandColor,
-    '--puck-color-interactive': brandColor,
-  } as React.CSSProperties
-
   return (
-    <div className="eatery-puck-shell eatery-puck" style={shellStyle}>
+    <div className="eatery-puck-shell eatery-puck">
       <div className="eatery-puck-editor">
         <Puck
           config={puckConfig}
           data={puckData}
           onChange={handlePuckChange}
+          plugins={puckPlugins}
           overrides={puckOverrides}
           iframe={{ enabled: false }}
           ui={{
@@ -385,38 +383,17 @@ export function PuckEditorShell({
         />
       </div>
 
-      <Dialog open={pagePanel !== null} onOpenChange={open => !open && setPagePanel(null)}>
+      <Dialog open={pagePanel === 'theme'} onOpenChange={open => !open && setPagePanel(null)}>
         <DialogContent className={cn('max-w-lg max-h-[85vh] overflow-y-auto')}>
           <DialogHeader>
-            <DialogTitle>
-              {pagePanel === 'navbar' && t('pageBuilder.navbar')}
-              {pagePanel === 'footer' && t('pageBuilder.footer')}
-              {pagePanel === 'theme' && t('pageBuilder.globalSettings')}
-            </DialogTitle>
+            <DialogTitle>{t('pageBuilder.globalSettings')}</DialogTitle>
           </DialogHeader>
-          {pagePanel === 'navbar' && (
-            <NavbarSettings
-              config={navbarConfig}
-              businessId={business.id}
-              blocks={blocksRef.current}
-              onChange={handleNavbarChange}
-            />
-          )}
-          {pagePanel === 'footer' && (
-            <FooterSettings
-              config={footerConfig}
-              businessId={business.id}
-              onChange={handleFooterChange}
-            />
-          )}
-          {pagePanel === 'theme' && (
-            <GlobalSettingsPanel
-              theme={theme}
-              publishing={publishingSettings}
-              onThemeChange={handleThemeChange}
-              onPublishingChange={handlePublishingChange}
-            />
-          )}
+          <GlobalSettingsPanel
+            theme={theme}
+            publishing={publishingSettings}
+            onThemeChange={handleThemeChange}
+            onPublishingChange={handlePublishingChange}
+          />
         </DialogContent>
       </Dialog>
     </div>

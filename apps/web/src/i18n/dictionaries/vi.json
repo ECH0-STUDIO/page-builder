@@ -414,6 +414,15 @@
     "nothingToUndo": "Không còn thao tác để hoàn tác",
     "nothingToRedo": "Không còn thao tác để làm lại"
   },
+  "puck": {
+    "blocks": "Khối",
+    "outline": "Dàn ý",
+    "sections": "Các phần",
+    "content": "Nội dung",
+    "outlineEmpty": "Chưa có phần nào. Kéo khối từ tab Khối.",
+    "toggleBlocks": "Bật/tắt bảng khối",
+    "toggleSettings": "Bật/tắt bảng cài đặt"
+  },
   "businessProfile": {
     "logo": "Logo",
     "uploadLogo": "Tải logo lên",

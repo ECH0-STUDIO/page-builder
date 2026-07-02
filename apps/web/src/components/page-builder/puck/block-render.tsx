@@ -2,8 +2,9 @@
 
 import type { CSSProperties, ReactNode } from 'react'
 import { scopeCSS } from '@/lib/scope-css'
-import type { BlockType, PageBlock } from '../types'
+import type { BlockType, PageBlock, NavbarConfig, FooterConfig } from '../types'
 import type { HeroConfig } from '../types'
+import { defaultNavbarConfig, defaultFooterConfig } from '../types'
 import { getBlockSurfaceLayers } from '../block-section-style'
 import { spacingFromSize } from '../spacing-presets'
 import type { PuckBlockProps } from './adapters'
@@ -15,6 +16,8 @@ import { ContactRender } from '../render/ContactRender'
 import { MenuGridRender } from '../render/MenuGridRender'
 import type { MenuGridData } from '../render/MenuGridRender'
 import { QRCodeRender } from '../render/QRCodeRender'
+import { NavbarRender } from '../render/NavbarRender'
+import { FooterRender } from '../render/FooterRender'
 import type { Business } from '@/lib/business'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveThemeTokens } from '../theme-tokens'
@@ -32,6 +35,11 @@ function propsToPageBlock(type: BlockType, props: PuckBlockProps, businessId: st
   const defaults = getDefaultConfig(type)
   const nested = (props.config ?? {}) as Record<string, unknown>
   const config = { ...defaults, ...nested, ...stripMetaFromProps(props) } as PageBlock['config']
+  if (type === 'hero') {
+    const hero = config as HeroConfig
+    if (props.layout !== undefined) hero.layout = props.layout as HeroConfig['layout']
+    if (props.height !== undefined) hero.height = props.height as HeroConfig['height']
+  }
   const heroConfig = type === 'hero' ? (config as HeroConfig) : undefined
 
   return {
@@ -154,4 +162,23 @@ export function renderQrCodeBlock(
       />
     </PuckBlockShell>
   )
+}
+
+export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) {
+  const config = { ...defaultNavbarConfig, ...(props.config as NavbarConfig) }
+
+  return (
+    <NavbarRender
+      config={config}
+      businessName={ctx.business.name}
+      logoUrl={ctx.business.logo_url ?? undefined}
+      inEditor
+    />
+  )
+}
+
+export function renderSiteFooter(props: PuckBlockProps, ctx: PuckRenderContext) {
+  const config = { ...defaultFooterConfig, ...(props.config as FooterConfig) }
+
+  return <FooterRender config={config} businessName={ctx.business.name} inEditor />
 }

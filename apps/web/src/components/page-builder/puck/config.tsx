@@ -21,20 +21,28 @@ import { TextImageSettings } from '../blocks/TextImageBlock'
 import { ContactSettings } from '../blocks/ContactBlock'
 import { MenuGridSettings } from '../blocks/MenuGridBlock'
 import { QRCodeSettings } from '../blocks/QRCodeBlock'
-import { spacingSizeField, visibleField } from './shared-fields'
+import { NavbarSettings } from '../blocks/NavbarBlock'
+import { FooterSettings } from '../blocks/FooterBlock'
+import {
+  spacingSizeField,
+  visibleField,
+  heroLayoutField,
+  heroHeightField,
+} from './shared-fields'
 import {
   renderContactBlock,
   renderHeroBlock,
   renderMenuGridBlock,
   renderQrCodeBlock,
+  renderSiteFooter,
+  renderSiteNavbar,
   renderTextImageBlock,
   type PuckRenderContext,
 } from './block-render'
 import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
-import { NavbarRender } from '../render/NavbarRender'
-import { FooterRender } from '../render/FooterRender'
 import { CartProvider } from '../render/CartContext'
+import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
 
 export interface PuckShellState {
   business: Business
@@ -55,7 +63,15 @@ export interface PuckEditorRefs {
   t: (key: string) => string
 }
 
-function configField(
+const CHROME_PERMISSIONS = {
+  delete: false,
+  drag: false,
+  duplicate: false,
+  insert: false,
+}
+
+function legacyConfigField(
+  t: (key: string) => string,
   render: (props: {
     value: Record<string, unknown>
     onChange: (value: Record<string, unknown>) => void
@@ -63,14 +79,14 @@ function configField(
 ) {
   return {
     type: 'custom' as const,
-    label: 'Content',
+    label: t('puck.content'),
     render: ({
       value,
       onChange,
     }: {
       value: Record<string, unknown>
       onChange: (v: Record<string, unknown>) => void
-    }) => render({ value: value ?? {}, onChange }),
+    }) => <div className="puck-legacy-fields">{render({ value: value ?? {}, onChange })}</div>,
   }
 }
 
@@ -84,7 +100,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       render: (props: { children?: ReactNode }) => {
         const { children } = props
         const shell = refs.current.getShell()
-        const { business, theme, navbarConfig, footerConfig, headingFont, bodyFont } = shell
+        const { theme, headingFont, bodyFont } = shell
 
         return (
           <CartProvider>
@@ -100,29 +116,66 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                   __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
                 }}
               />
-              <NavbarRender
-                config={navbarConfig}
-                businessName={business.name}
-                logoUrl={business.logo_url ?? undefined}
-                inEditor
-              />
               {children}
-              <FooterRender
-                config={footerConfig}
-                businessName={business.name}
-                inEditor
-              />
             </div>
           </CartProvider>
         )
       },
     },
     categories: {
-      sections: { title: 'Sections', components: ['hero', 'text_image', 'contact', 'menu_grid', 'qr_code'] },
+      sections: {
+        title: t('puck.sections'),
+        components: ['hero', 'text_image', 'contact', 'menu_grid', 'qr_code'],
+      },
     },
     components: {
+      [SITE_NAVBAR]: {
+        label: t('pageBuilder.header'),
+        permissions: CHROME_PERMISSIONS,
+        defaultProps: {
+          id: SITE_NAVBAR_ID,
+          config: { ...defaultNavbarConfig },
+        },
+        fields: {
+          config: legacyConfigField(t, ({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <NavbarSettings
+                config={{ ...defaultNavbarConfig, ...value } as NavbarConfig}
+                businessId={shell.business.id}
+                blocks={refs.current.getBlocks()}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
+        },
+        render: props =>
+          renderSiteNavbar(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
+      },
+      [SITE_FOOTER]: {
+        label: t('pageBuilder.footer'),
+        permissions: CHROME_PERMISSIONS,
+        defaultProps: {
+          id: SITE_FOOTER_ID,
+          config: { ...defaultFooterConfig },
+        },
+        fields: {
+          config: legacyConfigField(t, ({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <FooterSettings
+                config={{ ...defaultFooterConfig, ...value } as FooterConfig}
+                businessId={shell.business.id}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
+        },
+        render: props =>
+          renderSiteFooter(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
+      },
       hero: {
-        label: 'Hero',
+        label: t('pageBuilder.blocks.hero.label'),
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -130,12 +183,16 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
           blockId: '',
           anchorId: '',
           customCss: '',
+          layout: defaultHeroConfig.layout,
+          height: defaultHeroConfig.height,
           config: { ...defaultHeroConfig },
         },
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => {
+          layout: heroLayoutField(t),
+          height: heroHeightField(t),
+          config: legacyConfigField(t, ({ value, onChange }) => {
             const shell = refs.current.getShell()
             return (
               <HeroSettings
@@ -143,6 +200,8 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                 businessId={shell.business.id}
                 blocks={refs.current.getBlocks()}
                 brandColor={shell.brandColor}
+                omitLayout
+                omitHeight
                 onChange={c => onChange(c as unknown as Record<string, unknown>)}
               />
             )
@@ -151,7 +210,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         render: props => renderHeroBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       text_image: {
-        label: 'Text + Image',
+        label: t('pageBuilder.blocks.text_image.label'),
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -164,7 +223,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => {
+          config: legacyConfigField(t, ({ value, onChange }) => {
             const shell = refs.current.getShell()
             return (
               <TextImageSettings
@@ -180,7 +239,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         render: props => renderTextImageBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       contact: {
-        label: 'Contact & Info',
+        label: t('pageBuilder.blocks.contact.label'),
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -193,7 +252,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => {
+          config: legacyConfigField(t, ({ value, onChange }) => {
             const shell = refs.current.getShell()
             return (
               <ContactSettings
@@ -207,7 +266,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         render: props => renderContactBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       menu_grid: {
-        label: 'Menu / Products',
+        label: t('pageBuilder.blocks.menu_grid.label'),
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -220,7 +279,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => {
+          config: legacyConfigField(t, ({ value, onChange }) => {
             const shell = refs.current.getShell()
             return (
               <MenuGridSettings
@@ -235,7 +294,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         render: props => renderMenuGridBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       qr_code: {
-        label: 'QR Code',
+        label: t('pageBuilder.blocks.qr_code.label'),
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -248,7 +307,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => {
+          config: legacyConfigField(t, ({ value, onChange }) => {
             const shell = refs.current.getShell()
             return (
               <QRCodeSettings

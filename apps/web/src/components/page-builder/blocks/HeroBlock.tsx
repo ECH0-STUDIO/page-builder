@@ -78,6 +78,8 @@ export function HeroSettings({
   brandColor = '#E85D26',
   onChange,
   onHeightChange,
+  omitLayout = false,
+  omitHeight = false,
 }: {
   config: HeroConfig
   businessId: string
@@ -87,6 +89,8 @@ export function HeroSettings({
   onChange: (c: HeroConfig) => void
   /** Called when block height mode changes — resets outer padding defaults */
   onHeightChange?: (height: BlockHeight) => void
+  omitLayout?: boolean
+  omitHeight?: boolean
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -153,29 +157,33 @@ export function HeroSettings({
     <div className="space-y-5">
 
       {/* Layout */}
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.layout')}</Label>
-        <div className="grid grid-cols-1 gap-1.5">
-          {LAYOUTS.map(l => (
-            <button
-              key={l.value}
-              type="button"
-              onClick={() => set('layout', l.value)}
-              className={cn(
-                'text-left px-3 py-2 rounded-lg border text-xs transition-colors',
-                config.layout === l.value
-                  ? 'border-primary bg-primary/5 text-primary font-medium'
-                  : 'border-border hover:border-foreground/30'
-              )}
-            >
-              <span className="font-medium">{l.label}</span>
-              <span className="text-muted-foreground ml-2">{l.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {!omitLayout && (
+        <>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.layout')}</Label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {LAYOUTS.map(l => (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => set('layout', l.value)}
+                  className={cn(
+                    'text-left px-3 py-2 rounded-lg border text-xs transition-colors',
+                    config.layout === l.value
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      : 'border-border hover:border-foreground/30'
+                  )}
+                >
+                  <span className="font-medium">{l.label}</span>
+                  <span className="text-muted-foreground ml-2">{l.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <Separator />
+          <Separator />
+        </>
+      )}
 
       {/* Image (hidden for text_only) */}
       {hasImage && (
@@ -413,26 +421,28 @@ export function HeroSettings({
       <Separator />
 
       {/* Block height — all layouts */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.blockHeight')}</Label>
-        <div className="flex gap-1.5">
-          {HEIGHTS.map(h => (
-            <button key={h.value} type="button" onClick={() => setHeight(h.value)}
-              className={cn('flex-1 py-1.5 rounded-md border text-xs transition-colors',
-                resolvedHeight() === h.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-foreground/30'
-              )}
-            >
-              {h.label}
-            </button>
-          ))}
+      {!omitHeight && (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.blockHeight')}</Label>
+          <div className="flex gap-1.5">
+            {HEIGHTS.map(h => (
+              <button key={h.value} type="button" onClick={() => setHeight(h.value)}
+                className={cn('flex-1 py-1.5 rounded-md border text-xs transition-colors',
+                  resolvedHeight() === h.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-foreground/30'
+                )}
+              >
+                {h.label}
+              </button>
+            ))}
+          </div>
+          {resolvedHeight() === 'custom' && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.customHeightHelp')}</p>
+          )}
+          {resolvedHeight() === 'fullscreen' && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.fullscreenHeightHelp')}</p>
+          )}
         </div>
-        {resolvedHeight() === 'custom' && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.customHeightHelp')}</p>
-        )}
-        {resolvedHeight() === 'fullscreen' && (
-          <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.fullscreenHeightHelp')}</p>
-        )}
-      </div>
+      )}
 
       {/* Styling — text colour for overlay/text_only */}
       {!isSplit && (

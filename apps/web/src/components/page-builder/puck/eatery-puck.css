@@ -1,8 +1,5 @@
-/* Puck editor shell — business brand color applied via --puck-brand inline style */
+/* Puck editor shell — keep Puck's default interactive colors (azure), not business brand */
 .eatery-puck {
-  --puck-color-interactive: var(--puck-brand, var(--brand-color, #e85d26));
-  --puck-color-interactive-hover: color-mix(in srgb, var(--puck-brand, #e85d26) 85%, black);
-  --puck-color-interactive-active: color-mix(in srgb, var(--puck-brand, #e85d26) 70%, black);
   --puck-font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
 }
 
@@ -31,7 +28,7 @@
   min-height: 0;
 }
 
-/* Allow scrolling inside the canvas preview iframe */
+/* Allow scrolling inside the canvas preview */
 .eatery-puck-editor [class*='PuckCanvas'],
 .eatery-puck-editor [class*='PuckPreview'] {
   overflow: auto !important;
@@ -45,6 +42,19 @@
 /* Hide any leftover default Puck header chrome if present */
 .eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
   display: none;
+}
+
+/* Neutralize shadcn primary accents inside Puck field panels */
+.eatery-puck .puck-legacy-fields .border-primary {
+  border-color: var(--puck-color-azure-04) !important;
+}
+
+.eatery-puck .puck-legacy-fields .bg-primary\/5 {
+  background-color: var(--puck-color-azure-10) !important;
+}
+
+.eatery-puck .puck-legacy-fields .text-primary {
+  color: var(--puck-color-azure-04) !important;
 }
 
 /* Clickable drawer items */

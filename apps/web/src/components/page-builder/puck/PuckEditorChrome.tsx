@@ -10,14 +10,10 @@ import {
   Loader2,
   PanelLeft,
   PanelRight,
-  Plus,
   Settings,
-  Menu,
-  PanelBottom,
 } from 'lucide-react'
 import { usePuck } from '@puckeditor/core'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +24,7 @@ import { getPublicStoreUrl } from '@/lib/site-urls'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { SaveStatus } from '../PublishBar'
-import { BLOCK_REGISTRY } from '../registry'
-import type { BlockType } from '../types'
+import { ROOT_ZONE } from './constants'
 
 interface PuckEditorChromeProps {
   saveStatus: SaveStatus
@@ -40,7 +35,7 @@ interface PuckEditorChromeProps {
   previewMode: boolean
   onTogglePreview: () => void
   onPublish: (state: boolean) => void
-  onOpenPagePanel: (panel: 'theme' | 'navbar' | 'footer') => void
+  onOpenGlobalSettings: () => void
 }
 
 export function PuckHeaderBack() {
@@ -62,6 +57,7 @@ export function PuckHeaderBack() {
 
 function PuckSidebarToggles() {
   const { dispatch, appState } = usePuck()
+  const { t } = useTranslation()
   const leftVisible = appState.ui.leftSideBarVisible
   const rightVisible = appState.ui.rightSideBarVisible
 
@@ -74,7 +70,7 @@ function PuckSidebarToggles() {
           'p-1.5 rounded-md transition-colors',
           leftVisible ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
         )}
-        title="Toggle blocks panel"
+        title={t('puck.toggleBlocks')}
       >
         <PanelLeft className="size-4" />
       </button>
@@ -85,7 +81,7 @@ function PuckSidebarToggles() {
           'p-1.5 rounded-md transition-colors',
           rightVisible ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
         )}
-        title="Toggle settings panel"
+        title={t('puck.toggleSettings')}
       >
         <PanelRight className="size-4" />
       </button>
@@ -114,10 +110,7 @@ export function PuckCustomHeader({
         <span className="text-xs text-muted-foreground truncate hidden sm:inline">{pathLabel}</span>
       </div>
       <div className="flex-1 min-w-0" />
-      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-        {!previewMode && <PuckAddBlockButton />}
-        {chrome}
-      </div>
+      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">{chrome}</div>
     </header>
   )
 }
@@ -131,7 +124,7 @@ export function PuckHeaderActions({
   previewMode,
   onTogglePreview,
   onPublish,
-  onOpenPagePanel,
+  onOpenGlobalSettings,
 }: PuckEditorChromeProps) {
   const { t } = useTranslation()
   const showChanges = published && hasUnpublishedChanges
@@ -214,29 +207,14 @@ export function PuckHeaderActions({
         )}
       </Badge>
 
-      {/* Page settings */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 hidden md:flex">
-            <Settings className="size-3.5" />
-            {t('pageBuilder.pageSettings')}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onOpenPagePanel('navbar')}>
-            <Menu className="size-3.5 mr-2" />
-            {t('pageBuilder.header')}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpenPagePanel('footer')}>
-            <PanelBottom className="size-3.5 mr-2" />
-            {t('pageBuilder.footer')}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpenPagePanel('theme')}>
-            <Settings className="size-3.5 mr-2" />
-            {t('pageBuilder.globalSettings')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <button
+        type="button"
+        onClick={onOpenGlobalSettings}
+        className="hidden md:flex items-center gap-1 h-7 px-2.5 text-xs rounded-md border border-border bg-background hover:bg-accent transition-colors"
+      >
+        <Settings className="size-3.5" />
+        {t('pageBuilder.globalSettings')}
+      </button>
 
       {/* Publish */}
       <DropdownMenu>
@@ -245,7 +223,7 @@ export function PuckHeaderActions({
             type="button"
             onClick={() => onPublish(true)}
             disabled={publishing}
-            className="h-7 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-[var(--puck-brand)] text-white hover:opacity-90 disabled:opacity-50"
+            className="h-7 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-[var(--puck-color-azure-04)] text-white hover:bg-[var(--puck-color-azure-03)] disabled:opacity-50"
           >
             {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
           </button>
@@ -253,7 +231,7 @@ export function PuckHeaderActions({
             <button
               type="button"
               disabled={publishing}
-              className="h-7 px-1.5 flex items-center justify-center bg-[var(--puck-brand)] text-white hover:opacity-90 disabled:opacity-50 border-l border-white/20"
+              className="h-7 px-1.5 flex items-center justify-center bg-[var(--puck-color-azure-04)] text-white hover:bg-[var(--puck-color-azure-03)] disabled:opacity-50 border-l border-white/20"
             >
               <ChevronDown className="size-3.5" />
             </button>
@@ -271,41 +249,6 @@ export function PuckHeaderActions({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  )
-}
-
-const ROOT_ZONE = 'root:default-zone'
-
-export function PuckAddBlockButton() {
-  const { t } = useTranslation()
-  const { dispatch, appState } = usePuck()
-  const contentLength = appState.data.content.length
-
-  function insertBlock(type: BlockType) {
-    dispatch({
-      type: 'insert',
-      componentType: type,
-      destinationZone: ROOT_ZONE,
-      destinationIndex: contentLength,
-    })
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" className="h-7 text-xs gap-1 bg-[var(--puck-brand)] hover:opacity-90 text-white">
-          <Plus className="size-3.5" />
-          {t('pageBuilder.addSection')}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        {BLOCK_REGISTRY.map(block => (
-          <DropdownMenuItem key={block.type} onClick={() => insertBlock(block.type)}>
-            {t(`pageBuilder.blocks.${block.type}.label`)}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }
 

@@ -414,6 +414,15 @@
     "nothingToUndo": "Nothing more to undo",
     "nothingToRedo": "Nothing more to redo"
   },
+  "puck": {
+    "blocks": "Blocks",
+    "outline": "Outline",
+    "sections": "Sections",
+    "content": "Content",
+    "outlineEmpty": "No sections yet. Drag blocks from the Blocks tab.",
+    "toggleBlocks": "Toggle blocks panel",
+    "toggleSettings": "Toggle settings panel"
+  },
   "businessProfile": {
     "logo": "Logo",
     "uploadLogo": "Upload logo",

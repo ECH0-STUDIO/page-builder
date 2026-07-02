@@ -10,7 +10,16 @@ import {
   spacingFromSize,
   type SectionSize,
 } from '../spacing-presets'
-import type { HeroConfig, BlockType, PageBlock } from '../types'
+import type { HeroConfig, BlockType, PageBlock, NavbarConfig, FooterConfig } from '../types'
+import { defaultNavbarConfig, defaultFooterConfig } from '../types'
+import {
+  CHROME_BLOCK_TYPES,
+  SITE_FOOTER,
+  SITE_NAVBAR,
+  SITE_FOOTER_ID,
+  SITE_NAVBAR_ID,
+  type ChromeBlockType,
+} from './constants'
 
 export const PUCK_BLOCK_TYPES = [
   'hero',
@@ -30,6 +39,8 @@ const META_KEYS = new Set([
   'anchorId',
   'customCss',
   'config',
+  'layout',
+  'height',
 ])
 
 export interface PuckBlockMeta {
@@ -42,8 +53,17 @@ export interface PuckBlockMeta {
 
 export type PuckBlockProps = PuckBlockMeta & Record<string, unknown>
 
+export interface PuckChromeConfigs {
+  navbarConfig: NavbarConfig
+  footerConfig: FooterConfig
+}
+
 function isPuckBlockType(type: string): type is PuckBlockType {
   return (PUCK_BLOCK_TYPES as readonly string[]).includes(type)
+}
+
+function isChromeBlockType(type: string): type is ChromeBlockType {
+  return (CHROME_BLOCK_TYPES as readonly string[]).includes(type)
 }
 
 function splitProps(type: BlockType, props: PuckBlockProps): {
@@ -57,6 +77,8 @@ function splitProps(type: BlockType, props: PuckBlockProps): {
     anchorId = '',
     customCss = '',
     config: nestedConfig,
+    layout: topLayout,
+    height: topHeight,
     ...rest
   } = props
 
@@ -66,6 +88,12 @@ function splitProps(type: BlockType, props: PuckBlockProps): {
     ...(nestedConfig as Record<string, unknown> | undefined),
     ...rest,
   } as unknown as PageBlock['config']
+
+  if (type === 'hero') {
+    const hero = config as HeroConfig
+    if (topLayout !== undefined) hero.layout = topLayout as HeroConfig['layout']
+    if (topHeight !== undefined) hero.height = topHeight as HeroConfig['height']
+  }
 
   return {
     meta: {
@@ -83,7 +111,7 @@ function mergeProps(
   block: PageBlock,
   spacingSize: SectionSize,
 ): PuckBlockProps & { id: string } {
-  return {
+  const base: PuckBlockProps & { id: string } = {
     id: block.id,
     spacingSize,
     visible: block.visible,
@@ -92,20 +120,42 @@ function mergeProps(
     customCss: block.custom_css ?? '',
     config: block.config,
   }
+
+  if (block.type === 'hero') {
+    const hero = block.config as HeroConfig
+    base.layout = hero.layout
+    base.height = hero.height
+  }
+
+  return base
 }
 
-export function pageBlocksToPuckData(blocks: PageBlock[]): Data {
-  const content: ComponentData[] = blocks.map(block => {
-    const spacingSize = inferSpacingSize(
-      block.type,
-      block.spacing,
-      block.type === 'hero' ? (block.config as HeroConfig) : undefined,
-    )
-    return {
-      type: block.type,
-      props: mergeProps(block, spacingSize),
-    }
-  })
+function chromeProps(config: NavbarConfig | FooterConfig, id: string) {
+  return { id, config }
+}
+
+export function pageBlocksToPuckData(
+  blocks: PageBlock[],
+  chrome?: Partial<PuckChromeConfigs>,
+): Data {
+  const navbarConfig = chrome?.navbarConfig ?? defaultNavbarConfig
+  const footerConfig = chrome?.footerConfig ?? defaultFooterConfig
+
+  const content: ComponentData[] = [
+    { type: SITE_NAVBAR, props: chromeProps(navbarConfig, SITE_NAVBAR_ID) },
+    ...blocks.map(block => {
+      const spacingSize = inferSpacingSize(
+        block.type,
+        block.spacing,
+        block.type === 'hero' ? (block.config as HeroConfig) : undefined,
+      )
+      return {
+        type: block.type,
+        props: mergeProps(block, spacingSize),
+      }
+    }),
+    { type: SITE_FOOTER, props: chromeProps(footerConfig, SITE_FOOTER_ID) },
+  ]
 
   return {
     content,
@@ -113,11 +163,43 @@ export function pageBlocksToPuckData(blocks: PageBlock[]): Data {
   }
 }
 
+export function extractChromeFromData(data: Data): PuckChromeConfigs {
+  let navbarConfig = defaultNavbarConfig
+  let footerConfig = defaultFooterConfig
+
+  for (const item of data.content ?? []) {
+    if (item.type === SITE_NAVBAR) {
+      navbarConfig = { ...defaultNavbarConfig, ...(item.props?.config as NavbarConfig) }
+    }
+    if (item.type === SITE_FOOTER) {
+      footerConfig = { ...defaultFooterConfig, ...(item.props?.config as FooterConfig) }
+    }
+  }
+
+  return { navbarConfig, footerConfig }
+}
+
+/** Keep header/footer bookends even if Puck omits them after an operation. */
+export function ensureChromeBlocks(data: Data, chrome: PuckChromeConfigs): Data {
+  const middle = (data.content ?? []).filter(
+    item => item.type !== SITE_NAVBAR && item.type !== SITE_FOOTER,
+  )
+
+  return {
+    ...data,
+    content: [
+      { type: SITE_NAVBAR, props: chromeProps(chrome.navbarConfig, SITE_NAVBAR_ID) },
+      ...middle,
+      { type: SITE_FOOTER, props: chromeProps(chrome.footerConfig, SITE_FOOTER_ID) },
+    ],
+  }
+}
+
 export function puckDataToPageBlocks(
   data: Data,
   businessId: string,
 ): Omit<PageBlock, 'created_at' | 'updated_at'>[] {
-  const content = data.content ?? []
+  const content = (data.content ?? []).filter(item => !isChromeBlockType(item.type))
 
   return content.map((item, index) => {
     if (!isPuckBlockType(item.type)) {
