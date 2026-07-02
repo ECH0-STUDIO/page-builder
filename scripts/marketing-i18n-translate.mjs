@@ -3,6 +3,8 @@
  * Keep in sync with apps/web/src/lib/marketing-i18n.ts
  */
 
+import { decodeEntities, encodeHtmlTextEntities } from './marketing-i18n-normalize.mjs'
+
 /** Never replace these as substrings inside longer Vietnamese phrases. */
 export const EXACT_ONLY_KEYS = new Set([
   'Chi phí',
@@ -61,7 +63,7 @@ function escapeRegExp(value) {
 }
 
 export function translateString(text, pairs) {
-  let out = text
+  let out = decodeEntities(text)
   const sorted = [...pairs].sort((a, b) => b[0].length - a[0].length)
   for (const [from, to] of sorted) {
     if (!from || !to) continue
@@ -73,7 +75,7 @@ export function translateString(text, pairs) {
     const re = new RegExp(escapeRegExp(from), 'gi')
     out = out.replace(re, (match) => preserveCase(match, to))
   }
-  return out
+  return encodeHtmlTextEntities(out)
 }
 
 export function applyMarketingI18nToHtml(html, pairs) {

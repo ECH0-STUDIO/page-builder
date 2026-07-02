@@ -57,6 +57,20 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function decodeHtmlTextEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+}
+
+function encodeHtmlTextEntities(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 /** Short keys like "Bắt đầu" or "tháng" corrupt longer phrases if applied as substrings. */
 const MIN_SUBSTRING_KEY_LENGTH = 12
 
@@ -68,7 +82,7 @@ function shouldSubstringReplace(key: string, haystack: string): boolean {
 }
 
 function translateString(text: string, pairs: [string, string][]): string {
-  let out = text
+  let out = decodeHtmlTextEntities(text)
   const sorted = [...pairs].sort((a, b) => b[0].length - a[0].length)
   for (const [from, to] of sorted) {
     if (!from) continue
@@ -80,7 +94,7 @@ function translateString(text: string, pairs: [string, string][]): string {
     const re = new RegExp(escapeRegExp(from), 'gi')
     out = out.replace(re, (match) => preserveCase(match, to))
   }
-  return out
+  return encodeHtmlTextEntities(out)
 }
 
 function applyReplacements(html: string, pairs: [string, string][]): string {

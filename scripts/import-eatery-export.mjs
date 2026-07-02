@@ -60,7 +60,8 @@ function validateExport(dir) {
     process.exit(1)
   }
   const index = fs.readFileSync(indexPath, 'utf8')
-  if (/Nexbet|Temlis|nexbit-temlis/i.test(index)) {
+  const isEatery = /Eatery|eateryvn|Dành cho các cửa hàng/i.test(index)
+  if (!isEatery && /Nexbet|Temlis|nexbit-temlis/i.test(index)) {
     console.warn(
       'WARNING: index.html still looks like the old Nexbet template. ' +
         'Make sure you exported the Eatery Marketing Website project from Webflow.',

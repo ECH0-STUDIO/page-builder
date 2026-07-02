@@ -3,7 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { fillNullTranslations } from './marketing-i18n-normalize.mjs'
+import { expandEntityAliases, fillNullTranslations } from './marketing-i18n-normalize.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const outPath = path.join(__dirname, '../apps/web/src/lib/marketing-i18n-manifest.json')
@@ -474,6 +474,7 @@ for (const [vi, en] of Object.entries(existing)) {
   if (!(vi in pairs) && en) pairs[vi] = en
 }
 
+expandEntityAliases(pairs)
 const filled = fillNullTranslations(pairs)
 const stillNull = Object.entries(pairs).filter(([, en]) => !en)
 

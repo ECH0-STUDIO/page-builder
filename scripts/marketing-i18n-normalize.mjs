@@ -10,6 +10,24 @@ export function decodeEntities(s) {
     .replace(/&gt;/g, '>')
 }
 
+export function encodeHtmlTextEntities(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** Add &amp; / decoded alias keys so manifest matches Webflow HTML text nodes. */
+export function expandEntityAliases(pairs) {
+  for (const [vi, en] of Object.entries({ ...pairs })) {
+    if (!en) continue
+    if (vi.includes('&') && !vi.includes('&amp;')) {
+      pairs[vi.replace(/&/g, '&amp;')] = en
+    }
+    if (vi.includes('&amp;') && !pairs[vi.replace(/&amp;/g, '&')]) {
+      pairs[vi.replace(/&amp;/g, '&')] = en
+    }
+  }
+  return pairs
+}
+
 export function normalizeKey(s) {
   return decodeEntities(s).replace(/\s+/g, ' ').trim().toLowerCase()
 }

@@ -57,7 +57,8 @@ if (missingPages.length > 0) {
 const indexPath = path.join(source, 'index.html')
 if (fs.existsSync(indexPath)) {
   const indexHtml = fs.readFileSync(indexPath, 'utf8')
-  if (/Nexbet|Temlis|nexbit-temlis/i.test(indexHtml)) {
+  const isEatery = /Eatery|eateryvn|Dành cho các cửa hàng/i.test(indexHtml)
+  if (!isEatery && /Nexbet|Temlis|nexbit-temlis/i.test(indexHtml)) {
     console.warn(
       '\nWARNING: design/webflow-export looks like the OLD Nexbet template.\n' +
         'Replace with your Eatery export:\n' +
