@@ -1,26 +1,28 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Data } from '@puckeditor/core'
+import type { Data, Overrides } from '@puckeditor/core'
 import { Puck } from '@puckeditor/core'
 import '@puckeditor/core/puck.css'
 import './eatery-puck.css'
 import { toast } from 'sonner'
-import { Settings, Menu, PanelBottom } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
-import { PublishBar, type SaveStatus } from '../PublishBar'
 import { GlobalSettingsPanel } from '../blocks/GlobalSettingsPanel'
 import { NavbarSettings } from '../blocks/NavbarBlock'
 import { FooterSettings } from '../blocks/FooterBlock'
 import { normalizePageBlock } from '../spacing-utils'
-import { buildThemeStyle, resolveThemeTokens } from '../theme-tokens'
+import { resolveThemeTokens } from '../theme-tokens'
 import { pageBlocksToPuckData, puckDataToPageBlocks } from './adapters'
-import { createPuckConfig } from './config'
+import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
+import {
+  PuckAddBlockButton,
+  PuckHeaderActions,
+  PuckHeaderBack,
+} from './PuckEditorChrome'
 
 import {
   savePageBlocksAction,
@@ -45,6 +47,7 @@ import {
 } from '../types'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+import type { SaveStatus } from '../PublishBar'
 
 type PageSettingsPanel = 'theme' | 'navbar' | 'footer' | null
 
@@ -91,6 +94,7 @@ export function PuckEditorShell({
     initialPublishing,
   )
   const [pagePanel, setPagePanel] = useState<PageSettingsPanel>(null)
+  const [previewMode, setPreviewMode] = useState(false)
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -106,6 +110,7 @@ export function PuckEditorShell({
   const footerConfig: FooterConfig = theme?.footer_config ?? defaultFooterConfig
   const fontFamily = theme?.font_family ?? defaultThemeSettings.font_family
   const headingFont = theme?.heading_font_family ?? theme?.font_family ?? defaultThemeSettings.font_family
+  const brandColor = themeTokens.brandColor
 
   const menuGridData: MenuGridData = useMemo(
     () => ({
@@ -118,64 +123,55 @@ export function PuckEditorShell({
     [initialCategories, initialItems, initialVariantGroups, initialVariantOptions, business.slug],
   )
 
-  const blocksForSettings = useMemo(
-    () => puckDataToPageBlocks(puckData, business.id),
-    [puckData, business.id],
-  )
+  const blocksRef = useRef<PageBlock[]>([])
+  blocksRef.current = puckDataToPageBlocks(puckData, business.id) as PageBlock[]
 
-  const renderCtx = useMemo(
-    () => ({
+  const editorRefs = useRef<PuckEditorRefs>({
+    getShell: () => ({
       business,
-      menuGridData,
-      brandColor: themeTokens.brandColor,
-      defaultTextColor: themeTokens.pageText,
-      qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
-    }),
-    [business, menuGridData, themeTokens, t],
-  )
-
-  const puckConfig = useMemo(
-    () =>
-      createPuckConfig({
-        business,
-        blocks: blocksForSettings as PageBlock[],
-        categories: initialCategories,
-        items: initialItems,
-        brandColor: themeTokens.brandColor,
-        defaultTextColor: themeTokens.pageText,
-        renderCtx,
-        theme,
-        navbarConfig,
-        footerConfig,
-        headingFont,
-        bodyFont: fontFamily,
-        t,
-      }),
-    [
-      business,
-      blocksForSettings,
-      initialCategories,
-      initialItems,
-      themeTokens,
-      renderCtx,
       theme,
       navbarConfig,
       footerConfig,
       headingFont,
-      fontFamily,
-      t,
-    ],
-  )
+      bodyFont: fontFamily,
+      categories: initialCategories,
+      items: initialItems,
+      brandColor,
+    }),
+    getBlocks: () => blocksRef.current,
+    getRenderCtx: () => ({
+      business,
+      menuGridData,
+      brandColor,
+      defaultTextColor: themeTokens.pageText,
+      qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+    }),
+    t,
+  })
+  editorRefs.current = {
+    getShell: () => ({
+      business,
+      theme,
+      navbarConfig,
+      footerConfig,
+      headingFont,
+      bodyFont: fontFamily,
+      categories: initialCategories,
+      items: initialItems,
+      brandColor,
+    }),
+    getBlocks: () => blocksRef.current,
+    getRenderCtx: () => ({
+      business,
+      menuGridData,
+      brandColor,
+      defaultTextColor: themeTokens.pageText,
+      qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+    }),
+    t,
+  }
 
-  useEffect(() => {
-    const families = [...new Set([fontFamily, headingFont])]
-    const id = 'pb-puck-gfont'
-    const link = (document.getElementById(id) as HTMLLinkElement | null) ?? document.createElement('link')
-    link.id = id
-    link.rel = 'stylesheet'
-    link.href = `https://fonts.googleapis.com/css2?${families.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
-    if (!document.getElementById(id)) document.head.appendChild(link)
-  }, [fontFamily, headingFont])
+  const puckConfig = useMemo(() => createStablePuckConfig(editorRefs), [])
 
   const performSave = useCallback(
     async (data: Data) => {
@@ -207,41 +203,89 @@ export function PuckEditorShell({
     [performSave],
   )
 
+  const saveNow = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    performSave(puckDataRef.current)
+  }, [performSave])
+
+  const handlePublish = useCallback(
+    async (state: boolean) => {
+      setPublishing(true)
+      if (state) saveNow()
+      try {
+        const res = await togglePublishAction(business.id, state)
+        if (res.success) {
+          setPublished(state)
+          setPublishingSettings(res.data)
+          setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
+          toast.success(state ? 'Page published successfully!' : 'Page unpublished')
+        } else {
+          toast.error(res.error)
+        }
+      } catch {
+        toast.error('Failed to toggle publish status')
+      }
+      setPublishing(false)
+    },
+    [business.id, saveNow],
+  )
+
+  const chromeProps = useMemo(
+    () => ({
+      saveStatus,
+      published,
+      hasUnpublishedChanges,
+      publishing,
+      slug: business.slug ?? '',
+      previewMode,
+      onTogglePreview: () => setPreviewMode(p => !p),
+      onPublish: handlePublish,
+      onOpenPagePanel: setPagePanel,
+    }),
+    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
+  )
+
+  const puckOverrides = useMemo<Partial<Overrides>>(
+    () => ({
+      header: ({ children, actions }) => (
+        <div className="eatery-puck-header w-full">
+          <div className="flex items-center gap-1 w-full min-w-0 px-1">
+            <PuckHeaderBack />
+            <div className="flex-1 min-w-0 overflow-hidden">{children}</div>
+            <div className="flex items-center gap-2 shrink-0 px-2">
+              {!previewMode && <PuckAddBlockButton />}
+              {actions}
+            </div>
+          </div>
+        </div>
+      ),
+      headerActions: () => <PuckHeaderActions {...chromeProps} />,
+    }),
+    [chromeProps, previewMode],
+  )
+
+  useEffect(() => {
+    const families = [...new Set([fontFamily, headingFont])]
+    const id = 'pb-puck-gfont'
+    const link = (document.getElementById(id) as HTMLLinkElement | null) ?? document.createElement('link')
+    link.id = id
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?${families.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
+    if (!document.getElementById(id)) document.head.appendChild(link)
+  }, [fontFamily, headingFont])
+
   const handlePuckChange = useCallback(
     (data: Data) => {
       setPuckData(data)
+      blocksRef.current = puckDataToPageBlocks(data, business.id) as PageBlock[]
       if (isFirstRender.current) {
         isFirstRender.current = false
         return
       }
       triggerAutoSave(data)
     },
-    [triggerAutoSave],
+    [triggerAutoSave, business.id],
   )
-
-  function saveNow() {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    performSave(puckDataRef.current)
-  }
-
-  async function handlePublish(state: boolean) {
-    setPublishing(true)
-    if (state) saveNow()
-    try {
-      const res = await togglePublishAction(business.id, state)
-      if (res.success) {
-        setPublished(state)
-        setPublishingSettings(res.data)
-        setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
-        toast.success(state ? 'Page published successfully!' : 'Page unpublished')
-      } else {
-        toast.error(res.error)
-      }
-    } catch {
-      toast.error('Failed to toggle publish status')
-    }
-    setPublishing(false)
-  }
 
   const handleThemeChange = useCallback(
     (updated: Partial<ThemeSettings>) => {
@@ -324,69 +368,26 @@ export function PuckEditorShell({
     [business.id],
   )
 
+  const shellStyle = {
+    '--puck-brand': brandColor,
+    '--puck-color-interactive': brandColor,
+  } as React.CSSProperties
+
   return (
-    <div className="eatery-puck-shell eatery-puck">
-      <PublishBar
-        businessName={business.name}
-        slug={business.slug}
-        published={published}
-        hasUnpublishedChanges={hasUnpublishedChanges}
-        saveStatus={saveStatus}
-        onPublish={handlePublish}
-        publishing={publishing}
-        onTogglePreview={() => {
-          if (business.slug) {
-            window.open(`/${business.slug}`, '_blank')
-          }
-        }}
-      />
-
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-muted/30 shrink-0">
-        <span className="text-xs text-muted-foreground mr-1">{t('pageBuilder.pageSettings')}</span>
-        <Button
-          type="button"
-          variant={pagePanel === 'navbar' ? 'default' : 'outline'}
-          size="sm"
-          className="h-7 text-xs gap-1"
-          onClick={() => setPagePanel('navbar')}
-        >
-          <Menu className="size-3.5" />
-          {t('pageBuilder.header')}
-        </Button>
-        <Button
-          type="button"
-          variant={pagePanel === 'footer' ? 'default' : 'outline'}
-          size="sm"
-          className="h-7 text-xs gap-1"
-          onClick={() => setPagePanel('footer')}
-        >
-          <PanelBottom className="size-3.5" />
-          {t('pageBuilder.footer')}
-        </Button>
-        <Button
-          type="button"
-          variant={pagePanel === 'theme' ? 'default' : 'outline'}
-          size="sm"
-          className="h-7 text-xs gap-1"
-          onClick={() => setPagePanel('theme')}
-        >
-          <Settings className="size-3.5" />
-          {t('pageBuilder.globalSettings')}
-        </Button>
-      </div>
-
-      <div className="eatery-puck-editor" style={buildThemeStyle(theme)}>
+    <div className="eatery-puck-shell eatery-puck" style={shellStyle}>
+      <div className="eatery-puck-editor">
         <Puck
           config={puckConfig}
           data={puckData}
           onChange={handlePuckChange}
-          onPublish={data => {
-            setPuckData(data)
-            saveNow()
-          }}
+          overrides={puckOverrides}
           headerTitle={business.name}
           headerPath={t('sidebar.pageBuilder')}
-          iframe={{ enabled: true }}
+          iframe={{ enabled: false }}
+          ui={{
+            leftSideBarVisible: !previewMode,
+            rightSideBarVisible: !previewMode,
+          }}
         />
       </div>
 
@@ -403,7 +404,7 @@ export function PuckEditorShell({
             <NavbarSettings
               config={navbarConfig}
               businessId={business.id}
-              blocks={blocksForSettings as PageBlock[]}
+              blocks={blocksRef.current}
               onChange={handleNavbarChange}
             />
           )}

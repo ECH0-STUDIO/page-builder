@@ -1,8 +1,8 @@
-/* Eatery branding overrides for Puck editor chrome */
+/* Puck editor shell — business brand color applied via --puck-brand inline style */
 .eatery-puck {
-  --puck-color-interactive: #e85d26;
-  --puck-color-interactive-hover: #d14f1c;
-  --puck-color-interactive-active: #b84318;
+  --puck-color-interactive: var(--puck-brand, var(--brand-color, #e85d26));
+  --puck-color-interactive-hover: color-mix(in srgb, var(--puck-brand, #e85d26) 85%, black);
+  --puck-color-interactive-active: color-mix(in srgb, var(--puck-brand, #e85d26) 70%, black);
   --puck-font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
 }
 
@@ -13,7 +13,7 @@
 .eatery-puck-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
   width: 100%;
   overflow: hidden;
   background: var(--background, #fff);
@@ -22,13 +22,28 @@
 .eatery-puck-editor {
   flex: 1;
   min-height: 0;
-}
-
-.eatery-puck-editor .PuckLayout {
   height: 100%;
 }
 
-/* Tighter field panel for nested block settings */
-.eatery-puck [class*='Field'] {
-  max-width: 100%;
+.eatery-puck-editor > .Puck,
+.eatery-puck-editor .PuckLayout {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Allow scrolling inside the canvas preview iframe */
+.eatery-puck-editor [class*='PuckCanvas'],
+.eatery-puck-editor [class*='PuckPreview'] {
+  overflow: auto !important;
+  min-height: 0;
+}
+
+.eatery-puck-header {
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  background: var(--background, #fff);
+}
+
+/* Clickable drawer items */
+.eatery-puck [data-puck-drawer-item] button {
+  width: 100%;
 }

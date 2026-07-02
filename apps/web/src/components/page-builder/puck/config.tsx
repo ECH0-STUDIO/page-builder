@@ -1,16 +1,19 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import type { MutableRefObject } from 'react'
 import type { Config } from '@puckeditor/core'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
-import type { PageBlock } from '../types'
+import type { PageBlock, ThemeSettings, NavbarConfig, FooterConfig } from '../types'
 import {
   defaultContactConfig,
   defaultHeroConfig,
   defaultMenuGridConfig,
   defaultQRCodeConfig,
   defaultTextImageConfig,
+  defaultNavbarConfig,
+  defaultFooterConfig,
 } from '../types'
 import { defaultSpacingSize } from '../spacing-presets'
 import { HeroSettings } from '../blocks/HeroBlock'
@@ -28,26 +31,27 @@ import {
   type PuckRenderContext,
 } from './block-render'
 import type { PuckBlockProps } from './adapters'
-import type { ThemeSettings, NavbarConfig, FooterConfig } from '../types'
-import { defaultNavbarConfig, defaultFooterConfig } from '../types'
-import { buildThemeStyle, resolveThemeTokens } from '../theme-tokens'
+import { buildThemeStyle } from '../theme-tokens'
 import { NavbarRender } from '../render/NavbarRender'
 import { FooterRender } from '../render/FooterRender'
 import { CartProvider } from '../render/CartContext'
 
-export interface PuckConfigContext {
+export interface PuckShellState {
   business: Business
-  blocks: PageBlock[]
-  categories: MenuCategory[]
-  items: MenuItem[]
-  brandColor: string
-  defaultTextColor: string
-  renderCtx: PuckRenderContext
   theme: ThemeSettings | null
   navbarConfig: NavbarConfig
   footerConfig: FooterConfig
   headingFont: string
   bodyFont: string
+  categories: MenuCategory[]
+  items: MenuItem[]
+  brandColor: string
+}
+
+export interface PuckEditorRefs {
+  getShell: () => PuckShellState
+  getBlocks: () => PageBlock[]
+  getRenderCtx: () => PuckRenderContext
   t: (key: string) => string
 }
 
@@ -70,55 +74,46 @@ function configField(
   }
 }
 
-export function createPuckConfig(ctx: PuckConfigContext): Config {
-  const {
-    business,
-    blocks,
-    categories,
-    items,
-    brandColor,
-    renderCtx,
-    theme,
-    navbarConfig,
-    footerConfig,
-    headingFont,
-    bodyFont,
-    t,
-  } = ctx
+/** Stable Puck config — reads live editor state via refs to avoid remounting on every edit. */
+export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): Config {
+  const t = (key: string) => refs.current.t(key)
 
   return {
     root: {
       fields: {},
       render: (props: { children?: ReactNode }) => {
         const { children } = props
+        const shell = refs.current.getShell()
+        const { business, theme, navbarConfig, footerConfig, headingFont, bodyFont } = shell
+
         return (
-        <CartProvider>
-          <div
-            style={{
-              ...buildThemeStyle(theme),
-              fontFamily: `'${bodyFont}', sans-serif`,
-              minHeight: '100%',
-            }}
-          >
-            <style
-              dangerouslySetInnerHTML={{
-                __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+          <CartProvider>
+            <div
+              style={{
+                ...buildThemeStyle(theme),
+                fontFamily: `'${bodyFont}', sans-serif`,
+                minHeight: '100%',
               }}
-            />
-            <NavbarRender
-              config={navbarConfig}
-              businessName={business.name}
-              logoUrl={business.logo_url ?? undefined}
-              inEditor
-            />
-            {children}
-            <FooterRender
-              config={footerConfig}
-              businessName={business.name}
-              inEditor
-            />
-          </div>
-        </CartProvider>
+            >
+              <style
+                dangerouslySetInnerHTML={{
+                  __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+                }}
+              />
+              <NavbarRender
+                config={navbarConfig}
+                businessName={business.name}
+                logoUrl={business.logo_url ?? undefined}
+                inEditor
+              />
+              {children}
+              <FooterRender
+                config={footerConfig}
+                businessName={business.name}
+                inEditor
+              />
+            </div>
+          </CartProvider>
         )
       },
     },
@@ -140,17 +135,20 @@ export function createPuckConfig(ctx: PuckConfigContext): Config {
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => (
-            <HeroSettings
-              config={{ ...defaultHeroConfig, ...value } as import('../types').HeroConfig}
-              businessId={business.id}
-              blocks={blocks}
-              brandColor={brandColor}
-              onChange={c => onChange(c as unknown as Record<string, unknown>)}
-            />
-          )),
+          config: configField(({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <HeroSettings
+                config={{ ...defaultHeroConfig, ...value } as import('../types').HeroConfig}
+                businessId={shell.business.id}
+                blocks={refs.current.getBlocks()}
+                brandColor={shell.brandColor}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
         },
-        render: props => renderHeroBlock(props as unknown as PuckBlockProps, renderCtx),
+        render: props => renderHeroBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       text_image: {
         label: 'Text + Image',
@@ -166,17 +164,20 @@ export function createPuckConfig(ctx: PuckConfigContext): Config {
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => (
-            <TextImageSettings
-              config={{ ...defaultTextImageConfig, ...value } as import('../types').TextImageConfig}
-              businessId={business.id}
-              blocks={blocks}
-              brandColor={brandColor}
-              onChange={c => onChange(c as unknown as Record<string, unknown>)}
-            />
-          )),
+          config: configField(({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <TextImageSettings
+                config={{ ...defaultTextImageConfig, ...value } as import('../types').TextImageConfig}
+                businessId={shell.business.id}
+                blocks={refs.current.getBlocks()}
+                brandColor={shell.brandColor}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
         },
-        render: props => renderTextImageBlock(props as unknown as PuckBlockProps, renderCtx),
+        render: props => renderTextImageBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       contact: {
         label: 'Contact & Info',
@@ -192,15 +193,18 @@ export function createPuckConfig(ctx: PuckConfigContext): Config {
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => (
-            <ContactSettings
-              config={{ ...defaultContactConfig, ...value } as import('../types').ContactConfig}
-              business={business}
-              onChange={c => onChange(c as unknown as Record<string, unknown>)}
-            />
-          )),
+          config: configField(({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <ContactSettings
+                config={{ ...defaultContactConfig, ...value } as import('../types').ContactConfig}
+                business={shell.business}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
         },
-        render: props => renderContactBlock(props as unknown as PuckBlockProps, renderCtx),
+        render: props => renderContactBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       menu_grid: {
         label: 'Menu / Products',
@@ -216,16 +220,19 @@ export function createPuckConfig(ctx: PuckConfigContext): Config {
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => (
-            <MenuGridSettings
-              config={{ ...defaultMenuGridConfig, ...value } as import('../types').MenuGridConfig}
-              categories={categories}
-              items={items}
-              onChange={c => onChange(c as unknown as Record<string, unknown>)}
-            />
-          )),
+          config: configField(({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <MenuGridSettings
+                config={{ ...defaultMenuGridConfig, ...value } as import('../types').MenuGridConfig}
+                categories={shell.categories}
+                items={shell.items}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
         },
-        render: props => renderMenuGridBlock(props as unknown as PuckBlockProps, renderCtx),
+        render: props => renderMenuGridBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
       qr_code: {
         label: 'QR Code',
@@ -241,17 +248,35 @@ export function createPuckConfig(ctx: PuckConfigContext): Config {
         fields: {
           spacingSize: spacingSizeField(t),
           visible: visibleField(t),
-          config: configField(({ value, onChange }) => (
-            <QRCodeSettings
-              config={{ ...defaultQRCodeConfig, ...value } as import('../types').QRCodeConfig}
-              businessSlug={business.slug ?? undefined}
-              businessId={business.id}
-              onChange={c => onChange(c as unknown as Record<string, unknown>)}
-            />
-          )),
+          config: configField(({ value, onChange }) => {
+            const shell = refs.current.getShell()
+            return (
+              <QRCodeSettings
+                config={{ ...defaultQRCodeConfig, ...value } as import('../types').QRCodeConfig}
+                businessSlug={shell.business.slug ?? undefined}
+                businessId={shell.business.id}
+                onChange={c => onChange(c as unknown as Record<string, unknown>)}
+              />
+            )
+          }),
         },
-        render: props => renderQrCodeBlock(props as unknown as PuckBlockProps, renderCtx),
+        render: props => renderQrCodeBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
     },
   } as Config
+}
+
+/** Default shell for type exports / tests */
+export function defaultShellState(business: Business): PuckShellState {
+  return {
+    business,
+    theme: null,
+    navbarConfig: defaultNavbarConfig,
+    footerConfig: defaultFooterConfig,
+    headingFont: 'Inter',
+    bodyFont: 'Inter',
+    categories: [],
+    items: [],
+    brandColor: '#E85D26',
+  }
 }
