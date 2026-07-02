@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,11 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { slugify, checkSlugAvailable } from '@/lib/business'
+import { setActiveBusinessId } from '@/lib/active-business'
 import { createBusinessAction } from '@/app/actions/business'
 
 export default function NewBusinessPage() {
-  const router = useRouter()
-
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -54,9 +52,10 @@ export default function NewBusinessPage() {
     const result = await createBusinessAction({ name, slug })
 
     if (result.success) {
+      setActiveBusinessId(result.businessId)
       toast.success('Business created!')
-      router.push('/dashboard')
-      router.refresh()
+      window.location.assign('/dashboard')
+      return
     } else {
       toast.error(result.error)
       setSaving(false)

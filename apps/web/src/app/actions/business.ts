@@ -49,7 +49,8 @@ export async function createBusinessAction(input: {
   await db.from('publishing_settings').insert({ business_id: business.id, published: false })
   await db.from('payment_settings').insert({ business_id: business.id })
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard', 'layout')
+  revalidatePath('/onboarding/new-business')
   return { success: true, businessId: business.id }
 }
 
