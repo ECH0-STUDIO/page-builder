@@ -8,6 +8,8 @@ import {
   ExternalLink,
   Globe,
   Loader2,
+  PanelLeft,
+  PanelRight,
   Plus,
   Settings,
   Menu,
@@ -20,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getPublicStoreUrl } from '@/lib/site-urls'
@@ -56,6 +57,68 @@ export function PuckHeaderBack() {
       <ArrowLeft className="size-4" />
       <span className="hidden sm:inline text-xs font-medium">{t('pageBuilder.back')}</span>
     </button>
+  )
+}
+
+function PuckSidebarToggles() {
+  const { dispatch, appState } = usePuck()
+  const leftVisible = appState.ui.leftSideBarVisible
+  const rightVisible = appState.ui.rightSideBarVisible
+
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <button
+        type="button"
+        onClick={() => dispatch({ type: 'setUi', ui: { leftSideBarVisible: !leftVisible } })}
+        className={cn(
+          'p-1.5 rounded-md transition-colors',
+          leftVisible ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
+        )}
+        title="Toggle blocks panel"
+      >
+        <PanelLeft className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => dispatch({ type: 'setUi', ui: { rightSideBarVisible: !rightVisible } })}
+        className={cn(
+          'p-1.5 rounded-md transition-colors',
+          rightVisible ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
+        )}
+        title="Toggle settings panel"
+      >
+        <PanelRight className="size-4" />
+      </button>
+    </div>
+  )
+}
+
+/** Single-row header — replaces Puck's default header to avoid duplicated controls. */
+export function PuckCustomHeader({
+  businessName,
+  pathLabel,
+  previewMode,
+  chrome,
+}: {
+  businessName: string
+  pathLabel: string
+  previewMode: boolean
+  chrome: React.ReactNode
+}) {
+  return (
+    <header className="eatery-puck-header flex items-center gap-2 h-12 px-2 shrink-0 w-full min-w-0 border-b border-border bg-background">
+      <PuckHeaderBack />
+      <PuckSidebarToggles />
+      <div className="flex items-baseline gap-2 min-w-0 shrink">
+        <span className="font-semibold text-sm truncate max-w-[140px] sm:max-w-[220px]">{businessName}</span>
+        <span className="text-xs text-muted-foreground truncate hidden sm:inline">{pathLabel}</span>
+      </div>
+      <div className="flex-1 min-w-0" />
+      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        {!previewMode && <PuckAddBlockButton />}
+        {chrome}
+      </div>
+    </header>
   )
 }
 

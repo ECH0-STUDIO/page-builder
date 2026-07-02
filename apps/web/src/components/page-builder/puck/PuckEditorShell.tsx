@@ -20,8 +20,8 @@ import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
 import {
   PuckAddBlockButton,
+  PuckCustomHeader,
   PuckHeaderActions,
-  PuckHeaderBack,
 } from './PuckEditorChrome'
 
 import {
@@ -247,21 +247,17 @@ export function PuckEditorShell({
 
   const puckOverrides = useMemo<Partial<Overrides>>(
     () => ({
-      header: ({ children, actions }) => (
-        <div className="eatery-puck-header w-full">
-          <div className="flex items-center gap-1 w-full min-w-0 px-1">
-            <PuckHeaderBack />
-            <div className="flex-1 min-w-0 overflow-hidden">{children}</div>
-            <div className="flex items-center gap-2 shrink-0 px-2">
-              {!previewMode && <PuckAddBlockButton />}
-              {actions}
-            </div>
-          </div>
-        </div>
+      header: ({ actions }) => (
+        <PuckCustomHeader
+          businessName={business.name}
+          pathLabel={t('sidebar.pageBuilder')}
+          previewMode={previewMode}
+          chrome={actions}
+        />
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode],
+    [chromeProps, previewMode, business.name, t],
   )
 
   useEffect(() => {
@@ -381,8 +377,6 @@ export function PuckEditorShell({
           data={puckData}
           onChange={handlePuckChange}
           overrides={puckOverrides}
-          headerTitle={business.name}
-          headerPath={t('sidebar.pageBuilder')}
           iframe={{ enabled: false }}
           ui={{
             leftSideBarVisible: !previewMode,

@@ -39,8 +39,12 @@
 }
 
 .eatery-puck-header {
-  border-bottom: 1px solid var(--border, #e5e5e5);
   background: var(--background, #fff);
+}
+
+/* Hide any leftover default Puck header chrome if present */
+.eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
+  display: none;
 }
 
 /* Clickable drawer items */

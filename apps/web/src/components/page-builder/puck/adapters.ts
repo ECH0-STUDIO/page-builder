@@ -130,9 +130,10 @@ export function puckDataToPageBlocks(
     const puckItemId = props.id || props.blockId
 
     const heroConfig = type === 'hero' ? (config as HeroConfig) : undefined
+    const resolvedId = resolvePageBlockId(meta.blockId || puckItemId)
 
     return {
-      id: meta.blockId || puckItemId || makeTempBlockId(),
+      id: resolvedId,
       business_id: businessId,
       type,
       sort_order: index,
@@ -147,6 +148,23 @@ export function puckDataToPageBlocks(
 
 export function makeTempBlockId(): string {
   return `temp-${Math.random().toString(36).slice(2)}`
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Puck uses `{type}-{uuid}` ids; Supabase `page_blocks.id` is a plain UUID. */
+export function resolvePageBlockId(raw: string | undefined | null): string {
+  if (!raw) return makeTempBlockId()
+  if (raw.startsWith('temp-')) return raw
+  if (UUID_RE.test(raw)) return raw
+
+  const puckPrefixed = raw.match(
+    /^[a-z_]+-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+  )
+  if (puckPrefixed) return puckPrefixed[1]
+
+  return makeTempBlockId()
 }
 
 export function stripMetaFromProps(props: PuckBlockProps): Record<string, unknown> {
