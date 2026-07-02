@@ -68,3 +68,27 @@
   overflow-y: auto;
   box-sizing: border-box;
 }
+
+/* Puck insertion zones between blocks:
+   keep drag/drop behavior, but render as a thin rail (not a large spacer). */
+.eatery-puck [class*='DropZone-hitbox'] {
+  bottom: -4px !important;
+  height: 8px !important;
+}
+
+.eatery-puck [class*='DropZone--isAreaSelected'],
+.eatery-puck [class*='DropZone--hoveringOverArea'] {
+  background: transparent !important;
+  outline: none !important;
+}
+
+.eatery-puck [class*='DropZone--isAreaSelected']::before,
+.eatery-puck [class*='DropZone--hoveringOverArea']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 2px solid var(--puck-color-interactive);
+}
