@@ -474,7 +474,8 @@
       "security": "Security",
       "team": "Team Management",
       "localization": "Localization",
-      "credits": "Billing & Credits"
+      "credits": "Billing & Credits",
+      "business": "Business"
     },
     "security": {
       "title": "Security",
@@ -527,6 +528,23 @@
       "enOption": "English - USD ($)",
       "viOption": "Tiếng Việt - VND (₫)",
       "save": "Save Preferences"
+    },
+    "business": {
+      "title": "Business",
+      "description": "Manage settings for the currently selected restaurant.",
+      "dangerZone": "Danger zone",
+      "dangerDescription": "Permanently delete this restaurant and all of its data — menu, pages, orders, and team access. This cannot be undone.",
+      "deleteButton": "Delete business",
+      "deleteTitle": "Delete this business?",
+      "deleteWarning": "This will permanently remove the restaurant, its menu, website, orders, QR codes, and team memberships.",
+      "deleteTypePrompt": "Type",
+      "deleteTypeSuffix": "to confirm.",
+      "deleteConfirmLabel": "Business name",
+      "deleteConfirm": "Delete permanently",
+      "deleting": "Deleting…",
+      "cancel": "Cancel",
+      "deleteSuccess": "Business deleted",
+      "ownerOnly": "Only the business owner can delete this restaurant."
     }
   },
   "heroBlock": {

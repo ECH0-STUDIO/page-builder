@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { DEFAULT_BUSINESS_CATEGORY } from '@/lib/constants'
+import { getAllUserBusinessesServer } from '@/lib/business-server'
 
 type CreateBusinessResult =
   | { success: true; businessId: string }
@@ -86,4 +87,58 @@ export async function updateBusinessAction(
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/business')
   return { success: true }
+}
+
+type DeleteBusinessResult =
+  | { success: true; nextBusinessId: string | null }
+  | { success: false; error: string }
+
+export async function deleteBusinessAction(input: {
+  businessId: string
+  confirmName: string
+}): Promise<DeleteBusinessResult> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  const { data: business, error: fetchError } = await supabase
+    .from('businesses')
+    .select('id, name, owner_id')
+    .eq('id', input.businessId)
+    .single()
+
+  if (fetchError || !business) {
+    return { success: false, error: 'Business not found' }
+  }
+
+  if (business.owner_id !== user.id) {
+    return { success: false, error: 'Only the business owner can delete this restaurant' }
+  }
+
+  if (input.confirmName.trim() !== business.name.trim()) {
+    return { success: false, error: 'Business name does not match' }
+  }
+
+  const { error: deleteError } = await supabase
+    .from('businesses')
+    .delete()
+    .eq('id', input.businessId)
+    .eq('owner_id', user.id)
+
+  if (deleteError) {
+    return { success: false, error: deleteError.message ?? 'Failed to delete business' }
+  }
+
+  const remaining = await getAllUserBusinessesServer(user.id)
+
+  revalidatePath('/dashboard', 'layout')
+  revalidatePath('/dashboard/settings/business')
+
+  return {
+    success: true,
+    nextBusinessId: remaining[0]?.id ?? null,
+  }
 }
