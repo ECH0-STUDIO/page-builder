@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
 // import { createClient } from '@/lib/supabase/server'
-import { EditorShell } from '@/components/page-builder/EditorShell'
+import { PuckEditorShell } from '@/components/page-builder/puck/PuckEditorShell'
 import { getPageDataAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -47,7 +47,7 @@ export default async function PagesPage() {
   }
 
   return (
-    <EditorShell
+    <PuckEditorShell
       business={business}
       initialBlocks={blocks}
       initialPublishing={publishing}

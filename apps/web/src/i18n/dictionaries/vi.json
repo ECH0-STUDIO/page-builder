@@ -303,6 +303,14 @@
     "header": "Tiêu đề trang",
     "footer": "Chân trang",
     "globalSettings": "Cài đặt chung",
+    "pageSettings": "Cài đặt trang",
+    "sectionSpacing": "Khoảng cách phần",
+    "spacingSmall": "Nhỏ",
+    "spacingMedium": "Vừa",
+    "spacingLarge": "Lớn",
+    "blockVisibility": "Hiển thị",
+    "blockVisible": "Hiện",
+    "blockHidden": "Ẩn",
     "noSections": "Chưa có phần nào.",
     "addSection": "Thêm phần",
     "addBlock": "Thêm khối",
@@ -405,6 +413,15 @@
     "changes": "Có thay đổi",
     "nothingToUndo": "Không còn thao tác để hoàn tác",
     "nothingToRedo": "Không còn thao tác để làm lại"
+  },
+  "puck": {
+    "blocks": "Khối",
+    "outline": "Dàn ý",
+    "sections": "Các phần",
+    "content": "Nội dung",
+    "outlineEmpty": "Chưa có phần nào. Kéo khối từ tab Khối.",
+    "toggleBlocks": "Bật/tắt bảng khối",
+    "toggleSettings": "Bật/tắt bảng cài đặt"
   },
   "businessProfile": {
     "logo": "Logo",

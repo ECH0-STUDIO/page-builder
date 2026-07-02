@@ -303,6 +303,14 @@
     "header": "Header",
     "footer": "Footer",
     "globalSettings": "Global Settings",
+    "pageSettings": "Page settings",
+    "sectionSpacing": "Section spacing",
+    "spacingSmall": "Small",
+    "spacingMedium": "Medium",
+    "spacingLarge": "Large",
+    "blockVisibility": "Visibility",
+    "blockVisible": "Visible",
+    "blockHidden": "Hidden",
     "noSections": "No sections.",
     "addSection": "Add section",
     "addBlock": "Add block",
@@ -405,6 +413,15 @@
     "changes": "Changes",
     "nothingToUndo": "Nothing more to undo",
     "nothingToRedo": "Nothing more to redo"
+  },
+  "puck": {
+    "blocks": "Blocks",
+    "outline": "Outline",
+    "sections": "Sections",
+    "content": "Content",
+    "outlineEmpty": "No sections yet. Drag blocks from the Blocks tab.",
+    "toggleBlocks": "Toggle blocks panel",
+    "toggleSettings": "Toggle settings panel"
   },
   "businessProfile": {
     "logo": "Logo",

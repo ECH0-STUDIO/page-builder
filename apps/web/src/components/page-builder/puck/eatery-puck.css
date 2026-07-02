@@ -1,0 +1,70 @@
+/* Puck editor shell — use Eatery design system tokens, NOT business page brand color */
+.eatery-puck {
+  --puck-font-family: var(--font-sans-stack, 'Plus Jakarta Sans', system-ui, sans-serif);
+
+  /* Map Puck interactive UI to platform --primary (emerald green from globals.css) */
+  --puck-color-interactive: var(--primary);
+  --puck-color-interactive-hover: color-mix(in srgb, var(--primary) 88%, black);
+  --puck-color-interactive-active: color-mix(in srgb, var(--primary) 76%, black);
+  --puck-color-interactive-subtle: color-mix(in srgb, var(--primary) 14%, transparent);
+  --puck-color-interactive-soft: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.eatery-puck .Puck {
+  font-family: var(--puck-font-family);
+}
+
+.eatery-puck-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--background, #fff);
+}
+
+.eatery-puck-editor {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.eatery-puck-editor > .Puck,
+.eatery-puck-editor .PuckLayout {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Allow scrolling inside the canvas preview */
+.eatery-puck-editor [class*='PuckCanvas'],
+.eatery-puck-editor [class*='PuckPreview'] {
+  overflow: auto !important;
+  min-height: 0;
+}
+
+.eatery-puck-header {
+  background: var(--background, #fff);
+}
+
+/* Hide any leftover default Puck header chrome if present */
+.eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
+  display: none;
+}
+
+/* Clickable drawer items — preserve Puck drawer item padding when wrapping */
+.eatery-puck [data-puck-drawer-item] > button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: inherit;
+  font: inherit;
+}
+
+/* Sidebar plugin panels (blocks + outline) — restore Puck default inset */
+.eatery-puck .puck-plugin-panel {
+  padding: var(--puck-space-4, 16px);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { BusinessProvider } from '@/context/BusinessContext'
 import { Sidebar } from '@/components/dashboard/Sidebar'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { I18nProvider } from '@/i18n/I18nProvider'
 import { getDictionary } from '@/i18n/getDictionary'
 import { GlobalNavLoader } from '@/components/GlobalNavLoader'
@@ -42,16 +43,17 @@ export default async function DashboardLayout({
   return (
     <I18nProvider dictionary={dictionary}>
       <BusinessProvider initialBusinesses={businesses} initialActiveBusinessId={business.id}>
-        <div className="flex flex-col md:flex-row min-h-screen bg-background">
-          <Sidebar
-            userEmail={user.email ?? ''}
-            userAvatar={profile?.avatar_url}
-            userName={profile?.full_name}
-          />
-          <main className="flex-1 min-w-0 overflow-y-auto">
-            {children}
-          </main>
-        </div>
+        <DashboardShell
+          sidebar={
+            <Sidebar
+              userEmail={user.email ?? ''}
+              userAvatar={profile?.avatar_url}
+              userName={profile?.full_name}
+            />
+          }
+        >
+          {children}
+        </DashboardShell>
         <Suspense fallback={null}>
           <GlobalNavLoader />
         </Suspense>
