@@ -951,7 +951,15 @@
       "justNow": "Just now",
       "minsAgo": "{{m}}m ago",
       "hoursMinsAgo": "{{h}}h {{m}}m ago"
-    }
+    },
+    "serviceRequests": "Table requests",
+    "noServiceRequests": "No open table requests.",
+    "callStaffRequest": "Call staff",
+    "requestCheckRequest": "Request check",
+    "acknowledge": "Acknowledge",
+    "dismiss": "Dismiss",
+    "newServiceRequest": "New table request!",
+    "failedUpdateRequest": "Failed to update request"
   },
   "credits": {
     "availableCredits": "Available Credits",
@@ -1089,7 +1097,16 @@
   "orderPage": {
     "backToPage": "Home",
     "table": "Table",
-    "order": "Order"
+    "order": "Order",
+    "callStaff": "Call staff",
+    "requestCheck": "Request check",
+    "sent": "Sent",
+    "callStaffSent": "Staff has been notified",
+    "requestCheckSent": "Check request sent",
+    "enterTableFirst": "Please enter your table number",
+    "enterTablePrompt": "Enter your table number so staff can find you.",
+    "sendRequest": "Send request",
+    "cancel": "Cancel"
   },
   "payment": {
     "title": "Payment",

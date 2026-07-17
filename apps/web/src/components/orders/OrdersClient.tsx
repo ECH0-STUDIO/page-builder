@@ -4,7 +4,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrders } from '@/lib/react-query/hooks/useOrders'
-import { CheckCircle2, ChefHat, Clock, XCircle, Table2, RefreshCcw, DollarSign } from 'lucide-react'
+import { useServiceRequests } from '@/lib/react-query/hooks/useServiceRequests'
+import { updateServiceRequestStatusAction, type ServiceRequest } from '@/app/actions/service-requests'
+import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -49,6 +51,10 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     return t('orders.timeAgo.hoursMinsAgo').replace('{{h}}', h.toString()).replace('{{m}}', (diff % 60).toString())
   }
   const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useOrders(businessId)
+  const {
+    data: serviceRequests = [],
+    refetch: fetchServiceRequests,
+  } = useServiceRequests(businessId)
 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [dayFilter, setDayFilter] = useState<'today' | 'yesterday'>('today')
@@ -59,9 +65,11 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     queryClient.setQueryData(['orders', businessId], (old: Order[] = []) => updater(old))
   }, [businessId, queryClient])
 
-  useEffect(() => {
+  const setServiceRequests = useCallback((updater: (prev: ServiceRequest[]) => ServiceRequest[]) => {
+    queryClient.setQueryData(['serviceRequests', businessId], (old: ServiceRequest[] = []) => updater(old))
+  }, [businessId, queryClient])
 
-    // Realtime subscription
+  useEffect(() => {
     const channel = supabase
       .channel('orders-channel')
       .on(
@@ -69,10 +77,9 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
         { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // New order! Let's re-fetch to get the items, or just play a sound
             toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
             try {
-              const audio = new Audio('/bell.mp3') // Assume we have a sound, or it just fails silently
+              const audio = new Audio('/bell.mp3')
               audio.play().catch(() => {})
             } catch (e) {}
             fetchOrders()
@@ -81,12 +88,41 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_requests', filter: `business_id=eq.${businessId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            toast.success(t('orders.newServiceRequest'), { duration: 5000, icon: '🛎️' })
+            try {
+              const audio = new Audio('/bell.mp3')
+              audio.play().catch(() => {})
+            } catch (e) {}
+            fetchServiceRequests()
+          } else if (payload.eventType === 'UPDATE') {
+            setServiceRequests(prev =>
+              prev.map(r => r.id === payload.new.id ? { ...r, ...(payload.new as ServiceRequest) } : r),
+            )
+          }
+        }
+      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [businessId, fetchOrders, supabase])
+  }, [businessId, fetchOrders, fetchServiceRequests, setOrders, setServiceRequests, supabase, t])
+
+  const openRequests = serviceRequests.filter(r => r.status === 'open')
+
+  async function resolveRequest(id: string, status: 'acknowledged' | 'dismissed') {
+    setServiceRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+    const res = await updateServiceRequestStatusAction(id, status)
+    if (!res.success) {
+      toast.error(t('orders.failedUpdateRequest'))
+      fetchServiceRequests()
+    }
+  }
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     let previousStatus: OrderStatus | undefined
@@ -323,6 +359,63 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
           <DateSwitch className="w-full" />
         </div>
         
+      </div>
+
+      {/* Table service requests */}
+      <div className="mb-4 shrink-0 rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Bell className="size-4 text-amber-700" />
+          <h2 className="font-bold text-gray-900">{t('orders.serviceRequests')}</h2>
+          <span className="bg-amber-200 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+            {openRequests.length}
+          </span>
+        </div>
+        {openRequests.length === 0 ? (
+          <p className="text-sm text-gray-500">{t('orders.noServiceRequests')}</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {openRequests.map(req => (
+              <div
+                key={req.id}
+                className="flex items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm"
+              >
+                <div className="size-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  {req.type === 'request_check'
+                    ? <Receipt className="size-4 text-amber-800" />
+                    : <Bell className="size-4 text-amber-800" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 truncate">
+                    {t('orders.table')} {req.table_number}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {req.type === 'request_check'
+                      ? t('orders.requestCheckRequest')
+                      : t('orders.callStaffRequest')}
+                    {' · '}
+                    {formatTimeAgo(req.created_at)}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => resolveRequest(req.id, 'acknowledged')}
+                    className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800"
+                  >
+                    {t('orders.acknowledge')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => resolveRequest(req.id, 'dismissed')}
+                    className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  >
+                    {t('orders.dismiss')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4 flex-1 overflow-x-auto pb-4">

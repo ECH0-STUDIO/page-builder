@@ -118,6 +118,41 @@ export interface Database {
           { foreignKeyName: "orders_business_id_fkey", columns: ["business_id"], isOneToOne: false, referencedRelation: "businesses", referencedColumns: ["id"] }
         ]
       }
+      service_requests: {
+        Row: {
+          id: string
+          business_id: string
+          table_number: string
+          type: string
+          status: string
+          created_at: string
+          updated_at: string
+          acknowledged_at: string | null
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          table_number: string
+          type: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          acknowledged_at?: string | null
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          table_number?: string
+          type?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          acknowledged_at?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: "service_requests_business_id_fkey", columns: ["business_id"], isOneToOne: false, referencedRelation: "businesses", referencedColumns: ["id"] }
+        ]
+      }
       menu_categories: {
         Row: {
           id: string

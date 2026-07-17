@@ -16,6 +16,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
+import { OrderServiceActions } from '@/components/order-page/OrderServiceActions'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
 import { buildPromoSlides } from '@/components/order-page/buildPromoSlides'
 
@@ -197,6 +198,13 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
               slug={slug}
               businessName={business.name}
               logoUrl={business.logo_url}
+              brandColor={themeTokens.brandColor}
+            />
+          </Suspense>
+
+          <Suspense fallback={null}>
+            <OrderServiceActions
+              businessId={business.id}
               brandColor={themeTokens.brandColor}
             />
           </Suspense>

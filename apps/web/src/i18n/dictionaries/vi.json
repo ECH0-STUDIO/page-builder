@@ -951,7 +951,15 @@
       "justNow": "Vừa xong",
       "minsAgo": "{{m}} phút trước",
       "hoursMinsAgo": "{{h}}g {{m}}p trước"
-    }
+    },
+    "serviceRequests": "Yêu cầu từ bàn",
+    "noServiceRequests": "Không có yêu cầu đang mở.",
+    "callStaffRequest": "Gọi nhân viên",
+    "requestCheckRequest": "Yêu cầu tính tiền",
+    "acknowledge": "Đã nhận",
+    "dismiss": "Bỏ qua",
+    "newServiceRequest": "Có yêu cầu mới từ bàn!",
+    "failedUpdateRequest": "Không cập nhật được yêu cầu"
   },
   "credits": {
     "availableCredits": "Số Dư Tín Dụng",
@@ -1089,7 +1097,16 @@
   "orderPage": {
     "backToPage": "Trang chủ",
     "table": "Bàn",
-    "order": "Đặt món"
+    "order": "Đặt món",
+    "callStaff": "Gọi nhân viên",
+    "requestCheck": "Tính tiền",
+    "sent": "Đã gửi",
+    "callStaffSent": "Đã báo nhân viên",
+    "requestCheckSent": "Đã gửi yêu cầu tính tiền",
+    "enterTableFirst": "Vui lòng nhập số bàn",
+    "enterTablePrompt": "Nhập số bàn để nhân viên tìm bạn.",
+    "sendRequest": "Gửi yêu cầu",
+    "cancel": "Hủy"
   },
   "payment": {
     "title": "Thanh toán",
