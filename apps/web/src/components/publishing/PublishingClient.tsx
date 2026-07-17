@@ -109,6 +109,10 @@ export function PublishingClient({
   const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
+  const [isOrderPublished, setIsOrderPublished] = useState(
+    publishing?.order_published ?? publishing?.published ?? false
+  )
+  const [copiedKey, setCopiedKey] = useState<'landing' | 'order' | null>(null)
   const [customDomain, setCustomDomain] = useState(publishing?.custom_domain ?? initialDomainSetup?.domain ?? '')
   const [domainVerified, setDomainVerified] = useState(
     initialDomainSetup?.verified ?? (publishing as { custom_domain_verified?: boolean } | null)?.custom_domain_verified ?? false
@@ -116,7 +120,6 @@ export function PublishingClient({
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>(initialDomainSetup?.dnsRecords ?? [])
   const [savingDomain, setSavingDomain] = useState(false)
   const [verifyingDns, setVerifyingDns] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [period, setPeriod] = useState<7 | 30>(7)
   const [analytics, setAnalytics] = useState(initialAnalytics)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
@@ -239,27 +242,43 @@ export function PublishingClient({
     URL.revokeObjectURL(url)
   }
 
-  // ── Publish toggle ────────────────────────────────────────────────────────
+  // ── Publish toggles ───────────────────────────────────────────────────────
 
-  function handleToggle() {
+  function handleToggleLanding() {
     const next = !isPublished
     setIsPublished(next)
     startTransition(async () => {
-      const res = await togglePublishAction(businessId, next)
+      const res = await togglePublishAction(businessId, next, 'landing')
       if (!res.success) { setIsPublished(!next); toast.error(res.error) }
       else {
-        toast.success(next ? 'Page is now live 🎉' : 'Page set to draft')
+        toast.success(next ? t('publishing.toastLandingLive') : t('publishing.toastLandingDraft'))
         queryClient.invalidateQueries({ queryKey: ['pageData', businessId] })
       }
     })
   }
 
+  function handleToggleOrder() {
+    const next = !isOrderPublished
+    setIsOrderPublished(next)
+    startTransition(async () => {
+      const res = await togglePublishAction(businessId, next, 'order')
+      if (!res.success) { setIsOrderPublished(!next); toast.error(res.error) }
+      else {
+        toast.success(next ? t('publishing.toastOrderLive') : t('publishing.toastOrderDraft'))
+        queryClient.invalidateQueries({ queryKey: ['pageData', businessId] })
+      }
+    })
+  }
+
+  const orderUrl = `${publicUrl}/order`
+  const anyLive = isPublished || isOrderPublished
+
   // ── Copy URL ──────────────────────────────────────────────────────────────
 
-  function handleCopy() {
-    navigator.clipboard.writeText(publicUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  function handleCopy(url: string, key: 'landing' | 'order') {
+    navigator.clipboard.writeText(url)
+    setCopiedKey(key)
+    setTimeout(() => setCopiedKey(null), 2000)
   }
 
   return (
@@ -323,42 +342,114 @@ export function PublishingClient({
         </div>
       </Card>
 
-      {/* ── Live Status ── */}
+      {/* ── Live Status (per page) ── */}
       <Card>
-        <div className="flex items-start justify-between gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className={cn('size-2.5 rounded-full', isPublished ? 'bg-green-500 animate-pulse' : 'bg-gray-300')} />
-              <h2 className="font-semibold text-gray-900">
-                {isPublished ? t('publishing.pageIsLive') : t('publishing.pageIsDraft')}
-              </h2>
-            </div>
-            <p className="text-sm text-gray-500">
-              {isPublished
-                ? t('publishing.visitHint')
-                : 'Publish to make your page accessible to customers.'}
-            </p>
+        <div className="space-y-1 mb-5">
+          <div className="flex items-center gap-2">
+            <div className={cn('size-2.5 rounded-full', anyLive ? 'bg-green-500 animate-pulse' : 'bg-gray-300')} />
+            <h2 className="font-semibold text-gray-900">
+              {anyLive ? t('publishing.pagesLiveTitle') : t('publishing.pagesDraftTitle')}
+            </h2>
           </div>
-          <button
-            type="button" onClick={handleToggle} disabled={isPending}
-            className={cn('relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-60',
-              isPublished ? 'bg-gray-900' : 'bg-gray-200')}
-          >
-            <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
-              isPublished ? 'translate-x-6' : 'translate-x-1')} />
-          </button>
+          <p className="text-sm text-gray-500">{t('publishing.pagesPublishHint')}</p>
         </div>
 
-        <div className="mt-5 flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-          <Globe className="size-4 text-gray-400 shrink-0" />
-          <span className="flex-1 text-sm text-gray-700 truncate font-mono">{publicUrl}</span>
-          <button onClick={handleCopy} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors">
-            {copied ? <CheckCircle2 className="size-4 text-green-600" /> : <Copy className="size-4" />}
-          </button>
-          <a href={publicUrl} target="_blank" rel="noopener noreferrer"
-            className="shrink-0 p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors">
-            <ExternalLink className="size-4" />
-          </a>
+        <div className="space-y-4">
+          {/* Landing */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="font-medium text-gray-900">{t('publishing.landingPage')}</p>
+                <p className="text-xs text-gray-500">
+                  {isPublished ? t('publishing.landingLiveHint') : t('publishing.landingDraftHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleLanding}
+                disabled={isPending}
+                aria-label={t('publishing.landingPage')}
+                className={cn(
+                  'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-60',
+                  isPublished ? 'bg-gray-900' : 'bg-gray-200',
+                )}
+              >
+                <span className={cn(
+                  'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
+                  isPublished ? 'translate-x-6' : 'translate-x-1',
+                )} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
+              <Globe className="size-4 text-gray-400 shrink-0" />
+              <span className="flex-1 text-sm text-gray-700 truncate font-mono">{publicUrl}</span>
+              <button
+                type="button"
+                onClick={() => handleCopy(publicUrl, 'landing')}
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                {copiedKey === 'landing'
+                  ? <CheckCircle2 className="size-4 text-green-600" />
+                  : <Copy className="size-4" />}
+              </button>
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <ExternalLink className="size-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Order */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="font-medium text-gray-900">{t('publishing.orderPage')}</p>
+                <p className="text-xs text-gray-500">
+                  {isOrderPublished ? t('publishing.orderLiveHint') : t('publishing.orderDraftHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleOrder}
+                disabled={isPending}
+                aria-label={t('publishing.orderPage')}
+                className={cn(
+                  'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-60',
+                  isOrderPublished ? 'bg-gray-900' : 'bg-gray-200',
+                )}
+              >
+                <span className={cn(
+                  'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
+                  isOrderPublished ? 'translate-x-6' : 'translate-x-1',
+                )} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
+              <Globe className="size-4 text-gray-400 shrink-0" />
+              <span className="flex-1 text-sm text-gray-700 truncate font-mono">{orderUrl}</span>
+              <button
+                type="button"
+                onClick={() => handleCopy(orderUrl, 'order')}
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                {copiedKey === 'order'
+                  ? <CheckCircle2 className="size-4 text-green-600" />
+                  : <Copy className="size-4" />}
+              </button>
+              <a
+                href={orderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <ExternalLink className="size-4" />
+              </a>
+            </div>
+          </div>
         </div>
       </Card>
 

@@ -18,8 +18,16 @@ export type { PublishingSettings } from '@/components/page-builder/types'
 
 function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
   if (!row) return null
-  return row as unknown as PublishingSettings
+  const published = Boolean(row.published)
+  return {
+    ...(row as unknown as PublishingSettings),
+    published,
+    // Fall back to landing publish if column not yet migrated
+    order_published: row.order_published == null ? published : Boolean(row.order_published),
+  }
 }
+
+export type PublishPage = 'landing' | 'order'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +48,7 @@ async function revalidateLiveStore(
     .maybeSingle()
   if (data?.slug) {
     revalidatePath(`/${data.slug}`)
+    revalidatePath(`/${data.slug}/order`)
   }
 }
 
@@ -153,16 +162,33 @@ export async function savePageBlocksAction(
 
 export async function togglePublishAction(
   businessId: string,
-  published: boolean
+  published: boolean,
+  page: PublishPage = 'landing'
 ): Promise<ActionResult<PublishingSettings>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
-  // If we are publishing, we must snapshot the draft state
+  if (page === 'order') {
+    const { data, error } = await supabase
+      .from('publishing_settings')
+      .upsert(
+        { business_id: businessId, order_published: published },
+        { onConflict: 'business_id' }
+      )
+      .select()
+      .single()
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/publishing')
+    await revalidateLiveStore(supabase, businessId)
+    return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+  }
+
+  // Landing publish — snapshot draft blocks/theme into the live snapshot
   let published_blocks = undefined
   let published_theme = undefined
-  
+
   if (published) {
     const [blocksRes, themeRes] = await Promise.all([
       supabase.from('page_blocks').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
@@ -172,13 +198,12 @@ export async function togglePublishAction(
     if (themeRes.data) published_theme = themeRes.data
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
-      { 
-        business_id: businessId, 
-        published, 
+      {
+        business_id: businessId,
+        published,
         ...(published ? { has_unpublished_changes: false, published_blocks, published_theme } : {})
       },
       { onConflict: 'business_id' }
@@ -188,6 +213,7 @@ export async function togglePublishAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
+  revalidatePath('/dashboard/publishing')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }

@@ -451,6 +451,7 @@ export interface Database {
           id: string
           business_id: string
           published: boolean
+          order_published: boolean
           custom_domain: string | null
           seo_title: string | null
           seo_description: string | null
@@ -473,6 +474,7 @@ export interface Database {
           id?: string
           business_id: string
           published?: boolean
+          order_published?: boolean
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null
@@ -495,6 +497,7 @@ export interface Database {
           id?: string
           business_id?: string
           published?: boolean
+          order_published?: boolean
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null

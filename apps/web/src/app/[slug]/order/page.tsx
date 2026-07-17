@@ -69,7 +69,12 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     .eq('business_id', business.id)
     .single()
 
-  if (!pubSettings?.published) notFound()
+  // Order page has its own publish flag (falls back to landing if column not migrated)
+  const orderPublished =
+    pubSettings?.order_published == null
+      ? Boolean(pubSettings?.published)
+      : Boolean(pubSettings.order_published)
+  if (!orderPublished) notFound()
 
   let pageBlocksRaw = pubSettings?.published_blocks as PageBlock[] | null | undefined
   let themeRaw = pubSettings?.published_theme

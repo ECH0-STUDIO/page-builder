@@ -391,7 +391,10 @@ export const defaultFooterConfig: FooterConfig = {
 export interface PublishingSettings {
   id: string
   business_id: string
+  /** Landing page (/{slug}) go-live flag */
   published: boolean
+  /** Order page (/{slug}/order) go-live flag — independent of landing */
+  order_published: boolean
   custom_domain: string | null
   seo_title: string | null
   seo_description: string | null
