@@ -1070,7 +1070,13 @@
     "currentlyUnavailable": "Hiện không có sẵn",
     "options": "tùy chọn",
     "option": "Tùy chọn",
-    "availableLabel": "có sẵn"
+    "availableLabel": "có sẵn",
+    "closeDetails": "Đóng"
+  },
+  "orderPage": {
+    "backToPage": "Trang chủ",
+    "table": "Bàn",
+    "order": "Đặt món"
   },
   "payment": {
     "title": "Thanh toán",

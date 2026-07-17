@@ -1070,7 +1070,13 @@
     "currentlyUnavailable": "Currently unavailable",
     "options": "options",
     "option": "Option",
-    "availableLabel": "available"
+    "availableLabel": "available",
+    "closeDetails": "Close"
+  },
+  "orderPage": {
+    "backToPage": "Home",
+    "table": "Table",
+    "order": "Order"
   },
   "payment": {
     "title": "Payment",
