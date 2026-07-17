@@ -18,7 +18,8 @@ import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
 import { OrderServiceActions } from '@/components/order-page/OrderServiceActions'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
-import { buildPromoSlides } from '@/components/order-page/buildPromoSlides'
+import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
+import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -155,7 +156,10 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       }
     : { ...defaultMenuGridConfig }
 
-  const promoSlides = buildPromoSlides({
+  const promoSlides = resolvePromoSlides({
+    configured: normalizeOrderPromoSlides(
+      (pubSettings as { order_promo_slides?: unknown } | null)?.order_promo_slides,
+    ),
     businessName: business.name,
     ogImageUrl: pubSettings?.og_image_url,
     pageBlocks: (pageBlocksRaw ?? []) as PageBlock[],

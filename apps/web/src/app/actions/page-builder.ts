@@ -3,6 +3,11 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
+import {
+  normalizeOrderPromoSlides,
+  MAX_ORDER_PROMO_SLIDES,
+  type OrderPromoSlide,
+} from '@/components/order-page/promo-slides'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -24,6 +29,7 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
     published,
     // Fall back to landing publish if column not yet migrated
     order_published: row.order_published == null ? published : Boolean(row.order_published),
+    order_promo_slides: normalizeOrderPromoSlides(row.order_promo_slides),
   }
 }
 
@@ -216,6 +222,34 @@ export async function togglePublishAction(
   revalidatePath('/dashboard/publishing')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+}
+
+export async function saveOrderPromoSlidesAction(
+  businessId: string,
+  slides: OrderPromoSlide[],
+): Promise<ActionResult<OrderPromoSlide[]>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const cleaned = normalizeOrderPromoSlides(slides).slice(0, MAX_ORDER_PROMO_SLIDES)
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_promo_slides: cleaned as unknown as never },
+      { onConflict: 'business_id' },
+    )
+    .select('order_promo_slides')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return {
+    success: true,
+    data: normalizeOrderPromoSlides(data?.order_promo_slides),
+  }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────

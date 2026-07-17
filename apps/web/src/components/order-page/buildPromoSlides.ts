@@ -1,9 +1,28 @@
 import type { PageBlock, HeroConfig } from '@/components/page-builder/types'
 import type { MenuItem } from '@/app/actions/menu'
 import type { PromoSlide } from './OrderPromoCarousel'
+import type { OrderPromoSlide } from './promo-slides'
 
-/** Collect promo images for the order-page carousel (Phase 1 — no dedicated admin yet). */
-export function buildPromoSlides(opts: {
+/** Prefer admin-configured slides; otherwise derive from OG / hero / menu images. */
+export function resolvePromoSlides(opts: {
+  configured?: OrderPromoSlide[] | null
+  businessName: string
+  ogImageUrl?: string | null
+  pageBlocks: PageBlock[]
+  menuItems: MenuItem[]
+}): PromoSlide[] {
+  const configured = (opts.configured ?? []).filter(s => s.image_url?.trim())
+  if (configured.length > 0) {
+    return configured.map(s => ({
+      src: s.image_url,
+      alt: s.alt?.trim() || opts.businessName,
+    }))
+  }
+  return buildAutoPromoSlides(opts)
+}
+
+/** Auto-collect promo images when no admin slides are configured. */
+export function buildAutoPromoSlides(opts: {
   businessName: string
   ogImageUrl?: string | null
   pageBlocks: PageBlock[]
@@ -37,3 +56,6 @@ export function buildPromoSlides(opts: {
 
   return slides.slice(0, 8)
 }
+
+/** @deprecated Use resolvePromoSlides */
+export const buildPromoSlides = buildAutoPromoSlides

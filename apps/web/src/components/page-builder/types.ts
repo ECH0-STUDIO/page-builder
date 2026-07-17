@@ -2,6 +2,8 @@
  * Page Builder — shared type definitions
  */
 
+import type { OrderPromoSlide } from '@/components/order-page/promo-slides'
+
 // ─── Block types ──────────────────────────────────────────────────────────────
 
 export type BlockType = 'hero' | 'text_image' | 'contact' | 'menu_grid' | 'qr_code'
@@ -395,6 +397,8 @@ export interface PublishingSettings {
   published: boolean
   /** Order page (/{slug}/order) go-live flag — independent of landing */
   order_published: boolean
+  /** Custom promo carousel slides for the order page (empty = auto fallback) */
+  order_promo_slides?: OrderPromoSlide[]
   custom_domain: string | null
   seo_title: string | null
   seo_description: string | null

@@ -21,6 +21,8 @@ import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { OrderPromoSlidesEditor } from '@/components/order-page/OrderPromoSlidesEditor'
+import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -451,6 +453,14 @@ export function PublishingClient({
             </div>
           </div>
         </div>
+      </Card>
+
+      {/* ── Order page promo carousel ── */}
+      <Card>
+        <OrderPromoSlidesEditor
+          businessId={businessId}
+          initialSlides={normalizeOrderPromoSlides(publishing?.order_promo_slides)}
+        />
       </Card>
 
       {/* ── Custom Domain ── */}
