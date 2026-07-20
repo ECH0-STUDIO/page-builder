@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Admin editor for order-page promo carousel slides (Publishing dashboard).
+ * Admin editor for order-page promo carousel slides.
  */
 
 import { useRef, useState, useTransition } from 'react'

@@ -174,16 +174,35 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   )
 
   const pageUrl = `${getPublicStoreUrl(slug)}/order`
+  const orderBgColor =
+    (pubSettings as { order_background_color?: string | null } | null)?.order_background_color
+    || '#ffffff'
+  const orderBgImage =
+    (pubSettings as { order_background_image_url?: string | null } | null)?.order_background_image_url
+    || null
 
   return (
     <CartProvider>
-      <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
+      <div
+        className="min-h-screen flex flex-col items-center"
+        style={
+          orderBgImage
+            ? {
+                backgroundImage: `linear-gradient(rgba(243,244,246,0.85), rgba(243,244,246,0.85)), url(${orderBgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+              }
+            : { backgroundColor: '#f3f4f6' }
+        }
+      >
         <div
           lang={visitorLocale}
-          className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col bg-white"
+          className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col"
           style={{
             fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
             ...buildThemeStyle(themeForTokens),
+            backgroundColor: orderBgColor,
           }}
         >
           <ViewTracker slug={slug} />

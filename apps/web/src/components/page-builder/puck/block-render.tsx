@@ -140,6 +140,7 @@ export function renderMenuGridBlock(props: PuckBlockProps, ctx: PuckRenderContex
         config={block.config as import('../types').MenuGridConfig}
         data={ctx.menuGridData}
         brandColor={ctx.brandColor ?? tokens.brandColor}
+        browseOnly
       />
     </PuckBlockShell>
   )

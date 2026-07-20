@@ -32,6 +32,12 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
     order_published: row.order_published == null ? published : Boolean(row.order_published),
     order_promo_slides: normalizeOrderPromoSlides(row.order_promo_slides),
     order_menu_config: normalizeOrderMenuConfig(row.order_menu_config) ?? undefined,
+    order_background_color: typeof row.order_background_color === 'string'
+      ? row.order_background_color
+      : null,
+    order_background_image_url: typeof row.order_background_image_url === 'string'
+      ? row.order_background_image_url
+      : null,
   }
 }
 
@@ -247,6 +253,7 @@ export async function saveOrderPromoSlidesAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/order-page')
   await revalidateLiveStore(supabase, businessId)
   return {
     success: true,
@@ -278,6 +285,7 @@ export async function saveOrderMenuConfigAction(
   const saved = normalizeOrderMenuConfig(data?.order_menu_config)
   if (!saved) return { success: false, error: 'Failed to save menu config' }
   revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/order-page')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: saved }
 }
@@ -298,8 +306,39 @@ export async function clearOrderMenuConfigAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/order-page')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
+}
+
+export async function saveOrderAppearanceAction(
+  businessId: string,
+  fields: {
+    order_background_color?: string | null
+    order_background_image_url?: string | null
+  },
+): Promise<ActionResult<PublishingSettings>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_background_color: fields.order_background_color ?? null,
+        order_background_image_url: fields.order_background_image_url ?? null,
+      },
+      { onConflict: 'business_id' },
+    )
+    .select()
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/order-page')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────

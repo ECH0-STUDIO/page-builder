@@ -42,7 +42,6 @@ import {
 import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
 import { CartProvider } from '../render/CartContext'
-import { LiveStoreCart } from '../render/LiveStoreCart'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
 
@@ -121,14 +120,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                 }}
               />
               {children}
-              {shell.previewInteractive && (
-                <LiveStoreCart
-                  businessId={shell.business.id}
-                  paymentSettings={shell.paymentSettings ?? {}}
-                  previewMode
-                  contained
-                />
-              )}
+              {/* Landing page builder is browse-only — ordering is on /order */}
             </div>
           </CartProvider>
         )

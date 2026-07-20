@@ -489,6 +489,8 @@ export interface Database {
           order_published: boolean
           order_promo_slides: Json
           order_menu_config: Json | null
+          order_background_color: string | null
+          order_background_image_url: string | null
           custom_domain: string | null
           seo_title: string | null
           seo_description: string | null
@@ -514,6 +516,8 @@ export interface Database {
           order_published?: boolean
           order_promo_slides?: Json
           order_menu_config?: Json | null
+          order_background_color?: string | null
+          order_background_image_url?: string | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null
@@ -539,6 +543,8 @@ export interface Database {
           order_published?: boolean
           order_promo_slides?: Json
           order_menu_config?: Json | null
+          order_background_color?: string | null
+          order_background_image_url?: string | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null

@@ -11,7 +11,7 @@ import { NavbarRender } from '@/components/page-builder/render/NavbarRender'
 import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
 import { QRCodeRender } from '@/components/page-builder/render/QRCodeRender'
 import { FooterRender } from '@/components/page-builder/render/FooterRender'
-import { CartProvider } from '@/components/page-builder/render/CartContext'
+import { BrowseOnlyCartProvider } from '@/components/page-builder/render/CartContext'
 import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
 import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
 import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
@@ -209,7 +209,7 @@ export default async function SlugPage({
   )
 
   return (
-    <CartProvider>
+    <BrowseOnlyCartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={visitorLocale}
@@ -374,6 +374,6 @@ export default async function SlugPage({
       {/* Landing is browse-only — cart/order lives on /{slug}/order */}
     </div>
     </div>
-    </CartProvider>
+    </BrowseOnlyCartProvider>
   )
 }

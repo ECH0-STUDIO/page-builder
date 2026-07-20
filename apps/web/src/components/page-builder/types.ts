@@ -401,6 +401,8 @@ export interface PublishingSettings {
   order_promo_slides?: OrderPromoSlide[]
   /** Independent menu config for the order page (null/undefined = auto fallback) */
   order_menu_config?: MenuGridConfig | null
+  order_background_color?: string | null
+  order_background_image_url?: string | null
   custom_domain: string | null
   seo_title: string | null
   seo_description: string | null

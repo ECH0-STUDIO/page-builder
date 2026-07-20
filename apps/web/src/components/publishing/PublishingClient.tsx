@@ -21,11 +21,6 @@ import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { OrderPromoSlidesEditor } from '@/components/order-page/OrderPromoSlidesEditor'
-import { OrderMenuConfigEditor } from '@/components/order-page/OrderMenuConfigEditor'
-import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
-import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
-import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,8 +30,6 @@ interface PublishingClientProps {
   slug: string
   analytics: { total: number; periodTotal: number; daily: DayViewStat[] }
   baseUrl: string
-  categories: MenuCategory[]
-  items: MenuItem[]
   initialDomainSetup?: {
     domain: string | null
     verified: boolean
@@ -111,8 +104,6 @@ export function PublishingClient({
   slug: initialSlug,
   analytics: initialAnalytics,
   baseUrl,
-  categories,
-  items,
   initialDomainSetup,
 }: PublishingClientProps) {
   const queryClient = useQueryClient()
@@ -420,6 +411,12 @@ export function PublishingClient({
                 <p className="text-xs text-gray-500">
                   {isOrderPublished ? t('publishing.orderLiveHint') : t('publishing.orderDraftHint')}
                 </p>
+                <a
+                  href="/dashboard/order-page"
+                  className="inline-block text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 mt-1"
+                >
+                  {t('publishing.configureOrderPage')}
+                </a>
               </div>
               <button
                 type="button"
@@ -460,24 +457,6 @@ export function PublishingClient({
             </div>
           </div>
         </div>
-      </Card>
-
-      {/* ── Order page promo carousel ── */}
-      <Card>
-        <OrderPromoSlidesEditor
-          businessId={businessId}
-          initialSlides={normalizeOrderPromoSlides(publishing?.order_promo_slides)}
-        />
-      </Card>
-
-      {/* ── Order page menu ── */}
-      <Card>
-        <OrderMenuConfigEditor
-          businessId={businessId}
-          initialConfig={normalizeOrderMenuConfig(publishing?.order_menu_config)}
-          categories={categories}
-          items={items}
-        />
       </Card>
 
       {/* ── Custom Domain ── */}
