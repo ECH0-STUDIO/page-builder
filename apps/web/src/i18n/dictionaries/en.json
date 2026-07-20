@@ -1156,7 +1156,22 @@
     "bgImage": "Background image",
     "uploadBg": "Upload background",
     "uploadFailed": "Upload failed",
-    "slugNote": "Public path: /{{slug}}/order"
+    "slugNote": "Public path: /{{slug}}/order",
+    "tabAppearance": "Appearance",
+    "tabCarousel": "Carousel",
+    "tabMenu": "Menu",
+    "previewDesktop": "Desktop preview",
+    "previewMobile": "Mobile preview",
+    "copyUrl": "Copy URL",
+    "openLive": "Open",
+    "aspectTitle": "Image dimensions",
+    "aspectHint": "Choose the carousel frame ratio. Mobile defaults to the same as desktop.",
+    "aspectDesktop": "Desktop ratio",
+    "aspectMobile": "Mobile ratio",
+    "aspectSameAsDesktop": "Same as desktop",
+    "aspectGuide": "Optimal upload size — Desktop: {{desktop}}. Mobile: {{mobile}}. Images are cropped to fill the frame.",
+    "aspectSaved": "Carousel dimensions saved — live now",
+    "slideSizeNote": "Recommended upload size for desktop: {{px}} (JPG/PNG/WebP)."
   },
   "payment": {
     "title": "Payment",

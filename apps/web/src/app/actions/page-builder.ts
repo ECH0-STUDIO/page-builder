@@ -5,7 +5,11 @@ import { revalidatePath } from 'next/cache'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
 import {
   normalizeOrderPromoSlides,
+  normalizeCarouselAspect,
+  normalizeCarouselAspectMobile,
   MAX_ORDER_PROMO_SLIDES,
+  type CarouselAspect,
+  type CarouselAspectMobile,
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
@@ -38,6 +42,13 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
     order_background_image_url: typeof row.order_background_image_url === 'string'
       ? row.order_background_image_url
       : null,
+    order_carousel_aspect_desktop: normalizeCarouselAspect(
+      row.order_carousel_aspect_desktop,
+      '16/9',
+    ),
+    order_carousel_aspect_mobile: normalizeCarouselAspectMobile(
+      row.order_carousel_aspect_mobile ?? 'same',
+    ),
   }
 }
 
@@ -339,6 +350,38 @@ export async function saveOrderAppearanceAction(
   revalidatePath('/dashboard/order-page')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+}
+
+export async function saveOrderCarouselAspectAction(
+  businessId: string,
+  fields: {
+    desktop: CarouselAspect
+    mobile: CarouselAspectMobile
+  },
+): Promise<ActionResult<{ desktop: CarouselAspect; mobile: CarouselAspectMobile }>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const desktop = normalizeCarouselAspect(fields.desktop, '16/9')
+  const mobile = normalizeCarouselAspectMobile(fields.mobile)
+
+  const { error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_carousel_aspect_desktop: desktop as unknown as never,
+        order_carousel_aspect_mobile: mobile as unknown as never,
+      },
+      { onConflict: 'business_id' },
+    )
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: { desktop, mobile } }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────

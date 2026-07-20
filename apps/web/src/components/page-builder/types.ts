@@ -2,7 +2,11 @@
  * Page Builder — shared type definitions
  */
 
-import type { OrderPromoSlide } from '@/components/order-page/promo-slides'
+import type {
+  CarouselAspect,
+  CarouselAspectMobile,
+  OrderPromoSlide,
+} from '@/components/order-page/promo-slides'
 
 // ─── Block types ──────────────────────────────────────────────────────────────
 
@@ -403,6 +407,10 @@ export interface PublishingSettings {
   order_menu_config?: MenuGridConfig | null
   order_background_color?: string | null
   order_background_image_url?: string | null
+  /** Carousel frame ratio on desktop (default 16/9) */
+  order_carousel_aspect_desktop?: CarouselAspect | null
+  /** Carousel frame on mobile — `same` uses desktop ratio */
+  order_carousel_aspect_mobile?: CarouselAspectMobile | null
   custom_domain: string | null
   seo_title: string | null
   seo_description: string | null

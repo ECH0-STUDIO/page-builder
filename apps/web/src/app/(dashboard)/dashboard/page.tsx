@@ -109,6 +109,7 @@ export default async function DashboardPage() {
       <OverviewLiveLinks
         landingUrl={landingUrl}
         orderUrl={orderUrl}
+        orderOpenHref={`/${business.slug}/order`}
         landingPublished={landingPublished}
         orderPublished={orderPublished}
       />

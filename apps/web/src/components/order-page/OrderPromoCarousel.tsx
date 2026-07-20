@@ -2,12 +2,17 @@
 
 /**
  * Promo image carousel for the fixed order page hero.
- * Auto-advances; falls back to a brand-colored panel when no images exist.
+ * Supports independent desktop / mobile aspect ratios.
  */
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import {
+  aspectClass,
+  type CarouselAspect,
+  type CarouselAspectMobile,
+} from './promo-slides'
 
 export interface PromoSlide {
   src: string
@@ -18,11 +23,34 @@ interface OrderPromoCarouselProps {
   slides: PromoSlide[]
   businessName: string
   brandColor: string
+  aspectDesktop?: CarouselAspect
+  aspectMobile?: CarouselAspectMobile
+  /** When set, ignore responsive breakpoints and use this single aspect (preview canvas). */
+  forceAspect?: CarouselAspect
 }
 
-export function OrderPromoCarousel({ slides, businessName, brandColor }: OrderPromoCarouselProps) {
+export function OrderPromoCarousel({
+  slides,
+  businessName,
+  brandColor,
+  aspectDesktop = '16/9',
+  aspectMobile = 'same',
+  forceAspect,
+}: OrderPromoCarouselProps) {
   const [index, setIndex] = useState(0)
   const hasSlides = slides.length > 0
+  const mobileAspect: CarouselAspect = aspectMobile === 'same' ? aspectDesktop : aspectMobile
+  const frameClass = forceAspect
+    ? cn('relative w-full overflow-hidden', aspectClass(forceAspect))
+    : cn(
+        'relative w-full overflow-hidden',
+        aspectClass(mobileAspect),
+        // From sm up, use desktop aspect (override mobile)
+        aspectDesktop === '21/9' && 'sm:aspect-[21/9]',
+        aspectDesktop === '16/9' && 'sm:aspect-video',
+        aspectDesktop === '4/3' && 'sm:aspect-[4/3]',
+        aspectDesktop === '1/1' && 'sm:aspect-square',
+      )
 
   useEffect(() => {
     if (slides.length < 2) return
@@ -35,7 +63,7 @@ export function OrderPromoCarousel({ slides, businessName, brandColor }: OrderPr
   if (!hasSlides) {
     return (
       <div
-        className="relative w-full aspect-[16/9] sm:aspect-[21/9] overflow-hidden"
+        className={frameClass}
         style={{
           background: `linear-gradient(135deg, ${brandColor} 0%, color-mix(in srgb, ${brandColor} 55%, #111) 100%)`,
         }}
@@ -50,7 +78,7 @@ export function OrderPromoCarousel({ slides, businessName, brandColor }: OrderPr
   }
 
   return (
-    <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] overflow-hidden bg-gray-100">
+    <div className={cn(frameClass, 'bg-gray-100')}>
       {slides.map((slide, i) => (
         <div
           key={`${slide.src}-${i}`}

@@ -19,7 +19,11 @@ import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
 import { OrderServiceActions } from '@/components/order-page/OrderServiceActions'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
-import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
+import {
+  normalizeCarouselAspect,
+  normalizeCarouselAspectMobile,
+  normalizeOrderPromoSlides,
+} from '@/components/order-page/promo-slides'
 import {
   normalizeOrderMenuConfig,
   resolveOrderMenuConfig,
@@ -167,6 +171,16 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     menuItems,
   })
 
+  const carouselDesktop = normalizeCarouselAspect(
+    (pubSettings as { order_carousel_aspect_desktop?: unknown } | null)
+      ?.order_carousel_aspect_desktop,
+    '16/9',
+  )
+  const carouselMobile = normalizeCarouselAspectMobile(
+    (pubSettings as { order_carousel_aspect_mobile?: unknown } | null)
+      ?.order_carousel_aspect_mobile ?? 'same',
+  )
+
   const cookieStore = await cookies()
   const visitorLocale = resolveLiveLocale(
     cookieStore.get('NEXT_LOCALE')?.value,
@@ -237,6 +251,8 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             slides={promoSlides}
             businessName={business.name}
             brandColor={themeTokens.brandColor}
+            aspectDesktop={carouselDesktop}
+            aspectMobile={carouselMobile}
           />
 
           <main className="flex-1">

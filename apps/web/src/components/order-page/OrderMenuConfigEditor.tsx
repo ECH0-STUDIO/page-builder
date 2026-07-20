@@ -25,6 +25,7 @@ interface OrderMenuConfigEditorProps {
   initialConfig: MenuGridConfig | null
   categories: MenuCategory[]
   items: MenuItem[]
+  onConfigChange?: (config: MenuGridConfig) => void
 }
 
 export function OrderMenuConfigEditor({
@@ -32,6 +33,7 @@ export function OrderMenuConfigEditor({
   initialConfig,
   categories,
   items,
+  onConfigChange,
 }: OrderMenuConfigEditorProps) {
   const { t } = useTranslation()
   const [config, setConfig] = useState<MenuGridConfig>(
@@ -44,6 +46,7 @@ export function OrderMenuConfigEditor({
   function handleChange(next: MenuGridConfig) {
     setConfig(next)
     setDirty(true)
+    onConfigChange?.(next)
   }
 
   function handleSave() {
@@ -54,6 +57,7 @@ export function OrderMenuConfigEditor({
         return
       }
       setConfig(res.data)
+      onConfigChange?.(res.data)
       setIsCustomized(true)
       setDirty(false)
       toast.success(t('publishing.orderMenuSaved'))
@@ -67,7 +71,9 @@ export function OrderMenuConfigEditor({
         toast.error(res.error)
         return
       }
-      setConfig({ ...defaultMenuGridConfig, heading: '', description: '' })
+      const fallback = { ...defaultMenuGridConfig, heading: '', description: '' }
+      setConfig(fallback)
+      onConfigChange?.(fallback)
       setIsCustomized(false)
       setDirty(false)
       toast.success(t('publishing.orderMenuReset'))
@@ -78,8 +84,7 @@ export function OrderMenuConfigEditor({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h2 className="font-semibold text-gray-900">{t('publishing.orderMenuTitle')}</h2>
-          <p className="text-sm text-gray-500">{t('publishing.orderMenuHint')}</p>
+          <p className="text-xs text-muted-foreground">{t('publishing.orderMenuHint')}</p>
           {!isCustomized && !dirty && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 inline-block mt-1">
               {t('publishing.orderMenuUsingDefault')}
@@ -91,6 +96,7 @@ export function OrderMenuConfigEditor({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={handleReset}
               disabled={isPending}
               className="hidden sm:inline-flex"
@@ -99,13 +105,13 @@ export function OrderMenuConfigEditor({
               {t('publishing.orderMenuResetBtn')}
             </Button>
           )}
-          <Button type="button" onClick={handleSave} disabled={!dirty || isPending}>
+          <Button type="button" size="sm" onClick={handleSave} disabled={!dirty || isPending}>
             {isPending ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
           </Button>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-100 bg-white p-4">
+      <div className="rounded-xl border border-border bg-background p-3">
         <MenuGridSettings
           config={config}
           categories={categories}
@@ -118,6 +124,7 @@ export function OrderMenuConfigEditor({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={handleReset}
           disabled={isPending}
           className="sm:hidden w-full"

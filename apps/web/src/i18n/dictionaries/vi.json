@@ -1156,7 +1156,22 @@
     "bgImage": "Ảnh nền",
     "uploadBg": "Tải ảnh nền",
     "uploadFailed": "Tải ảnh thất bại",
-    "slugNote": "Đường dẫn công khai: /{{slug}}/order"
+    "slugNote": "Đường dẫn công khai: /{{slug}}/order",
+    "tabAppearance": "Giao diện",
+    "tabCarousel": "Carousel",
+    "tabMenu": "Thực đơn",
+    "previewDesktop": "Xem trước desktop",
+    "previewMobile": "Xem trước mobile",
+    "copyUrl": "Sao chép URL",
+    "openLive": "Mở",
+    "aspectTitle": "Kích thước ảnh",
+    "aspectHint": "Chọn tỉ lệ khung carousel. Mobile mặc định giống desktop.",
+    "aspectDesktop": "Tỉ lệ desktop",
+    "aspectMobile": "Tỉ lệ mobile",
+    "aspectSameAsDesktop": "Giống desktop",
+    "aspectGuide": "Kích thước tải lên tối ưu — Desktop: {{desktop}}. Mobile: {{mobile}}. Ảnh sẽ được crop để vừa khung.",
+    "aspectSaved": "Đã lưu kích thước carousel — đang live",
+    "slideSizeNote": "Kích thước khuyến nghị cho desktop: {{px}} (JPG/PNG/WebP)."
   },
   "payment": {
     "title": "Thanh toán",

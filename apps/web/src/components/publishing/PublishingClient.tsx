@@ -447,7 +447,7 @@ export function PublishingClient({
                   : <Copy className="size-4" />}
               </button>
               <a
-                href={orderUrl}
+                href={`/${slug}/order`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"

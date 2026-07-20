@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 interface OverviewLiveLinksProps {
   landingUrl: string
   orderUrl: string
+  /** Same-origin open path for order (optional; defaults to orderUrl) */
+  orderOpenHref?: string
   landingPublished: boolean
   orderPublished: boolean
 }
@@ -19,6 +21,7 @@ interface OverviewLiveLinksProps {
 export function OverviewLiveLinks({
   landingUrl,
   orderUrl,
+  orderOpenHref,
   landingPublished,
   orderPublished,
 }: OverviewLiveLinksProps) {
@@ -34,11 +37,13 @@ export function OverviewLiveLinks({
   function Row({
     label,
     url,
+    openHref,
     live,
     copyKey,
   }: {
     label: string
     url: string
+    openHref?: string
     live: boolean
     copyKey: 'landing' | 'order'
   }) {
@@ -70,7 +75,7 @@ export function OverviewLiveLinks({
           </button>
           {live ? (
             <a
-              href={url}
+              href={openHref ?? url}
               target="_blank"
               rel="noopener noreferrer"
               className="shrink-0 p-1.5 rounded-lg hover:bg-background text-muted-foreground transition-colors"
@@ -107,6 +112,7 @@ export function OverviewLiveLinks({
         <Row
           label={t('overview.liveLinks.order')}
           url={orderUrl}
+          openHref={orderOpenHref}
           live={orderPublished}
           copyKey="order"
         />

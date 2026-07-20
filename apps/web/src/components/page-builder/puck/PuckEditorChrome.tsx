@@ -217,7 +217,7 @@ export function PuckHeaderActions({
       )}
       {orderPublished && (
         <a
-          href={`${getPublicStoreUrl(slug)}/order`}
+          href={`/${slug}/order`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"

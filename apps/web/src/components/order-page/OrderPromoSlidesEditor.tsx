@@ -21,9 +21,17 @@ import { cn } from '@/lib/utils'
 interface OrderPromoSlidesEditorProps {
   businessId: string
   initialSlides: OrderPromoSlide[]
+  onSlidesChange?: (slides: OrderPromoSlide[]) => void
+  /** Recommended upload pixel size shown as guidance */
+  recommendedPx?: string
 }
 
-export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromoSlidesEditorProps) {
+export function OrderPromoSlidesEditor({
+  businessId,
+  initialSlides,
+  onSlidesChange,
+  recommendedPx = '1920×1080',
+}: OrderPromoSlidesEditorProps) {
   const { t } = useTranslation()
   const [slides, setSlides] = useState<OrderPromoSlide[]>(initialSlides)
   const [uploading, setUploading] = useState(false)
@@ -34,6 +42,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
   function markDirty(next: OrderPromoSlide[]) {
     setSlides(next)
     setDirty(true)
+    onSlidesChange?.(next)
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -92,6 +101,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
         return
       }
       setSlides(res.data)
+      onSlidesChange?.(res.data)
       setDirty(false)
       toast.success(t('publishing.promoSaved'))
     })
@@ -101,11 +111,15 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h2 className="font-semibold text-gray-900">{t('publishing.promoTitle')}</h2>
-          <p className="text-sm text-gray-500">{t('publishing.promoHint')}</p>
+          <h2 className="text-sm font-semibold text-foreground">{t('publishing.promoTitle')}</h2>
+          <p className="text-xs text-muted-foreground">{t('publishing.promoHint')}</p>
+          <p className="text-[11px] text-muted-foreground/90">
+            {t('orderPageAdmin.slideSizeNote').replace('{{px}}', recommendedPx)}
+          </p>
         </div>
         <Button
           type="button"
+          size="sm"
           onClick={handleSave}
           disabled={!dirty || isPending}
           className="shrink-0"
@@ -115,23 +129,23 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
       </div>
 
       {slides.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center">
-          <p className="text-sm text-gray-500">{t('publishing.promoEmpty')}</p>
+        <div className="rounded-xl border border-dashed border-border bg-muted/50 px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">{t('publishing.promoEmpty')}</p>
         </div>
       ) : (
         <ul className="space-y-3">
           {slides.map((slide, index) => (
             <li
               key={slide.id}
-              className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/80 p-3"
+              className="flex gap-3 rounded-xl border border-border bg-muted/40 p-3"
             >
-              <div className="relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-lg bg-gray-200">
+              <div className="relative size-16 sm:size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
                 <Image
                   src={slide.image_url}
                   alt={slide.alt || `Slide ${index + 1}`}
                   fill
                   className="object-cover"
-                  sizes="96px"
+                  sizes="80px"
                 />
               </div>
               <div className="flex-1 min-w-0 space-y-2">
@@ -140,7 +154,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
                   value={slide.alt}
                   onChange={e => setAlt(slide.id, e.target.value)}
                   placeholder={t('publishing.promoAltPlaceholder')}
-                  className="w-full h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                  className="w-full h-9 px-3 text-sm rounded-lg border border-border bg-background focus:outline-none focus:border-foreground/40"
                 />
                 <div className="flex items-center gap-1">
                   <button
@@ -148,7 +162,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
                     onClick={() => moveSlide(slide.id, -1)}
                     disabled={index === 0}
                     className={cn(
-                      'p-1.5 rounded-lg text-gray-500 hover:bg-white hover:text-gray-900 disabled:opacity-30',
+                      'p-1.5 rounded-lg text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30',
                     )}
                     aria-label={t('publishing.promoMoveUp')}
                   >
@@ -158,7 +172,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
                     type="button"
                     onClick={() => moveSlide(slide.id, 1)}
                     disabled={index === slides.length - 1}
-                    className="p-1.5 rounded-lg text-gray-500 hover:bg-white hover:text-gray-900 disabled:opacity-30"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30"
                     aria-label={t('publishing.promoMoveDown')}
                   >
                     <ChevronDown className="size-4" />
@@ -166,7 +180,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
                   <button
                     type="button"
                     onClick={() => removeSlide(slide.id)}
-                    className="ml-auto p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    className="ml-auto p-1.5 rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600"
                     aria-label={t('publishing.promoRemove')}
                   >
                     <Trash2 className="size-4" />
@@ -189,6 +203,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
         <Button
           type="button"
           variant="outline"
+          size="sm"
           disabled={uploading || slides.length >= MAX_ORDER_PROMO_SLIDES}
           onClick={() => fileRef.current?.click()}
           className="w-full sm:w-auto"
@@ -199,7 +214,7 @@ export function OrderPromoSlidesEditor({ businessId, initialSlides }: OrderPromo
             <ImagePlus className="size-4 mr-2" />
           )}
           {t('publishing.promoAddSlide')}
-          <span className="ml-2 text-xs text-gray-400">
+          <span className="ml-2 text-xs text-muted-foreground">
             ({slides.length}/{MAX_ORDER_PROMO_SLIDES})
           </span>
         </Button>
