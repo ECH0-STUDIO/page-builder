@@ -74,6 +74,17 @@
       "title": "Page Analytics",
       "totalViews": "Total Views",
       "last7Days": "Last 7 Days"
+    },
+    "liveLinks": {
+      "title": "Your live pages",
+      "description": "Copy or open your landing and order page URLs.",
+      "landing": "Landing page",
+      "order": "Order page",
+      "live": "Live",
+      "draft": "Draft",
+      "copy": "Copy URL",
+      "open": "Open page",
+      "publishFirst": "Publish this page to open it"
     }
   },
   "publishing": {
@@ -111,6 +122,12 @@
     "promoSlideAdded": "Slide added — click Save to publish",
     "promoUploadFailed": "Upload failed",
     "promoMaxSlides": "Maximum {{n}} slides",
+    "orderMenuTitle": "Order page menu",
+    "orderMenuHint": "Choose which categories or items appear on /order. Changes go live when you save.",
+    "orderMenuUsingDefault": "Using default: all menu items (landing menu styling).",
+    "orderMenuSaved": "Order menu saved — live now",
+    "orderMenuReset": "Order menu reset to default",
+    "orderMenuResetBtn": "Reset to default",
     "customDomain": "Custom Domain",
     "domainLabel": "Your Domain (e.g., menu.yourrestaurant.com)",
     "save": "Save",
@@ -432,6 +449,7 @@
       }
     },
     "viewLive": "View Live Page",
+    "viewOrder": "View Order Page",
     "saveAsDraft": "Save as Draft",
     "publishToLive": "Publish to Live",
     "closePreview": "Close Preview",

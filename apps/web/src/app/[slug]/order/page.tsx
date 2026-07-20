@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import type { MenuGridConfig, PageBlock } from '@/components/page-builder/types'
-import { defaultMenuGridConfig, defaultThemeSettings, type ThemeSettings } from '@/components/page-builder/types'
+import { defaultThemeSettings, type ThemeSettings } from '@/components/page-builder/types'
 import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
@@ -20,6 +20,10 @@ import { OrderServiceActions } from '@/components/order-page/OrderServiceActions
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
+import {
+  normalizeOrderMenuConfig,
+  resolveOrderMenuConfig,
+} from '@/components/order-page/order-menu-config'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -142,19 +146,16 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     }
   }
 
-  // Prefer menu_grid settings from the published landing page when available
+  // Prefer dedicated order menu config; else landing menu_grid styling with all items
   const publishedMenuBlock = (pageBlocksRaw ?? []).find(b => b.type === 'menu_grid')
-  const menuConfig: MenuGridConfig = publishedMenuBlock
-    ? {
-        ...defaultMenuGridConfig,
-        ...(publishedMenuBlock.config as MenuGridConfig),
-        category_ids: [],
-        selection_mode: 'category',
-        item_ids: [],
-        heading: '',
-        description: '',
-      }
-    : { ...defaultMenuGridConfig }
+  const menuConfig: MenuGridConfig = resolveOrderMenuConfig({
+    configured: normalizeOrderMenuConfig(
+      (pubSettings as { order_menu_config?: unknown } | null)?.order_menu_config,
+    ),
+    landingMenuGrid: publishedMenuBlock
+      ? (publishedMenuBlock.config as MenuGridConfig)
+      : null,
+  })
 
   const promoSlides = resolvePromoSlides({
     configured: normalizeOrderPromoSlides(

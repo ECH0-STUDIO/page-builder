@@ -488,6 +488,7 @@ export interface Database {
           published: boolean
           order_published: boolean
           order_promo_slides: Json
+          order_menu_config: Json | null
           custom_domain: string | null
           seo_title: string | null
           seo_description: string | null
@@ -512,6 +513,7 @@ export interface Database {
           published?: boolean
           order_published?: boolean
           order_promo_slides?: Json
+          order_menu_config?: Json | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null
@@ -536,6 +538,7 @@ export interface Database {
           published?: boolean
           order_published?: boolean
           order_promo_slides?: Json
+          order_menu_config?: Json | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null

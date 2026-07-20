@@ -51,6 +51,7 @@ function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
 interface PuckEditorChromeProps {
   saveStatus: SaveStatus
   published: boolean
+  orderPublished?: boolean
   hasUnpublishedChanges: boolean
   publishing: boolean
   slug: string
@@ -163,6 +164,7 @@ export function PuckCustomHeader({
 export function PuckHeaderActions({
   saveStatus,
   published,
+  orderPublished,
   hasUnpublishedChanges,
   publishing,
   slug,
@@ -211,6 +213,18 @@ export function PuckHeaderActions({
         >
           <ExternalLink className="size-3.5" />
           <span className="hidden md:inline">{t('pageBuilder.viewLive')}</span>
+        </a>
+      )}
+      {orderPublished && (
+        <a
+          href={`${getPublicStoreUrl(slug)}/order`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
+          title={t('pageBuilder.viewOrder')}
+        >
+          <ExternalLink className="size-3.5" />
+          <span className="hidden lg:inline">{t('pageBuilder.viewOrder')}</span>
         </a>
       )}
 

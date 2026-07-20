@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
 import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
 import { getServerTranslation } from '@/i18n/getDictionary'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 
 export const metadata: Metadata = { title: 'Publishing' }
 export const dynamic = 'force-dynamic'
@@ -23,11 +24,16 @@ export default async function PublishingPage() {
 
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-  const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
+  const [{ publishing, slug }, analytics, domainSetup, { data: catsRaw }, { data: itemsRaw }] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),
     getCustomDomainSetupAction(business.id),
+    db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
+    db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
   ])
+
+  const categories = normalizeMenuCategories((catsRaw ?? []) as Record<string, unknown>[])
+  const items = normalizeMenuItems((itemsRaw ?? []) as Record<string, unknown>[])
 
   const siteOrigin = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
 
@@ -46,6 +52,8 @@ export default async function PublishingPage() {
         slug={slug ?? business.id}
         analytics={analytics}
         baseUrl={siteOrigin}
+        categories={categories}
+        items={items}
         initialDomainSetup={domainSetup}
       />
     </div>

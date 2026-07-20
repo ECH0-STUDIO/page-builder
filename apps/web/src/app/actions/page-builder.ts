@@ -8,6 +8,7 @@ import {
   MAX_ORDER_PROMO_SLIDES,
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
+import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -30,6 +31,7 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
     // Fall back to landing publish if column not yet migrated
     order_published: row.order_published == null ? published : Boolean(row.order_published),
     order_promo_slides: normalizeOrderPromoSlides(row.order_promo_slides),
+    order_menu_config: normalizeOrderMenuConfig(row.order_menu_config) ?? undefined,
   }
 }
 
@@ -250,6 +252,54 @@ export async function saveOrderPromoSlidesAction(
     success: true,
     data: normalizeOrderPromoSlides(data?.order_promo_slides),
   }
+}
+
+export async function saveOrderMenuConfigAction(
+  businessId: string,
+  config: import('@/components/page-builder/types').MenuGridConfig,
+): Promise<ActionResult<import('@/components/page-builder/types').MenuGridConfig>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const cleaned = normalizeOrderMenuConfig(config)
+  if (!cleaned) return { success: false, error: 'Invalid menu config' }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_menu_config: cleaned as unknown as never },
+      { onConflict: 'business_id' },
+    )
+    .select('order_menu_config')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  const saved = normalizeOrderMenuConfig(data?.order_menu_config)
+  if (!saved) return { success: false, error: 'Failed to save menu config' }
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: saved }
+}
+
+export async function clearOrderMenuConfigAction(
+  businessId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_menu_config: null },
+      { onConflict: 'business_id' },
+    )
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: undefined }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────

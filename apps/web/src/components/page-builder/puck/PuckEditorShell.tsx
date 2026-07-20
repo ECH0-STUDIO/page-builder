@@ -87,6 +87,9 @@ export function PuckEditorShell({
   )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
+  const [orderPublished] = useState(
+    initialPublishing?.order_published ?? initialPublishing?.published ?? false,
+  )
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
     initialPublishing?.has_unpublished_changes ?? false,
   )
@@ -280,6 +283,7 @@ export function PuckEditorShell({
     () => ({
       saveStatus,
       published,
+      orderPublished,
       hasUnpublishedChanges,
       publishing,
       slug: business.slug ?? '',
@@ -288,7 +292,7 @@ export function PuckEditorShell({
       onPublish: handlePublish,
       onOpenGlobalSettings: () => setPagePanel('theme'),
     }),
-    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
+    [saveStatus, published, orderPublished, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
   )
 
   const puckOverrides = useMemo<Partial<Overrides>>(

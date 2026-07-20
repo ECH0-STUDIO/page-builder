@@ -74,6 +74,17 @@
       "title": "Phân tích trang",
       "totalViews": "Tổng lượt xem",
       "last7Days": "7 ngày qua"
+    },
+    "liveLinks": {
+      "title": "Trang đang hoạt động",
+      "description": "Sao chép hoặc mở URL trang giới thiệu và trang đặt món.",
+      "landing": "Trang giới thiệu",
+      "order": "Trang đặt món",
+      "live": "Đang live",
+      "draft": "Nháp",
+      "copy": "Sao chép URL",
+      "open": "Mở trang",
+      "publishFirst": "Xuất bản trang này để mở"
     }
   },
   "publishing": {
@@ -111,6 +122,12 @@
     "promoSlideAdded": "Đã thêm slide — bấm Lưu để xuất bản",
     "promoUploadFailed": "Tải ảnh thất bại",
     "promoMaxSlides": "Tối đa {{n}} slide",
+    "orderMenuTitle": "Thực đơn trang đặt món",
+    "orderMenuHint": "Chọn danh mục hoặc món hiển thị trên /order. Thay đổi có hiệu lực ngay khi lưu.",
+    "orderMenuUsingDefault": "Đang dùng mặc định: tất cả món (theo kiểu menu trang giới thiệu).",
+    "orderMenuSaved": "Đã lưu thực đơn đặt món — đang live",
+    "orderMenuReset": "Đã reset thực đơn đặt món về mặc định",
+    "orderMenuResetBtn": "Reset về mặc định",
     "customDomain": "Tên miền tùy chỉnh",
     "domainLabel": "Tên miền của bạn (VD: menu.nhahang.com)",
     "save": "Lưu",
@@ -432,6 +449,7 @@
       }
     },
     "viewLive": "Xem trang trực tiếp",
+    "viewOrder": "Xem trang đặt món",
     "saveAsDraft": "Lưu nháp",
     "publishToLive": "Xuất bản trực tuyến",
     "closePreview": "Đóng xem trước",

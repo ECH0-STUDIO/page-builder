@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { getServerTranslation } from '@/i18n/getDictionary'
 import { getPageViewsAction } from '@/app/actions/page-builder'
+import { getPublicStoreUrl } from '@/lib/site-urls'
+import { OverviewLiveLinks } from '@/components/dashboard/OverviewLiveLinks'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -26,16 +28,22 @@ export default async function DashboardPage() {
     { count: menuCount },
     { count: blocksCount },
   ] = await Promise.all([
-    db.from('publishing_settings').select('published').eq('business_id', business.id).single(),
+    db.from('publishing_settings').select('published, order_published').eq('business_id', business.id).single(),
     db.from('menu_categories').select('*', { count: 'exact', head: true }).eq('business_id', business.id),
     db.from('page_blocks').select('*', { count: 'exact', head: true }).eq('business_id', business.id),
   ])
+
+  const landingPublished = publishing?.published === true
+  const orderPublished =
+    publishing?.order_published == null
+      ? landingPublished
+      : publishing.order_published === true
 
   const stepsComplete = {
     businessProfile: !!(business.logo_url || business.address || business.phone),
     menu: (menuCount ?? 0) > 0,
     pageBuilder: (blocksCount ?? 0) > 0,
-    publish: publishing?.published === true,
+    publish: landingPublished,
   }
 
   const CORE_STEPS = [
@@ -85,6 +93,8 @@ export default async function DashboardPage() {
   ]
 
   const goToLabel = t('overview.steps.goTo')
+  const landingUrl = getPublicStoreUrl(business.slug)
+  const orderUrl = `${landingUrl}/order`
 
   return (
     <div className="p-4 md:p-6 lg:p-8 pb-12 md:pb-16 max-w-4xl space-y-10">
@@ -95,6 +105,13 @@ export default async function DashboardPage() {
           {t('overview.description')}
         </p>
       </div>
+
+      <OverviewLiveLinks
+        landingUrl={landingUrl}
+        orderUrl={orderUrl}
+        landingPublished={landingPublished}
+        orderPublished={orderPublished}
+      />
 
       {/* Analytics */}
       <section className="space-y-4">
