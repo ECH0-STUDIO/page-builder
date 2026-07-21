@@ -153,6 +153,8 @@ export function MenuGridSettings({
 
       <Separator />
 
+      {!layoutOnly && (
+        <>
       {/* Tabs Layout */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.tabsLayout')}</Label>
@@ -184,8 +186,6 @@ export function MenuGridSettings({
         </div>
       </div>
 
-      {!layoutOnly && (
-        <>
       <Separator />
 
       {/* Selection Mode */}

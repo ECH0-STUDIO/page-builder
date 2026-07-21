@@ -5,8 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import type { Metadata } from 'next'
 import type { MenuGridConfig, PageBlock } from '@/components/page-builder/types'
 import { defaultThemeSettings, type ThemeSettings } from '@/components/page-builder/types'
-import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
-import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -16,8 +14,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
-import { OrderServiceActions } from '@/components/order-page/OrderServiceActions'
-import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
+import { OrderPageLive } from '@/components/order-page/OrderPageLive'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import {
   normalizeCarouselAspect,
@@ -166,9 +163,6 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       (pubSettings as { order_promo_slides?: unknown } | null)?.order_promo_slides,
     ),
     businessName: business.name,
-    ogImageUrl: pubSettings?.og_image_url,
-    pageBlocks: (pageBlocksRaw ?? []) as PageBlock[],
-    menuItems,
   })
 
   const carouselDesktop = normalizeCarouselAspect(
@@ -240,40 +234,21 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             />
           </Suspense>
 
-          <OrderPromoCarousel
-            slides={promoSlides}
+          <OrderPageLive
+            businessId={business.id}
             businessName={business.name}
             brandColor={themeTokens.brandColor}
+            promoSlides={promoSlides}
             aspectDesktop={carouselDesktop}
             aspectMobile={carouselMobile}
-          />
-
-          <main className="flex-1 px-4 sm:px-6 py-6 pb-36">
-            <MenuGridRender
-              config={menuConfig}
-              data={{
-                categories: menuCategories,
-                items: menuItems,
-                variantGroups,
-                variantOptions,
-                businessSlug: slug,
-              }}
-              brandColor={themeTokens.brandColor}
-            />
-          </main>
-
-          <Suspense fallback={null}>
-            <OrderServiceActions
-              businessId={business.id}
-              brandColor={themeTokens.brandColor}
-            />
-          </Suspense>
-
-          <LiveStoreCart
-            businessId={business.id}
+            menuConfig={menuConfig}
+            categories={menuCategories}
+            items={menuItems}
+            variantGroups={variantGroups}
+            variantOptions={variantOptions}
+            slug={slug}
             paymentSettings={paymentSettings}
             locale={visitorLocale}
-            fabOffsetClass="bottom-24"
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
+import { usePathname } from 'next/navigation'
 import { CartDrawer } from './CartDrawer'
 import { PaymentDrawer } from './PaymentDrawer'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
@@ -17,6 +18,15 @@ interface LiveStoreCartProps {
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {
+  const pathname = usePathname()
+  const isOrderRoute = Boolean(
+    pathname && /(^|\/)order\/?$/.test(pathname.split('?')[0] ?? ''),
+  )
+  // Never mount cart/payment FABs on marketing/landing — only /order (or contained canvas).
+  if (!props.contained && !props.previewMode && !isOrderRoute) {
+    return null
+  }
+
   return (
     <>
       <CartDrawer {...props} />

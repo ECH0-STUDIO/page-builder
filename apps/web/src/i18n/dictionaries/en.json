@@ -113,8 +113,8 @@
     "toastOrderDraft": "Order page set to draft",
     "configureOrderPage": "Customize order page →",
     "promoTitle": "Order page carousel",
-    "promoHint": "Upload promo images for /order. Leave empty to auto-use your OG image, hero, and menu photos.",
-    "promoEmpty": "No custom slides yet — the order page will use automatic images.",
+    "promoHint": "Upload promo images for /order. Leave empty until you add your own slides.",
+    "promoEmpty": "No slides yet — add images here. The order page will stay empty until you do.",
     "promoAddSlide": "Add slide",
     "promoAltPlaceholder": "Caption / alt text (optional)",
     "promoMoveUp": "Move up",
@@ -1146,7 +1146,12 @@
     "enterTableFirst": "Please enter your table number",
     "enterTablePrompt": "Enter your table number so staff can find you.",
     "sendRequest": "Send request",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "menu": "Menu",
+    "categoriesMenu": "Categories",
+    "scrollTop": "Back to top",
+    "carouselPrev": "Previous slide",
+    "carouselNext": "Next slide"
   },
   "orderPageAdmin": {
     "title": "Order Page",
@@ -1180,7 +1185,8 @@
     "aspectGuide": "Optimal upload size — Desktop: {{desktop}}. Mobile: {{mobile}}. Images are cropped to fill the frame.",
     "aspectSaved": "Carousel dimensions saved — live now",
     "slideSizeNote": "Recommended upload size for desktop: {{px}} (JPG/PNG/WebP).",
-    "menuAllCategoriesNote": "All menu categories are shown automatically. Hide dishes or categories from the Menu tab in the dashboard."
+    "menuAllCategoriesNote": "All menu categories are shown automatically. Hide dishes or categories from the Menu tab in the dashboard.",
+    "carouselEmptyHint": "No carousel images yet. Add slides in the Carousel tab — we won’t use random menu photos."
   },
   "payment": {
     "title": "Payment",

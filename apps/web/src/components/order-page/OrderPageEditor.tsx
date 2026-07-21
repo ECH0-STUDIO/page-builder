@@ -120,11 +120,8 @@ export function OrderPageEditor({
       resolvePromoSlides({
         configured: slides,
         businessName,
-        ogImageUrl: publishing?.og_image_url,
-        pageBlocks: [],
-        menuItems: items,
       }),
-    [slides, businessName, publishing?.og_image_url, items],
+    [slides, businessName],
   )
 
   function handleCopy() {

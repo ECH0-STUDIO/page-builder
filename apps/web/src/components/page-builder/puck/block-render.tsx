@@ -173,6 +173,7 @@ export function renderQrCodeBlock(
 export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) {
   const config = { ...defaultNavbarConfig, ...(props.config as NavbarConfig) }
   const inEditor = !ctx.previewInteractive
+  const isMobilePreview = ctx.previewLayout === 'mobile'
 
   return (
     <NavbarRender
@@ -180,6 +181,7 @@ export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) 
       businessName={ctx.business.name}
       logoUrl={ctx.business.logo_url ?? undefined}
       inEditor={inEditor}
+      isMobilePreview={isMobilePreview}
     />
   )
 }

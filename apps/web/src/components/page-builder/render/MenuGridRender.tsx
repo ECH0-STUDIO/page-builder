@@ -3,21 +3,15 @@
 /**
  * MenuGridRender — shared between editor canvas and live page.
  *
- * Wraps itself in CartProvider so the cart is scoped to this menu section.
- * When item_click === 'modal', the ItemModal lets customers:
- *  1. View item details (image, description, price)
- *  2. Select variants (required groups must be selected)
- *  3. See live-updating total as they pick options
- *  4. Add the configured item to the cart
- *
- * CartDrawer (floating button + bottom sheet + call waiter) is rendered
- * as a sibling so it sits outside the scrollable content.
+ * Landing: pass browseOnly to hide add-to-cart (no cart drawer on marketing).
+ * Order page: full cart via parent CartProvider + LiveStoreCart.
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
@@ -466,23 +460,45 @@ function MenuGridInner({
   isMobilePreview,
   brandColor = '#111111',
   browseOnly = false,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string; browseOnly?: boolean }) {
+  hideCategoryTabs = false,
+  activeCategoryId,
+  onActiveCategoryChange,
+}: MenuGridRenderProps & {
+  previewLayout?: PreviewLayout
+  isMobilePreview?: boolean
+  brandColor?: string
+  browseOnly?: boolean
+  hideCategoryTabs?: boolean
+  activeCategoryId?: string | null
+  onActiveCategoryChange?: (id: string) => void
+}) {
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
-  const layout: PreviewLayout | undefined =
-    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const ctxLayout = usePreviewLayout()
+  const layout: PreviewLayout =
+    previewLayout
+    ?? (isMobilePreview ? 'mobile' : undefined)
+    ?? (ctxLayout !== 'responsive' ? ctxLayout : 'responsive')
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
-  const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [internalActiveCatId, setInternalActiveCatId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const loadingTimer = useRef<NodeJS.Timeout | null>(null)
   const renderTimer = useRef<NodeJS.Timeout | null>(null)
   const [modalItem, setModalItem] = useState<MenuItem | null>(null)
+
+  const isControlled = onActiveCategoryChange != null
+  const activeCatId = isControlled ? (activeCategoryId ?? null) : internalActiveCatId
+
+  function setActiveCatId(id: string) {
+    if (isControlled) onActiveCategoryChange?.(id)
+    else setInternalActiveCatId(id)
+  }
 
   // Cleanup timers
   useEffect(() => {
@@ -509,8 +525,14 @@ function MenuGridInner({
         config.category_ids.length === 0 || config.category_ids.includes(c.id)
       ))
 
-  const tabsEnabled = config.show_category_tabs !== false && visibleCats.length > 1
-  const activeCat = tabsEnabled ? (activeCatId ?? visibleCats[0]?.id ?? null) : null
+  const tabsEnabled =
+    !hideCategoryTabs
+    && config.show_category_tabs !== false
+    && visibleCats.length > 1
+  const filterByCategory = (tabsEnabled || hideCategoryTabs) && visibleCats.length > 0
+  const activeCat = filterByCategory
+    ? (activeCatId ?? visibleCats[0]?.id ?? null)
+    : null
 
   const displayItems = items.filter(item => {
     if (isCustomMode) {
@@ -518,7 +540,7 @@ function MenuGridInner({
     } else if (!visibleCats.some(c => c.id === item.category_id)) {
       return false
     }
-    if (tabsEnabled && activeCat && item.category_id !== activeCat) return false
+    if (filterByCategory && activeCat && item.category_id !== activeCat) return false
     return true
   })
 
@@ -540,7 +562,11 @@ function MenuGridInner({
 
   const colClass = menuGridColClass(layout, config.layout)
   const isList = config.layout === 'list'
-  const sideTabs = visibleCats.length > 1 && config.tabs_layout !== 'horizontal' && !mobileLayout
+  const sideTabs =
+    !hideCategoryTabs
+    && visibleCats.length > 1
+    && config.tabs_layout !== 'horizontal'
+    && !mobileLayout
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
@@ -727,6 +753,11 @@ interface MenuGridRenderProps {
   data: MenuGridData
   /** View menu details only — hide add-to-cart actions (landing page). */
   browseOnly?: boolean
+  /** Hide built-in category tabs (order page uses external drawer). */
+  hideCategoryTabs?: boolean
+  /** Controlled active category (used with hideCategoryTabs). */
+  activeCategoryId?: string | null
+  onActiveCategoryChange?: (id: string) => void
 }
 
 export function MenuGridRender({
@@ -736,6 +767,9 @@ export function MenuGridRender({
   isMobilePreview,
   brandColor = '#111111',
   browseOnly = false,
+  hideCategoryTabs = false,
+  activeCategoryId,
+  onActiveCategoryChange,
 }: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
@@ -745,6 +779,9 @@ export function MenuGridRender({
       isMobilePreview={isMobilePreview}
       brandColor={brandColor}
       browseOnly={browseOnly}
+      hideCategoryTabs={hideCategoryTabs}
+      activeCategoryId={activeCategoryId}
+      onActiveCategoryChange={onActiveCategoryChange}
     />
   )
 }

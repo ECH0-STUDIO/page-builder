@@ -100,6 +100,7 @@ export function OrderPagePreview({
                 ? (aspectMobile === 'same' ? aspectDesktop : aspectMobile)
                 : aspectDesktop
             }
+            showEmptyHint
           />
 
           <CartProvider>

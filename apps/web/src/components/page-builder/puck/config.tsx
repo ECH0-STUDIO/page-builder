@@ -44,6 +44,7 @@ import { buildThemeStyle } from '../theme-tokens'
 import { BrowseOnlyCartProvider } from '../render/CartContext'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
+import { PreviewLayoutProvider } from './PreviewLayoutContext'
 
 export interface PuckShellState {
   business: Business
@@ -109,25 +110,28 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
 
         return (
           <BrowseOnlyCartProvider>
-            <div
-              className={
-                isMobile
-                  ? 'mx-auto w-[375px] max-w-full rounded-[28px] overflow-hidden shadow-2xl ring-4 ring-black/5 bg-white'
-                  : undefined
-              }
-              style={{
-                ...buildThemeStyle(theme),
-                fontFamily: `'${bodyFont}', sans-serif`,
-                minHeight: isMobile ? '667px' : '100%',
-              }}
-            >
-              <style
-                dangerouslySetInnerHTML={{
-                  __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+            <PreviewLayoutProvider value={isMobile ? 'mobile' : 'desktop'}>
+              <div
+                className={
+                  isMobile
+                    ? 'mx-auto w-[375px] max-w-full rounded-[28px] overflow-hidden shadow-2xl ring-4 ring-black/5 bg-white'
+                    : undefined
+                }
+                data-preview-layout={isMobile ? 'mobile' : 'desktop'}
+                style={{
+                  ...buildThemeStyle(theme),
+                  fontFamily: `'${bodyFont}', sans-serif`,
+                  minHeight: isMobile ? '667px' : '100%',
                 }}
-              />
-              {children}
-            </div>
+              >
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+                  }}
+                />
+                {children}
+              </div>
+            </PreviewLayoutProvider>
           </BrowseOnlyCartProvider>
         )
       },

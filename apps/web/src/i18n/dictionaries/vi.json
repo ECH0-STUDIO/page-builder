@@ -113,8 +113,8 @@
     "toastOrderDraft": "Trang đặt món đã chuyển về nháp",
     "configureOrderPage": "Tuỳ chỉnh trang đặt món →",
     "promoTitle": "Carousel trang đặt món",
-    "promoHint": "Tải ảnh khuyến mãi cho /order. Để trống sẽ tự dùng ảnh OG, hero và ảnh món.",
-    "promoEmpty": "Chưa có slide tùy chỉnh — trang đặt món sẽ dùng ảnh tự động.",
+    "promoHint": "Tải ảnh khuyến mãi cho /order. Để trống cho đến khi bạn thêm slide của mình.",
+    "promoEmpty": "Chưa có slide — thêm ảnh tại đây. Trang đặt món sẽ trống cho đến khi bạn thêm.",
     "promoAddSlide": "Thêm slide",
     "promoAltPlaceholder": "Chú thích / mô tả ảnh (tùy chọn)",
     "promoMoveUp": "Lên",
@@ -1146,7 +1146,12 @@
     "enterTableFirst": "Vui lòng nhập số bàn",
     "enterTablePrompt": "Nhập số bàn để nhân viên tìm bạn.",
     "sendRequest": "Gửi yêu cầu",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "menu": "Thực đơn",
+    "categoriesMenu": "Danh mục",
+    "scrollTop": "Lên đầu trang",
+    "carouselPrev": "Slide trước",
+    "carouselNext": "Slide sau"
   },
   "orderPageAdmin": {
     "title": "Trang đặt món",
@@ -1180,7 +1185,8 @@
     "aspectGuide": "Kích thước tải lên tối ưu — Desktop: {{desktop}}. Mobile: {{mobile}}. Ảnh sẽ được crop để vừa khung.",
     "aspectSaved": "Đã lưu kích thước carousel — đang live",
     "slideSizeNote": "Kích thước khuyến nghị cho desktop: {{px}} (JPG/PNG/WebP).",
-    "menuAllCategoriesNote": "Tất cả danh mục thực đơn được hiển thị tự động. Ẩn món hoặc danh mục trong tab Thực đơn trên dashboard."
+    "menuAllCategoriesNote": "Tất cả danh mục thực đơn được hiển thị tự động. Ẩn món hoặc danh mục trong tab Thực đơn trên dashboard.",
+    "carouselEmptyHint": "Chưa có ảnh carousel. Thêm slide trong tab Carousel — chúng tôi sẽ không dùng ảnh món ngẫu nhiên."
   },
   "payment": {
     "title": "Thanh toán",

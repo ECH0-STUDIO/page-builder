@@ -7,7 +7,7 @@
  *  - logo_type='none': links center-aligned
  *  - sticky: uses position:sticky top:0 z-[9999] — must NOT be inside overflow:hidden parent
  *  - anchor links: href uses block-{id} format, smooth scroll via CSS
- *  - burger menu collapses on mobile (≤640px)
+ *  - burger menu collapses on mobile (≤640px) or when isMobilePreview / preview layout is mobile
  */
 
 import { useState } from 'react'
@@ -15,6 +15,7 @@ import Image from 'next/image'
 import type { NavbarConfig, NavLink } from '../types'
 import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 interface NavbarRenderProps {
   config: NavbarConfig
@@ -26,9 +27,18 @@ interface NavbarRenderProps {
   locale?: string
 }
 
-export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview, locale }: NavbarRenderProps) {
+export function NavbarRender({
+  config,
+  businessName = 'Brand',
+  logoUrl,
+  inEditor,
+  isMobilePreview,
+  locale,
+}: NavbarRenderProps) {
   const activeLocale = toSupportedLocale(locale)
   const [open, setOpen] = useState(false)
+  const previewLayout = usePreviewLayout()
+  const forceMobile = Boolean(isMobilePreview) || previewLayout === 'mobile'
 
   const isTransparent = config.background_color === 'transparent'
   const bg = isTransparent ? 'rgba(255,255,255,0.85)' : config.background_color
@@ -227,7 +237,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
           .nav-burger-btn    { display: flex !important; }
           .nav-mobile-panel  { display: block !important; }
         }
-        ${isMobilePreview ? `
+        ${forceMobile ? `
           .nav-desktop-links { display: none !important; }
           .nav-burger-btn    { display: flex !important; }
           .nav-mobile-panel  { display: block !important; }

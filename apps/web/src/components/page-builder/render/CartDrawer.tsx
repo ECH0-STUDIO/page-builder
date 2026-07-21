@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useTransition } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, usePathname } from 'next/navigation'
 import { ShoppingBag, Plus, Minus, Trash2, ChevronRight, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { useCart, type CartItem } from './CartContext'
@@ -86,6 +86,7 @@ export function CartDrawer({
   const activeLocale = toSupportedLocale(locale)
   const { t } = useTranslationWithFallback(activeLocale)
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const tableFromUrl = searchParams.get('table') ?? ''
 
   const [open, setOpen] = useState(false)
@@ -96,6 +97,12 @@ export function CartDrawer({
 
   const effectiveTable = (tableFromUrl || tableNumber).trim()
   const position = contained ? 'absolute' : 'fixed'
+
+  // Hard guard: never show cart chrome on marketing/landing (/{slug}).
+  const isOrderRoute = Boolean(
+    pathname && /(^|\/)order\/?$/.test(pathname.split('?')[0] ?? ''),
+  )
+  const cartAllowed = Boolean(contained || previewMode || isOrderRoute)
 
   useEffect(() => {
     if (previewMode && !tableFromUrl) {
@@ -131,11 +138,12 @@ export function CartDrawer({
   }, [businessId])
 
   // Close drawer when cart empties IF we are still on cart step
-  if (totalItems === 0 && open && step === 'cart') {
+  if (cartAllowed && totalItems === 0 && open && step === 'cart') {
     setOpen(false)
   }
 
-  // Hide entirely if empty cart and closed
+  // Hide entirely if empty cart and closed — or if not on an order surface
+  if (!cartAllowed) return null
   if (totalItems === 0 && !open && step === 'cart' && pastOrders.length === 0) return null
 
   async function handlePlaceOrder() {
