@@ -59,24 +59,23 @@ export function resolveOrderMenuConfig(opts: {
   configured: MenuGridConfig | null
   landingMenuGrid?: MenuGridConfig | null
 }): MenuGridConfig {
-  if (opts.configured) {
-    return {
-      ...opts.configured,
-      // Order page owns its own chrome; keep compact section copy optional
-    }
-  }
+  const base = opts.configured
+    ? { ...opts.configured }
+    : opts.landingMenuGrid
+      ? {
+          ...defaultMenuGridConfig,
+          ...opts.landingMenuGrid,
+          heading: '',
+          description: '',
+        }
+      : { ...defaultMenuGridConfig }
 
-  if (opts.landingMenuGrid) {
-    return {
-      ...defaultMenuGridConfig,
-      ...opts.landingMenuGrid,
-      category_ids: [],
-      selection_mode: 'category',
-      item_ids: [],
-      heading: '',
-      description: '',
-    }
+  // Order page always shows all visible menu categories/items.
+  // Hide dishes/categories from the Menu dashboard tab, not here.
+  return {
+    ...base,
+    selection_mode: 'category',
+    category_ids: [],
+    item_ids: [],
   }
-
-  return { ...defaultMenuGridConfig }
 }

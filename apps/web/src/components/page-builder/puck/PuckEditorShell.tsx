@@ -16,7 +16,7 @@ import { resolveThemeTokens } from '../theme-tokens'
 import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensureChromeBlocks } from './adapters'
 import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
-import { PuckCustomHeader, PuckHeaderActions } from './PuckEditorChrome'
+import { PuckCustomHeader, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
 import { createPuckPlugins } from './plugins'
 
 import {
@@ -87,9 +87,6 @@ export function PuckEditorShell({
   )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
-  const [orderPublished] = useState(
-    initialPublishing?.order_published ?? initialPublishing?.published ?? false,
-  )
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
     initialPublishing?.has_unpublished_changes ?? false,
   )
@@ -100,6 +97,8 @@ export function PuckEditorShell({
   )
   const [pagePanel, setPagePanel] = useState<PageSettingsPanel>(null)
   const [previewMode, setPreviewMode] = useState(false)
+  const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop')
+  const canvasPreviewLayout = viewMode === 'mobile' ? 'mobile' as const : 'desktop' as const
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -143,6 +142,7 @@ export function PuckEditorShell({
       items: initialItems,
       brandColor,
       previewInteractive: previewMode,
+      viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
@@ -153,6 +153,7 @@ export function PuckEditorShell({
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
       previewInteractive: previewMode,
+      previewLayout: canvasPreviewLayout,
     }),
     t,
   })
@@ -168,6 +169,7 @@ export function PuckEditorShell({
       items: initialItems,
       brandColor,
       previewInteractive: previewMode,
+      viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
@@ -178,6 +180,7 @@ export function PuckEditorShell({
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
       previewInteractive: previewMode,
+      previewLayout: canvasPreviewLayout,
     }),
     t,
   }
@@ -283,7 +286,6 @@ export function PuckEditorShell({
     () => ({
       saveStatus,
       published,
-      orderPublished,
       hasUnpublishedChanges,
       publishing,
       slug: business.slug ?? '',
@@ -292,23 +294,28 @@ export function PuckEditorShell({
       onPublish: handlePublish,
       onOpenGlobalSettings: () => setPagePanel('theme'),
     }),
-    [saveStatus, published, orderPublished, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
+    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
   )
 
   const puckOverrides = useMemo<Partial<Overrides>>(
     () => ({
       header: ({ actions }) => (
-        <PuckCustomHeader
-          businessName={business.name}
-          pathLabel={t('sidebar.pageBuilder')}
-          previewMode={previewMode}
-          onTogglePreview={() => setPreviewMode(p => !p)}
-          chrome={actions}
-        />
+        <>
+          <PuckPreviewSync previewMode={previewMode} />
+          <PuckCustomHeader
+            businessName={business.name}
+            pathLabel={t('sidebar.pageBuilder')}
+            previewMode={previewMode}
+            viewMode={viewMode}
+            onTogglePreview={() => setPreviewMode(p => !p)}
+            onViewModeChange={setViewMode}
+            chrome={actions}
+          />
+        </>
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, business.name, t],
+    [chromeProps, previewMode, viewMode, business.name, t],
   )
 
   useEffect(() => {

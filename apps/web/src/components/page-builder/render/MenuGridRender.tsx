@@ -654,9 +654,9 @@ function MenuGridInner({
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} browseOnly={browseOnly} />
+                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => { if (!browseOnly) addItem(item, []) }} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} browseOnly={browseOnly} />
                     ) : (
-                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} browseOnly={browseOnly} />
+                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => { if (!browseOnly) addItem(item, []) }} hasVariants={hasVariants} optionCount={optionCount} browseOnly={browseOnly} />
                     )
                   })}
                 </div>

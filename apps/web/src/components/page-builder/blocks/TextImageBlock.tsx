@@ -18,7 +18,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
-  BlockBackground, CtaButton, BorderRadius, PageBlock,
+  BlockBackground, CtaButton, BorderRadius, PageBlock, ContentAlign,
 } from '../types'
 import { CtaEditor } from './CtaEditor'
 
@@ -267,6 +267,30 @@ export function TextImageSettings({
       {config.layout !== 'img_only' && (
         <div className="space-y-3">
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t('textImageBlock.contentAlign')}</Label>
+            <div className="flex gap-1.5">
+              {([
+                { value: 'left' as ContentAlign, label: t('textImageBlock.alignLeft') },
+                { value: 'center' as ContentAlign, label: t('textImageBlock.alignCenter') },
+                { value: 'right' as ContentAlign, label: t('textImageBlock.alignRight') },
+              ]).map(a => (
+                <button
+                  key={a.value}
+                  type="button"
+                  onClick={() => set('content_align', a.value)}
+                  className={cn(
+                    'flex-1 py-1.5 rounded border text-xs transition-colors',
+                    (config.content_align ?? (config.layout === 'text_only' ? 'center' : 'left')) === a.value
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      : 'border-border hover:border-foreground/30',
+                  )}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
             <Input

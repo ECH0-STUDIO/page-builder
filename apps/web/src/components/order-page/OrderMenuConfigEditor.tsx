@@ -117,6 +117,7 @@ export function OrderMenuConfigEditor({
           categories={categories}
           items={items}
           onChange={handleChange}
+          layoutOnly
         />
       </div>
 

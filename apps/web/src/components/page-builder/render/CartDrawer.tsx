@@ -68,11 +68,20 @@ interface CartDrawerProps {
   /** Pin overlays inside a relative canvas (page builder) instead of the viewport */
   contained?: boolean
   locale?: string
+  /** Tailwind bottom offset for the floating cart FAB (e.g. bottom-24 above service bar) */
+  fabOffsetClass?: string
 }
 
 type DrawerStep = 'cart' | 'payment'
 
-export function CartDrawer({ businessId, paymentSettings, previewMode, contained, locale = 'vi' }: CartDrawerProps) {
+export function CartDrawer({
+  businessId,
+  paymentSettings,
+  previewMode,
+  contained,
+  locale = 'vi',
+  fabOffsetClass = 'bottom-6',
+}: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const activeLocale = toSupportedLocale(locale)
   const { t } = useTranslationWithFallback(activeLocale)
@@ -177,7 +186,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
       {!open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
-          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
+          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
           aria-label={t('cart.viewOrder')}
         >
           <div className="relative">
@@ -197,7 +206,7 @@ export function CartDrawer({ businessId, paymentSettings, previewMode, contained
       {!open && totalItems === 0 && pastOrders.length > 0 && (
         <button
           onClick={() => { setStep('payment'); setOpen(true); }}
-          className={`${position} bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
+          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
         >
           <div className="relative">
             <CheckCircle2 className="size-5 text-green-500" />

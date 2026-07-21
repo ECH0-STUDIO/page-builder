@@ -57,7 +57,7 @@ import { FooterRender } from './render/FooterRender'
 import { MenuGridRender } from './render/MenuGridRender'
 import type { MenuGridData } from './render/MenuGridRender'
 import { QRCodeRender } from './render/QRCodeRender'
-import { CartProvider } from './render/CartContext'
+import { BrowseOnlyCartProvider } from './render/CartContext'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { PreviewLayout } from './render/preview-layout'
 
@@ -1276,7 +1276,7 @@ export function EditorShell({
           {/* Canvas scroll — overflow-y-auto (NOT hidden) so sticky navbar works */}
           <div ref={canvasScrollRef} className="flex-1 overflow-y-auto overflow-x-auto pb-16 lg:pb-0">
             <div className="py-6 px-4 min-h-full">
-              <CartProvider>
+              <BrowseOnlyCartProvider>
               <div
                 className={cn(
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
@@ -1366,7 +1366,7 @@ export function EditorShell({
                 </div>
 
               </div>
-              </CartProvider>
+              </BrowseOnlyCartProvider>
             </div>
           </div>
         </main>

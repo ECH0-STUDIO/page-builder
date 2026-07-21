@@ -41,7 +41,7 @@ import {
 } from './block-render'
 import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
-import { CartProvider } from '../render/CartContext'
+import { BrowseOnlyCartProvider } from '../render/CartContext'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
 
@@ -56,6 +56,7 @@ export interface PuckShellState {
   items: MenuItem[]
   brandColor: string
   previewInteractive: boolean
+  viewMode: 'desktop' | 'mobile'
   paymentSettings: PaymentSettings | null
 }
 
@@ -103,15 +104,21 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       render: (props: { children?: ReactNode }) => {
         const { children } = props
         const shell = refs.current.getShell()
-        const { theme, headingFont, bodyFont } = shell
+        const { theme, headingFont, bodyFont, viewMode } = shell
+        const isMobile = viewMode === 'mobile'
 
         return (
-          <CartProvider>
+          <BrowseOnlyCartProvider>
             <div
+              className={
+                isMobile
+                  ? 'mx-auto w-[375px] max-w-full rounded-[28px] overflow-hidden shadow-2xl ring-4 ring-black/5 bg-white'
+                  : undefined
+              }
               style={{
                 ...buildThemeStyle(theme),
                 fontFamily: `'${bodyFont}', sans-serif`,
-                minHeight: '100%',
+                minHeight: isMobile ? '667px' : '100%',
               }}
             >
               <style
@@ -120,9 +127,8 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                 }}
               />
               {children}
-              {/* Landing page builder is browse-only — ordering is on /order */}
             </div>
-          </CartProvider>
+          </BrowseOnlyCartProvider>
         )
       },
     },
@@ -347,6 +353,7 @@ export function defaultShellState(business: Business): PuckShellState {
     items: [],
     brandColor: '#E85D26',
     previewInteractive: false,
+    viewMode: 'desktop',
     paymentSettings: null,
   }
 }

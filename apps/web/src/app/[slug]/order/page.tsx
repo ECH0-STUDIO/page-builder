@@ -230,19 +230,12 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
           ` }} />
 
           <Suspense fallback={
-            <div className="h-14 border-b border-black/6 bg-white/92" />
+            <div className="h-14 border-b border-black/6 bg-white" />
           }>
             <OrderPageHeader
               slug={slug}
               businessName={business.name}
               logoUrl={business.logo_url}
-              brandColor={themeTokens.brandColor}
-            />
-          </Suspense>
-
-          <Suspense fallback={null}>
-            <OrderServiceActions
-              businessId={business.id}
               brandColor={themeTokens.brandColor}
             />
           </Suspense>
@@ -255,7 +248,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             aspectMobile={carouselMobile}
           />
 
-          <main className="flex-1">
+          <main className="flex-1 px-4 sm:px-6 py-6 pb-36">
             <MenuGridRender
               config={menuConfig}
               data={{
@@ -269,10 +262,18 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             />
           </main>
 
+          <Suspense fallback={null}>
+            <OrderServiceActions
+              businessId={business.id}
+              brandColor={themeTokens.brandColor}
+            />
+          </Suspense>
+
           <LiveStoreCart
             businessId={business.id}
             paymentSettings={paymentSettings}
             locale={visitorLocale}
+            fabOffsetClass="bottom-24"
           />
         </div>
       </div>

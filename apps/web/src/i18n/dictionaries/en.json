@@ -617,6 +617,10 @@
     "panelBackground": "Panel background",
     "panelTextColour": "Panel text colour",
     "content": "Content",
+    "contentAlign": "Alignment",
+    "alignLeft": "Left",
+    "alignCenter": "Center",
+    "alignRight": "Right",
     "heading": "Heading",
     "headingPlaceholder": "Your business name",
     "tagline": "Tagline",
@@ -669,6 +673,10 @@
     "cover": "Cover",
     "contain": "Contain",
     "content": "Content",
+    "contentAlign": "Alignment",
+    "alignLeft": "Left",
+    "alignCenter": "Center",
+    "alignRight": "Right",
     "headingOptional": "Heading (optional)",
     "headingPlaceholder": "Section title…",
     "bodyText": "Body text",
@@ -1171,7 +1179,8 @@
     "aspectSameAsDesktop": "Same as desktop",
     "aspectGuide": "Optimal upload size — Desktop: {{desktop}}. Mobile: {{mobile}}. Images are cropped to fill the frame.",
     "aspectSaved": "Carousel dimensions saved — live now",
-    "slideSizeNote": "Recommended upload size for desktop: {{px}} (JPG/PNG/WebP)."
+    "slideSizeNote": "Recommended upload size for desktop: {{px}} (JPG/PNG/WebP).",
+    "menuAllCategoriesNote": "All menu categories are shown automatically. Hide dishes or categories from the Menu tab in the dashboard."
   },
   "payment": {
     "title": "Payment",

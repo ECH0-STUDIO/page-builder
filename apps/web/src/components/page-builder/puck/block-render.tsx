@@ -30,6 +30,7 @@ export interface PuckRenderContext {
   defaultTextColor?: string
   qrDownloadLabel?: string
   previewInteractive?: boolean
+  previewLayout?: import('../render/preview-layout').PreviewLayout
 }
 
 function propsToPageBlock(type: BlockType, props: PuckBlockProps, businessId: string): PageBlock {
@@ -100,6 +101,7 @@ export function renderHeroBlock(props: PuckBlockProps, ctx: PuckRenderContext) {
         businessName={ctx.business.name}
         brandColor={ctx.brandColor ?? tokens.brandColor}
         contentInset={contentInset}
+        previewLayout={ctx.previewLayout}
       />
     </PuckBlockShell>
   )
@@ -115,6 +117,7 @@ export function renderTextImageBlock(props: PuckBlockProps, ctx: PuckRenderConte
         config={block.config as import('../types').TextImageConfig}
         brandColor={ctx.brandColor ?? tokens.brandColor}
         defaultTextColor={ctx.defaultTextColor ?? tokens.pageText}
+        previewLayout={ctx.previewLayout}
       />
     </PuckBlockShell>
   )
@@ -141,6 +144,7 @@ export function renderMenuGridBlock(props: PuckBlockProps, ctx: PuckRenderContex
         data={ctx.menuGridData}
         brandColor={ctx.brandColor ?? tokens.brandColor}
         browseOnly
+        previewLayout={ctx.previewLayout}
       />
     </PuckBlockShell>
   )

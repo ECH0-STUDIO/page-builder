@@ -117,12 +117,22 @@ export function TextImageRender({
   )
 
   // ── Text element ───────────────────────────────────────────────────────────
+  const align =
+    config.content_align === 'left' || config.content_align === 'right' || config.content_align === 'center'
+      ? config.content_align
+      : isTextOnly
+        ? 'center'
+        : 'left'
+  const justify =
+    align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
+
   const textEl = !isImgOnly && (
     <div style={{
       // text_only / stacked: shrink to content; side-by-side: flex grow
       flex: isTextOnly || isStacked ? '0 1 auto' : '1 1 280px',
       minWidth: 0,
-      textAlign: isTextOnly ? 'center' : 'left',
+      textAlign: align,
+      width: isTextOnly ? '100%' : undefined,
     }}>
       {heading && (
         <h2 style={{
@@ -146,7 +156,11 @@ export function TextImageRender({
       {!heading && !body && (
         <p style={{ color: '#ccc', fontSize: '15px', fontStyle: 'italic' }}>Add heading or body text in the settings panel.</p>
       )}
-      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
+      {config.cta && (
+        <div style={{ display: 'flex', justifyContent: justify }}>
+          <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />
+        </div>
+      )}
     </div>
   )
 
@@ -158,8 +172,8 @@ export function TextImageRender({
     flexDirection: isStacked || isTextOnly ? 'column' : 'row',
     flexWrap: isStacked || isTextOnly ? 'nowrap' : 'wrap',
     gap: isTextOnly ? '0' : '40px',
-    alignItems: isTextOnly ? 'center' : isStacked ? 'flex-start' : 'center',
-    justifyContent: isTextOnly ? 'center' : 'flex-start',
+    alignItems: isTextOnly ? 'stretch' : isStacked ? 'flex-start' : 'center',
+    justifyContent: isTextOnly ? justify : 'flex-start',
     maxWidth: isTextOnly ? '760px' : '1100px',
     margin: '0 auto',
   }

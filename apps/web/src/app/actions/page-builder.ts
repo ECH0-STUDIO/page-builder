@@ -283,10 +283,18 @@ export async function saveOrderMenuConfigAction(
   const cleaned = normalizeOrderMenuConfig(config)
   if (!cleaned) return { success: false, error: 'Invalid menu config' }
 
+  // Order page never filters by category/item — always show full menu
+  const orderCleaned = {
+    ...cleaned,
+    selection_mode: 'category' as const,
+    category_ids: [] as string[],
+    item_ids: [] as string[],
+  }
+
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
-      { business_id: businessId, order_menu_config: cleaned as unknown as never },
+      { business_id: businessId, order_menu_config: orderCleaned as unknown as never },
       { onConflict: 'business_id' },
     )
     .select('order_menu_config')
@@ -295,10 +303,16 @@ export async function saveOrderMenuConfigAction(
   if (error) return { success: false, error: error.message }
   const saved = normalizeOrderMenuConfig(data?.order_menu_config)
   if (!saved) return { success: false, error: 'Failed to save menu config' }
+  const orderSaved = {
+    ...saved,
+    selection_mode: 'category' as const,
+    category_ids: [] as string[],
+    item_ids: [] as string[],
+  }
   revalidatePath('/dashboard/publishing')
   revalidatePath('/dashboard/order-page')
   await revalidateLiveStore(supabase, businessId)
-  return { success: true, data: saved }
+  return { success: true, data: orderSaved }
 }
 
 export async function clearOrderMenuConfigAction(

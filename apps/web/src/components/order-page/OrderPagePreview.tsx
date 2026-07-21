@@ -13,7 +13,6 @@ import { CartProvider } from '@/components/page-builder/render/CartContext'
 import type { MenuGridConfig } from '@/components/page-builder/types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { cn } from '@/lib/utils'
-import { useTranslation } from '@/i18n/I18nProvider'
 
 export type PreviewDevice = 'desktop' | 'mobile'
 
@@ -48,7 +47,6 @@ export function OrderPagePreview({
   items,
   slug,
 }: OrderPagePreviewProps) {
-  const { t } = useTranslation()
   const isMobile = device === 'mobile'
 
   return (
@@ -74,25 +72,21 @@ export function OrderPagePreview({
           className="flex-1 flex flex-col shadow-sm"
           style={{ backgroundColor: bgColor || '#ffffff' }}
         >
-          {/* Static header chrome (matches live OrderPageHeader) */}
-          <div className="flex h-12 items-center gap-2 border-b border-black/6 px-3 bg-white/92">
-            <span className="text-xs text-gray-500 truncate">{t('orderPage.backToPage')}</span>
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-              {logoUrl ? (
-                <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-gray-100">
-                  <Image src={logoUrl} alt="" fill className="object-cover" sizes="28px" />
-                </div>
-              ) : (
-                <div
-                  className="size-7 shrink-0 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                  style={{ backgroundColor: brandColor }}
-                >
-                  {businessName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="truncate text-xs font-semibold text-gray-900">{businessName}</span>
-            </div>
-            <span className="w-10" />
+          {/* Static header chrome — logo + name only */}
+          <div className="flex h-12 items-center justify-center gap-2 border-b border-black/6 px-3 bg-white">
+            {logoUrl ? (
+              <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-gray-100">
+                <Image src={logoUrl} alt="" fill className="object-cover" sizes="28px" />
+              </div>
+            ) : (
+              <div
+                className="size-7 shrink-0 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                style={{ backgroundColor: brandColor }}
+              >
+                {businessName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="truncate text-xs font-semibold text-gray-900">{businessName}</span>
           </div>
 
           <OrderPromoCarousel
@@ -109,7 +103,7 @@ export function OrderPagePreview({
           />
 
           <CartProvider>
-            <div className="flex-1 pointer-events-none select-none">
+            <div className="flex-1 pointer-events-none select-none px-4 py-5">
               <MenuGridRender
                 config={menuConfig}
                 data={{
@@ -121,6 +115,7 @@ export function OrderPagePreview({
                 }}
                 brandColor={brandColor}
                 browseOnly
+                previewLayout={isMobile ? 'mobile' : 'desktop'}
               />
             </div>
           </CartProvider>

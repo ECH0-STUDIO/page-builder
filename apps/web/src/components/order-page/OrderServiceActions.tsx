@@ -71,7 +71,7 @@ export function OrderServiceActions({ businessId, brandColor }: OrderServiceActi
 
   return (
     <>
-      <div className="sticky top-14 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
+      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-black/6 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-[1440px] gap-2 px-4 py-2.5 sm:px-6">
           <button
             type="button"

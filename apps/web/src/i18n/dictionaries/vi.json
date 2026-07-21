@@ -617,6 +617,10 @@
     "panelBackground": "Nền khung",
     "panelTextColour": "Màu chữ khung",
     "content": "Nội dung",
+    "contentAlign": "Căn chữ",
+    "alignLeft": "Trái",
+    "alignCenter": "Giữa",
+    "alignRight": "Phải",
     "heading": "Tiêu đề",
     "headingPlaceholder": "Tên doanh nghiệp của bạn",
     "tagline": "Khẩu hiệu",
@@ -669,6 +673,10 @@
     "cover": "Phủ kín",
     "contain": "Thu gọn",
     "content": "Nội dung",
+    "contentAlign": "Căn chữ",
+    "alignLeft": "Trái",
+    "alignCenter": "Giữa",
+    "alignRight": "Phải",
     "headingOptional": "Tiêu đề (tùy chọn)",
     "headingPlaceholder": "Tiêu đề phần…",
     "bodyText": "Nội dung văn bản",
@@ -1171,7 +1179,8 @@
     "aspectSameAsDesktop": "Giống desktop",
     "aspectGuide": "Kích thước tải lên tối ưu — Desktop: {{desktop}}. Mobile: {{mobile}}. Ảnh sẽ được crop để vừa khung.",
     "aspectSaved": "Đã lưu kích thước carousel — đang live",
-    "slideSizeNote": "Kích thước khuyến nghị cho desktop: {{px}} (JPG/PNG/WebP)."
+    "slideSizeNote": "Kích thước khuyến nghị cho desktop: {{px}} (JPG/PNG/WebP).",
+    "menuAllCategoriesNote": "Tất cả danh mục thực đơn được hiển thị tự động. Ẩn món hoặc danh mục trong tab Thực đơn trên dashboard."
   },
   "payment": {
     "title": "Thanh toán",

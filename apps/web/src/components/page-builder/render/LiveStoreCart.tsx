@@ -13,6 +13,7 @@ interface LiveStoreCartProps {
   /** Pin cart UI inside the page-builder canvas frame */
   contained?: boolean
   locale?: string
+  fabOffsetClass?: string
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {

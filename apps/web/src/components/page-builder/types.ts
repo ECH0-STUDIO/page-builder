@@ -124,6 +124,7 @@ export type HeroLayout = 'centered' | 'split' | 'overlay' | 'text_only'
 export type BlockHeight = 'custom' | 'fullscreen'
 export type ImagePosition = 'top' | 'center' | 'bottom'
 export type SplitImageSide = 'left' | 'right'
+export type ContentAlign = 'left' | 'center' | 'right'
 
 export interface HeroConfig {
   layout: HeroLayout
@@ -137,6 +138,8 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
+  /** Content alignment for heading / body / CTAs */
+  content_align?: ContentAlign
   /** @deprecated Use block spacing (outer padding) instead */
   section_padding_y?: number
   /** --- Split layout specific --- */
@@ -164,6 +167,7 @@ export const defaultHeroConfig: HeroConfig = {
   cta_secondary: null,
   text_color: 'auto',
   height: 'custom',
+  content_align: 'center',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',
   split_text_color: '#ffffff',
@@ -203,6 +207,8 @@ export interface TextImageConfig {
   padding: PaddingSize
   /** image corner radius level */
   border_radius: BorderRadius
+  /** Content alignment for heading / body / CTA */
+  content_align?: ContentAlign
 }
 
 export const defaultTextImageConfig: TextImageConfig = {
@@ -221,6 +227,7 @@ export const defaultTextImageConfig: TextImageConfig = {
   gradient_to: '#e8e8e8',
   padding: 'normal',
   border_radius: 'md',
+  content_align: 'left',
 }
 
 // ─── Contact ──────────────────────────────────────────────────────────────────
