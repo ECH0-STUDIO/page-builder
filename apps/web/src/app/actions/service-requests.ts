@@ -56,9 +56,11 @@ export async function updateServiceRequestStatusAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
-  const patch: Record<string, unknown> = { status }
-  if (status === 'acknowledged') {
-    patch.acknowledged_at = new Date().toISOString()
+  const patch = {
+    status,
+    ...(status === 'acknowledged'
+      ? { acknowledged_at: new Date().toISOString() }
+      : {}),
   }
 
   const { error } = await supabase
