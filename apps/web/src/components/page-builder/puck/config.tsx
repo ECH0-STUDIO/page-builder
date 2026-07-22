@@ -28,6 +28,7 @@ import {
   visibleField,
   heroLayoutField,
   heroHeightField,
+  anchorIdField,
 } from './shared-fields'
 import {
   renderContactBlock,
@@ -225,6 +226,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderHeroBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -254,6 +256,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderTextImageBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -281,6 +284,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderContactBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -309,6 +313,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderMenuGridBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -337,6 +342,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderQrCodeBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },

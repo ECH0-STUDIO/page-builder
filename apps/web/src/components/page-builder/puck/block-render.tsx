@@ -81,7 +81,11 @@ export function PuckBlockShell({
           }}
         />
       )}
-      <div data-block-id={block.id} style={shell as CSSProperties}>
+      <div
+        id={block.block_anchor_id || `block-${block.id}`}
+        data-block-id={block.id}
+        style={shell as CSSProperties}
+      >
         {children}
       </div>
     </div>

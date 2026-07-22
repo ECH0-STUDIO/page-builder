@@ -49,3 +49,28 @@ export function heroHeightField(t: Translate) {
     ],
   } satisfies Field<{ height: BlockHeight }>
 }
+
+/** Section ID used for #anchor scroll-to links (navbar / CTA). */
+export function anchorIdField(t: Translate) {
+  return {
+    type: 'custom',
+    label: t('pageBuilder.sectionAnchor'),
+    render: ({ value, onChange }) => (
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {t('pageBuilder.sectionAnchorHint')}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground font-mono">#</span>
+          <input
+            type="text"
+            value={typeof value === 'string' ? value : ''}
+            onChange={e => onChange(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
+            placeholder={t('pageBuilder.sectionAnchorPlaceholder')}
+            className="flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm font-mono"
+          />
+        </div>
+      </div>
+    ),
+  } satisfies Field<string>
+}

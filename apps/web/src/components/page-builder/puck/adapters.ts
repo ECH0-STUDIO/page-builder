@@ -100,7 +100,7 @@ function splitProps(type: BlockType, props: PuckBlockProps): {
       spacingSize: spacingSize as SectionSize,
       visible: Boolean(visible),
       blockId: String(blockId),
-      anchorId: String(anchorId),
+      anchorId: String(anchorId).replace(/[^a-zA-Z0-9-_]/g, ''),
       customCss: String(customCss),
     },
     config,
@@ -116,7 +116,7 @@ function mergeProps(
     spacingSize,
     visible: block.visible,
     blockId: block.id,
-    anchorId: block.block_anchor_id ?? '',
+    anchorId: (block.block_anchor_id ?? '').replace(/[^a-zA-Z0-9-_]/g, ''),
     customCss: block.custom_css ?? '',
     config: block.config,
   }

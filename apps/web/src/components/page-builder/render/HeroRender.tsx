@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * HeroRender — shared between editor canvas and live page.
  *
@@ -22,6 +24,7 @@ import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/loca
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 function resolveAlign(config: HeroConfig): ContentAlign {
   if (config.content_align === 'left' || config.content_align === 'right' || config.content_align === 'center') {
@@ -72,8 +75,12 @@ export function HeroRender({
   contentInset?: BlockContentInset
 }) {
   const activeLocale = toSupportedLocale(locale)
-  const layout: PreviewLayout | undefined =
-    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const ctxLayout = usePreviewLayout()
+  const layout: PreviewLayout =
+    (ctxLayout !== 'responsive' ? ctxLayout : undefined)
+    ?? previewLayout
+    ?? (isMobilePreview ? 'mobile' : undefined)
+    ?? 'responsive'
   const mobileLayout = isForcedMobileLayout(layout)
   const align = resolveAlign(config)
 

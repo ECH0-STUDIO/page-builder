@@ -398,6 +398,63 @@ export async function saveOrderCarouselAspectAction(
   return { success: true, data: { desktop, mobile } }
 }
 
+/** Unified autosave for the Order Page builder (appearance + carousel + menu). */
+export async function saveOrderPageDraftAction(
+  businessId: string,
+  draft: {
+    order_background_color?: string | null
+    order_background_image_url?: string | null
+    order_promo_slides: OrderPromoSlide[]
+    order_carousel_aspect_desktop: CarouselAspect
+    order_carousel_aspect_mobile: CarouselAspectMobile
+    /** null clears custom config and falls back to defaults */
+    order_menu_config: import('@/components/page-builder/types').MenuGridConfig | null
+  },
+): Promise<ActionResult<PublishingSettings>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const slides = normalizeOrderPromoSlides(draft.order_promo_slides).slice(0, MAX_ORDER_PROMO_SLIDES)
+  const desktop = normalizeCarouselAspect(draft.order_carousel_aspect_desktop, '16/9')
+  const mobile = normalizeCarouselAspectMobile(draft.order_carousel_aspect_mobile)
+
+  let menuPayload: unknown = null
+  if (draft.order_menu_config != null) {
+    const cleaned = normalizeOrderMenuConfig(draft.order_menu_config)
+    if (!cleaned) return { success: false, error: 'Invalid menu config' }
+    menuPayload = {
+      ...cleaned,
+      selection_mode: 'category' as const,
+      category_ids: [] as string[],
+      item_ids: [] as string[],
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_background_color: draft.order_background_color ?? null,
+        order_background_image_url: draft.order_background_image_url ?? null,
+        order_promo_slides: slides as unknown as never,
+        order_carousel_aspect_desktop: desktop as unknown as never,
+        order_carousel_aspect_mobile: mobile as unknown as never,
+        order_menu_config: menuPayload as never,
+      },
+      { onConflict: 'business_id' },
+    )
+    .select()
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+}
+
 // ─── Theme ─────────────────────────────────────────────────────────────────────
 
 export async function saveThemeAction(

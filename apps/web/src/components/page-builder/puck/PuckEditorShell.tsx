@@ -17,6 +17,7 @@ import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensu
 import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
 import { PuckCustomHeader, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
+import { PreviewLayoutProvider } from './PreviewLayoutContext'
 import { createPuckPlugins } from './plugins'
 
 import {
@@ -301,7 +302,7 @@ export function PuckEditorShell({
     () => ({
       header: ({ actions }) => (
         <>
-          <PuckPreviewSync previewMode={previewMode} />
+          <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
           <PuckCustomHeader
             businessName={business.name}
             pathLabel={t('sidebar.pageBuilder')}
@@ -389,19 +390,22 @@ export function PuckEditorShell({
   return (
     <div className="eatery-puck-shell eatery-puck">
       <div className="eatery-puck-editor">
-        <Puck
-          config={puckConfig}
-          data={puckData}
-          onChange={handlePuckChange}
-          plugins={puckPlugins}
-          overrides={puckOverrides}
-          iframe={{ enabled: false }}
-          ui={{
-            leftSideBarVisible: !previewMode,
-            rightSideBarVisible: !previewMode,
-            previewMode: previewMode ? 'interactive' : 'edit',
-          }}
-        />
+        {/* Live layout context so blocks update on viewport toggle even before Puck re-renders root */}
+        <PreviewLayoutProvider value={canvasPreviewLayout}>
+          <Puck
+            config={puckConfig}
+            data={puckData}
+            onChange={handlePuckChange}
+            plugins={puckPlugins}
+            overrides={puckOverrides}
+            iframe={{ enabled: false }}
+            ui={{
+              leftSideBarVisible: !previewMode,
+              rightSideBarVisible: !previewMode,
+              previewMode: previewMode ? 'interactive' : 'edit',
+            }}
+          />
+        </PreviewLayoutProvider>
       </div>
 
       <Dialog open={pagePanel === 'theme'} onOpenChange={open => !open && setPagePanel(null)}>

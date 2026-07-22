@@ -1,15 +1,14 @@
 'use client'
 
 /**
- * Admin editor for order-page promo carousel slides.
+ * Controlled editor for order-page promo carousel slides (autosave owned by parent).
  */
 
-import { useRef, useState, useTransition } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { ImagePlus, Loader2, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImageToStorage } from '@/lib/image-utils'
-import { saveOrderPromoSlidesAction } from '@/app/actions/page-builder'
 import {
   MAX_ORDER_PROMO_SLIDES,
   type OrderPromoSlide,
@@ -20,30 +19,21 @@ import { cn } from '@/lib/utils'
 
 interface OrderPromoSlidesEditorProps {
   businessId: string
-  initialSlides: OrderPromoSlide[]
-  onSlidesChange?: (slides: OrderPromoSlide[]) => void
+  slides: OrderPromoSlide[]
+  onChange: (slides: OrderPromoSlide[]) => void
   /** Recommended upload pixel size shown as guidance */
   recommendedPx?: string
 }
 
 export function OrderPromoSlidesEditor({
   businessId,
-  initialSlides,
-  onSlidesChange,
+  slides,
+  onChange,
   recommendedPx = '1920×1080',
 }: OrderPromoSlidesEditorProps) {
   const { t } = useTranslation()
-  const [slides, setSlides] = useState<OrderPromoSlide[]>(initialSlides)
   const [uploading, setUploading] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const [dirty, setDirty] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  function markDirty(next: OrderPromoSlide[]) {
-    setSlides(next)
-    setDirty(true)
-    onSlidesChange?.(next)
-  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -61,7 +51,7 @@ export function OrderPromoSlidesEditor({
         quality: 0.85,
         targetSizeKB: 500,
       })
-      markDirty([
+      onChange([
         ...slides,
         { id: crypto.randomUUID(), image_url: url, alt: '' },
       ])
@@ -75,7 +65,7 @@ export function OrderPromoSlidesEditor({
   }
 
   function removeSlide(id: string) {
-    markDirty(slides.filter(s => s.id !== id))
+    onChange(slides.filter(s => s.id !== id))
   }
 
   function moveSlide(id: string, dir: -1 | 1) {
@@ -86,46 +76,21 @@ export function OrderPromoSlidesEditor({
     const next = [...slides]
     const [item] = next.splice(idx, 1)
     next.splice(nextIdx, 0, item)
-    markDirty(next)
+    onChange(next)
   }
 
   function setAlt(id: string, alt: string) {
-    markDirty(slides.map(s => (s.id === id ? { ...s, alt } : s)))
-  }
-
-  function handleSave() {
-    startTransition(async () => {
-      const res = await saveOrderPromoSlidesAction(businessId, slides)
-      if (!res.success) {
-        toast.error(res.error)
-        return
-      }
-      setSlides(res.data)
-      onSlidesChange?.(res.data)
-      setDirty(false)
-      toast.success(t('publishing.promoSaved'))
-    })
+    onChange(slides.map(s => (s.id === id ? { ...s, alt } : s)))
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1 min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{t('publishing.promoTitle')}</h2>
-          <p className="text-xs text-muted-foreground">{t('publishing.promoHint')}</p>
-          <p className="text-[11px] text-muted-foreground/90">
-            {t('orderPageAdmin.slideSizeNote').replace('{{px}}', recommendedPx)}
-          </p>
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleSave}
-          disabled={!dirty || isPending}
-          className="shrink-0"
-        >
-          {isPending ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
-        </Button>
+      <div className="space-y-1 min-w-0">
+        <h2 className="text-sm font-semibold text-foreground">{t('publishing.promoTitle')}</h2>
+        <p className="text-xs text-muted-foreground">{t('publishing.promoHint')}</p>
+        <p className="text-[11px] text-muted-foreground/90">
+          {t('orderPageAdmin.slideSizeNote').replace('{{px}}', recommendedPx)}
+        </p>
       </div>
 
       {slides.length === 0 ? (

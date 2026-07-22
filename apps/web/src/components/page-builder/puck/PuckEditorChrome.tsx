@@ -37,8 +37,18 @@ import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
 
-/** Keep Puck's internal previewMode in sync with shell state (ui prop is initial-only). */
-export function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
+/**
+ * Keep Puck's internal UI in sync with shell state.
+ * `ui` on <Puck> is initial-only — without this, viewport/preview toggles update
+ * the header but the canvas keeps stale layout until something else re-renders it.
+ */
+export function PuckPreviewSync({
+  previewMode,
+  viewMode = 'desktop',
+}: {
+  previewMode: boolean
+  viewMode?: 'desktop' | 'mobile'
+}) {
   const { dispatch } = usePuck()
 
   useEffect(() => {
@@ -48,10 +58,19 @@ export function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
         previewMode: previewMode ? 'interactive' : 'edit',
         leftSideBarVisible: !previewMode,
         rightSideBarVisible: !previewMode,
+        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop switch
+        viewports: {
+          controlsVisible: false,
+          options: [],
+          current: {
+            width: viewMode === 'mobile' ? 375 : '100%',
+            height: 'auto' as const,
+          },
+        },
       },
       recordHistory: false,
     })
-  }, [previewMode, dispatch])
+  }, [previewMode, viewMode, dispatch])
 
   return null
 }

@@ -80,10 +80,12 @@ export function TextImageRender({
   const heading = pickLocale(config.heading, activeLocale)
   const body = pickLocale(config.body, activeLocale)
   const ctxLayout = usePreviewLayout()
+  // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
   const layout: PreviewLayout =
-    previewLayout
+    (ctxLayout !== 'responsive' ? ctxLayout : undefined)
+    ?? previewLayout
     ?? (isMobilePreview ? 'mobile' : undefined)
-    ?? (ctxLayout !== 'responsive' ? ctxLayout : 'responsive')
+    ?? 'responsive'
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
 

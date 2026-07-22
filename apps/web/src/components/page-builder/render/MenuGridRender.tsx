@@ -475,10 +475,12 @@ function MenuGridInner({
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
   const ctxLayout = usePreviewLayout()
+  // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
   const layout: PreviewLayout =
-    previewLayout
+    (ctxLayout !== 'responsive' ? ctxLayout : undefined)
+    ?? previewLayout
     ?? (isMobilePreview ? 'mobile' : undefined)
-    ?? (ctxLayout !== 'responsive' ? ctxLayout : 'responsive')
+    ?? 'responsive'
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
