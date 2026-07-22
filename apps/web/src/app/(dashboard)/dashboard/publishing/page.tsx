@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
@@ -17,9 +16,6 @@ export default async function PublishingPage() {
   if (!user) redirect('/login')
 
   const { t } = await getServerTranslation()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
 
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')

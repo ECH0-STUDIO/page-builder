@@ -10,7 +10,9 @@ interface DashboardShellProps {
 /** Hides the dashboard sidebar on full-screen routes (e.g. page builder). */
 export function DashboardShell({ sidebar, children }: DashboardShellProps) {
   const pathname = usePathname()
-  const isFullScreen = pathname?.startsWith('/dashboard/pages')
+  const isFullScreen =
+    pathname?.startsWith('/dashboard/pages') ||
+    pathname?.startsWith('/dashboard/order-page')
 
   if (isFullScreen) {
     return <>{children}</>

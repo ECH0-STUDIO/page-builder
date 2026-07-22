@@ -212,7 +212,7 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
             return (
               <SimpleQRCard
                 key={num}
-                url={`${origin}/${slug}?table=${num}`}
+                url={`${origin}/${slug}/order?table=${num}`}
                 label={`${t('qr.tableLabel')} ${num}`}
                 sublabel={t('qr.autoAssigns')}
                 filename={`table-${num}-qr.png`}

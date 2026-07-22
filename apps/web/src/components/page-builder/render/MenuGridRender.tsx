@@ -3,21 +3,15 @@
 /**
  * MenuGridRender — shared between editor canvas and live page.
  *
- * Wraps itself in CartProvider so the cart is scoped to this menu section.
- * When item_click === 'modal', the ItemModal lets customers:
- *  1. View item details (image, description, price)
- *  2. Select variants (required groups must be selected)
- *  3. See live-updating total as they pick options
- *  4. Add the configured item to the cart
- *
- * CartDrawer (floating button + bottom sheet + call waiter) is rendered
- * as a sibling so it sits outside the scrollable content.
+ * Landing: pass browseOnly to hide add-to-cart (no cart drawer on marketing).
+ * Order page: full cart via parent CartProvider + LiveStoreCart.
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuGridConfig } from '../types'
@@ -44,13 +38,14 @@ export interface MenuGridData {
 // ─── Item Modal (with cart integration) ──────────────────────────────────────
 
 function ItemModal({
-  item, groups, options, config, onClose,
+  item, groups, options, config, onClose, browseOnly = false,
 }: {
   item: MenuItem
   groups: VariantGroup[]
   options: VariantOption[]
   config: MenuGridConfig
   onClose: () => void
+  browseOnly?: boolean
 }) {
   const { addItem } = useCart()
   const { t } = useTranslation()
@@ -227,7 +222,7 @@ function ItemModal({
           </div>
         </div>
 
-        {/* Sticky footer — price + add to order */}
+        {/* Sticky footer — price + add to order (hidden in browse-only) */}
         <div className="px-5 pb-8 pt-4 border-t border-gray-100 bg-white space-y-3 shrink-0">
           {config.show_price && (
             <div className="flex items-center justify-between">
@@ -238,7 +233,15 @@ function ItemModal({
             </div>
           )}
 
-          {item.available ? (
+          {browseOnly ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-4 rounded-2xl font-bold text-base bg-gray-900 text-white hover:bg-gray-800 transition-all"
+            >
+              {t('cart.closeDetails')}
+            </button>
+          ) : item.available ? (
             <button
               onClick={handleAdd}
               disabled={added}
@@ -268,7 +271,7 @@ function ItemModal({
 // ─── Item Card (grid layout) ───────────────────────────────────────────────────
 
 function ItemCardGrid({
-  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount, browseOnly = false,
 }: {
   item: MenuItem
   config: MenuGridConfig
@@ -277,6 +280,7 @@ function ItemCardGrid({
   onQuickAdd: () => void
   hasVariants: boolean
   optionCount: number
+  browseOnly?: boolean
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
@@ -338,13 +342,13 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            {item.available ? (
+            {!browseOnly && item.available ? (
               <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
                 <Plus className="size-4 pointer-events-none" />
               </button>
-            ) : (
+            ) : !browseOnly && !item.available ? (
               <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -355,7 +359,7 @@ function ItemCardGrid({
 // ─── Item Row (list layout) ──────────────────────────────────────────────────
 
 function ItemRowList({
-  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount, isMobile = false,
+  item, config, brandColor, onClick, onQuickAdd, hasVariants, optionCount, isMobile = false, browseOnly = false,
 }: {
   item: MenuItem
   config: MenuGridConfig
@@ -365,6 +369,7 @@ function ItemRowList({
   hasVariants: boolean
   optionCount: number
   isMobile?: boolean
+  browseOnly?: boolean
 }) {
   const { t } = useTranslation()
   const textColor = config.text_color || '#111111'
@@ -432,15 +437,15 @@ function ItemRowList({
             {formatCurrency(item.price)}
           </p>
         )}
-        {item.available ? (
+        {!browseOnly && item.available ? (
           <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
             <Plus className="size-4 pointer-events-none" />
           </button>
-        ) : (
+        ) : !browseOnly && !item.available ? (
           !config.show_unavailable_badge && (
             <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
           )
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -454,23 +459,48 @@ function MenuGridInner({
   previewLayout,
   isMobilePreview,
   brandColor = '#111111',
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
+  browseOnly = false,
+  hideCategoryTabs = false,
+  activeCategoryId,
+  onActiveCategoryChange,
+}: MenuGridRenderProps & {
+  previewLayout?: PreviewLayout
+  isMobilePreview?: boolean
+  brandColor?: string
+  browseOnly?: boolean
+  hideCategoryTabs?: boolean
+  activeCategoryId?: string | null
+  onActiveCategoryChange?: (id: string) => void
+}) {
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
-  const layout: PreviewLayout | undefined =
-    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const ctxLayout = usePreviewLayout()
+  // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
+  const layout: PreviewLayout =
+    (ctxLayout !== 'responsive' ? ctxLayout : undefined)
+    ?? previewLayout
+    ?? (isMobilePreview ? 'mobile' : undefined)
+    ?? 'responsive'
   const mobileLayout = isForcedMobileLayout(layout)
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
-  const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [internalActiveCatId, setInternalActiveCatId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const loadingTimer = useRef<NodeJS.Timeout | null>(null)
   const renderTimer = useRef<NodeJS.Timeout | null>(null)
   const [modalItem, setModalItem] = useState<MenuItem | null>(null)
+
+  const isControlled = onActiveCategoryChange != null
+  const activeCatId = isControlled ? (activeCategoryId ?? null) : internalActiveCatId
+
+  function setActiveCatId(id: string) {
+    if (isControlled) onActiveCategoryChange?.(id)
+    else setInternalActiveCatId(id)
+  }
 
   // Cleanup timers
   useEffect(() => {
@@ -497,8 +527,14 @@ function MenuGridInner({
         config.category_ids.length === 0 || config.category_ids.includes(c.id)
       ))
 
-  const tabsEnabled = config.show_category_tabs !== false && visibleCats.length > 1
-  const activeCat = tabsEnabled ? (activeCatId ?? visibleCats[0]?.id ?? null) : null
+  const tabsEnabled =
+    !hideCategoryTabs
+    && config.show_category_tabs !== false
+    && visibleCats.length > 1
+  const filterByCategory = (tabsEnabled || hideCategoryTabs) && visibleCats.length > 0
+  const activeCat = filterByCategory
+    ? (activeCatId ?? visibleCats[0]?.id ?? null)
+    : null
 
   const displayItems = items.filter(item => {
     if (isCustomMode) {
@@ -506,7 +542,7 @@ function MenuGridInner({
     } else if (!visibleCats.some(c => c.id === item.category_id)) {
       return false
     }
-    if (tabsEnabled && activeCat && item.category_id !== activeCat) return false
+    if (filterByCategory && activeCat && item.category_id !== activeCat) return false
     return true
   })
 
@@ -528,7 +564,11 @@ function MenuGridInner({
 
   const colClass = menuGridColClass(layout, config.layout)
   const isList = config.layout === 'list'
-  const sideTabs = visibleCats.length > 1 && config.tabs_layout !== 'horizontal' && !mobileLayout
+  const sideTabs =
+    !hideCategoryTabs
+    && visibleCats.length > 1
+    && config.tabs_layout !== 'horizontal'
+    && !mobileLayout
 
   if (!isCustomMode && visibleCats.length === 0) {
     return (
@@ -642,9 +682,9 @@ function MenuGridInner({
                     const optionCount = variantOptions.filter(o => itemGroups.some(g => g.id === o.group_id)).length
                     
                     return isList ? (
-                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} />
+                      <ItemRowList key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => { if (!browseOnly) addItem(item, []) }} hasVariants={hasVariants} optionCount={optionCount} isMobile={mobileLayout} browseOnly={browseOnly} />
                     ) : (
-                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => addItem(item, [])} hasVariants={hasVariants} optionCount={optionCount} />
+                      <ItemCardGrid key={item.id} item={item} config={config} brandColor={actionColor} onClick={() => setModalItem(item)} onQuickAdd={() => { if (!browseOnly) addItem(item, []) }} hasVariants={hasVariants} optionCount={optionCount} browseOnly={browseOnly} />
                     )
                   })}
                 </div>
@@ -688,6 +728,7 @@ function MenuGridInner({
           options={variantOptions}
           config={config}
           onClose={() => setModalItem(null)}
+          browseOnly={browseOnly}
         />
       )}
 
@@ -712,6 +753,13 @@ function MenuGridInner({
 interface MenuGridRenderProps {
   config: MenuGridConfig
   data: MenuGridData
+  /** View menu details only — hide add-to-cart actions (landing page). */
+  browseOnly?: boolean
+  /** Hide built-in category tabs (order page uses external drawer). */
+  hideCategoryTabs?: boolean
+  /** Controlled active category (used with hideCategoryTabs). */
+  activeCategoryId?: string | null
+  onActiveCategoryChange?: (id: string) => void
 }
 
 export function MenuGridRender({
@@ -720,6 +768,10 @@ export function MenuGridRender({
   previewLayout,
   isMobilePreview,
   brandColor = '#111111',
+  browseOnly = false,
+  hideCategoryTabs = false,
+  activeCategoryId,
+  onActiveCategoryChange,
 }: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
@@ -728,6 +780,10 @@ export function MenuGridRender({
       previewLayout={previewLayout}
       isMobilePreview={isMobilePreview}
       brandColor={brandColor}
+      browseOnly={browseOnly}
+      hideCategoryTabs={hideCategoryTabs}
+      activeCategoryId={activeCategoryId}
+      onActiveCategoryChange={onActiveCategoryChange}
     />
   )
 }

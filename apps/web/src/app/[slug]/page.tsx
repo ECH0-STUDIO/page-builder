@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Script from 'next/script'
@@ -11,9 +11,7 @@ import { NavbarRender } from '@/components/page-builder/render/NavbarRender'
 import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
 import { QRCodeRender } from '@/components/page-builder/render/QRCodeRender'
 import { FooterRender } from '@/components/page-builder/render/FooterRender'
-import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
-import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
-import { CartProvider } from '@/components/page-builder/render/CartContext'
+import { BrowseOnlyCartProvider } from '@/components/page-builder/render/CartContext'
 import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
 import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
 import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
@@ -69,8 +67,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function SlugPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SlugPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ table?: string }>
+}) {
   const { slug } = await params
+  const sp = await searchParams
+  const tableParam = (sp.table ?? '').trim()
+  if (tableParam) {
+    redirect(`/${slug}/order?table=${encodeURIComponent(tableParam)}`)
+  }
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -199,7 +209,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
   )
 
   return (
-    <CartProvider>
+    <BrowseOnlyCartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
       lang={visitorLocale}
@@ -339,6 +349,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         businessSlug: slug,
                       }}
                       brandColor={themeTokens.brandColor}
+                      browseOnly
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -360,9 +371,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         businessName={business.name}
       />
 
-      <LiveStoreCart businessId={business.id} paymentSettings={paymentSettings} locale={visitorLocale} />
+      {/* Landing is browse-only — cart/order lives on /{slug}/order */}
     </div>
     </div>
-    </CartProvider>
+    </BrowseOnlyCartProvider>
   )
 }

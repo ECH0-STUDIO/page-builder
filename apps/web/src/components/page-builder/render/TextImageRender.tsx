@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * TextImageRender — shared between editor canvas and live page.
  *
@@ -6,6 +8,8 @@
  *  - CTA: full action support (url / tel / email / anchor)
  *  - gradient background: uses config.gradient_from / gradient_to
  *  - image border radius: uses config.border_radius
+ *  - content_align centers/right-aligns the whole text block within the section
+ *  - aspect_ratio is respected via a single relative + aspect-ratio wrapper
  */
 
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
@@ -15,6 +19,7 @@ import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/loca
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
@@ -74,55 +79,67 @@ export function TextImageRender({
   const activeLocale = toSupportedLocale(locale)
   const heading = pickLocale(config.heading, activeLocale)
   const body = pickLocale(config.body, activeLocale)
-  const layout: PreviewLayout | undefined =
-    previewLayout ?? (isMobilePreview ? 'mobile' : 'responsive')
+  const ctxLayout = usePreviewLayout()
+  // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
+  const layout: PreviewLayout =
+    (ctxLayout !== 'responsive' ? ctxLayout : undefined)
+    ?? previewLayout
+    ?? (isMobilePreview ? 'mobile' : undefined)
+    ?? 'responsive'
   const radius   = RADIUS[config.border_radius ?? 'md']
   const typography = getTypography(isForcedMobileLayout(layout))
-
-  // ── Background lives on the block shell wrapper ─────────────────────────────
 
   const isTextOnly = config.layout === 'text_only'
   const isStacked  = config.layout === 'stacked'
   const isImgOnly  = config.layout === 'img_only'
   const isReverse  = config.layout === 'img_right'
 
-  // ── Image element ──────────────────────────────────────────────────────────
+  const align =
+    config.content_align === 'left' || config.content_align === 'right' || config.content_align === 'center'
+      ? config.content_align
+      : isTextOnly
+        ? 'center'
+        : 'left'
+  const justify =
+    align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
+
+  // Single relative + aspect-ratio box so Next/Image fill respects the ratio on live + editor
+  const aspect = isImgOnly ? '16/6' : resolveAspectRatio(config)
   const imageEl = config.image_url && !isTextOnly && (
     <div style={{
       flex: '0 0 auto',
       width: isStacked || isImgOnly ? '100%' : 'min(45%, 480px)',
-      // Use the chosen aspect ratio — NOT a fixed height — to avoid whitespace
-      aspectRatio: isImgOnly ? '16/6' : resolveAspectRatio(config),
+      position: 'relative',
+      aspectRatio: aspect,
       overflow: 'hidden',
       borderRadius: radius,
       background: '#f0f0f0',
       flexShrink: 0,
+      alignSelf: isStacked ? 'stretch' : undefined,
     }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-      }}>
-        <Image
-          src={config.image_url}
-          alt=""
-          fill
-          style={{
-            objectFit: config.image_fit === 'contain' ? 'contain' : 'cover',
-          }}
-          sizes="(max-width: 768px) 100vw, 50vw"
-        />
-      </div>
+      <Image
+        src={config.image_url}
+        alt=""
+        fill
+        style={{
+          objectFit: config.image_fit === 'contain' ? 'contain' : 'cover',
+        }}
+        sizes="(max-width: 768px) 100vw, 50vw"
+      />
     </div>
   )
 
-  // ── Text element ───────────────────────────────────────────────────────────
   const textEl = !isImgOnly && (
     <div style={{
-      // text_only / stacked: shrink to content; side-by-side: flex grow
       flex: isTextOnly || isStacked ? '0 1 auto' : '1 1 280px',
       minWidth: 0,
-      textAlign: isTextOnly ? 'center' : 'left',
+      // Full width of section so text-align centers within the section, not a shrink-wrapped box
+      width: isTextOnly || isStacked ? '100%' : undefined,
+      maxWidth: isTextOnly ? '760px' : undefined,
+      textAlign: align,
+      alignSelf: isStacked || isTextOnly
+        ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
+        : undefined,
     }}>
       {heading && (
         <h2 style={{
@@ -146,26 +163,30 @@ export function TextImageRender({
       {!heading && !body && (
         <p style={{ color: '#ccc', fontSize: '15px', fontStyle: 'italic' }}>Add heading or body text in the settings panel.</p>
       )}
-      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
+      {config.cta && (
+        <div style={{ display: 'flex', justifyContent: justify }}>
+          <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />
+        </div>
+      )}
     </div>
   )
 
-  // ── Outer container ────────────────────────────────────────────────────────
-  // Key fix: do NOT set a fixed min-height on stacked/text_only —
-  // let padding + content determine the actual height naturally.
   const innerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: isStacked || isTextOnly ? 'column' : 'row',
     flexWrap: isStacked || isTextOnly ? 'nowrap' : 'wrap',
     gap: isTextOnly ? '0' : '40px',
-    alignItems: isTextOnly ? 'center' : isStacked ? 'flex-start' : 'center',
-    justifyContent: isTextOnly ? 'center' : 'flex-start',
+    alignItems: isTextOnly || isStacked
+      ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
+      : 'center',
+    justifyContent: isTextOnly ? justify : 'flex-start',
     maxWidth: isTextOnly ? '760px' : '1100px',
     margin: '0 auto',
+    width: '100%',
   }
 
   return (
-    <section>
+    <section style={{ width: '100%' }}>
       <div style={innerStyle}>
         {isReverse ? <>{textEl}{imageEl}</> : <>{imageEl}{textEl}</>}
       </div>

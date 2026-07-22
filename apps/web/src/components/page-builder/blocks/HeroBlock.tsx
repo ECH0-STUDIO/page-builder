@@ -19,7 +19,7 @@ import { CtaEditor } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
 import type {
-  HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock,
+  HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock, ContentAlign,
 } from '../types'
 import { resolveHeroHeight } from '../hero-utils'
 
@@ -363,6 +363,30 @@ export function HeroSettings({
       {/* Content */}
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.content')}</Label>
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('heroBlock.contentAlign')}</Label>
+          <div className="flex gap-1.5">
+            {([
+              { value: 'left' as ContentAlign, label: t('heroBlock.alignLeft') },
+              { value: 'center' as ContentAlign, label: t('heroBlock.alignCenter') },
+              { value: 'right' as ContentAlign, label: t('heroBlock.alignRight') },
+            ]).map(a => (
+              <button
+                key={a.value}
+                type="button"
+                onClick={() => set('content_align', a.value)}
+                className={cn(
+                  'flex-1 py-1.5 rounded border text-xs transition-colors',
+                  (config.content_align ?? 'center') === a.value
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border hover:border-foreground/30',
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
           <Input id="hero-heading" value={plainText(config.heading)} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />

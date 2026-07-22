@@ -16,7 +16,8 @@ import { resolveThemeTokens } from '../theme-tokens'
 import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensureChromeBlocks } from './adapters'
 import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
-import { PuckCustomHeader, PuckHeaderActions } from './PuckEditorChrome'
+import { PuckCustomHeader, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
+import { PreviewLayoutProvider } from './PreviewLayoutContext'
 import { createPuckPlugins } from './plugins'
 
 import {
@@ -97,6 +98,8 @@ export function PuckEditorShell({
   )
   const [pagePanel, setPagePanel] = useState<PageSettingsPanel>(null)
   const [previewMode, setPreviewMode] = useState(false)
+  const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop')
+  const canvasPreviewLayout = viewMode === 'mobile' ? 'mobile' as const : 'desktop' as const
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -140,6 +143,7 @@ export function PuckEditorShell({
       items: initialItems,
       brandColor,
       previewInteractive: previewMode,
+      viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
@@ -150,6 +154,7 @@ export function PuckEditorShell({
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
       previewInteractive: previewMode,
+      previewLayout: canvasPreviewLayout,
     }),
     t,
   })
@@ -165,6 +170,7 @@ export function PuckEditorShell({
       items: initialItems,
       brandColor,
       previewInteractive: previewMode,
+      viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
     }),
     getBlocks: () => blocksRef.current,
@@ -175,6 +181,7 @@ export function PuckEditorShell({
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
       previewInteractive: previewMode,
+      previewLayout: canvasPreviewLayout,
     }),
     t,
   }
@@ -294,17 +301,22 @@ export function PuckEditorShell({
   const puckOverrides = useMemo<Partial<Overrides>>(
     () => ({
       header: ({ actions }) => (
-        <PuckCustomHeader
-          businessName={business.name}
-          pathLabel={t('sidebar.pageBuilder')}
-          previewMode={previewMode}
-          onTogglePreview={() => setPreviewMode(p => !p)}
-          chrome={actions}
-        />
+        <>
+          <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
+          <PuckCustomHeader
+            businessName={business.name}
+            pathLabel={t('sidebar.pageBuilder')}
+            previewMode={previewMode}
+            viewMode={viewMode}
+            onTogglePreview={() => setPreviewMode(p => !p)}
+            onViewModeChange={setViewMode}
+            chrome={actions}
+          />
+        </>
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, business.name, t],
+    [chromeProps, previewMode, viewMode, business.name, t],
   )
 
   useEffect(() => {
@@ -378,19 +390,22 @@ export function PuckEditorShell({
   return (
     <div className="eatery-puck-shell eatery-puck">
       <div className="eatery-puck-editor">
-        <Puck
-          config={puckConfig}
-          data={puckData}
-          onChange={handlePuckChange}
-          plugins={puckPlugins}
-          overrides={puckOverrides}
-          iframe={{ enabled: false }}
-          ui={{
-            leftSideBarVisible: !previewMode,
-            rightSideBarVisible: !previewMode,
-            previewMode: previewMode ? 'interactive' : 'edit',
-          }}
-        />
+        {/* Live layout context so blocks update on viewport toggle even before Puck re-renders root */}
+        <PreviewLayoutProvider value={canvasPreviewLayout}>
+          <Puck
+            config={puckConfig}
+            data={puckData}
+            onChange={handlePuckChange}
+            plugins={puckPlugins}
+            overrides={puckOverrides}
+            iframe={{ enabled: false }}
+            ui={{
+              leftSideBarVisible: !previewMode,
+              rightSideBarVisible: !previewMode,
+              previewMode: previewMode ? 'interactive' : 'edit',
+            }}
+          />
+        </PreviewLayoutProvider>
       </div>
 
       <Dialog open={pagePanel === 'theme'} onOpenChange={open => !open && setPagePanel(null)}>

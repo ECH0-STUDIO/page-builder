@@ -118,6 +118,41 @@ export interface Database {
           { foreignKeyName: "orders_business_id_fkey", columns: ["business_id"], isOneToOne: false, referencedRelation: "businesses", referencedColumns: ["id"] }
         ]
       }
+      service_requests: {
+        Row: {
+          id: string
+          business_id: string
+          table_number: string
+          type: string
+          status: string
+          created_at: string
+          updated_at: string
+          acknowledged_at: string | null
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          table_number: string
+          type: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          acknowledged_at?: string | null
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          table_number?: string
+          type?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          acknowledged_at?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: "service_requests_business_id_fkey", columns: ["business_id"], isOneToOne: false, referencedRelation: "businesses", referencedColumns: ["id"] }
+        ]
+      }
       menu_categories: {
         Row: {
           id: string
@@ -451,6 +486,11 @@ export interface Database {
           id: string
           business_id: string
           published: boolean
+          order_published: boolean
+          order_promo_slides: Json
+          order_menu_config: Json | null
+          order_background_color: string | null
+          order_background_image_url: string | null
           custom_domain: string | null
           seo_title: string | null
           seo_description: string | null
@@ -473,6 +513,11 @@ export interface Database {
           id?: string
           business_id: string
           published?: boolean
+          order_published?: boolean
+          order_promo_slides?: Json
+          order_menu_config?: Json | null
+          order_background_color?: string | null
+          order_background_image_url?: string | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null
@@ -495,6 +540,11 @@ export interface Database {
           id?: string
           business_id?: string
           published?: boolean
+          order_published?: boolean
+          order_promo_slides?: Json
+          order_menu_config?: Json | null
+          order_background_color?: string | null
+          order_background_image_url?: string | null
           custom_domain?: string | null
           seo_title?: string | null
           seo_description?: string | null

@@ -54,10 +54,17 @@ interface MenuGridSettingsProps {
   categories: MenuCategory[]
   items: MenuItem[]
   onChange: (c: MenuGridConfig) => void
-  
+  /** Order page: layout/display only — no category/item picking */
+  layoutOnly?: boolean
 }
 
-export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
+export function MenuGridSettings({
+  config,
+  categories,
+  items,
+  onChange,
+  layoutOnly = false,
+}: MenuGridSettingsProps) {
   const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCatId, setFilterCatId] = useState('all')
@@ -146,6 +153,8 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       <Separator />
 
+      {!layoutOnly && (
+        <>
       {/* Tabs Layout */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.tabsLayout')}</Label>
@@ -342,6 +351,14 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       )}
 
       <Separator />
+        </>
+      )}
+
+      {layoutOnly && (
+        <p className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2">
+          {t('orderPageAdmin.menuAllCategoriesNote')}
+        </p>
+      )}
 
       {/* Display toggles */}
       <div className="space-y-2">

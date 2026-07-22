@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Puck editor chrome — header, preview sync, publish actions.
+ * Preview sync must stay mounted while preview is active (not inside headerActions only).
+ */
+
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -9,9 +14,11 @@ import {
   ExternalLink,
   Globe,
   Loader2,
+  Monitor,
   PanelLeft,
   PanelRight,
   Settings,
+  Smartphone,
   Eye,
   X,
 } from 'lucide-react'
@@ -28,9 +35,20 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
+import type { PreviewLayout } from '../render/preview-layout'
 
-/** Keep Puck's internal previewMode in sync with shell state (ui prop is initial-only). */
-function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
+/**
+ * Keep Puck's internal UI in sync with shell state.
+ * `ui` on <Puck> is initial-only — without this, viewport/preview toggles update
+ * the header but the canvas keeps stale layout until something else re-renders it.
+ */
+export function PuckPreviewSync({
+  previewMode,
+  viewMode = 'desktop',
+}: {
+  previewMode: boolean
+  viewMode?: 'desktop' | 'mobile'
+}) {
   const { dispatch } = usePuck()
 
   useEffect(() => {
@@ -40,10 +58,19 @@ function PuckPreviewSync({ previewMode }: { previewMode: boolean }) {
         previewMode: previewMode ? 'interactive' : 'edit',
         leftSideBarVisible: !previewMode,
         rightSideBarVisible: !previewMode,
+        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop switch
+        viewports: {
+          controlsVisible: false,
+          options: [],
+          current: {
+            width: viewMode === 'mobile' ? 375 : '100%',
+            height: 'auto' as const,
+          },
+        },
       },
       recordHistory: false,
     })
-  }, [previewMode, dispatch])
+  }, [previewMode, viewMode, dispatch])
 
   return null
 }
@@ -55,7 +82,9 @@ interface PuckEditorChromeProps {
   publishing: boolean
   slug: string
   previewMode: boolean
+  viewMode: 'desktop' | 'mobile'
   onTogglePreview: () => void
+  onViewModeChange: (mode: 'desktop' | 'mobile') => void
   onPublish: (state: boolean) => void
   onOpenGlobalSettings: () => void
 }
@@ -111,29 +140,79 @@ function PuckSidebarToggles() {
   )
 }
 
+export function PuckViewportToggle({
+  viewMode,
+  onChange,
+}: {
+  viewMode: 'desktop' | 'mobile'
+  onChange: (mode: 'desktop' | 'mobile') => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex items-center rounded-lg border border-border p-0.5 shrink-0">
+      <button
+        type="button"
+        onClick={() => onChange('desktop')}
+        className={cn(
+          'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+          viewMode === 'desktop'
+            ? 'bg-accent text-foreground'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+        title={t('pageBuilder.desktop')}
+      >
+        <Monitor className="size-3.5" />
+        <span className="hidden xl:inline">{t('pageBuilder.desktop')}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('mobile')}
+        className={cn(
+          'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+          viewMode === 'mobile'
+            ? 'bg-accent text-foreground'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+        title={t('pageBuilder.mobile')}
+      >
+        <Smartphone className="size-3.5" />
+        <span className="hidden xl:inline">{t('pageBuilder.mobile')}</span>
+      </button>
+    </div>
+  )
+}
+
 /** Single-row header — replaces Puck's default header to avoid duplicated controls. */
 export function PuckCustomHeader({
   businessName,
   pathLabel,
   previewMode,
+  viewMode,
   onTogglePreview,
+  onViewModeChange,
   chrome,
 }: {
   businessName: string
   pathLabel: string
   previewMode: boolean
+  viewMode: 'desktop' | 'mobile'
   onTogglePreview: () => void
+  onViewModeChange: (mode: 'desktop' | 'mobile') => void
   chrome: React.ReactNode
 }) {
   const { t } = useTranslation()
 
   if (previewMode) {
     return (
-      <header className="eatery-puck-header flex items-center justify-center h-12 px-2 shrink-0 w-full min-w-0 border-b border-primary/20 bg-primary text-primary-foreground relative z-50">
+      <header className="eatery-puck-header eatery-puck-header--preview flex items-center justify-center h-12 px-2 shrink-0 w-full min-w-0 border-b border-primary/20 bg-primary text-primary-foreground relative z-50">
         <span className="text-sm font-medium tracking-wide flex items-center gap-2">
           <Eye className="size-4 opacity-90" />
           {t('pageBuilder.preview')}
         </span>
+        <div className="absolute left-2 top-1/2 -translate-y-1/2">
+          <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
+        </div>
         <button
           type="button"
           onClick={onTogglePreview}
@@ -155,6 +234,7 @@ export function PuckCustomHeader({
         <span className="text-xs text-muted-foreground truncate hidden sm:inline">{pathLabel}</span>
       </div>
       <div className="flex-1 min-w-0" />
+      <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">{chrome}</div>
     </header>
   )
@@ -170,15 +250,12 @@ export function PuckHeaderActions({
   onTogglePreview,
   onPublish,
   onOpenGlobalSettings,
-}: PuckEditorChromeProps) {
+}: Omit<PuckEditorChromeProps, 'viewMode' | 'onViewModeChange' | 'orderPublished'>) {
   const { t } = useTranslation()
   const showChanges = published && hasUnpublishedChanges
 
   return (
-    <>
-      <PuckPreviewSync previewMode={previewMode} />
-      <div className="flex items-center gap-2 flex-wrap justify-end">
-      {/* Autosave */}
+    <div className="flex items-center gap-2 flex-wrap justify-end">
       <div className="flex items-center gap-2 shrink-0">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -265,7 +342,6 @@ export function PuckHeaderActions({
         {t('pageBuilder.globalSettings')}
       </button>
 
-      {/* Publish */}
       <DropdownMenu>
         <div className="flex rounded-md shadow-sm overflow-hidden">
           <button
@@ -298,7 +374,6 @@ export function PuckHeaderActions({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-    </>
   )
 }
 
@@ -330,3 +405,5 @@ export function PuckDrawerItem({
     </button>
   )
 }
+
+export type { PreviewLayout }

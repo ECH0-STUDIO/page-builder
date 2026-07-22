@@ -43,7 +43,12 @@
 }
 
 .eatery-puck-header {
-  background: var(--background, #fff);
+  /* Do not force background — edit vs preview headers set their own */
+}
+
+.eatery-puck-header--preview {
+  background: var(--primary) !important;
+  color: var(--primary-foreground, #fff) !important;
 }
 
 /* Hide any leftover default Puck header chrome if present */

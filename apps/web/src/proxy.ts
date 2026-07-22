@@ -149,11 +149,13 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Custom domain routing ──
+  // Preserve subpaths (e.g. /order, /order?table=3) when rewriting to /{slug}/…
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
     const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
     if (slug) {
       const rewriteUrl = request.nextUrl.clone()
-      rewriteUrl.pathname = `/${slug}`
+      const suffix = pathname === '/' ? '' : pathname
+      rewriteUrl.pathname = `/${slug}${suffix}`
       return NextResponse.rewrite(rewriteUrl)
     }
   }

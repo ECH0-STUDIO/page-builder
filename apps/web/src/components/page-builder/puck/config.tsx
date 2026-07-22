@@ -28,6 +28,7 @@ import {
   visibleField,
   heroLayoutField,
   heroHeightField,
+  anchorIdField,
 } from './shared-fields'
 import {
   renderContactBlock,
@@ -41,10 +42,10 @@ import {
 } from './block-render'
 import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
-import { CartProvider } from '../render/CartContext'
-import { LiveStoreCart } from '../render/LiveStoreCart'
+import { BrowseOnlyCartProvider } from '../render/CartContext'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
+import { PreviewLayoutProvider } from './PreviewLayoutContext'
 
 export interface PuckShellState {
   business: Business
@@ -57,6 +58,7 @@ export interface PuckShellState {
   items: MenuItem[]
   brandColor: string
   previewInteractive: boolean
+  viewMode: 'desktop' | 'mobile'
   paymentSettings: PaymentSettings | null
 }
 
@@ -104,33 +106,34 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       render: (props: { children?: ReactNode }) => {
         const { children } = props
         const shell = refs.current.getShell()
-        const { theme, headingFont, bodyFont } = shell
+        const { theme, headingFont, bodyFont, viewMode } = shell
+        const isMobile = viewMode === 'mobile'
 
         return (
-          <CartProvider>
-            <div
-              style={{
-                ...buildThemeStyle(theme),
-                fontFamily: `'${bodyFont}', sans-serif`,
-                minHeight: '100%',
-              }}
-            >
-              <style
-                dangerouslySetInnerHTML={{
-                  __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+          <BrowseOnlyCartProvider>
+            <PreviewLayoutProvider value={isMobile ? 'mobile' : 'desktop'}>
+              <div
+                className={
+                  isMobile
+                    ? 'mx-auto w-[375px] max-w-full rounded-[28px] overflow-hidden shadow-2xl ring-4 ring-black/5 bg-white'
+                    : undefined
+                }
+                data-preview-layout={isMobile ? 'mobile' : 'desktop'}
+                style={{
+                  ...buildThemeStyle(theme),
+                  fontFamily: `'${bodyFont}', sans-serif`,
+                  minHeight: isMobile ? '667px' : '100%',
                 }}
-              />
-              {children}
-              {shell.previewInteractive && (
-                <LiveStoreCart
-                  businessId={shell.business.id}
-                  paymentSettings={shell.paymentSettings ?? {}}
-                  previewMode
-                  contained
+              >
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+                  }}
                 />
-              )}
-            </div>
-          </CartProvider>
+                {children}
+              </div>
+            </PreviewLayoutProvider>
+          </BrowseOnlyCartProvider>
         )
       },
     },
@@ -223,6 +226,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderHeroBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -252,6 +256,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderTextImageBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -279,6 +284,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderContactBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -307,6 +313,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderMenuGridBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -335,6 +342,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               />
             )
           }),
+          anchorId: anchorIdField(t),
         },
         render: props => renderQrCodeBlock(props as unknown as PuckBlockProps, refs.current.getRenderCtx()),
       },
@@ -355,6 +363,7 @@ export function defaultShellState(business: Business): PuckShellState {
     items: [],
     brandColor: '#E85D26',
     previewInteractive: false,
+    viewMode: 'desktop',
     paymentSettings: null,
   }
 }
