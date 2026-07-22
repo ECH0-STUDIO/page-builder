@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
+import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
 import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
@@ -19,6 +20,10 @@ export default async function PublishingPage() {
 
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+
+  // Renew custom-domain billing while owner is on Publishing (no cron needed)
+  await billCustomDomainIfDueAction(business.id)
+
   const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),

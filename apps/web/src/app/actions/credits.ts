@@ -2,15 +2,23 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-
-const CUSTOM_DOMAIN_CREDITS_PER_MONTH = 50
-const STORAGE_CREDITS_PER_20MB = 1
+import {
+  CREDIT_PACKS,
+  CUSTOM_DOMAIN_CREDITS_PER_MONTH,
+  PAGE_VIEWS_PER_CREDIT,
+  STORAGE_CREDITS_PER_20MB,
+  findCreditPack,
+} from '@/lib/credit-packs'
 
 export async function getCreditBalanceAction(businessId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
+
+    // Opportunistic renewals while the owner is in the dashboard
+    await billCustomDomainIfDueAction(businessId)
+    await billPageViewsIfDueAction(businessId)
 
     const adminClient = createAdminClient()
     const { data, error } = await (adminClient as any)
@@ -140,8 +148,12 @@ export async function deductCreditsAction(
   }
 }
 
-/** Bill custom domain hosting (50 credits / 30 days) after DNS is verified. */
-export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean }> {
+/**
+ * Bill custom domain hosting (50 credits / 30 days) while a verified domain is in use.
+ * Idempotent until billed_until expires. No cron required — call from dashboard / verify.
+ * On insufficient credits, suspends the domain (unverify) so it stops resolving.
+ */
+export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean; suspended?: boolean }> {
   const adminClient = createAdminClient()
 
   const { data: pub } = await (adminClient as any)
@@ -165,7 +177,14 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
     `Tên miền tùy chỉnh (${pub.custom_domain}) — ${CUSTOM_DOMAIN_CREDITS_PER_MONTH} Credits/tháng`
   )
 
-  if (!deduct.success) return deduct
+  if (!deduct.success) {
+    // Stop serving unpaid domains until owner tops up and re-verifies
+    await (adminClient as any)
+      .from('publishing_settings')
+      .update({ custom_domain_verified: false })
+      .eq('business_id', businessId)
+    return { success: false, error: deduct.error, suspended: true }
+  }
 
   const nextBill = new Date()
   nextBill.setDate(nextBill.getDate() + 30)
@@ -176,6 +195,38 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
     .eq('business_id', businessId)
 
   return { success: true, billed: true }
+}
+
+/**
+ * Reconcile page-view credit charges (1 credit / 500 views).
+ * Primary billing happens in /api/view via RPC; this is a dashboard safety net.
+ */
+export async function billPageViewsIfDueAction(
+  businessId: string
+): Promise<{ success: boolean; error?: string; billed?: boolean; creditsCharged?: number }> {
+  try {
+    const adminClient = createAdminClient()
+    const { data, error } = await (adminClient as any).rpc('bill_page_views_due', {
+      p_business_id: businessId,
+      p_views_per_credit: PAGE_VIEWS_PER_CREDIT,
+    })
+
+    if (error) {
+      // Migration may not be applied yet — don't break dashboard
+      console.error('billPageViewsIfDueAction rpc error:', error)
+      return { success: true, billed: false }
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    const charged = Number(row?.credits_charged ?? 0)
+    if (charged > 0) {
+      revalidatePath('/dashboard/settings/credits')
+    }
+    return { success: true, billed: charged > 0, creditsCharged: charged }
+  } catch (error) {
+    console.error('billPageViewsIfDueAction error:', error)
+    return { success: true, billed: false }
+  }
 }
 
 /** Bill gallery storage (1 credit per 20 MB) when the billing cycle is due. */
@@ -199,7 +250,7 @@ export async function billStorageIfDueAction(
   }
 
   const usedMb = Math.max(usedBytes / (1024 * 1024), 20)
-  const creditsNeeded = Math.max(1, Math.ceil(usedMb / 20))
+  const creditsNeeded = Math.max(1, Math.ceil(usedMb / 20) * STORAGE_CREDITS_PER_20MB)
 
   const deduct = await deductCreditsAction(
     businessId,
@@ -245,18 +296,28 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
       return { success: false, error: 'Only owners can purchase credits' }
     }
 
+    // Server-side pack whitelist — never trust client price/amount
+    const pack = findCreditPack(amount)
+    if (!pack || pack.priceVnd !== priceVnd) {
+      return {
+        success: false,
+        error: `Gói Credits không hợp lệ. Chọn một trong: ${CREDIT_PACKS.map(p => p.amount).join(', ')}.`,
+      }
+    }
+    const listPrice: number = pack.priceVnd
+
     const adminClient = createAdminClient()
 
-    let finalPrice = priceVnd
+    let finalPrice: number = listPrice
     let appliedDiscountId = null
     let appliedDiscountAmount = 0
 
     if (discountCode) {
-      const verifyRes = await verifyDiscountCodeAction(discountCode, priceVnd)
+      const verifyRes = await verifyDiscountCodeAction(discountCode, listPrice)
       if (!verifyRes.success) {
         return { success: false, error: verifyRes.error }
       }
-      finalPrice = verifyRes.newPrice || 0
+      finalPrice = verifyRes.newPrice ?? 0
       appliedDiscountId = verifyRes.discountId
       appliedDiscountAmount = verifyRes.discountAmount || 0
     }
@@ -274,7 +335,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
       .from('credit_orders')
       .insert({
         business_id: businessId,
-        amount_credits: amount,
+        amount_credits: pack.amount,
         price_vnd: finalPrice, // Use final price
         status: finalPrice === 0 ? 'paid' : 'pending',
         order_code: orderCode,
@@ -293,7 +354,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
         .eq('business_id', businessId)
         .single()
       
-      const newBalance = (currentBalance?.balance || 0) + amount
+      const newBalance = (currentBalance?.balance || 0) + pack.amount
 
       await (adminClient as any)
         .from('credit_balances')
@@ -310,8 +371,8 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
         .from('credit_transactions')
         .insert({
           business_id: businessId,
-          amount: amount,
-          description: `Mua ${amount} Credits (Mã giảm giá: ${discountCode})`
+          amount: pack.amount,
+          description: `Mua ${pack.amount} Credits (Mã giảm giá: ${discountCode})`
         })
 
       return { success: true, checkoutUrl: null, instantSuccess: true }
@@ -324,7 +385,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
     const requestData = {
       orderCode: orderCode,
       amount: finalPrice,
-      description: `Mua ${amount} Credits`,
+      description: `Mua ${pack.amount} Credits`,
       returnUrl: `${DOMAIN}/dashboard/settings/credits?status=success`,
       cancelUrl: `${DOMAIN}/dashboard/settings/credits?status=cancel`
     }

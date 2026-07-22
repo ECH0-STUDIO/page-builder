@@ -1003,7 +1003,7 @@
   },
   "credits": {
     "availableCredits": "Available Credits",
-    "usedForPremium": "Used for custom domains and image storage",
+    "usedForPremium": "Used for page views, custom domains, and image storage",
     "buyCredits": "Buy Credits",
     "purchaseMore": "Purchase credits for custom domains and gallery storage",
     "transactionHistory": "Transaction History",

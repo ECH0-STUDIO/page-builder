@@ -627,6 +627,10 @@ export async function getPageViewsAction(
   periodTotal: number
   daily: DayViewStat[]  // last `period` days, oldest → newest, gaps filled with 0
 }> {
+  // Safety-net reconcile for page-view credit charges (primary path is /api/view)
+  const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
+  await billPageViewsIfDueAction(businessId)
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase

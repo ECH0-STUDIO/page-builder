@@ -12,6 +12,7 @@ import {
   getCreditBalanceAction,
   getCreditTransactionsAction,
 } from '@/app/actions/credits'
+import { CREDIT_PACKS } from '@/lib/credit-packs'
 import { PurchaseCreditsModal } from './PurchaseCreditsModal'
 
 interface Transaction {
@@ -105,37 +106,26 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
-            <Button
-              variant="outline"
-              className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50"
-              onClick={() => handleSelectPackage(50, 50000)}
-            >
-              <div className="flex items-center gap-1 font-bold text-xl">
-                <Coins className="size-5 text-yellow-500" /> 50
-              </div>
-              <div className="text-sm text-muted-foreground">{formatCurrency(50000)}</div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50 relative overflow-hidden"
-              onClick={() => handleSelectPackage(100, 90000)}
-            >
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
-              <div className="flex items-center gap-1 font-bold text-xl">
-                <Coins className="size-5 text-yellow-500" /> 100
-              </div>
-              <div className="text-sm text-muted-foreground">{formatCurrency(90000)}</div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50"
-              onClick={() => handleSelectPackage(500, 400000)}
-            >
-              <div className="flex items-center gap-1 font-bold text-xl">
-                <Coins className="size-5 text-yellow-500" /> 500
-              </div>
-              <div className="text-sm text-muted-foreground">{formatCurrency(400000)}</div>
-            </Button>
+            {CREDIT_PACKS.map((pack, index) => (
+              <Button
+                key={pack.amount}
+                variant="outline"
+                className={
+                  index === 1
+                    ? 'h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50 relative overflow-hidden'
+                    : 'h-auto py-4 px-6 flex flex-col items-center gap-2 border-border/60 hover:border-primary/50'
+                }
+                onClick={() => handleSelectPackage(pack.amount, pack.priceVnd)}
+              >
+                {index === 1 && (
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 to-orange-500" />
+                )}
+                <div className="flex items-center gap-1 font-bold text-xl">
+                  <Coins className="size-5 text-yellow-500" /> {pack.amount}
+                </div>
+                <div className="text-sm text-muted-foreground">{formatCurrency(pack.priceVnd)}</div>
+              </Button>
+            ))}
           </CardContent>
         </Card>
       </div>
