@@ -333,58 +333,39 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
       .insert({
         business_id: businessId,
         amount_credits: pack.amount,
-        price_vnd: finalPrice, // Use final price
-        status: finalPrice === 0 ? 'paid' : 'pending',
+        price_vnd: finalPrice,
+        status: 'pending',
         order_code: orderCode,
         discount_code_id: appliedDiscountId,
-        discount_amount: appliedDiscountAmount
+        discount_amount: appliedDiscountAmount,
       })
 
     if (orderError) throw orderError
 
-    // 1.5 If price is 0, fulfill order instantly without PayOS
+    // 1.5 If price is 0, fulfill instantly without PayOS (same atomic path as webhook)
     if (finalPrice === 0) {
-      // Add balance
-      const { data: currentBalance } = await (adminClient as any)
-        .from('credit_balances')
-        .select('balance')
-        .eq('business_id', businessId)
-        .single()
-      
-      const newBalance = (currentBalance?.balance || 0) + pack.amount
-
-      await (adminClient as any)
-        .from('credit_balances')
-        .update({ balance: newBalance })
-        .eq('business_id', businessId)
-      
-      // Update discount usage
-      if (appliedDiscountId) {
-        await (adminClient as any).rpc('increment_discount_uses', { d_id: appliedDiscountId })
+      const { data: fulfilled, error: fulfillError } = await (adminClient as any).rpc(
+        'fulfill_credit_order',
+        { p_order_code: orderCode },
+      )
+      if (fulfillError || !fulfilled) {
+        throw new Error(fulfillError?.message || 'Failed to fulfill free credit order')
       }
-
-      // Log transaction
-      await (adminClient as any)
-        .from('credit_transactions')
-        .insert({
-          business_id: businessId,
-          amount: pack.amount,
-          description: `Mua ${pack.amount} Credits (Mã giảm giá: ${discountCode})`
-        })
-
+      revalidatePath('/dashboard/settings/credits')
       return { success: true, checkoutUrl: null, instantSuccess: true }
     }
 
-    // 2. Create PayOS payment link
+    // 2. Create PayOS payment link — return to the app host (not marketing site)
     const { payos } = await import('@/lib/payos')
-    const DOMAIN = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    
+    const { getAppBaseUrl } = await import('@/lib/site-urls')
+    const appBase = getAppBaseUrl()
+
     const requestData = {
       orderCode: orderCode,
       amount: finalPrice,
       description: `Mua ${pack.amount} Credits`,
-      returnUrl: `${DOMAIN}/dashboard/settings/credits?status=success`,
-      cancelUrl: `${DOMAIN}/dashboard/settings/credits?status=cancel`
+      returnUrl: `${appBase}/dashboard/settings/credits?status=success`,
+      cancelUrl: `${appBase}/dashboard/settings/credits?status=cancel`,
     }
 
     const paymentLinkData = await payos.paymentRequests.create(requestData)

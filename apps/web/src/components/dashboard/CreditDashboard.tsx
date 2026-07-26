@@ -34,17 +34,6 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  useEffect(() => {
-    const status = searchParams.get('status')
-    if (status === 'success') {
-      toast.success(t('credits.purchaseSuccess'))
-      router.replace('/dashboard/settings/credits')
-    } else if (status === 'cancel') {
-      toast.error(t('credits.paymentCancelled'))
-      router.replace('/dashboard/settings/credits')
-    }
-  }, [searchParams, router])
-
   async function loadData() {
     setLoading(true)
     const [balRes, txRes] = await Promise.all([
@@ -56,6 +45,22 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
     if (txRes.success && txRes.data) setTransactions(txRes.data as Transaction[])
     setLoading(false)
   }
+
+  useEffect(() => {
+    const status = searchParams.get('status')
+    if (status === 'success') {
+      toast.success(t('credits.purchaseSuccess'))
+      // Webhook may still be in flight — refresh now and again shortly
+      void loadData()
+      const retry = window.setTimeout(() => void loadData(), 2500)
+      router.replace('/dashboard/settings/credits')
+      return () => window.clearTimeout(retry)
+    }
+    if (status === 'cancel') {
+      toast.error(t('credits.paymentCancelled'))
+      router.replace('/dashboard/settings/credits')
+    }
+  }, [searchParams, router, t, businessId])
 
   useEffect(() => {
     loadData()
