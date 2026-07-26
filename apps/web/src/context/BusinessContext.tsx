@@ -11,6 +11,7 @@ import {
 import type { Business } from '@/lib/business'
 import { useBusinesses } from '@/lib/react-query/hooks/useBusiness'
 import { useQueryClient } from '@tanstack/react-query'
+import { ACTIVE_BUSINESS_STORAGE_KEY, setActiveBusinessId } from '@/lib/active-business'
 
 interface BusinessContextValue {
   businesses: Business[]
@@ -21,8 +22,6 @@ interface BusinessContextValue {
 }
 
 const BusinessContext = createContext<BusinessContextValue | null>(null)
-
-const STORAGE_KEY = 'eatery_current_business_id'
 
 export function BusinessProvider({
   children,
@@ -37,14 +36,21 @@ export function BusinessProvider({
   const { data: businesses, isLoading, refetch } = useBusinesses(initialBusinesses)
   const [currentId, setCurrentId] = useState<string | null>(initialActiveBusinessId)
 
-  // Fallback to empty array if businesses is undefined (e.g., during refetch)
-  const currentBusiness = (businesses ?? initialBusinesses).find((b: Business) => b.id === currentId) ?? null
+  // Server layout may pass a newer list after creating/switching businesses.
+  useEffect(() => {
+    queryClient.setQueryData(['businesses'], initialBusinesses)
+  }, [queryClient, initialBusinesses])
+
+  useEffect(() => {
+    setCurrentId(initialActiveBusinessId)
+  }, [initialActiveBusinessId])
+
+  const list = businesses ?? initialBusinesses
+  const currentBusiness = list.find((b: Business) => b.id === currentId) ?? null
 
   const switchBusiness = useCallback((id: string) => {
-    setCurrentId(id)
-    localStorage.setItem(STORAGE_KEY, id)
-    document.cookie = `${STORAGE_KEY}=${id}; path=/; max-age=31536000`
-    window.location.reload()
+    setActiveBusinessId(id)
+    window.location.assign('/dashboard')
   }, [])
 
   const refreshBusinesses = useCallback(async () => {
@@ -52,17 +58,15 @@ export function BusinessProvider({
     await refetch()
   }, [queryClient, refetch])
 
-  // Persist when currentId changes
   useEffect(() => {
     if (currentId) {
-      localStorage.setItem(STORAGE_KEY, currentId)
-      document.cookie = `${STORAGE_KEY}=${currentId}; path=/; max-age=31536000`
+      setActiveBusinessId(currentId)
     }
   }, [currentId])
 
   return (
     <BusinessContext.Provider
-      value={{ businesses: businesses ?? initialBusinesses, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
+      value={{ businesses: list, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
     >
       {children}
     </BusinessContext.Provider>
@@ -74,3 +78,5 @@ export function useBusiness() {
   if (!ctx) throw new Error('useBusiness must be used inside BusinessProvider')
   return ctx
 }
+
+export { ACTIVE_BUSINESS_STORAGE_KEY }
