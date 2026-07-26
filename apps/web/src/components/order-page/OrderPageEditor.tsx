@@ -75,6 +75,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeAppearanceFields } from '@/components/shared/ThemeAppearanceFields'
 import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
+import {
+  PageBuilderModeSwitcher,
+  type BuilderPageMode,
+} from '@/components/page-builder/PageBuilderModeSwitcher'
 import { cn } from '@/lib/utils'
 
 type SettingsTab = 'appearance' | 'carousel' | 'menu'
@@ -112,6 +116,8 @@ interface OrderPageEditorProps {
   initialTheme: Partial<ThemeSettings> | null
   categories: MenuCategory[]
   items: MenuItem[]
+  /** Unified builder mode — shows Landing | Order switcher when set */
+  builderMode?: BuilderPageMode
 }
 
 function draftFromSources(
@@ -161,6 +167,7 @@ export function OrderPageEditor({
   initialTheme,
   categories,
   items,
+  builderMode = 'order',
 }: OrderPageEditorProps) {
   const { t } = useTranslation()
   const router = useRouter()
@@ -436,10 +443,12 @@ export function OrderPageEditor({
           <span className="hidden sm:inline text-xs font-medium">{t('pageBuilder.back')}</span>
         </button>
 
+        <PageBuilderModeSwitcher mode={builderMode} />
+
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground truncate">
-              {t('orderPageAdmin.title')}
+              {businessName}
             </span>
             <span className="hidden sm:inline text-xs text-muted-foreground truncate">
               /{slug}/order

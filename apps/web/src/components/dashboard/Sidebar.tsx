@@ -19,7 +19,6 @@ import {
   Menu,
   Coins,
   Image as ImageIcon,
-  ShoppingBag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'
@@ -65,13 +64,6 @@ const NAV_ITEMS = [
     labelKey: 'pageBuilder',
     href: '/dashboard/pages',
     icon: Palette,
-    phase: 'v1',
-    exact: false,
-  },
-  {
-    labelKey: 'orderPage',
-    href: '/dashboard/order-page',
-    icon: ShoppingBag,
     phase: 'v1',
     exact: false,
   },

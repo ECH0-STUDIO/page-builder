@@ -33,6 +33,10 @@ import {
 import { getPublicStoreUrl } from '@/lib/site-urls'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import {
+  PageBuilderModeSwitcher,
+  type BuilderPageMode,
+} from '@/components/page-builder/PageBuilderModeSwitcher'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
@@ -187,6 +191,7 @@ export function PuckViewportToggle({
 export function PuckCustomHeader({
   businessName,
   pathLabel,
+  builderMode,
   previewMode,
   viewMode,
   onTogglePreview,
@@ -195,6 +200,7 @@ export function PuckCustomHeader({
 }: {
   businessName: string
   pathLabel: string
+  builderMode?: BuilderPageMode
   previewMode: boolean
   viewMode: 'desktop' | 'mobile'
   onTogglePreview: () => void
@@ -229,9 +235,10 @@ export function PuckCustomHeader({
     <header className="eatery-puck-header flex items-center gap-2 h-12 px-2 shrink-0 w-full min-w-0 border-b border-border bg-background">
       <PuckHeaderBack />
       <PuckSidebarToggles />
+      {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
       <div className="flex items-baseline gap-2 min-w-0 shrink">
-        <span className="font-semibold text-sm truncate max-w-[140px] sm:max-w-[220px]">{businessName}</span>
-        <span className="text-xs text-muted-foreground truncate hidden sm:inline">{pathLabel}</span>
+        <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[180px]">{businessName}</span>
+        <span className="text-xs text-muted-foreground truncate hidden lg:inline">{pathLabel}</span>
       </div>
       <div className="flex-1 min-w-0" />
       <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />

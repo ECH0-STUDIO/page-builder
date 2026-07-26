@@ -320,6 +320,9 @@
   },
   "pageBuilder": {
     "back": "Back",
+    "pageSwitcherLabel": "Page to edit",
+    "modeLanding": "Landing",
+    "modeOrder": "Order",
     "unsaved": "Unsaved changes",
     "saving": "Saving…",
     "saved": "Saved",

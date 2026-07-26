@@ -320,6 +320,9 @@
   },
   "pageBuilder": {
     "back": "Quay lại",
+    "pageSwitcherLabel": "Trang cần chỉnh",
+    "modeLanding": "Landing",
+    "modeOrder": "Đặt món",
     "unsaved": "Chưa lưu thay đổi",
     "saving": "Đang lưu…",
     "saved": "Đã lưu",

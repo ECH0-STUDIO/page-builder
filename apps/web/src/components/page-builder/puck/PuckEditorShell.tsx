@@ -48,6 +48,7 @@ import type { SaveStatus } from '../PublishBar'
 type PageSettingsPanel = 'theme' | null
 
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
 
 interface PuckEditorShellProps {
   business: Business
@@ -58,6 +59,8 @@ interface PuckEditorShellProps {
   initialItems: MenuItem[]
   initialVariantGroups: VariantGroup[]
   initialVariantOptions: VariantOption[]
+  /** Unified builder mode — shows Landing | Order switcher when set */
+  builderMode?: BuilderPageMode
 }
 
 export function PuckEditorShell({
@@ -69,6 +72,7 @@ export function PuckEditorShell({
   initialItems,
   initialVariantGroups,
   initialVariantOptions,
+  builderMode = 'landing',
 }: PuckEditorShellProps) {
   const { t } = useTranslation()
 
@@ -305,7 +309,8 @@ export function PuckEditorShell({
           <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
           <PuckCustomHeader
             businessName={business.name}
-            pathLabel={t('sidebar.pageBuilder')}
+            pathLabel={t('pageBuilder.modeLanding')}
+            builderMode={builderMode}
             previewMode={previewMode}
             viewMode={viewMode}
             onTogglePreview={() => setPreviewMode(p => !p)}
@@ -316,7 +321,7 @@ export function PuckEditorShell({
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, viewMode, business.name, t],
+    [chromeProps, previewMode, viewMode, business.name, builderMode, t],
   )
 
   useEffect(() => {
