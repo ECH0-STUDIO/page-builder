@@ -70,7 +70,12 @@ BEGIN
   VALUES (
     v_order.business_id,
     v_order.amount_credits,
-    'PayOS Payment (Order ' || p_order_code::text || ')'
+    CASE
+      WHEN v_order.price_vnd = 0 THEN
+        'Mua ' || v_order.amount_credits::text || ' Credits (miễn phí / mã giảm giá)'
+      ELSE
+        'PayOS Payment (Order ' || p_order_code::text || ')'
+    END
   );
 
   RETURN true;
