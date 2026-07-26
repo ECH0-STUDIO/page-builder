@@ -149,7 +149,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
 
   // Prefer dedicated order menu config; else landing menu_grid styling with all items
   const publishedMenuBlock = (pageBlocksRaw ?? []).find(b => b.type === 'menu_grid')
-  const menuConfig: MenuGridConfig = resolveOrderMenuConfig({
+  const menuConfigBase: MenuGridConfig = resolveOrderMenuConfig({
     configured: normalizeOrderMenuConfig(
       (pubSettings as { order_menu_config?: unknown } | null)?.order_menu_config,
     ),
@@ -157,6 +157,11 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       ? (publishedMenuBlock.config as MenuGridConfig)
       : null,
   })
+  // Order page chrome (category tabs / headings) follows live theme text colour.
+  const menuConfig: MenuGridConfig = {
+    ...menuConfigBase,
+    text_color: themeRaw?.text_color || menuConfigBase.text_color || '#111111',
+  }
 
   const promoSlides = resolvePromoSlides({
     configured: normalizeOrderPromoSlides(

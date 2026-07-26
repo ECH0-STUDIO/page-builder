@@ -191,7 +191,11 @@ export function OrderPageEditor({
   const skipHistory = useRef(false)
   const isFirstSave = useRef(true)
 
-  const previewMenuConfig = draft.menuConfig ?? defaultOrderMenuConfig()
+  // Appearance text colour drives category chrome on the order page; card text stays dark on white cards.
+  const previewMenuConfig: MenuGridConfig = {
+    ...(draft.menuConfig ?? defaultOrderMenuConfig()),
+    text_color: draft.themeTextColor || '#111111',
+  }
 
   const previewSlides = useMemo(
     () =>
@@ -662,6 +666,29 @@ export function OrderPageEditor({
                       className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t('pageBuilder.textColor')}
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={draft.themeTextColor || '#111111'}
+                      onChange={e => updateDraft(d => ({ ...d, themeTextColor: e.target.value }))}
+                      className="size-9 rounded-lg border border-border cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={draft.themeTextColor}
+                      onChange={e => updateDraft(d => ({ ...d, themeTextColor: e.target.value }))}
+                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {t('orderPageAdmin.textColorHint')}
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">

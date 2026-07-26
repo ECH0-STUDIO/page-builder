@@ -283,7 +283,8 @@ function ItemCardGrid({
   browseOnly?: boolean
 }) {
   const { t } = useTranslation()
-  const textColor = config.text_color || '#111111'
+  // White cards always use dark text so page/section text colour can be light on dark backgrounds.
+  const textColor = '#111111'
   const cardBg = '#ffffff'
 
   function handleAddClick(e: React.MouseEvent) {
@@ -658,7 +659,11 @@ function MenuGridInner({
                     style={
                       activeCat === cat.id
                         ? { backgroundColor: actionColor, color: '#ffffff', border: `1.5px solid ${actionColor}` }
-                        : { backgroundColor: 'transparent', color: textColor, border: '1.5px solid #e5e7eb' }
+                        : {
+                            backgroundColor: 'transparent',
+                            color: textColor,
+                            border: `1.5px solid color-mix(in srgb, ${textColor} 28%, transparent)`,
+                          }
                     }
                   >
                     {cat.name}
