@@ -191,9 +191,10 @@ export function OrderPageEditor({
   const skipHistory = useRef(false)
   const isFirstSave = useRef(true)
 
-  // Appearance text colour drives category chrome on the order page; card text stays dark on white cards.
+  const baseMenuConfig = draft.menuConfig ?? defaultOrderMenuConfig()
+  // Appearance text colour drives category chrome; card text stays dark on white cards.
   const previewMenuConfig: MenuGridConfig = {
-    ...(draft.menuConfig ?? defaultOrderMenuConfig()),
+    ...baseMenuConfig,
     text_color: draft.themeTextColor || '#111111',
   }
 
@@ -876,7 +877,7 @@ export function OrderPageEditor({
                   <span className="text-xs font-medium">{t('publishing.orderMenuTitle')}</span>
                 </div>
                 <OrderMenuConfigEditor
-                  config={previewMenuConfig}
+                  config={baseMenuConfig}
                   isCustomized={draft.menuConfig != null}
                   categories={categories}
                   items={items}
