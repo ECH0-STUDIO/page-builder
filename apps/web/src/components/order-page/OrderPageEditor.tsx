@@ -445,16 +445,7 @@ export function OrderPageEditor({
 
         <PageBuilderModeSwitcher mode={builderMode} />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground truncate">
-              {businessName}
-            </span>
-            <span className="hidden sm:inline text-xs text-muted-foreground truncate">
-              /{slug}/order
-            </span>
-          </div>
-        </div>
+        <div className="min-w-0 flex-1" />
 
         <div className="flex items-center gap-1 shrink-0">
           <div className="flex items-center gap-0.5 mr-1">
@@ -538,10 +529,11 @@ export function OrderPageEditor({
               href={orderPath}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              title={t('orderPageAdmin.openLive')}
+              aria-label={t('orderPageAdmin.openLive')}
             >
-              <ExternalLink className="size-3.5" />
-              <span className="hidden md:inline">{t('orderPageAdmin.openLive')}</span>
+              <ExternalLink className="size-4" />
             </a>
           )}
 

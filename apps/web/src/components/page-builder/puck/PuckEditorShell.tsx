@@ -6,11 +6,8 @@ import { Puck } from '@puckeditor/core'
 import '@puckeditor/core/puck.css'
 import './eatery-puck.css'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 
-import { GlobalSettingsPanel } from '../blocks/GlobalSettingsPanel'
 import { normalizePageBlock } from '../spacing-utils'
 import { resolveThemeTokens } from '../theme-tokens'
 import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensureChromeBlocks } from './adapters'
@@ -18,7 +15,7 @@ import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
 import { PuckCustomHeader, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
 import { PreviewLayoutProvider } from './PreviewLayoutContext'
-import { createPuckPlugins } from './plugins'
+import { createPuckPlugins, PuckSettingsContext } from './plugins'
 
 import {
   savePageBlocksAction,
@@ -44,8 +41,6 @@ import {
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { SaveStatus } from '../PublishBar'
-
-type PageSettingsPanel = 'theme' | null
 
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
@@ -100,7 +95,6 @@ export function PuckEditorShell({
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(
     initialPublishing,
   )
-  const [pagePanel, setPagePanel] = useState<PageSettingsPanel>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop')
   const canvasPreviewLayout = viewMode === 'mobile' ? 'mobile' as const : 'desktop' as const
@@ -297,7 +291,6 @@ export function PuckEditorShell({
       previewMode,
       onTogglePreview: () => setPreviewMode(p => !p),
       onPublish: handlePublish,
-      onOpenGlobalSettings: () => setPagePanel('theme'),
     }),
     [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
   )
@@ -308,8 +301,6 @@ export function PuckEditorShell({
         <>
           <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
           <PuckCustomHeader
-            businessName={business.name}
-            pathLabel={t('pageBuilder.modeLanding')}
             builderMode={builderMode}
             previewMode={previewMode}
             viewMode={viewMode}
@@ -321,7 +312,7 @@ export function PuckEditorShell({
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, viewMode, business.name, builderMode, t],
+    [chromeProps, previewMode, viewMode, builderMode],
   )
 
   useEffect(() => {
@@ -392,40 +383,37 @@ export function PuckEditorShell({
     [business.id],
   )
 
+  const settingsContextValue = useMemo(
+    () => ({
+      theme,
+      publishing: publishingSettings,
+      onThemeChange: handleThemeChange,
+      onPublishingChange: handlePublishingChange,
+    }),
+    [theme, publishingSettings, handleThemeChange, handlePublishingChange],
+  )
+
   return (
     <div className="eatery-puck-shell eatery-puck">
       <div className="eatery-puck-editor">
-        {/* Live layout context so blocks update on viewport toggle even before Puck re-renders root */}
-        <PreviewLayoutProvider value={canvasPreviewLayout}>
-          <Puck
-            config={puckConfig}
-            data={puckData}
-            onChange={handlePuckChange}
-            plugins={puckPlugins}
-            overrides={puckOverrides}
-            iframe={{ enabled: false }}
-            ui={{
-              leftSideBarVisible: !previewMode,
-              rightSideBarVisible: !previewMode,
-              previewMode: previewMode ? 'interactive' : 'edit',
-            }}
-          />
-        </PreviewLayoutProvider>
+        <PuckSettingsContext.Provider value={settingsContextValue}>
+          <PreviewLayoutProvider value={canvasPreviewLayout}>
+            <Puck
+              config={puckConfig}
+              data={puckData}
+              onChange={handlePuckChange}
+              plugins={puckPlugins}
+              overrides={puckOverrides}
+              iframe={{ enabled: false }}
+              ui={{
+                leftSideBarVisible: !previewMode,
+                rightSideBarVisible: !previewMode,
+                previewMode: previewMode ? 'interactive' : 'edit',
+              }}
+            />
+          </PreviewLayoutProvider>
+        </PuckSettingsContext.Provider>
       </div>
-
-      <Dialog open={pagePanel === 'theme'} onOpenChange={open => !open && setPagePanel(null)}>
-        <DialogContent className={cn('max-w-lg max-h-[85vh] overflow-y-auto')}>
-          <DialogHeader>
-            <DialogTitle>{t('pageBuilder.globalSettings')}</DialogTitle>
-          </DialogHeader>
-          <GlobalSettingsPanel
-            theme={theme}
-            publishing={publishingSettings}
-            onThemeChange={handleThemeChange}
-            onPublishingChange={handlePublishingChange}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

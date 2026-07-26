@@ -17,7 +17,6 @@ import {
   Monitor,
   PanelLeft,
   PanelRight,
-  Settings,
   Smartphone,
   Eye,
   X,
@@ -90,7 +89,6 @@ interface PuckEditorChromeProps {
   onTogglePreview: () => void
   onViewModeChange: (mode: 'desktop' | 'mobile') => void
   onPublish: (state: boolean) => void
-  onOpenGlobalSettings: () => void
 }
 
 export function PuckHeaderBack() {
@@ -189,8 +187,6 @@ export function PuckViewportToggle({
 
 /** Single-row header — replaces Puck's default header to avoid duplicated controls. */
 export function PuckCustomHeader({
-  businessName,
-  pathLabel,
   builderMode,
   previewMode,
   viewMode,
@@ -198,8 +194,6 @@ export function PuckCustomHeader({
   onViewModeChange,
   chrome,
 }: {
-  businessName: string
-  pathLabel: string
   builderMode?: BuilderPageMode
   previewMode: boolean
   viewMode: 'desktop' | 'mobile'
@@ -236,10 +230,6 @@ export function PuckCustomHeader({
       <PuckHeaderBack />
       <PuckSidebarToggles />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
-      <div className="flex items-baseline gap-2 min-w-0 shrink">
-        <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[180px]">{businessName}</span>
-        <span className="text-xs text-muted-foreground truncate hidden lg:inline">{pathLabel}</span>
-      </div>
       <div className="flex-1 min-w-0" />
       <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">{chrome}</div>
@@ -256,8 +246,7 @@ export function PuckHeaderActions({
   previewMode,
   onTogglePreview,
   onPublish,
-  onOpenGlobalSettings,
-}: Omit<PuckEditorChromeProps, 'viewMode' | 'onViewModeChange' | 'orderPublished'>) {
+}: Omit<PuckEditorChromeProps, 'viewMode' | 'onViewModeChange'>) {
   const { t } = useTranslation()
   const showChanges = published && hasUnpublishedChanges
 
@@ -291,10 +280,11 @@ export function PuckHeaderActions({
           href={getPublicStoreUrl(slug)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
+          className="flex items-center justify-center size-8 text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md hover:bg-accent"
+          title={t('pageBuilder.viewLive')}
+          aria-label={t('pageBuilder.viewLive')}
         >
-          <ExternalLink className="size-3.5" />
-          <span className="hidden md:inline">{t('pageBuilder.viewLive')}</span>
+          <ExternalLink className="size-4" />
         </a>
       )}
 
@@ -302,16 +292,15 @@ export function PuckHeaderActions({
         type="button"
         onClick={onTogglePreview}
         className={cn(
-          'flex items-center gap-1 text-xs transition-colors shrink-0 px-2 py-1.5 rounded-md',
+          'flex items-center justify-center size-8 transition-colors shrink-0 rounded-md',
           previewMode
             ? 'bg-accent text-foreground'
             : 'text-muted-foreground hover:text-foreground hover:bg-accent',
         )}
+        title={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
+        aria-label={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
       >
-        <Globe className="size-3.5" />
-        <span className="hidden md:inline">
-          {previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
-        </span>
+        <Globe className="size-4" />
       </button>
 
       <Badge
@@ -339,15 +328,6 @@ export function PuckHeaderActions({
           t('pageBuilder.draft')
         )}
       </Badge>
-
-      <button
-        type="button"
-        onClick={onOpenGlobalSettings}
-        className="hidden md:flex items-center gap-1 h-7 px-2.5 text-xs rounded-md border border-border bg-background hover:bg-accent transition-colors"
-      >
-        <Settings className="size-3.5" />
-        {t('pageBuilder.globalSettings')}
-      </button>
 
       <DropdownMenu>
         <div className="flex rounded-md shadow-sm overflow-hidden">
