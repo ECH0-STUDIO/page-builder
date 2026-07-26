@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadImageToStorage, validateImageDimensions } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import type { ThemeSettings, PublishingSettings } from '../types'
-import { GOOGLE_FONTS as FONTS } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { ThemeAppearanceFields } from '@/components/shared/ThemeAppearanceFields'
 
 interface GlobalSettingsPanelProps {
   theme: ThemeSettings | null
@@ -315,69 +314,25 @@ export function GlobalSettingsPanel({
       {/* ── Theme (Colors & Typography) ── */}
       <div className="space-y-4">
         <h3 className="font-semibold text-sm">{t('pageBuilder.designTheme')}</h3>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('pageBuilder.brandColor')}</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={thm.primary_color || '#E85D26'}
-                  onChange={e => onThemeChange({ primary_color: e.target.value })}
-                  className="size-8 rounded border border-border cursor-pointer"
-                />
-                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.primary_color}</span>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('pageBuilder.background')}</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={thm.background_color || '#FFFFFF'}
-                  onChange={e => onThemeChange({ background_color: e.target.value })}
-                  className="size-8 rounded border border-border cursor-pointer"
-                />
-                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.background_color}</span>
-              </div>
-            </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs">{t('pageBuilder.textColor')}</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={thm.text_color || '#111111'}
-                  onChange={e => onThemeChange({ text_color: e.target.value })}
-                  className="size-8 rounded border border-border cursor-pointer"
-                />
-                <span className="text-[11px] font-mono text-muted-foreground truncate">{thm.text_color || '#111111'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('pageBuilder.headingFont')}</Label>
-            <Select value={thm.heading_font_family || 'Inter'} onValueChange={v => onThemeChange({ heading_font_family: v })}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {FONTS.map(f => <SelectItem key={f.name} value={f.name} className="text-xs">{f.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('pageBuilder.bodyFont')}</Label>
-            <Select value={thm.font_family || 'Inter'} onValueChange={v => onThemeChange({ font_family: v })}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {FONTS.map(f => <SelectItem key={f.name} value={f.name} className="text-xs">{f.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <ThemeAppearanceFields
+          showBackgroundColor
+          values={{
+            brandColor: thm.primary_color || '#E85D26',
+            backgroundColor: thm.background_color || '#FFFFFF',
+            textColor: thm.text_color || '#111111',
+            headingFont: thm.heading_font_family || 'Inter',
+            bodyFont: thm.font_family || 'Inter',
+          }}
+          onChange={patch => {
+            const next: Partial<ThemeSettings> = {}
+            if (patch.brandColor != null) next.primary_color = patch.brandColor
+            if (patch.backgroundColor != null) next.background_color = patch.backgroundColor
+            if (patch.textColor != null) next.text_color = patch.textColor
+            if (patch.headingFont != null) next.heading_font_family = patch.headingFont
+            if (patch.bodyFont != null) next.font_family = patch.bodyFont
+            onThemeChange(next)
+          }}
+        />
       </div>
     </div>
   )

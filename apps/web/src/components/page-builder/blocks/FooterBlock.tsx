@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 import { SpacingControls } from './SpacingControls'
 
 export function FooterSettings({
@@ -78,30 +79,18 @@ export function FooterSettings({
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('footerBlock.colours')}</Label>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('footerBlock.background')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.background_color}
-                onChange={e => set('background_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('footerBlock.text')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.text_color}
-                onChange={e => set('text_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.text_color}</span>
-            </div>
-          </div>
+          <ColorSwatchField
+            label={t('footerBlock.background')}
+            value={config.background_color}
+            fallback="#ffffff"
+            onChange={v => set('background_color', v)}
+          />
+          <ColorSwatchField
+            label={t('footerBlock.text')}
+            value={config.text_color}
+            fallback="#111111"
+            onChange={v => set('text_color', v)}
+          />
         </div>
       </div>
 

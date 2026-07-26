@@ -56,7 +56,6 @@ import {
 } from '@/app/actions/page-builder'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import {
-  GOOGLE_FONTS as FONTS,
   defaultThemeSettings,
   type PublishingSettings,
   type MenuGridConfig,
@@ -67,19 +66,15 @@ import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ThemeAppearanceFields } from '@/components/shared/ThemeAppearanceFields'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 import { cn } from '@/lib/utils'
 
 type SettingsTab = 'appearance' | 'carousel' | 'menu'
@@ -649,115 +644,41 @@ export function OrderPageEditor({
                   </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.brandColor')}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={draft.brandColor || '#E85D26'}
-                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
-                      className="size-9 rounded-lg border border-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={draft.brandColor}
-                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
-                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
-                    />
-                  </div>
+                {/* Shared with landing Global Settings — brand / text / fonts */}
+                <ThemeAppearanceFields
+                  values={{
+                    brandColor: draft.brandColor || '#E85D26',
+                    textColor: draft.themeTextColor || '#111111',
+                    headingFont: draft.headingFont || 'Inter',
+                    bodyFont: draft.bodyFont || 'Inter',
+                  }}
+                  textColorHint={t('orderPageAdmin.textColorHint')}
+                  onChange={patch =>
+                    updateDraft(d => ({
+                      ...d,
+                      ...(patch.brandColor != null ? { brandColor: patch.brandColor } : {}),
+                      ...(patch.textColor != null ? { themeTextColor: patch.textColor } : {}),
+                      ...(patch.headingFont != null ? { headingFont: patch.headingFont } : {}),
+                      ...(patch.bodyFont != null ? { bodyFont: patch.bodyFont } : {}),
+                    }))
+                  }
+                />
+
+                {/* Order-page-only background (not theme background) */}
+                <div className="space-y-3 border-t border-border pt-4">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('orderPageAdmin.pageBackground')}
+                  </Label>
+                  <ColorSwatchField
+                    label={t('orderPageAdmin.bgColor')}
+                    value={draft.bgColor || '#ffffff'}
+                    fallback="#ffffff"
+                    onChange={v => updateDraft(d => ({ ...d, bgColor: v }))}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.textColor')}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={draft.themeTextColor || '#111111'}
-                      onChange={e => updateDraft(d => ({ ...d, themeTextColor: e.target.value }))}
-                      className="size-9 rounded-lg border border-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={draft.themeTextColor}
-                      onChange={e => updateDraft(d => ({ ...d, themeTextColor: e.target.value }))}
-                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {t('orderPageAdmin.textColorHint')}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.headingFont')}
-                  </label>
-                  <Select
-                    value={draft.headingFont || 'Inter'}
-                    onValueChange={v => updateDraft(d => ({ ...d, headingFont: v }))}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {FONTS.map(f => (
-                        <SelectItem key={f.name} value={f.name} className="text-sm">
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.bodyFont')}
-                  </label>
-                  <Select
-                    value={draft.bodyFont || 'Inter'}
-                    onValueChange={v => updateDraft(d => ({ ...d, bodyFont: v }))}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {FONTS.map(f => (
-                        <SelectItem key={f.name} value={f.name} className="text-sm">
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('orderPageAdmin.bgColor')}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={draft.bgColor || '#ffffff'}
-                      onChange={e => updateDraft(d => ({ ...d, bgColor: e.target.value }))}
-                      className="size-9 rounded-lg border border-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={draft.bgColor}
-                      onChange={e => updateDraft(d => ({ ...d, bgColor: e.target.value }))}
-                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('orderPageAdmin.bgImage')}
-                  </label>
+                  <Label className="text-xs">{t('orderPageAdmin.bgImage')}</Label>
                   <input
                     ref={fileRef}
                     type="file"

@@ -17,6 +17,18 @@ import { plainText } from '@/i18n/locale'
 import type { QRCodeConfig } from '../types'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
+import { RadiusPicker, type RadiusOption } from '@/components/shared/RadiusPicker'
+
+const QR_RADIUS_OPTIONS: RadiusOption[] = [
+  { value: 'none', label: '0' },
+  { value: 'md', label: 'MD' },
+  { value: 'lg', label: 'LG' },
+  { value: 'xl', label: 'XL' },
+  { value: '2xl', label: '2XL' },
+  { value: '3xl', label: '3XL' },
+  { value: 'full', label: 'Round' },
+]
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -206,32 +218,12 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Radius</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {([
-            { value: 'none', label: '0' },
-            { value: 'md', label: 'MD' },
-            { value: 'lg', label: 'LG' },
-            { value: 'xl', label: 'XL' },
-            { value: '2xl', label: '2XL' },
-            { value: '3xl', label: '3XL' },
-            { value: 'full', label: 'Round' },
-          ] as const).map(r => (
-            <button
-              key={r.value}
-              type="button"
-              onClick={() => set('border_radius', r.value)}
-              className={cn(
-                'px-3 py-1 rounded border text-[11px] transition-colors',
-                (config.border_radius || '2xl') === r.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border text-muted-foreground hover:border-foreground/30'
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <RadiusPicker
+        label={t('qrCodeBlock.radius')}
+        value={config.border_radius || '2xl'}
+        options={QR_RADIUS_OPTIONS}
+        onChange={v => set('border_radius', v as QRCodeConfig['border_radius'])}
+      />
 
       <Separator />
 
@@ -251,42 +243,25 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.colours')}</Label>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('qrCodeBlock.background')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.background_color}
-                onChange={e => set('background_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('qrCodeBlock.qrColour')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.qr_color ?? config.text_color ?? '#111111'}
-                onChange={e => set('qr_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.qr_color ?? config.text_color ?? '#111111'}</span>
-            </div>
-          </div>
-          <div className="space-y-1.5 col-span-2">
-            <Label className="text-xs">{t('qrCodeBlock.textColour')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.text_color}
-                onChange={e => set('text_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.text_color}</span>
-            </div>
-          </div>
+          <ColorSwatchField
+            label={t('qrCodeBlock.background')}
+            value={config.background_color}
+            fallback="#ffffff"
+            onChange={v => set('background_color', v)}
+          />
+          <ColorSwatchField
+            label={t('qrCodeBlock.qrColour')}
+            value={config.qr_color ?? config.text_color ?? '#111111'}
+            fallback="#111111"
+            onChange={v => set('qr_color', v)}
+          />
+          <ColorSwatchField
+            label={t('qrCodeBlock.textColour')}
+            value={config.text_color}
+            fallback="#111111"
+            onChange={v => set('text_color', v)}
+            wrapperClassName="col-span-2"
+          />
         </div>
       </div>
 

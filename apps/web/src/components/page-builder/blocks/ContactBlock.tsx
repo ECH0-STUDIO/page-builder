@@ -9,6 +9,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import type { ContactConfig, MapHeight } from '../types'
 import type { Business } from '@/lib/business'
 import { SOCIAL_LINKS_CONFIG } from '@/lib/constants'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -140,32 +141,18 @@ export function ContactSettings({
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contactBlock.appearance')}</Label>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('contactBlock.background')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.background_color ?? '#f8f8f8'}
-                onChange={e => set('background_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-                title="Background colour"
-              />
-              <span className="text-xs font-mono text-muted-foreground">{config.background_color ?? '#f8f8f8'}</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('contactBlock.textColour')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.text_color ?? '#111111'}
-                onChange={e => set('text_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-                title="Text colour"
-              />
-              <span className="text-xs font-mono text-muted-foreground">{config.text_color ?? '#111111'}</span>
-            </div>
-          </div>
+          <ColorSwatchField
+            label={t('contactBlock.background')}
+            value={config.background_color ?? '#f8f8f8'}
+            fallback="#f8f8f8"
+            onChange={v => set('background_color', v)}
+          />
+          <ColorSwatchField
+            label={t('contactBlock.textColour')}
+            value={config.text_color ?? '#111111'}
+            fallback="#111111"
+            onChange={v => set('text_color', v)}
+          />
         </div>
         <div className="flex gap-1.5">
           {([
