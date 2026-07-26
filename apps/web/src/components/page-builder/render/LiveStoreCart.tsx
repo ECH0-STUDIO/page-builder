@@ -15,6 +15,7 @@ interface LiveStoreCartProps {
   contained?: boolean
   locale?: string
   fabOffsetClass?: string
+  brandColor?: string
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {

@@ -133,7 +133,6 @@ export function OrderPagePreview({
                   businessSlug: slug,
                 }}
                 brandColor={brandColor}
-                browseOnly
                 previewLayout={isMobile ? 'mobile' : 'desktop'}
               />
             </div>

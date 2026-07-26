@@ -82,7 +82,7 @@ export function resolveOrderMenuConfig(opts: {
   landingMenuGrid?: MenuGridConfig | null
 }): MenuGridConfig {
   const base = opts.configured
-    ? { ...opts.configured }
+    ? { ...defaultMenuGridConfig, ...opts.configured }
     : opts.landingMenuGrid
       ? {
           ...defaultMenuGridConfig,
