@@ -278,8 +278,16 @@ export interface MenuGridConfig {
   show_category_tabs: boolean
   /** Section background colour */
   background_color: string
-  /** Heading + text colour */
+  /** Heading + category chrome text colour */
   text_color: string
+  /** Menu item card background */
+  card_background_color?: string
+  /** Menu item card title / price text */
+  card_text_color?: string
+  /** Menu item card border */
+  card_border_color?: string
+  /** Menu item card corner radius */
+  card_border_radius?: BorderRadius
   /** Description shown below heading */
   description?: string
   /** Selection mode: 'category' (default) or 'custom_items' */
@@ -305,6 +313,10 @@ export const defaultMenuGridConfig: MenuGridConfig = {
   show_category_tabs: true,
   background_color: '#ffffff',
   text_color: '#111111',
+  card_background_color: '#ffffff',
+  card_text_color: '#111111',
+  card_border_color: '#f3f4f6',
+  card_border_radius: 'md',
   description: '',
   selection_mode: 'category',
   item_ids: [],

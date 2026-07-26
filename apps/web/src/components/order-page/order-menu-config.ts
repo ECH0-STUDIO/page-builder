@@ -5,8 +5,17 @@
 
 import {
   defaultMenuGridConfig,
+  type BorderRadius,
   type MenuGridConfig,
 } from '@/components/page-builder/types'
+
+const CARD_RADII: BorderRadius[] = ['none', 'sm', 'md', 'lg', 'xl', 'full']
+
+function normalizeBorderRadius(raw: unknown, fallback: BorderRadius): BorderRadius {
+  return typeof raw === 'string' && (CARD_RADII as string[]).includes(raw)
+    ? (raw as BorderRadius)
+    : fallback
+}
 
 export function normalizeOrderMenuConfig(raw: unknown): MenuGridConfig | null {
   if (raw == null) return null
@@ -47,6 +56,19 @@ export function normalizeOrderMenuConfig(raw: unknown): MenuGridConfig | null {
     text_color: typeof row.text_color === 'string'
       ? row.text_color
       : defaultMenuGridConfig.text_color,
+    card_background_color: typeof row.card_background_color === 'string'
+      ? row.card_background_color
+      : defaultMenuGridConfig.card_background_color,
+    card_text_color: typeof row.card_text_color === 'string'
+      ? row.card_text_color
+      : defaultMenuGridConfig.card_text_color,
+    card_border_color: typeof row.card_border_color === 'string'
+      ? row.card_border_color
+      : defaultMenuGridConfig.card_border_color,
+    card_border_radius: normalizeBorderRadius(
+      row.card_border_radius,
+      defaultMenuGridConfig.card_border_radius ?? 'md',
+    ),
     pagination_enabled: Boolean(row.pagination_enabled),
     items_per_page: typeof row.items_per_page === 'number' && row.items_per_page > 0
       ? Math.min(Math.floor(row.items_per_page), 100)

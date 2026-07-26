@@ -14,7 +14,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
-import type { MenuGridConfig } from '../types'
+import type { BorderRadius, MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { useCart, type CartVariantSelection } from './CartContext'
 import { getTypography } from './typography'
@@ -24,6 +24,24 @@ import {
   isForcedMobileLayout,
   menuGridColClass,
 } from './preview-layout'
+
+const CARD_RADIUS: Record<BorderRadius, string> = {
+  none: '0px',
+  sm: '4px',
+  md: '12px',
+  lg: '20px',
+  xl: '32px',
+  full: '9999px',
+}
+
+function resolveCardStyles(config: MenuGridConfig) {
+  return {
+    backgroundColor: config.card_background_color || '#ffffff',
+    color: config.card_text_color || '#111111',
+    borderColor: config.card_border_color || '#f3f4f6',
+    borderRadius: CARD_RADIUS[config.card_border_radius || 'md'] ?? CARD_RADIUS.md,
+  }
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -283,9 +301,8 @@ function ItemCardGrid({
   browseOnly?: boolean
 }) {
   const { t } = useTranslation()
-  // White cards always use dark text so page/section text colour can be light on dark backgrounds.
-  const textColor = '#111111'
-  const cardBg = '#ffffff'
+  const card = resolveCardStyles(config)
+  const textColor = card.color
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -301,8 +318,13 @@ function ItemCardGrid({
   return (
     <div
       onClick={onClick}
-      className={`group rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer`}
-      style={{ backgroundColor: cardBg, opacity: item.available ? 1 : 0.85 }}
+      className="group border overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+      style={{
+        backgroundColor: card.backgroundColor,
+        borderColor: card.borderColor,
+        borderRadius: card.borderRadius,
+        opacity: item.available ? 1 : 0.85,
+      }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -373,8 +395,8 @@ function ItemRowList({
   browseOnly?: boolean
 }) {
   const { t } = useTranslation()
-  const textColor = config.text_color || '#111111'
-  const cardBg = '#ffffff'
+  const card = resolveCardStyles(config)
+  const textColor = card.color
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -391,10 +413,15 @@ function ItemRowList({
     <div
       onClick={onClick}
       className={cn(
-        'flex gap-4 py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors',
+        'flex gap-4 py-3 px-3 border cursor-pointer transition-colors',
         isMobile ? 'items-start' : 'items-center',
       )}
-      style={{ opacity: item.available ? 1 : 0.85 }}
+      style={{
+        backgroundColor: card.backgroundColor,
+        borderColor: card.borderColor,
+        borderRadius: card.borderRadius,
+        opacity: item.available ? 1 : 0.85,
+      }}
       id={`item-${item.id}`}
     >
       {config.show_image && (

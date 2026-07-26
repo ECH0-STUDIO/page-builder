@@ -19,7 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
-import type { MenuGridConfig } from '../types'
+import type { BorderRadius, MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
@@ -425,32 +425,119 @@ export function MenuGridSettings({
 
 
 
-      {/* Colours */}
+      {/* Section colours — landing page builder only (order page uses Appearance) */}
+      {!layoutOnly && (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('menuGridBlock.background')}</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={config.background_color}
+                  onChange={e => set('background_color', e.target.value)}
+                  className="size-8 rounded border border-border cursor-pointer"
+                />
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('menuGridBlock.text')}</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={config.text_color}
+                  onChange={e => set('text_color', e.target.value)}
+                  className="size-8 rounded border border-border cursor-pointer"
+                />
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{config.text_color}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Card style */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+        <div className="space-y-1">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('menuGridBlock.cardStyle')}
+          </Label>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            {t('menuGridBlock.cardStyleHint')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">{t('menuGridBlock.cardRadius')}</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { value: 'none', label: '0' },
+              { value: 'sm', label: 'SM' },
+              { value: 'md', label: 'MD' },
+              { value: 'lg', label: 'LG' },
+              { value: 'xl', label: 'XL' },
+              { value: 'full', label: 'Round' },
+            ] as { value: BorderRadius; label: string }[]).map(r => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => set('card_border_radius', r.value)}
+                className={cn(
+                  'px-3 py-1 rounded border text-[11px] transition-colors',
+                  (config.card_border_radius || 'md') === r.value
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border text-muted-foreground hover:border-foreground/30',
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">{t('menuGridBlock.background')}</Label>
+            <Label className="text-xs">{t('menuGridBlock.cardBackground')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
-                value={config.background_color}
-                onChange={e => set('background_color', e.target.value)}
+                value={config.card_background_color || '#ffffff'}
+                onChange={e => set('card_background_color', e.target.value)}
                 className="size-8 rounded border border-border cursor-pointer"
               />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
+              <span className="text-[11px] font-mono text-muted-foreground truncate">
+                {config.card_background_color || '#ffffff'}
+              </span>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">{t('menuGridBlock.text')}</Label>
+            <Label className="text-xs">{t('menuGridBlock.cardText')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
-                value={config.text_color}
-                onChange={e => set('text_color', e.target.value)}
+                value={config.card_text_color || '#111111'}
+                onChange={e => set('card_text_color', e.target.value)}
                 className="size-8 rounded border border-border cursor-pointer"
               />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.text_color}</span>
+              <span className="text-[11px] font-mono text-muted-foreground truncate">
+                {config.card_text_color || '#111111'}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">{t('menuGridBlock.cardBorder')}</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={config.card_border_color || '#f3f4f6'}
+                onChange={e => set('card_border_color', e.target.value)}
+                className="size-8 rounded border border-border cursor-pointer"
+              />
+              <span className="text-[11px] font-mono text-muted-foreground truncate">
+                {config.card_border_color || '#f3f4f6'}
+              </span>
             </div>
           </div>
         </div>
