@@ -51,10 +51,17 @@ import {
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
 import {
   saveOrderPageDraftAction,
+  saveThemeAction,
   togglePublishAction,
 } from '@/app/actions/page-builder'
 import { uploadImageToStorage } from '@/lib/image-utils'
-import type { PublishingSettings, MenuGridConfig } from '@/components/page-builder/types'
+import {
+  GOOGLE_FONTS as FONTS,
+  defaultThemeSettings,
+  type PublishingSettings,
+  type MenuGridConfig,
+  type ThemeSettings,
+} from '@/components/page-builder/types'
 import type { SaveStatus } from '@/components/page-builder/PublishBar'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -66,6 +73,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 type SettingsTab = 'appearance' | 'carousel' | 'menu'
@@ -73,6 +87,11 @@ type SettingsTab = 'appearance' | 'carousel' | 'menu'
 interface OrderDraft {
   bgColor: string
   bgImage: string
+  brandColor: string
+  headingFont: string
+  bodyFont: string
+  themeBgColor: string
+  themeTextColor: string
   slides: OrderPromoSlide[]
   aspectDesktop: CarouselAspect
   aspectMobile: CarouselAspectMobile
@@ -88,7 +107,6 @@ interface OrderPageEditorProps {
   businessId: string
   businessName: string
   logoUrl?: string | null
-  brandColor: string
   slug: string
   /** Canonical absolute URL for copy */
   orderUrl: string
@@ -96,14 +114,23 @@ interface OrderPageEditorProps {
   orderPath: string
   orderPublished: boolean
   publishing: PublishingSettings | null
+  initialTheme: Partial<ThemeSettings> | null
   categories: MenuCategory[]
   items: MenuItem[]
 }
 
-function draftFromPublishing(publishing: PublishingSettings | null): OrderDraft {
+function draftFromSources(
+  publishing: PublishingSettings | null,
+  theme: Partial<ThemeSettings> | null,
+): OrderDraft {
   return {
     bgColor: publishing?.order_background_color ?? '#ffffff',
     bgImage: publishing?.order_background_image_url ?? '',
+    brandColor: theme?.primary_color || defaultThemeSettings.primary_color,
+    headingFont: theme?.heading_font_family || defaultThemeSettings.heading_font_family || 'Inter',
+    bodyFont: theme?.font_family || defaultThemeSettings.font_family || 'Inter',
+    themeBgColor: theme?.background_color || defaultThemeSettings.background_color,
+    themeTextColor: theme?.text_color || defaultThemeSettings.text_color,
     slides: normalizeOrderPromoSlides(publishing?.order_promo_slides),
     aspectDesktop: normalizeCarouselAspect(publishing?.order_carousel_aspect_desktop, '16/9'),
     aspectMobile: normalizeCarouselAspectMobile(publishing?.order_carousel_aspect_mobile ?? 'same'),
@@ -115,6 +142,11 @@ function cloneDraft(d: OrderDraft): OrderDraft {
   return {
     bgColor: d.bgColor,
     bgImage: d.bgImage,
+    brandColor: d.brandColor,
+    headingFont: d.headingFont,
+    bodyFont: d.bodyFont,
+    themeBgColor: d.themeBgColor,
+    themeTextColor: d.themeTextColor,
     slides: d.slides.map(s => ({ ...s })),
     aspectDesktop: d.aspectDesktop,
     aspectMobile: d.aspectMobile,
@@ -126,12 +158,12 @@ export function OrderPageEditor({
   businessId,
   businessName,
   logoUrl,
-  brandColor,
   slug,
   orderUrl,
   orderPath,
   orderPublished: initialPublished,
   publishing,
+  initialTheme,
   categories,
   items,
 }: OrderPageEditorProps) {
@@ -145,7 +177,7 @@ export function OrderPageEditor({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublished)
   const [publishingBusy, setPublishingBusy] = useState(false)
-  const [draft, setDraft] = useState<OrderDraft>(() => draftFromPublishing(publishing))
+  const [draft, setDraft] = useState<OrderDraft>(() => draftFromSources(publishing, initialTheme))
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
@@ -176,16 +208,30 @@ export function OrderPageEditor({
     saveTimer.current = setTimeout(async () => {
       const current = draftRef.current
       setSaveStatus('saving')
-      const res = await saveOrderPageDraftAction(businessId, {
-        order_background_color: current.bgColor || null,
-        order_background_image_url: current.bgImage || null,
-        order_promo_slides: current.slides,
-        order_carousel_aspect_desktop: current.aspectDesktop,
-        order_carousel_aspect_mobile: current.aspectMobile,
-        order_menu_config: current.menuConfig,
-      })
-      if (!res.success) {
-        toast.error(res.error)
+      const [orderRes, themeRes] = await Promise.all([
+        saveOrderPageDraftAction(businessId, {
+          order_background_color: current.bgColor || null,
+          order_background_image_url: current.bgImage || null,
+          order_promo_slides: current.slides,
+          order_carousel_aspect_desktop: current.aspectDesktop,
+          order_carousel_aspect_mobile: current.aspectMobile,
+          order_menu_config: current.menuConfig,
+        }),
+        saveThemeAction(businessId, {
+          primary_color: current.brandColor,
+          background_color: current.themeBgColor,
+          text_color: current.themeTextColor,
+          font_family: current.bodyFont,
+          heading_font_family: current.headingFont,
+        }),
+      ])
+      if (!orderRes.success) {
+        toast.error(orderRes.error)
+        setSaveStatus('idle')
+        return
+      }
+      if (!themeRes.success) {
+        toast.error(themeRes.error)
         setSaveStatus('idle')
         return
       }
@@ -326,16 +372,30 @@ export function OrderPageEditor({
       saveTimer.current = null
       setSaveStatus('saving')
       const current = draftRef.current
-      const saveRes = await saveOrderPageDraftAction(businessId, {
-        order_background_color: current.bgColor || null,
-        order_background_image_url: current.bgImage || null,
-        order_promo_slides: current.slides,
-        order_carousel_aspect_desktop: current.aspectDesktop,
-        order_carousel_aspect_mobile: current.aspectMobile,
-        order_menu_config: current.menuConfig,
-      })
+      const [saveRes, themeRes] = await Promise.all([
+        saveOrderPageDraftAction(businessId, {
+          order_background_color: current.bgColor || null,
+          order_background_image_url: current.bgImage || null,
+          order_promo_slides: current.slides,
+          order_carousel_aspect_desktop: current.aspectDesktop,
+          order_carousel_aspect_mobile: current.aspectMobile,
+          order_menu_config: current.menuConfig,
+        }),
+        saveThemeAction(businessId, {
+          primary_color: current.brandColor,
+          background_color: current.themeBgColor,
+          text_color: current.themeTextColor,
+          font_family: current.bodyFont,
+          heading_font_family: current.headingFont,
+        }),
+      ])
       if (!saveRes.success) {
         toast.error(saveRes.error)
+        setSaveStatus('idle')
+        return
+      }
+      if (!themeRes.success) {
+        toast.error(themeRes.error)
         setSaveStatus('idle')
         return
       }
@@ -538,9 +598,11 @@ export function OrderPageEditor({
             device={device}
             businessName={businessName}
             logoUrl={logoUrl}
-            brandColor={brandColor}
+            brandColor={draft.brandColor}
             bgColor={draft.bgColor}
             bgImage={draft.bgImage}
+            headingFont={draft.headingFont}
+            bodyFont={draft.bodyFont}
             slides={previewSlides}
             aspectDesktop={draft.aspectDesktop}
             aspectMobile={draft.aspectMobile}
@@ -580,6 +642,68 @@ export function OrderPageEditor({
                   <p className="text-xs text-muted-foreground">
                     {t('orderPageAdmin.appearanceHint')}
                   </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t('pageBuilder.brandColor')}
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={draft.brandColor || '#E85D26'}
+                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
+                      className="size-9 rounded-lg border border-border cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={draft.brandColor}
+                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
+                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t('pageBuilder.headingFont')}
+                  </label>
+                  <Select
+                    value={draft.headingFont || 'Inter'}
+                    onValueChange={v => updateDraft(d => ({ ...d, headingFont: v }))}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {FONTS.map(f => (
+                        <SelectItem key={f.name} value={f.name} className="text-sm">
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t('pageBuilder.bodyFont')}
+                  </label>
+                  <Select
+                    value={draft.bodyFont || 'Inter'}
+                    onValueChange={v => updateDraft(d => ({ ...d, bodyFont: v }))}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {FONTS.map(f => (
+                        <SelectItem key={f.name} value={f.name} className="text-sm">
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">

@@ -1163,7 +1163,7 @@
     "draftHint": "Publish the order page under Publishing to make this URL live.",
     "goPublish": "Go to Publishing",
     "appearanceTitle": "Appearance",
-    "appearanceHint": "Background colour and optional full-bleed image behind the order page.",
+    "appearanceHint": "Brand colour, fonts, background colour, and optional full-bleed image for the order page.",
     "appearanceSaved": "Appearance saved — live now",
     "bgColor": "Background colour",
     "bgImage": "Background image",

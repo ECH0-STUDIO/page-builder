@@ -23,6 +23,8 @@ interface OrderPagePreviewProps {
   brandColor: string
   bgColor: string
   bgImage: string
+  headingFont?: string
+  bodyFont?: string
   slides: PromoSlide[]
   aspectDesktop: CarouselAspect
   aspectMobile: CarouselAspectMobile
@@ -39,6 +41,8 @@ export function OrderPagePreview({
   brandColor,
   bgColor,
   bgImage,
+  headingFont = 'Inter',
+  bodyFont = 'Inter',
   slides,
   aspectDesktop,
   aspectMobile,
@@ -48,6 +52,10 @@ export function OrderPagePreview({
   slug,
 }: OrderPagePreviewProps) {
   const isMobile = device === 'mobile'
+  const fontsToLoad = [...new Set([headingFont, bodyFont].filter(f => f && f !== 'Inter'))]
+  const googleFontUrl = fontsToLoad.length > 0
+    ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
+    : null
 
   return (
     <div
@@ -56,6 +64,7 @@ export function OrderPagePreview({
         isMobile ? 'max-w-[390px] rounded-[1.75rem] ring-4 ring-black/5' : 'max-w-[960px] rounded-xl',
       )}
     >
+      {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
       <div
         className="min-h-[520px] flex flex-col"
         style={
@@ -64,12 +73,21 @@ export function OrderPagePreview({
                 backgroundImage: `linear-gradient(rgba(243,244,246,0.85), rgba(243,244,246,0.85)), url(${bgImage})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
+                fontFamily: `'${bodyFont}', sans-serif`,
               }
-            : { backgroundColor: '#f3f4f6' }
+            : {
+                backgroundColor: '#f3f4f6',
+                fontFamily: `'${bodyFont}', sans-serif`,
+              }
         }
       >
+        <style>{`
+          .order-preview-canvas h1, .order-preview-canvas h2, .order-preview-canvas h3 {
+            font-family: '${headingFont}', sans-serif !important;
+          }
+        `}</style>
         <div
-          className="flex-1 flex flex-col shadow-sm"
+          className="order-preview-canvas flex-1 flex flex-col shadow-sm"
           style={{ backgroundColor: bgColor || '#ffffff' }}
         >
           {/* Static header chrome — logo + name only */}

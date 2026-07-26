@@ -44,7 +44,17 @@ export async function createServiceRequestAction(
     .select('id')
     .single()
 
-  if (error) return { success: false, error: error.message }
+  if (error) {
+    const msg = error.message || 'Failed to create request'
+    if (/schema cache|does not exist|Could not find the table/i.test(msg)) {
+      return {
+        success: false,
+        error:
+          'Service requests table is missing or not exposed. Run migration 042_service_requests_repair.sql in Supabase, then wait a few seconds for the API cache to reload.',
+      }
+    }
+    return { success: false, error: msg }
+  }
   return { success: true, data: { id: data.id } }
 }
 

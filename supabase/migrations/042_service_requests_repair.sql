@@ -1,6 +1,7 @@
 -- ============================================================
--- 036_service_requests.sql
--- Guest "Call staff" / "Request check" signals for the order page
+-- 042_service_requests_repair.sql
+-- Idempotent repair: grants + schema reload for PostgREST
+-- Fixes: "Could not find the table 'public.service_requests' in the schema cache"
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.service_requests (
@@ -20,6 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_service_requests_business_status
 CREATE INDEX IF NOT EXISTS idx_service_requests_business_created
   ON public.service_requests (business_id, created_at DESC);
 
+-- set_updated_at may not exist on older projects — only attach if present
 DO $$
 BEGIN
   IF EXISTS (
@@ -51,11 +53,11 @@ CREATE POLICY "Team can update service requests"
   ON public.service_requests FOR UPDATE
   USING (public.has_business_role(business_id, ARRAY['owner', 'manager', 'staff']));
 
+-- Critical: expose table to API roles (missing grants → schema cache miss)
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.service_requests TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.service_requests TO authenticated;
 GRANT ALL ON TABLE public.service_requests TO service_role;
 
--- Realtime for dashboard alerts (ignore if publication missing / already added)
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.service_requests;
@@ -64,4 +66,5 @@ EXCEPTION
   WHEN undefined_object THEN NULL;
 END $$;
 
+-- Force PostgREST to reload its schema cache
 NOTIFY pgrst, 'reload schema';

@@ -12,10 +12,15 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import type { NavbarConfig, NavLink } from '../types'
 import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
 import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
+
+function isInternalPath(href: string) {
+  return href.startsWith('/') && !href.startsWith('//')
+}
 
 interface NavbarRenderProps {
   config: NavbarConfig
@@ -98,12 +103,12 @@ export function NavbarRender({
 
           {/* Logo / brand */}
           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-            <a 
+            <a
               href="#"
               onClick={(e) => {
                 e.preventDefault()
                 if (!inEditor) {
-                  window.location.reload()
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
                 }
               }}
               style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', cursor: inEditor ? 'default' : 'pointer' }}
@@ -131,25 +136,43 @@ export function NavbarRender({
                 marginLeft: 'auto',
               }}
             >
-            {config.links.map((link, i) => (
-              <a
-                key={i}
-                href={getHref(link)}
-                target={linkTarget(link)}
-                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
-                style={{ ...linkStyle, opacity: 0.85 }}
-                onClick={e => {
-                  if (link.anchor && !inEditor) {
-                    e.preventDefault()
-                    handleLinkClick(link.href)
-                  }
-                }}
-                onMouseEnter={e => !inEditor && (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => !inEditor && (e.currentTarget.style.opacity = '0.85')}
-              >
-                {pickLocale(link.label, activeLocale)}
-              </a>
-            ))}
+            {config.links.map((link, i) => {
+              const href = getHref(link)
+              const label = pickLocale(link.label, activeLocale)
+              const sharedProps = {
+                style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
+                onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  if (!inEditor) e.currentTarget.style.opacity = '1'
+                },
+                onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  if (!inEditor) e.currentTarget.style.opacity = '0.85'
+                },
+              }
+              if (!link.anchor && isInternalPath(href) && !navLinkOpensNewTab(link)) {
+                return (
+                  <Link key={i} href={href} {...sharedProps}>
+                    {label}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={i}
+                  href={href}
+                  target={linkTarget(link)}
+                  rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
+                  {...sharedProps}
+                  onClick={e => {
+                    if (link.anchor && !inEditor) {
+                      e.preventDefault()
+                      handleLinkClick(link.href)
+                    }
+                  }}
+                >
+                  {label}
+                </a>
+              )
+            })}
           </div>
           )}
 
@@ -202,30 +225,42 @@ export function NavbarRender({
               display: 'none', // overridden by responsive CSS below
             }}
           >
-            {config.links.map((link, i) => (
-              <a
-                key={i}
-                href={getHref(link)}
-                target={linkTarget(link)}
-                rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
-                onClick={e => {
-                  if (link.anchor && !inEditor) {
-                    e.preventDefault()
-                    handleLinkClick(link.href)
-                  }
-                  setOpen(false)
-                }}
-                style={{
-                  ...linkStyle,
-                  display: 'block',
-                  padding: '12px 0',
-                  opacity: 1,
-                  borderBottom: i < config.links.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
-                }}
-              >
-                {pickLocale(link.label, activeLocale)}
-              </a>
-            ))}
+            {config.links.map((link, i) => {
+              const href = getHref(link)
+              const label = pickLocale(link.label, activeLocale)
+              const style: React.CSSProperties = {
+                ...linkStyle,
+                display: 'block',
+                padding: '12px 0',
+                opacity: 1,
+                borderBottom: i < config.links.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
+              }
+              if (!link.anchor && isInternalPath(href) && !navLinkOpensNewTab(link)) {
+                return (
+                  <Link key={i} href={href} style={style} onClick={() => setOpen(false)}>
+                    {label}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={i}
+                  href={href}
+                  target={linkTarget(link)}
+                  rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
+                  onClick={e => {
+                    if (link.anchor && !inEditor) {
+                      e.preventDefault()
+                      handleLinkClick(link.href)
+                    }
+                    setOpen(false)
+                  }}
+                  style={style}
+                >
+                  {label}
+                </a>
+              )
+            })}
           </div>
         )}
       </div>

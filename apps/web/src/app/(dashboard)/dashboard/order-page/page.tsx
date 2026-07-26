@@ -7,7 +7,6 @@ import { OrderPageEditor } from '@/components/order-page/OrderPageEditor'
 import { getPublicStoreUrl } from '@/lib/site-urls'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 import { defaultThemeSettings } from '@/components/page-builder/types'
-import { resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 
 export const metadata: Metadata = { title: 'Order Page' }
 export const dynamic = 'force-dynamic'
@@ -27,7 +26,7 @@ export default async function OrderPageAdminPage() {
       getPublishingAction(business.id),
       db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
       db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
-      db.from('theme_settings').select('primary_color').eq('business_id', business.id).maybeSingle(),
+      db.from('theme_settings').select('*').eq('business_id', business.id).maybeSingle(),
     ])
 
   const categories = normalizeMenuCategories((catsRaw ?? []) as Record<string, unknown>[])
@@ -40,21 +39,17 @@ export default async function OrderPageAdminPage() {
       ? Boolean(publishing?.published)
       : Boolean(publishing.order_published)
 
-  const themeTokens = resolveThemeTokens({
-    primary_color: themeRaw?.primary_color ?? defaultThemeSettings.primary_color,
-  })
-
   return (
     <OrderPageEditor
       businessId={business.id}
       businessName={business.name}
       logoUrl={business.logo_url}
-      brandColor={themeTokens.brandColor}
       slug={resolvedSlug}
       orderUrl={orderUrl}
       orderPath={orderPath}
       orderPublished={orderPublished}
       publishing={publishing}
+      initialTheme={themeRaw ?? defaultThemeSettings}
       categories={categories}
       items={items}
     />

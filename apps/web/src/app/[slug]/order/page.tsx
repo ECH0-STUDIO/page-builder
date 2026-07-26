@@ -83,27 +83,27 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       : Boolean(pubSettings.order_published)
   if (!orderPublished) notFound()
 
-  let pageBlocksRaw = pubSettings?.published_blocks as PageBlock[] | null | undefined
-  let themeRaw = pubSettings?.published_theme
-
-  if (!pageBlocksRaw || !themeRaw) {
-    const [blocksRes, themeRes] = await Promise.all([
-      db.from('page_blocks')
+  // Brand/fonts always come from live theme_settings so Order Page edits apply immediately
+  const publishedBlocks = pubSettings?.published_blocks as PageBlock[] | null | undefined
+  const [blocksRes, liveThemeRes] = await Promise.all([
+    publishedBlocks
+      ? Promise.resolve({ data: null })
+      : db.from('page_blocks')
         .select('*')
         .eq('business_id', business.id)
         .eq('visible', true)
         .order('sort_order', { ascending: true }),
-      db.from('theme_settings')
-        .select('*')
-        .eq('business_id', business.id)
-        .maybeSingle(),
-    ])
-    pageBlocksRaw = (blocksRes.data as PageBlock[]) ?? []
-    themeRaw = themeRes.data
-  } else {
-    pageBlocksRaw = pageBlocksRaw.filter(b => b.visible)
-  }
+    db.from('theme_settings')
+      .select('*')
+      .eq('business_id', business.id)
+      .maybeSingle(),
+  ])
 
+  const pageBlocksRaw: PageBlock[] = publishedBlocks
+    ? publishedBlocks.filter(b => b.visible)
+    : ((blocksRes.data as PageBlock[] | null) ?? [])
+
+  const themeRaw = liveThemeRes.data ?? pubSettings?.published_theme
   const bodyFont: string = themeRaw?.font_family ?? 'Inter'
   const headingFontRaw: string = themeRaw?.heading_font_family ?? 'Inter'
   const themeForTokens: Partial<ThemeSettings> = {

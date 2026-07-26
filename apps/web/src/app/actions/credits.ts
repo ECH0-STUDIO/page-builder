@@ -16,10 +16,7 @@ export async function getCreditBalanceAction(businessId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    // Opportunistic renewals while the owner is in the dashboard
-    await billCustomDomainIfDueAction(businessId)
-    await billPageViewsIfDueAction(businessId)
-
+    // Fast path — do not await billing on every sidebar / credits read
     const adminClient = createAdminClient()
     const { data, error } = await (adminClient as any)
       .from('credit_balances')
