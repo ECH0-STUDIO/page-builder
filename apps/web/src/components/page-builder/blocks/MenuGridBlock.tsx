@@ -428,7 +428,10 @@ export function MenuGridSettings({
       {/* Section colours — landing page builder only (order page uses Appearance) */}
       {!layoutOnly && (
         <div className="space-y-3">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{t('menuGridBlock.coloursHint')}</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">{t('menuGridBlock.background')}</Label>
