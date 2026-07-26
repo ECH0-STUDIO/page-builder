@@ -3,6 +3,24 @@
 -- Guest "Call staff" / "Request check" signals for the order page
 -- ============================================================
 
+-- Ensure role helper exists (production may not have run 027 yet)
+CREATE OR REPLACE FUNCTION public.has_business_role(b_id uuid, allowed_roles text[])
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.businesses b
+    WHERE b.id = b_id AND b.owner_id = auth.uid()
+  ) OR EXISTS (
+    SELECT 1 FROM public.business_members bm
+    WHERE bm.business_id = b_id
+    AND bm.user_id = auth.uid()
+    AND bm.role = ANY(allowed_roles)
+  );
+$$;
+
 CREATE TABLE IF NOT EXISTS public.service_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
@@ -44,12 +62,12 @@ CREATE POLICY "Anyone can insert service requests"
 DROP POLICY IF EXISTS "Team can view service requests" ON public.service_requests;
 CREATE POLICY "Team can view service requests"
   ON public.service_requests FOR SELECT
-  USING (public.has_business_role(business_id, ARRAY['owner', 'manager', 'staff']));
+  USING (public.has_business_role(business_id, ARRAY['owner', 'manager', 'staff']::text[]));
 
 DROP POLICY IF EXISTS "Team can update service requests" ON public.service_requests;
 CREATE POLICY "Team can update service requests"
   ON public.service_requests FOR UPDATE
-  USING (public.has_business_role(business_id, ARRAY['owner', 'manager', 'staff']));
+  USING (public.has_business_role(business_id, ARRAY['owner', 'manager', 'staff']::text[]));
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.service_requests TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.service_requests TO authenticated;
