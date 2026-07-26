@@ -289,10 +289,12 @@ export function PuckEditorShell({
       publishing,
       slug: business.slug ?? '',
       previewMode,
+      viewMode,
       onTogglePreview: () => setPreviewMode(p => !p),
+      onViewModeChange: setViewMode,
       onPublish: handlePublish,
     }),
-    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, handlePublish],
+    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, viewMode, handlePublish],
   )
 
   const puckOverrides = useMemo<Partial<Overrides>>(
