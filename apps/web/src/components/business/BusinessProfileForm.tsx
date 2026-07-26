@@ -29,7 +29,6 @@ import {
   type Business,
 } from '@/lib/business'
 import {
-  BUSINESS_CATEGORIES,
   BUSINESS_TAGS,
   DAYS_OF_WEEK,
   HOURS,
@@ -110,7 +109,6 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
   // General fields
   const [name, setName] = useState(business.name)
-  const [category, setCategory] = useState<string>(business.category?.[0] ?? '')
   const [tags, setTags] = useState<string[]>(business.tags ?? [])
   const [customTagInput, setCustomTagInput] = useState('')
   const [customTagsList, setCustomTagsList] = useState<string[]>(() => {
@@ -232,7 +230,6 @@ export function BusinessProfileForm({ business }: { business: Business }) {
     try {
       await updateBusiness(business.id, {
         name,
-        category: category ? [category] : [],
         tags,
         address: address || null,
         city: city || null,
@@ -317,7 +314,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
       <section className="space-y-4">
         <h2 className="text-base font-semibold">{t('businessProfile.general')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="prof-name">{t('businessProfile.businessName')}</Label>
             <Input
               id="prof-name"
@@ -325,20 +322,6 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               onChange={e => setName(e.target.value)}
               required
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prof-category">{t('businessProfile.category')}</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="prof-category">
-                <SelectValue placeholder={t('businessProfile.selectCategory')} />
-              </SelectTrigger>
-              <SelectContent>
-                {BUSINESS_CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

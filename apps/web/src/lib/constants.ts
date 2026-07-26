@@ -1,17 +1,7 @@
-// Business categories and tags — edit here to add/remove options
-// These are used in the onboarding wizard, business profile, and marketplace filtering
+// Business tags — edit here to add/remove amenity options (business profile)
 
-export const BUSINESS_CATEGORIES = [
-  { value: 'cafe',       label: 'Cafe & Coffee' },
-  { value: 'restaurant', label: 'Restaurant' },
-  { value: 'fast_food',  label: 'Fast Food & Street Food' },
-  { value: 'bakery',     label: 'Bakery & Desserts' },
-  { value: 'bar',        label: 'Bar & Drinks' },
-  { value: 'service',    label: 'Service Business' },
-  { value: 'retail',     label: 'Retail Shop' },
-  { value: 'beauty',     label: 'Beauty & Spa' },
-  { value: 'other',      label: 'Other' },
-] as const
+/** Default `businesses.category` for new businesses (restaurant MVP). */
+export const DEFAULT_BUSINESS_CATEGORY = ['restaurant'] as const
 
 export const BUSINESS_TAGS = [
   'Dine-in',
@@ -56,5 +46,4 @@ export const SOCIAL_LINKS_CONFIG = [
   { key: 'youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/@yourchannel' },
 ] as const
 
-export type CategoryValue = typeof BUSINESS_CATEGORIES[number]['value']
 export type SocialKey = typeof SOCIAL_LINKS_CONFIG[number]['key']
