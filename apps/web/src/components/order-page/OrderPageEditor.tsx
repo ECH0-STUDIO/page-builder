@@ -433,7 +433,7 @@ export function OrderPageEditor({
 
   return (
     <div className="flex flex-col h-dvh w-full overflow-hidden bg-background">
-      <header className="shrink-0 flex items-center gap-2 h-12 px-3 border-b border-border bg-background z-20">
+      <header className="shrink-0 flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-x-auto">
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
@@ -448,7 +448,7 @@ export function OrderPageEditor({
         <div className="min-w-0 flex-1" />
 
         <div className="flex items-center gap-1 shrink-0">
-          <div className="flex items-center gap-0.5 mr-1">
+          <div className="hidden sm:flex items-center gap-0.5 mr-1">
             <button
               type="button"
               onClick={undo}

@@ -19,31 +19,26 @@ import { cn } from '@/lib/utils'
 import { slugify, checkSlugAvailable } from '@/lib/business'
 import { BUSINESS_CATEGORIES } from '@/lib/constants'
 import { createBusinessAction } from '@/app/actions/business'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 type Step = 1 | 2
 
 export default function NewBusinessPage() {
   const router = useRouter()
+  const { t } = useTranslation()
 
-  // Step 1
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
   const [slugEdited, setSlugEdited] = useState(false)
-
-  // Step 2
   const [category, setCategory] = useState('')
-
   const [step, setStep] = useState<Step>(1)
   const [saving, setSaving] = useState(false)
 
-  // Auto-generate slug from name
-  // Auto-generate slug from name during render
   if (!slugEdited && name && slug !== slugify(name)) {
     setSlug(slugify(name))
   }
 
-  // Debounced slug check
   const checkSlug = useCallback(async (value: string) => {
     if (value.length < 2) { setSlugStatus('idle'); return }
     setSlugStatus('checking')
@@ -51,7 +46,6 @@ export default function NewBusinessPage() {
     setSlugStatus(available ? 'available' : 'taken')
   }, [])
 
-  // Sync idle status during render
   if (!slug && slugStatus !== 'idle') {
     setSlugStatus('idle')
   }
@@ -81,7 +75,7 @@ export default function NewBusinessPage() {
     const result = await createBusinessAction({ name, slug, category: [category] })
 
     if (result.success) {
-      toast.success('Business created!')
+      toast.success(t('onboarding.created'))
       router.push('/dashboard')
       router.refresh()
     } else {
@@ -92,7 +86,6 @@ export default function NewBusinessPage() {
 
   return (
     <div>
-      {/* Step indicators */}
       <div className="flex items-center gap-3 mb-8">
         {([1, 2] as const).map((s, i) => (
           <div key={s} className="flex items-center gap-3">
@@ -109,22 +102,19 @@ export default function NewBusinessPage() {
         ))}
       </div>
 
-      {/* Step 1: Name & Slug */}
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Name your business</CardTitle>
-            <CardDescription>
-              This becomes your public page URL. You can change it later.
-            </CardDescription>
+            <CardTitle>{t('onboarding.nameTitle')}</CardTitle>
+            <CardDescription>{t('onboarding.nameDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleStep1Submit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="biz-name">Business name</Label>
+                <Label htmlFor="biz-name">{t('onboarding.businessName')}</Label>
                 <Input
                   id="biz-name"
-                  placeholder="La Cafe, Pho 24, Tran Bakery..."
+                  placeholder={t('onboarding.namePlaceholder')}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   required
@@ -134,30 +124,30 @@ export default function NewBusinessPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="biz-slug">
-                  Page URL slug
+                  {t('onboarding.slugLabel')}
                   {slugStatus === 'checking' && (
                     <span className="ml-2 text-xs text-muted-foreground inline-flex items-center gap-1">
-                      <Loader2 className="size-3 animate-spin" /> Checking…
+                      <Loader2 className="size-3 animate-spin" /> {t('onboarding.checking')}
                     </span>
                   )}
                   {slugStatus === 'available' && (
                     <span className="ml-2 text-xs text-green-600 dark:text-green-400 inline-flex items-center gap-1">
-                      <CheckCircle2 className="size-3" /> Available
+                      <CheckCircle2 className="size-3" /> {t('onboarding.available')}
                     </span>
                   )}
                   {slugStatus === 'taken' && (
                     <span className="ml-2 text-xs text-destructive inline-flex items-center gap-1">
-                      <AlertCircle className="size-3" /> Already taken
+                      <AlertCircle className="size-3" /> {t('onboarding.taken')}
                     </span>
                   )}
                 </Label>
-                <div className="flex items-center">
-                  <span className="px-3 py-2 bg-muted border border-r-0 border-input rounded-l-md text-sm text-muted-foreground">
+                <div className="flex items-center min-w-0">
+                  <span className="px-2 sm:px-3 py-2 bg-muted border border-r-0 border-input rounded-l-md text-xs sm:text-sm text-muted-foreground shrink-0 max-w-[40%] truncate">
                     eatery.app/
                   </span>
                   <Input
                     id="biz-slug"
-                    className="rounded-l-none"
+                    className="rounded-l-none min-w-0"
                     placeholder="la-cafe"
                     value={slug}
                     onChange={e => handleSlugChange(e.target.value)}
@@ -165,9 +155,7 @@ export default function NewBusinessPage() {
                     minLength={2}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Lowercase letters, numbers, and hyphens only.
-                </p>
+                <p className="text-xs text-muted-foreground">{t('onboarding.slugHint')}</p>
               </div>
 
               <Button
@@ -175,34 +163,31 @@ export default function NewBusinessPage() {
                 className="w-full"
                 disabled={slugStatus !== 'available' || !name || !slug}
               >
-                Continue
+                {t('onboarding.continue')}
               </Button>
             </form>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 2: Category */}
       {step === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle>What type of business?</CardTitle>
-            <CardDescription>
-              This helps customers find your restaurant online.
-            </CardDescription>
+            <CardTitle>{t('onboarding.categoryTitle')}</CardTitle>
+            <CardDescription>{t('onboarding.categoryDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleFinish} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="biz-category">Category</Label>
+                <Label htmlFor="biz-category">{t('onboarding.category')}</Label>
                 <Select value={category} onValueChange={setCategory} required>
                   <SelectTrigger id="biz-category" className="w-full">
-                    <SelectValue placeholder="Select a category…" />
+                    <SelectValue placeholder={t('onboarding.selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
                     {BUSINESS_CATEGORIES.map(cat => (
                       <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
+                        {t(`onboarding.categories.${cat.value}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -217,7 +202,7 @@ export default function NewBusinessPage() {
                   className="flex-1"
                   disabled={saving}
                 >
-                  Back
+                  {t('onboarding.back')}
                 </Button>
                 <Button
                   type="submit"
@@ -225,8 +210,8 @@ export default function NewBusinessPage() {
                   disabled={!category || saving}
                 >
                   {saving ? (
-                    <><Loader2 className="size-4 animate-spin mr-2" />Creating…</>
-                  ) : 'Create business'}
+                    <><Loader2 className="size-4 animate-spin mr-2" />{t('onboarding.creating')}</>
+                  ) : t('onboarding.create')}
                 </Button>
               </div>
             </form>

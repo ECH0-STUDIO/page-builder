@@ -1,13 +1,31 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AcceptInviteForm } from './AcceptInviteForm'
+import { I18nProvider } from '@/i18n/I18nProvider'
+import { getDictionary } from '@/i18n/getDictionary'
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
+  const dictionary = await getDictionary()
+  const t = (key: string, vars?: Record<string, string>) => {
+    const parts = key.split('.')
+    let value: unknown = dictionary
+    for (const p of parts) {
+      if (value == null || typeof value !== 'object') return key
+      value = (value as Record<string, unknown>)[p]
+    }
+    let out = typeof value === 'string' ? value : key
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        out = out.replace(`{${k}}`, v)
+      }
+    }
+    return out
+  }
+
   const supabase = await createClient()
   const adminClient = createAdminClient()
 
-  // 1. Validate the token (requires admin client because RLS restricts to business owners)
   const { data: invite } = await adminClient.from('team_invitations')
     .select(`
       id,
@@ -22,10 +40,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   if (!invite) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
-          <h2 className="text-xl font-bold text-gray-900">Invalid Invitation</h2>
-          <p className="text-gray-500 mt-2">This invitation link is invalid or has expired.</p>
+          <h2 className="text-xl font-bold text-gray-900">{t('invite.invalidTitle')}</h2>
+          <p className="text-gray-500 mt-2">{t('invite.invalidDesc')}</p>
         </div>
       </div>
     )
@@ -33,50 +51,50 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   if (invite.status === 'accepted') {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
-          <h2 className="text-xl font-bold text-gray-900">Already Accepted</h2>
-          <p className="text-gray-500 mt-2">This invitation has already been accepted.</p>
+          <h2 className="text-xl font-bold text-gray-900">{t('invite.acceptedTitle')}</h2>
+          <p className="text-gray-500 mt-2">{t('invite.acceptedDesc')}</p>
         </div>
       </div>
     )
   }
 
-  // 2. Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    // Redirect to login with a next parameter to come back here
     redirect(`/login?next=/invite/${token}`)
   }
 
-  // 3. Ensure the logged-in user's email matches the invitation
   if (user.email !== invite.email) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
-          <h2 className="text-xl font-bold text-gray-900">Email Mismatch</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('invite.mismatchTitle')}</h2>
           <p className="text-gray-500 mt-2">
-            This invitation was sent to <strong>{invite.email}</strong>, but you are logged in as <strong>{user.email}</strong>.
+            {t('invite.mismatchDesc', { email: invite.email, current: user.email || '' })}
           </p>
-          <p className="text-sm text-gray-400 mt-4">Please log out and log in with the correct email.</p>
+          <p className="text-sm text-gray-400 mt-4">{t('invite.mismatchHint')}</p>
         </div>
       </div>
     )
   }
 
+  const businessName = (invite.businesses as { name?: string } | null)?.name || ''
+
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Join Team</h2>
-          <p className="text-gray-500 mt-2">
-            You've been invited to join <strong>{invite.businesses.name}</strong> as a {invite.role}.
-          </p>
+    <I18nProvider dictionary={dictionary}>
+      <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{t('invite.joinTitle')}</h2>
+            <p className="text-gray-500 mt-2">
+              {t('invite.joinDesc', { business: businessName, role: invite.role })}
+            </p>
+          </div>
+          <AcceptInviteForm token={token} />
         </div>
-        
-        <AcceptInviteForm token={token} />
       </div>
-    </div>
+    </I18nProvider>
   )
 }

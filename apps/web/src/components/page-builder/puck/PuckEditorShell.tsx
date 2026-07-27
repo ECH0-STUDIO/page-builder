@@ -98,6 +98,24 @@ export function PuckEditorShell({
   const [previewMode, setPreviewMode] = useState(false)
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop')
   const canvasPreviewLayout = viewMode === 'mobile' ? 'mobile' as const : 'desktop' as const
+  const [leftSideBarVisible, setLeftSideBarVisible] = useState(true)
+  const [rightSideBarVisible, setRightSideBarVisible] = useState(true)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const apply = () => {
+      if (mq.matches) {
+        setLeftSideBarVisible(false)
+        setRightSideBarVisible(false)
+      } else {
+        setLeftSideBarVisible(true)
+        setRightSideBarVisible(true)
+      }
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -205,7 +223,7 @@ export function PuckEditorShell({
         saveNavbarTimer.current = setTimeout(() => {
           saveNavbarAction(business.id, chrome.navbarConfig).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
-            else toast.error('Failed to save navbar: ' + res.error)
+            else toast.error(t('pageBuilder.toastSaveNavbarFailed') + res.error)
           })
         }, 1000)
 
@@ -213,7 +231,7 @@ export function PuckEditorShell({
         saveFooterTimer.current = setTimeout(() => {
           saveFooterAction(business.id, chrome.footerConfig).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
-            else toast.error('Failed to save footer: ' + res.error)
+            else toast.error(t('pageBuilder.toastSaveFooterFailed') + res.error)
           })
         }, 1000)
 
@@ -221,7 +239,7 @@ export function PuckEditorShell({
       })
       return chrome
     },
-    [business.id],
+    [business.id, t],
   )
 
   const performSave = useCallback(
@@ -269,16 +287,16 @@ export function PuckEditorShell({
           setPublished(state)
           setPublishingSettings(res.data)
           setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
-          toast.success(state ? 'Page published successfully!' : 'Page unpublished')
+          toast.success(state ? t('pageBuilder.toastPublished') : t('pageBuilder.toastUnpublished'))
         } else {
           toast.error(res.error)
         }
       } catch {
-        toast.error('Failed to toggle publish status')
+        toast.error(t('pageBuilder.toastPublishFailed'))
       }
       setPublishing(false)
     },
-    [business.id, saveNow],
+    [business.id, saveNow, t],
   )
 
   const chromeProps = useMemo(
@@ -358,13 +376,13 @@ export function PuckEditorShell({
             heading_font_family: next.heading_font_family || 'Inter',
           }).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
-            else toast.error('Failed to save theme: ' + res.error)
+            else toast.error(t('pageBuilder.toastSaveThemeFailed') + res.error)
           })
         }, 1000)
         return next
       })
     },
-    [business.id],
+    [business.id, t],
   )
 
   const handlePublishingChange = useCallback(
@@ -408,8 +426,8 @@ export function PuckEditorShell({
               overrides={puckOverrides}
               iframe={{ enabled: false }}
               ui={{
-                leftSideBarVisible: !previewMode,
-                rightSideBarVisible: !previewMode,
+                leftSideBarVisible: previewMode ? false : leftSideBarVisible,
+                rightSideBarVisible: previewMode ? false : rightSideBarVisible,
                 previewMode: previewMode ? 'interactive' : 'edit',
               }}
             />

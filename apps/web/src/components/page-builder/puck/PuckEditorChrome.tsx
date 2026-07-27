@@ -226,12 +226,12 @@ export function PuckCustomHeader({
   }
 
   return (
-    <header className="eatery-puck-header flex items-center gap-2 h-12 px-3 shrink-0 w-full min-w-0 border-b border-border bg-background">
+    <header className="eatery-puck-header flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-x-auto">
       <PuckHeaderBack />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
       <PuckSidebarToggles />
       <div className="flex-1 min-w-0" />
-      <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">{chrome}</div>
+      <div className="flex items-center gap-1 shrink-0 justify-end">{chrome}</div>
     </header>
   )
 }
@@ -309,7 +309,7 @@ export function PuckHeaderActions({
       <Badge
         variant="outline"
         className={cn(
-          'text-xs shrink-0 hidden sm:flex items-center gap-1.5 pl-2',
+          'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
           showChanges
             ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
             : published

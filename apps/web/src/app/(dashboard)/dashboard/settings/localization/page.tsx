@@ -31,8 +31,8 @@ export default async function LocalizationPage() {
       
       <div className="bg-white border rounded-xl p-6">
         <LocalizationForm 
-          initialLanguage={profile?.language || 'en'} 
-          initialCurrency={profile?.currency || 'USD'} 
+          initialLanguage={profile?.language || 'vi'} 
+          initialCurrency={profile?.currency || 'VND'} 
         />
       </div>
     </div>
