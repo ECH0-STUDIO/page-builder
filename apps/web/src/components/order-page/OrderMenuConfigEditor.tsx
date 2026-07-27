@@ -2,6 +2,11 @@
 
 /**
  * Controlled editor for order-page menu layout (autosave owned by parent).
+ *
+ * Intentionally off vs landing page builder Menu Grid:
+ * - Category / custom-item picking (`layoutOnly`) — order always shows all visible categories
+ * - Section colours — order Appearance owns page text; cards use Card style below
+ * Landing-only blocks (Hero, Text+Image, Contact, Navbar, Footer, QR) are not part of this editor.
  */
 
 import { RotateCcw } from 'lucide-react'

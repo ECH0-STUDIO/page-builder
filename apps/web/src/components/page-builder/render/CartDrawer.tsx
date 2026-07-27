@@ -70,6 +70,8 @@ interface CartDrawerProps {
   locale?: string
   /** Tailwind bottom offset for the floating cart FAB (e.g. bottom-24 above service bar) */
   fabOffsetClass?: string
+  /** Brand / primary colour for FAB + checkout CTA */
+  brandColor?: string
 }
 
 type DrawerStep = 'cart' | 'payment'
@@ -81,10 +83,12 @@ export function CartDrawer({
   contained,
   locale = 'vi',
   fabOffsetClass = 'bottom-6',
+  brandColor = '#E85D26',
 }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const activeLocale = toSupportedLocale(locale)
   const { t } = useTranslationWithFallback(activeLocale)
+  const actionColor = brandColor || '#E85D26'
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const tableFromUrl = searchParams.get('table') ?? ''
@@ -194,7 +198,8 @@ export function CartDrawer({
       {!open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
-          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
+          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:opacity-90 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
+          style={{ backgroundColor: actionColor }}
           aria-label={t('cart.viewOrder')}
         >
           <div className="relative">
@@ -306,7 +311,8 @@ export function CartDrawer({
                 <button
                   onClick={handlePlaceOrder}
                   disabled={isPending || items.length === 0}
-                  className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-base flex items-center justify-center gap-2.5 hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg shadow-gray-900/20 disabled:opacity-70 disabled:pointer-events-none"
+                  className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70 disabled:pointer-events-none"
+                  style={{ backgroundColor: actionColor }}
                 >
                   {isPending ? <Loader2 className="size-5 animate-spin" /> : previewMode ? t('cart.testPlaceOrder') : t('cart.placeOrder')}
                 </button>

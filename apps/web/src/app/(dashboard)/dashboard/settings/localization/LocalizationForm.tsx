@@ -53,10 +53,10 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
     setLoading(false)
 
     if (res.error) {
-      toast.error('Failed to update preferences')
+      toast.error(t('settings.localization.toastFailed'))
     } else {
       savedRef.current = true
-      toast.success('Preferences updated')
+      toast.success(t('settings.localization.toastUpdated'))
       router.refresh()
     }
   }

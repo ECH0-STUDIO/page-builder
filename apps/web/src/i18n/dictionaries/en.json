@@ -320,6 +320,9 @@
   },
   "pageBuilder": {
     "back": "Back",
+    "pageSwitcherLabel": "Page to edit",
+    "modeLanding": "Landing",
+    "modeOrder": "Order",
     "unsaved": "Unsaved changes",
     "saving": "Saving…",
     "saved": "Saved",
@@ -457,7 +460,13 @@
     "closePreview": "Close Preview",
     "changes": "Changes",
     "nothingToUndo": "Nothing more to undo",
-    "nothingToRedo": "Nothing more to redo"
+    "nothingToRedo": "Nothing more to redo",
+    "toastPublished": "Page published successfully!",
+    "toastUnpublished": "Page unpublished",
+    "toastPublishFailed": "Failed to toggle publish status",
+    "toastSaveThemeFailed": "Failed to save theme: ",
+    "toastSaveNavbarFailed": "Failed to save navbar: ",
+    "toastSaveFooterFailed": "Failed to save footer: "
   },
   "puck": {
     "blocks": "Blocks",
@@ -588,7 +597,9 @@
       "regionSub": "Updates both the dashboard and public menu defaults.",
       "enOption": "English - USD ($)",
       "viOption": "Tiếng Việt - VND (₫)",
-      "save": "Save Preferences"
+      "save": "Save Preferences",
+      "toastUpdated": "Preferences updated",
+      "toastFailed": "Failed to update preferences"
     }
   },
   "heroBlock": {
@@ -719,7 +730,23 @@
     "openingHours": "Opening hours",
     "socialIcons": "Social Icons",
     "noSocialsSet": "No social links set on the business profile yet. Add them in the Business settings.",
-    "socialsPreview": "Socials:"
+    "socialsPreview": "Socials:",
+    "addressLabel": "Address",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "hoursLabel": "Opening Hours",
+    "connectLabel": "Connect",
+    "closed": "Closed",
+    "mapPlaceholder": "Map will appear once an address is set in Business Profile",
+    "daysShort": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
   },
   "menuGridBlock": {
     "layout": "Layout",
@@ -749,9 +776,16 @@
     "itemDescriptions": "Item descriptions",
     "prices": "Prices",
     "soldOutBadge": "\"Sold Out\" badge",
-    "colours": "Colours",
-    "background": "Background",
-    "text": "Text",
+    "colours": "Section colours",
+    "coloursHint": "Background and heading/tab text for the section itself — not the menu item cards.",
+    "background": "Section background",
+    "text": "Section text",
+    "cardStyle": "Menu card style",
+    "cardStyleHint": "Background, text, border, and corner radius for each menu item card — set separately from the section above.",
+    "cardBackground": "Card background",
+    "cardText": "Card text",
+    "cardBorder": "Card border",
+    "cardRadius": "Corner radius",
     "tabsOn": "Tabs on",
     "noTabs": "No tabs",
     "menu": "Menu",
@@ -829,6 +863,7 @@
     "scanToView": "Scan to view our menu",
     "size": "Size",
     "alignment": "Alignment",
+    "radius": "Corner radius",
     "showDownload": "Show download button",
     "colours": "Colours",
     "background": "Background",
@@ -1163,8 +1198,10 @@
     "draftHint": "Publish the order page under Publishing to make this URL live.",
     "goPublish": "Go to Publishing",
     "appearanceTitle": "Appearance",
-    "appearanceHint": "Brand colour, fonts, background colour, and optional full-bleed image for the order page.",
+    "appearanceHint": "Brand colour, text colour, fonts, background colour, and optional full-bleed image for the order page.",
     "appearanceSaved": "Appearance saved — live now",
+    "textColorHint": "Used for category labels and headings. Menu cards keep dark text on white.",
+    "pageBackground": "Page background",
     "bgColor": "Background colour",
     "bgImage": "Background image",
     "uploadBg": "Upload background",
@@ -1198,5 +1235,49 @@
   "liveStore": {
     "language": "Language",
     "poweredBy": "Powered by Eatery"
+  },
+  "onboarding": {
+    "nameTitle": "Name your business",
+    "nameDesc": "This becomes your public page URL. You can change it later.",
+    "businessName": "Business name",
+    "namePlaceholder": "La Cafe, Pho 24, Tran Bakery...",
+    "slugLabel": "Page URL slug",
+    "checking": "Checking…",
+    "available": "Available",
+    "taken": "Already taken",
+    "slugHint": "Lowercase letters, numbers, and hyphens only.",
+    "continue": "Continue",
+    "categoryTitle": "What type of business?",
+    "categoryDesc": "This helps customers find your restaurant online.",
+    "category": "Category",
+    "selectCategory": "Select a category…",
+    "back": "Back",
+    "create": "Create business",
+    "creating": "Creating…",
+    "created": "Business created!",
+    "categories": {
+      "cafe": "Cafe & Coffee",
+      "restaurant": "Restaurant",
+      "fast_food": "Fast Food & Street Food",
+      "bakery": "Bakery & Desserts",
+      "bar": "Bar & Drinks",
+      "service": "Service Business",
+      "retail": "Retail Shop",
+      "beauty": "Beauty & Spa",
+      "other": "Other"
+    }
+  },
+  "invite": {
+    "invalidTitle": "Invalid Invitation",
+    "invalidDesc": "This invitation link is invalid or has expired.",
+    "acceptedTitle": "Already Accepted",
+    "acceptedDesc": "This invitation has already been accepted.",
+    "mismatchTitle": "Email Mismatch",
+    "mismatchDesc": "This invitation was sent to {email}, but you are logged in as {current}.",
+    "mismatchHint": "Please log out and log in with the correct email.",
+    "joinTitle": "Join Team",
+    "joinDesc": "You've been invited to join {business} as a {role}.",
+    "accept": "Accept Invitation",
+    "acceptedToast": "Invitation accepted! Welcome to the team."
   }
 }

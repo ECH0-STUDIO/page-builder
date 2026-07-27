@@ -74,6 +74,18 @@
   box-sizing: border-box;
 }
 
+/* Pin Global Settings to the bottom of the left plugin bar (desktop) */
+@media (min-width: 638px) {
+  .eatery-puck [class*='Nav-list'] {
+    height: 100%;
+  }
+
+  .eatery-puck [class*='NavItem']:has([data-puck-plugin='settings']) {
+    margin-top: auto;
+    margin-bottom: var(--puck-space-4, 16px);
+  }
+}
+
 /* Puck insertion zones between blocks:
    keep drag/drop behavior, but render as a thin rail (not a large spacer). */
 .eatery-puck [class*='DropZone-hitbox'] {

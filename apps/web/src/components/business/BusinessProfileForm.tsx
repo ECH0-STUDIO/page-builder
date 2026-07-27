@@ -335,7 +335,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               </SelectTrigger>
               <SelectContent>
                 {BUSINESS_CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{t(`onboarding.categories.${c.value}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

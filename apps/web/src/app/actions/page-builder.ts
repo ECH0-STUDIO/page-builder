@@ -264,7 +264,7 @@ export async function saveOrderPromoSlidesAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return {
     success: true,
@@ -310,7 +310,7 @@ export async function saveOrderMenuConfigAction(
     item_ids: [] as string[],
   }
   revalidatePath('/dashboard/publishing')
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: orderSaved }
 }
@@ -331,7 +331,7 @@ export async function clearOrderMenuConfigAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/publishing')
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
@@ -361,7 +361,7 @@ export async function saveOrderAppearanceAction(
     .single()
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
@@ -392,7 +392,7 @@ export async function saveOrderCarouselAspectAction(
     )
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   revalidatePath('/dashboard/publishing')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: { desktop, mobile } }
@@ -449,7 +449,7 @@ export async function saveOrderPageDraftAction(
     .single()
 
   if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/order-page')
+  revalidatePath('/dashboard/pages')
   revalidatePath('/dashboard/publishing')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }

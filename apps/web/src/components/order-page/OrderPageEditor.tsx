@@ -56,7 +56,6 @@ import {
 } from '@/app/actions/page-builder'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import {
-  GOOGLE_FONTS as FONTS,
   defaultThemeSettings,
   type PublishingSettings,
   type MenuGridConfig,
@@ -67,19 +66,19 @@ import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemeAppearanceFields } from '@/components/shared/ThemeAppearanceFields'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  PageBuilderModeSwitcher,
+  type BuilderPageMode,
+} from '@/components/page-builder/PageBuilderModeSwitcher'
 import { cn } from '@/lib/utils'
 
 type SettingsTab = 'appearance' | 'carousel' | 'menu'
@@ -117,6 +116,8 @@ interface OrderPageEditorProps {
   initialTheme: Partial<ThemeSettings> | null
   categories: MenuCategory[]
   items: MenuItem[]
+  /** Unified builder mode — shows Landing | Order switcher when set */
+  builderMode?: BuilderPageMode
 }
 
 function draftFromSources(
@@ -166,6 +167,7 @@ export function OrderPageEditor({
   initialTheme,
   categories,
   items,
+  builderMode = 'order',
 }: OrderPageEditorProps) {
   const { t } = useTranslation()
   const router = useRouter()
@@ -191,7 +193,12 @@ export function OrderPageEditor({
   const skipHistory = useRef(false)
   const isFirstSave = useRef(true)
 
-  const previewMenuConfig = draft.menuConfig ?? defaultOrderMenuConfig()
+  const baseMenuConfig = draft.menuConfig ?? defaultOrderMenuConfig()
+  // Appearance text colour drives category chrome; card text stays dark on white cards.
+  const previewMenuConfig: MenuGridConfig = {
+    ...baseMenuConfig,
+    text_color: draft.themeTextColor || '#111111',
+  }
 
   const previewSlides = useMemo(
     () =>
@@ -426,7 +433,7 @@ export function OrderPageEditor({
 
   return (
     <div className="flex flex-col h-dvh w-full overflow-hidden bg-background">
-      <header className="shrink-0 flex items-center gap-2 h-12 px-3 border-b border-border bg-background z-20">
+      <header className="shrink-0 flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-x-auto">
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
@@ -436,19 +443,12 @@ export function OrderPageEditor({
           <span className="hidden sm:inline text-xs font-medium">{t('pageBuilder.back')}</span>
         </button>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground truncate">
-              {t('orderPageAdmin.title')}
-            </span>
-            <span className="hidden sm:inline text-xs text-muted-foreground truncate">
-              /{slug}/order
-            </span>
-          </div>
-        </div>
+        <PageBuilderModeSwitcher mode={builderMode} />
+
+        <div className="min-w-0 flex-1" />
 
         <div className="flex items-center gap-1 shrink-0">
-          <div className="flex items-center gap-0.5 mr-1">
+          <div className="hidden sm:flex items-center gap-0.5 mr-1">
             <button
               type="button"
               onClick={undo}
@@ -529,10 +529,11 @@ export function OrderPageEditor({
               href={orderPath}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              title={t('orderPageAdmin.openLive')}
+              aria-label={t('orderPageAdmin.openLive')}
             >
-              <ExternalLink className="size-3.5" />
-              <span className="hidden md:inline">{t('orderPageAdmin.openLive')}</span>
+              <ExternalLink className="size-4" />
             </a>
           )}
 
@@ -644,92 +645,41 @@ export function OrderPageEditor({
                   </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.brandColor')}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={draft.brandColor || '#E85D26'}
-                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
-                      className="size-9 rounded-lg border border-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={draft.brandColor}
-                      onChange={e => updateDraft(d => ({ ...d, brandColor: e.target.value }))}
-                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
-                    />
-                  </div>
+                {/* Shared with landing Global Settings — brand / text / fonts */}
+                <ThemeAppearanceFields
+                  values={{
+                    brandColor: draft.brandColor || '#E85D26',
+                    textColor: draft.themeTextColor || '#111111',
+                    headingFont: draft.headingFont || 'Inter',
+                    bodyFont: draft.bodyFont || 'Inter',
+                  }}
+                  textColorHint={t('orderPageAdmin.textColorHint')}
+                  onChange={patch =>
+                    updateDraft(d => ({
+                      ...d,
+                      ...(patch.brandColor != null ? { brandColor: patch.brandColor } : {}),
+                      ...(patch.textColor != null ? { themeTextColor: patch.textColor } : {}),
+                      ...(patch.headingFont != null ? { headingFont: patch.headingFont } : {}),
+                      ...(patch.bodyFont != null ? { bodyFont: patch.bodyFont } : {}),
+                    }))
+                  }
+                />
+
+                {/* Order-page-only background (not theme background) */}
+                <div className="space-y-3 border-t border-border pt-4">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('orderPageAdmin.pageBackground')}
+                  </Label>
+                  <ColorSwatchField
+                    label={t('orderPageAdmin.bgColor')}
+                    value={draft.bgColor || '#ffffff'}
+                    fallback="#ffffff"
+                    onChange={v => updateDraft(d => ({ ...d, bgColor: v }))}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.headingFont')}
-                  </label>
-                  <Select
-                    value={draft.headingFont || 'Inter'}
-                    onValueChange={v => updateDraft(d => ({ ...d, headingFont: v }))}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {FONTS.map(f => (
-                        <SelectItem key={f.name} value={f.name} className="text-sm">
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('pageBuilder.bodyFont')}
-                  </label>
-                  <Select
-                    value={draft.bodyFont || 'Inter'}
-                    onValueChange={v => updateDraft(d => ({ ...d, bodyFont: v }))}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {FONTS.map(f => (
-                        <SelectItem key={f.name} value={f.name} className="text-sm">
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('orderPageAdmin.bgColor')}
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={draft.bgColor || '#ffffff'}
-                      onChange={e => updateDraft(d => ({ ...d, bgColor: e.target.value }))}
-                      className="size-9 rounded-lg border border-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={draft.bgColor}
-                      onChange={e => updateDraft(d => ({ ...d, bgColor: e.target.value }))}
-                      className="h-9 px-3 rounded-lg border border-border text-sm font-mono w-32"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    {t('orderPageAdmin.bgImage')}
-                  </label>
+                  <Label className="text-xs">{t('orderPageAdmin.bgImage')}</Label>
                   <input
                     ref={fileRef}
                     type="file"
@@ -849,7 +799,7 @@ export function OrderPageEditor({
                   <span className="text-xs font-medium">{t('publishing.orderMenuTitle')}</span>
                 </div>
                 <OrderMenuConfigEditor
-                  config={previewMenuConfig}
+                  config={baseMenuConfig}
                   isCustomized={draft.menuConfig != null}
                   categories={categories}
                   items={items}

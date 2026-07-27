@@ -17,7 +17,6 @@ import {
   Monitor,
   PanelLeft,
   PanelRight,
-  Settings,
   Smartphone,
   Eye,
   X,
@@ -33,6 +32,10 @@ import {
 import { getPublicStoreUrl } from '@/lib/site-urls'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import {
+  PageBuilderModeSwitcher,
+  type BuilderPageMode,
+} from '@/components/page-builder/PageBuilderModeSwitcher'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
@@ -86,7 +89,6 @@ interface PuckEditorChromeProps {
   onTogglePreview: () => void
   onViewModeChange: (mode: 'desktop' | 'mobile') => void
   onPublish: (state: boolean) => void
-  onOpenGlobalSettings: () => void
 }
 
 export function PuckHeaderBack() {
@@ -155,29 +157,29 @@ export function PuckViewportToggle({
         type="button"
         onClick={() => onChange('desktop')}
         className={cn(
-          'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+          'p-1.5 rounded-md transition-colors',
           viewMode === 'desktop'
             ? 'bg-accent text-foreground'
-            : 'text-muted-foreground hover:text-foreground',
+            : 'text-muted-foreground hover:bg-accent/60',
         )}
         title={t('pageBuilder.desktop')}
+        aria-label={t('pageBuilder.desktop')}
       >
-        <Monitor className="size-3.5" />
-        <span className="hidden xl:inline">{t('pageBuilder.desktop')}</span>
+        <Monitor className="size-4" />
       </button>
       <button
         type="button"
         onClick={() => onChange('mobile')}
         className={cn(
-          'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+          'p-1.5 rounded-md transition-colors',
           viewMode === 'mobile'
             ? 'bg-accent text-foreground'
-            : 'text-muted-foreground hover:text-foreground',
+            : 'text-muted-foreground hover:bg-accent/60',
         )}
         title={t('pageBuilder.mobile')}
+        aria-label={t('pageBuilder.mobile')}
       >
-        <Smartphone className="size-3.5" />
-        <span className="hidden xl:inline">{t('pageBuilder.mobile')}</span>
+        <Smartphone className="size-4" />
       </button>
     </div>
   )
@@ -185,16 +187,14 @@ export function PuckViewportToggle({
 
 /** Single-row header — replaces Puck's default header to avoid duplicated controls. */
 export function PuckCustomHeader({
-  businessName,
-  pathLabel,
+  builderMode,
   previewMode,
   viewMode,
   onTogglePreview,
   onViewModeChange,
   chrome,
 }: {
-  businessName: string
-  pathLabel: string
+  builderMode?: BuilderPageMode
   previewMode: boolean
   viewMode: 'desktop' | 'mobile'
   onTogglePreview: () => void
@@ -226,16 +226,12 @@ export function PuckCustomHeader({
   }
 
   return (
-    <header className="eatery-puck-header flex items-center gap-2 h-12 px-2 shrink-0 w-full min-w-0 border-b border-border bg-background">
+    <header className="eatery-puck-header flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-x-auto">
       <PuckHeaderBack />
+      {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
       <PuckSidebarToggles />
-      <div className="flex items-baseline gap-2 min-w-0 shrink">
-        <span className="font-semibold text-sm truncate max-w-[140px] sm:max-w-[220px]">{businessName}</span>
-        <span className="text-xs text-muted-foreground truncate hidden sm:inline">{pathLabel}</span>
-      </div>
       <div className="flex-1 min-w-0" />
-      <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
-      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">{chrome}</div>
+      <div className="flex items-center gap-1 shrink-0 justify-end">{chrome}</div>
     </header>
   )
 }
@@ -247,16 +243,17 @@ export function PuckHeaderActions({
   publishing,
   slug,
   previewMode,
+  viewMode,
   onTogglePreview,
+  onViewModeChange,
   onPublish,
-  onOpenGlobalSettings,
-}: Omit<PuckEditorChromeProps, 'viewMode' | 'onViewModeChange' | 'orderPublished'>) {
+}: PuckEditorChromeProps) {
   const { t } = useTranslation()
   const showChanges = published && hasUnpublishedChanges
 
   return (
-    <div className="flex items-center gap-2 flex-wrap justify-end">
-      <div className="flex items-center gap-2 shrink-0">
+    <>
+      <div className="flex items-center gap-2 shrink-0 mr-1">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
@@ -277,40 +274,42 @@ export function PuckHeaderActions({
         )}
       </div>
 
-      <div className="w-px h-5 bg-border shrink-0 hidden sm:block" />
+      <div className="mr-1">
+        <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
+      </div>
+
+      <button
+        type="button"
+        onClick={onTogglePreview}
+        className={cn(
+          'flex items-center justify-center size-8 transition-colors shrink-0 rounded-md',
+          previewMode
+            ? 'bg-accent text-foreground'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+        )}
+        title={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
+        aria-label={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
+      >
+        <Globe className="size-4" />
+      </button>
 
       {published && (
         <a
           href={getPublicStoreUrl(slug)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 px-2 py-1.5 rounded-md hover:bg-accent"
+          className="flex items-center justify-center size-8 text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md hover:bg-accent"
+          title={t('pageBuilder.viewLive')}
+          aria-label={t('pageBuilder.viewLive')}
         >
-          <ExternalLink className="size-3.5" />
-          <span className="hidden md:inline">{t('pageBuilder.viewLive')}</span>
+          <ExternalLink className="size-4" />
         </a>
       )}
-
-      <button
-        type="button"
-        onClick={onTogglePreview}
-        className={cn(
-          'flex items-center gap-1 text-xs transition-colors shrink-0 px-2 py-1.5 rounded-md',
-          previewMode
-            ? 'bg-accent text-foreground'
-            : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-        )}
-      >
-        <Globe className="size-3.5" />
-        <span className="hidden md:inline">
-          {previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
-        </span>
-      </button>
 
       <Badge
         variant="outline"
         className={cn(
-          'text-xs shrink-0 hidden lg:flex items-center gap-1.5 pl-2',
+          'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
           showChanges
             ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
             : published
@@ -333,22 +332,13 @@ export function PuckHeaderActions({
         )}
       </Badge>
 
-      <button
-        type="button"
-        onClick={onOpenGlobalSettings}
-        className="hidden md:flex items-center gap-1 h-7 px-2.5 text-xs rounded-md border border-border bg-background hover:bg-accent transition-colors"
-      >
-        <Settings className="size-3.5" />
-        {t('pageBuilder.globalSettings')}
-      </button>
-
       <DropdownMenu>
         <div className="flex rounded-md shadow-sm overflow-hidden">
           <button
             type="button"
             onClick={() => onPublish(true)}
             disabled={publishing}
-            className="h-7 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="h-8 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
           </button>
@@ -356,7 +346,7 @@ export function PuckHeaderActions({
             <button
               type="button"
               disabled={publishing}
-              className="h-7 px-1.5 flex items-center justify-center bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 border-l border-primary-foreground/20"
+              className="h-8 px-1.5 flex items-center justify-center bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 border-l border-primary-foreground/20"
             >
               <ChevronDown className="size-3.5" />
             </button>
@@ -373,7 +363,7 @@ export function PuckHeaderActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </>
   )
 }
 

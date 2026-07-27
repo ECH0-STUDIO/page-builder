@@ -14,7 +14,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
-import type { MenuGridConfig } from '../types'
+import { defaultMenuGridConfig, defaultThemeSettings, type BorderRadius, type MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { useCart, type CartVariantSelection } from './CartContext'
 import { getTypography } from './typography'
@@ -24,6 +24,32 @@ import {
   isForcedMobileLayout,
   menuGridColClass,
 } from './preview-layout'
+
+const DEFAULT_BRAND = defaultThemeSettings.primary_color
+
+const CARD_RADIUS: Record<BorderRadius, string> = {
+  none: '0px',
+  sm: '4px',
+  md: '12px',
+  lg: '20px',
+  xl: '32px',
+  full: '9999px',
+}
+
+/** Merge saved config with defaults so older blocks pick up new card style fields. */
+export function resolveMenuGridConfig(config: MenuGridConfig | null | undefined): MenuGridConfig {
+  return { ...defaultMenuGridConfig, ...(config ?? {}) }
+}
+
+function resolveCardStyles(config: MenuGridConfig) {
+  const resolved = resolveMenuGridConfig(config)
+  return {
+    backgroundColor: resolved.card_background_color || '#ffffff',
+    color: resolved.card_text_color || '#111111',
+    borderColor: resolved.card_border_color || '#f3f4f6',
+    borderRadius: CARD_RADIUS[resolved.card_border_radius || 'md'] ?? CARD_RADIUS.md,
+  }
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,17 +64,19 @@ export interface MenuGridData {
 // ─── Item Modal (with cart integration) ──────────────────────────────────────
 
 function ItemModal({
-  item, groups, options, config, onClose, browseOnly = false,
+  item, groups, options, config, brandColor, onClose, browseOnly = false,
 }: {
   item: MenuItem
   groups: VariantGroup[]
   options: VariantOption[]
   config: MenuGridConfig
+  brandColor: string
   onClose: () => void
   browseOnly?: boolean
 }) {
   const { addItem } = useCart()
   const { t } = useTranslation()
+  const actionColor = brandColor || DEFAULT_BRAND
 
   const itemGroups = groups
     .filter(g => g.item_id === item.id)
@@ -160,7 +188,14 @@ function ItemModal({
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-gray-900">{group.name}</p>
                     {group.required
-                      ? <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-900 text-white font-semibold uppercase tracking-wide">{t('cart.required')}</span>
+                      ? (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-md text-white font-semibold uppercase tracking-wide"
+                          style={{ backgroundColor: actionColor }}
+                        >
+                          {t('cart.required')}
+                        </span>
+                      )
                       : <span className="text-[10px] text-gray-400">{t('cart.optional')}</span>
                     }
                   </div>
@@ -199,11 +234,16 @@ function ItemModal({
                           onClick={toggleSelection}
                           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm border-2 transition-all ${
                             isSelected
-                              ? 'border-gray-900 bg-gray-900 text-white font-semibold'
+                              ? 'text-white font-semibold'
                               : hasError
                                 ? 'border-red-200 bg-red-50 text-gray-700 hover:border-gray-300'
                                 : 'border-gray-200 text-gray-700 hover:border-gray-400'
                           }`}
+                          style={
+                            isSelected
+                              ? { backgroundColor: actionColor, borderColor: actionColor }
+                              : undefined
+                          }
                         >
                           {isSelected && <Check className="size-3 shrink-0" strokeWidth={3} />}
                           <span>{opt.label}</span>
@@ -237,7 +277,8 @@ function ItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-4 rounded-2xl font-bold text-base bg-gray-900 text-white hover:bg-gray-800 transition-all"
+              className="w-full py-4 rounded-2xl font-bold text-base text-white transition-all hover:opacity-90"
+              style={{ backgroundColor: actionColor }}
             >
               {t('cart.closeDetails')}
             </button>
@@ -248,8 +289,9 @@ function ItemModal({
               className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                 added
                   ? 'bg-green-500 text-white'
-                  : 'bg-gray-900 text-white hover:bg-gray-800 shadow-lg shadow-gray-900/20'
+                  : 'text-white hover:opacity-90 shadow-lg'
               }`}
+              style={added ? undefined : { backgroundColor: actionColor }}
             >
               {added ? (
                 <><Check className="size-5" strokeWidth={3} />{t('cart.addedToOrder')}</>
@@ -283,14 +325,15 @@ function ItemCardGrid({
   browseOnly?: boolean
 }) {
   const { t } = useTranslation()
-  const textColor = config.text_color || '#111111'
-  const cardBg = '#ffffff'
+  const card = resolveCardStyles(config)
+  const textColor = card.color
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (!item.available) return
-    if (hasVariants) {
+    // Landing/browse: open details. Order: variants → modal, else quick-add.
+    if (browseOnly || hasVariants) {
       onClick()
     } else {
       onQuickAdd()
@@ -300,8 +343,13 @@ function ItemCardGrid({
   return (
     <div
       onClick={onClick}
-      className={`group rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer`}
-      style={{ backgroundColor: cardBg, opacity: item.available ? 1 : 0.85 }}
+      className="group border overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+      style={{
+        backgroundColor: card.backgroundColor,
+        borderColor: card.borderColor,
+        borderRadius: card.borderRadius,
+        opacity: item.available ? 1 : 0.85,
+      }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -342,11 +390,11 @@ function ItemCardGrid({
             {config.show_price ? (
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
-            {!browseOnly && item.available ? (
-              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+            {item.available ? (
+              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
                 <Plus className="size-4 pointer-events-none" />
               </button>
-            ) : !browseOnly && !item.available ? (
+            ) : !browseOnly ? (
               <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
             ) : null}
           </div>
@@ -372,14 +420,14 @@ function ItemRowList({
   browseOnly?: boolean
 }) {
   const { t } = useTranslation()
-  const textColor = config.text_color || '#111111'
-  const cardBg = '#ffffff'
+  const card = resolveCardStyles(config)
+  const textColor = card.color
 
   function handleAddClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (!item.available) return
-    if (hasVariants) {
+    if (browseOnly || hasVariants) {
       onClick()
     } else {
       onQuickAdd()
@@ -390,10 +438,15 @@ function ItemRowList({
     <div
       onClick={onClick}
       className={cn(
-        'flex gap-4 py-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-lg transition-colors',
+        'flex gap-4 py-3 px-3 border cursor-pointer transition-colors',
         isMobile ? 'items-start' : 'items-center',
       )}
-      style={{ opacity: item.available ? 1 : 0.85 }}
+      style={{
+        backgroundColor: card.backgroundColor,
+        borderColor: card.borderColor,
+        borderRadius: card.borderRadius,
+        opacity: item.available ? 1 : 0.85,
+      }}
       id={`item-${item.id}`}
     >
       {config.show_image && (
@@ -437,14 +490,12 @@ function ItemRowList({
             {formatCurrency(item.price)}
           </p>
         )}
-        {!browseOnly && item.available ? (
-          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor }}>
+        {item.available ? (
+          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
             <Plus className="size-4 pointer-events-none" />
           </button>
-        ) : !browseOnly && !item.available ? (
-          !config.show_unavailable_badge && (
-            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
-          )
+        ) : !browseOnly && !config.show_unavailable_badge ? (
+          <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gray-400 font-medium shrink-0">{t('cart.soldOut')}</span>
         ) : null}
       </div>
     </div>
@@ -454,11 +505,11 @@ function ItemRowList({
 // ─── Inner render (needs CartProvider as ancestor) ────────────────────────────
 
 function MenuGridInner({
-  config,
+  config: rawConfig,
   data,
   previewLayout,
   isMobilePreview,
-  brandColor = '#111111',
+  brandColor = DEFAULT_BRAND,
   browseOnly = false,
   hideCategoryTabs = false,
   activeCategoryId,
@@ -472,6 +523,7 @@ function MenuGridInner({
   activeCategoryId?: string | null
   onActiveCategoryChange?: (id: string) => void
 }) {
+  const config = resolveMenuGridConfig(rawConfig)
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
   const ctxLayout = usePreviewLayout()
@@ -511,7 +563,7 @@ function MenuGridInner({
   }, [])
 
   const textColor = config.text_color || '#111111'
-  const actionColor = brandColor || '#111111'
+  const actionColor = brandColor || DEFAULT_BRAND
 
   const typography = getTypography(mobileLayout)
 
@@ -658,7 +710,11 @@ function MenuGridInner({
                     style={
                       activeCat === cat.id
                         ? { backgroundColor: actionColor, color: '#ffffff', border: `1.5px solid ${actionColor}` }
-                        : { backgroundColor: 'transparent', color: textColor, border: '1.5px solid #e5e7eb' }
+                        : {
+                            backgroundColor: 'transparent',
+                            color: textColor,
+                            border: `1.5px solid color-mix(in srgb, ${textColor} 28%, transparent)`,
+                          }
                     }
                   >
                     {cat.name}
@@ -727,6 +783,7 @@ function MenuGridInner({
           groups={variantGroups}
           options={variantOptions}
           config={config}
+          brandColor={actionColor}
           onClose={() => setModalItem(null)}
           browseOnly={browseOnly}
         />
@@ -767,7 +824,7 @@ export function MenuGridRender({
   data,
   previewLayout,
   isMobilePreview,
-  brandColor = '#111111',
+  brandColor = DEFAULT_BRAND,
   browseOnly = false,
   hideCategoryTabs = false,
   activeCategoryId,

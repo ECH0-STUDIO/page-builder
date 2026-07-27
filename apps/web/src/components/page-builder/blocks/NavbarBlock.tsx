@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 
 // ─── Canvas preview ────────────────────────────────────────────────────────────
 
@@ -234,6 +235,7 @@ export function NavbarSettings({
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('navbarBlock.appearance')}</Label>
 
         <div className="grid grid-cols-2 gap-3">
+          {/* Background may be 'transparent' (glass preset) — keep custom display */}
           <div className="space-y-1.5">
             <Label className="text-xs">{t('navbarBlock.background')}</Label>
             <div className="flex items-center gap-2">
@@ -243,21 +245,15 @@ export function NavbarSettings({
                 onChange={e => set('background_color', e.target.value)}
                 className="size-8 rounded border border-border cursor-pointer"
               />
-              <span className="text-xs font-mono text-muted-foreground truncate">{config.background_color}</span>
+              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('navbarBlock.linkColour')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.text_color}
-                onChange={e => set('text_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-xs font-mono text-muted-foreground truncate">{config.text_color}</span>
-            </div>
-          </div>
+          <ColorSwatchField
+            label={t('navbarBlock.linkColour')}
+            value={config.text_color}
+            fallback="#111111"
+            onChange={v => set('text_color', v)}
+          />
         </div>
 
         {/* Presets */}

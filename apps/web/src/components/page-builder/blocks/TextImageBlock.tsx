@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
+import { RadiusPicker } from '@/components/shared/RadiusPicker'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
   BlockBackground, CtaButton, BorderRadius, PageBlock, ContentAlign,
@@ -401,33 +402,20 @@ export function TextImageSettings({
 
         {/* Roundness */}
         {config.layout !== 'text_only' && config.layout !== 'img_only' && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('textImageBlock.imageRoundness')}</Label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {([
-                { value: 'none', label: t('textImageBlock.none') },
-                { value: 'sm', label: t('textImageBlock.small') },
-                { value: 'md', label: t('textImageBlock.medium') },
-                { value: 'lg', label: t('textImageBlock.large') },
-                { value: 'xl', label: t('textImageBlock.xlarge') },
-                { value: 'full', label: t('textImageBlock.pill') },
-              ] as { value: BorderRadius; label: string }[]).map(r => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => set('border_radius', r.value)}
-                  className={cn(
-                    'py-1.5 rounded border text-xs transition-colors',
-                    config.border_radius === r.value
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
-                      : 'border-border hover:border-foreground/30'
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <RadiusPicker
+            label={t('textImageBlock.imageRoundness')}
+            value={config.border_radius}
+            layout="grid"
+            options={[
+              { value: 'none', label: t('textImageBlock.none') },
+              { value: 'sm', label: t('textImageBlock.small') },
+              { value: 'md', label: t('textImageBlock.medium') },
+              { value: 'lg', label: t('textImageBlock.large') },
+              { value: 'xl', label: t('textImageBlock.xlarge') },
+              { value: 'full', label: t('textImageBlock.pill') },
+            ]}
+            onChange={v => set('border_radius', v as BorderRadius)}
+          />
         )}
       </div>
     </div>

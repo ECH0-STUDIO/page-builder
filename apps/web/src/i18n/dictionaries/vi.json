@@ -320,6 +320,9 @@
   },
   "pageBuilder": {
     "back": "Quay lại",
+    "pageSwitcherLabel": "Trang cần chỉnh",
+    "modeLanding": "Trang chủ",
+    "modeOrder": "Đặt món",
     "unsaved": "Chưa lưu thay đổi",
     "saving": "Đang lưu…",
     "saved": "Đã lưu",
@@ -457,7 +460,13 @@
     "closePreview": "Đóng xem trước",
     "changes": "Có thay đổi",
     "nothingToUndo": "Không còn thao tác để hoàn tác",
-    "nothingToRedo": "Không còn thao tác để làm lại"
+    "nothingToRedo": "Không còn thao tác để làm lại",
+    "toastPublished": "Đã xuất bản trang thành công!",
+    "toastUnpublished": "Đã chuyển trang về bản nháp",
+    "toastPublishFailed": "Không thể thay đổi trạng thái xuất bản",
+    "toastSaveThemeFailed": "Không lưu được chủ đề: ",
+    "toastSaveNavbarFailed": "Không lưu được thanh điều hướng: ",
+    "toastSaveFooterFailed": "Không lưu được chân trang: "
   },
   "puck": {
     "blocks": "Khối",
@@ -588,7 +597,9 @@
       "regionSub": "Cập nhật mặc định cho cả bảng điều khiển và thực đơn công khai.",
       "enOption": "Tiếng Anh - USD ($)",
       "viOption": "Tiếng Việt - VND (₫)",
-      "save": "Lưu tùy chọn"
+      "save": "Lưu tùy chọn",
+      "toastUpdated": "Đã cập nhật tùy chọn",
+      "toastFailed": "Không cập nhật được tùy chọn"
     }
   },
   "heroBlock": {
@@ -719,7 +730,23 @@
     "openingHours": "Giờ mở cửa",
     "socialIcons": "Biểu tượng MXH",
     "noSocialsSet": "Chưa có liên kết mạng xã hội trong hồ sơ doanh nghiệp. Thêm chúng trong phần Cài đặt doanh nghiệp.",
-    "socialsPreview": "Mạng xã hội:"
+    "socialsPreview": "Mạng xã hội:",
+    "addressLabel": "Địa chỉ",
+    "phoneLabel": "Điện thoại",
+    "emailLabel": "Email",
+    "hoursLabel": "Giờ mở cửa",
+    "connectLabel": "Kết nối",
+    "closed": "Đóng cửa",
+    "mapPlaceholder": "Bản đồ sẽ hiện khi bạn thêm địa chỉ trong Hồ sơ doanh nghiệp",
+    "daysShort": {
+      "monday": "T2",
+      "tuesday": "T3",
+      "wednesday": "T4",
+      "thursday": "T5",
+      "friday": "T6",
+      "saturday": "T7",
+      "sunday": "CN"
+    }
   },
   "menuGridBlock": {
     "layout": "Bố cục",
@@ -749,9 +776,16 @@
     "itemDescriptions": "Mô tả món ăn",
     "prices": "Giá",
     "soldOutBadge": "Nhãn \"Hết hàng\"",
-    "colours": "Màu sắc",
-    "background": "Nền",
-    "text": "Chữ",
+    "colours": "Màu sắc của khu vực",
+    "coloursHint": "Màu nền và chữ tiêu đề/tab của khu vực — không phải màu của thẻ món.",
+    "background": "Nền khu vực",
+    "text": "Chữ khu vực",
+    "cardStyle": "Kiểu thẻ món",
+    "cardStyleHint": "Nền, chữ, viền và bo góc cho từng thẻ món — tách riêng với khu vực phía trên.",
+    "cardBackground": "Nền thẻ",
+    "cardText": "Chữ thẻ",
+    "cardBorder": "Viền thẻ",
+    "cardRadius": "Bo góc",
     "tabsOn": "Bật thẻ lọc",
     "noTabs": "Tắt thẻ lọc",
     "menu": "Thực đơn",
@@ -829,6 +863,7 @@
     "scanToView": "Quét để xem thực đơn",
     "size": "Kích thước",
     "alignment": "Căn chỉnh",
+    "radius": "Bo góc",
     "showDownload": "Hiện nút tải xuống",
     "colours": "Màu sắc",
     "background": "Nền",
@@ -1036,7 +1071,7 @@
     "quotaUsage": "Đang sử dụng",
     "billingCycleEnds": "Chu kỳ kết thúc vào",
     "projectedCharge": "Chi phí gia hạn dự kiến",
-    "credits": "Credits",
+    "credits": "Credit",
     "quotaExplanation": "Bạn mua trước dung lượng bằng credit (1 credit = 20MB). Nếu bạn xóa ảnh để giảm dung lượng, chi phí gia hạn tháng tiếp theo sẽ tự động giảm xuống!"
   },
   "auth": {
@@ -1163,15 +1198,17 @@
     "draftHint": "Xuất bản trang đặt món trong Xuất bản để URL này hoạt động.",
     "goPublish": "Đến Xuất bản",
     "appearanceTitle": "Giao diện",
-    "appearanceHint": "Màu thương hiệu, font chữ, màu nền và ảnh nền (tuỳ chọn) cho trang đặt món.",
+    "appearanceHint": "Màu thương hiệu, màu chữ, font chữ, màu nền và ảnh nền (tuỳ chọn) cho trang đặt món.",
     "appearanceSaved": "Đã lưu giao diện — đang live",
+    "textColorHint": "Dùng cho nhãn danh mục và tiêu đề. Thẻ món vẫn giữ chữ tối trên nền trắng.",
+    "pageBackground": "Nền trang",
     "bgColor": "Màu nền",
     "bgImage": "Ảnh nền",
     "uploadBg": "Tải ảnh nền",
     "uploadFailed": "Tải ảnh thất bại",
     "slugNote": "Đường dẫn công khai: /{{slug}}/order",
     "tabAppearance": "Giao diện",
-    "tabCarousel": "Carousel",
+    "tabCarousel": "Ảnh trượt",
     "tabMenu": "Thực đơn",
     "previewDesktop": "Xem trước desktop",
     "previewMobile": "Xem trước mobile",
@@ -1198,5 +1235,49 @@
   "liveStore": {
     "language": "Ngôn ngữ",
     "poweredBy": "Được vận hành bởi Eatery"
+  },
+  "onboarding": {
+    "nameTitle": "Đặt tên doanh nghiệp",
+    "nameDesc": "Tên này dùng cho đường dẫn trang công khai. Bạn có thể đổi sau.",
+    "businessName": "Tên doanh nghiệp",
+    "namePlaceholder": "La Cafe, Phở 24, Trần Bakery...",
+    "slugLabel": "Đường dẫn trang",
+    "checking": "Đang kiểm tra…",
+    "available": "Có thể dùng",
+    "taken": "Đã được dùng",
+    "slugHint": "Chỉ dùng chữ thường, số và dấu gạch ngang.",
+    "continue": "Tiếp tục",
+    "categoryTitle": "Loại hình kinh doanh?",
+    "categoryDesc": "Giúp khách tìm thấy quán của bạn dễ hơn.",
+    "category": "Danh mục",
+    "selectCategory": "Chọn danh mục…",
+    "back": "Quay lại",
+    "create": "Tạo doanh nghiệp",
+    "creating": "Đang tạo…",
+    "created": "Đã tạo doanh nghiệp!",
+    "categories": {
+      "cafe": "Quán cà phê",
+      "restaurant": "Nhà hàng",
+      "fast_food": "Đồ ăn nhanh & Đường phố",
+      "bakery": "Tiệm bánh & Tráng miệng",
+      "bar": "Quán bar & Đồ uống",
+      "service": "Dịch vụ",
+      "retail": "Cửa hàng bán lẻ",
+      "beauty": "Làm đẹp & Spa",
+      "other": "Khác"
+    }
+  },
+  "invite": {
+    "invalidTitle": "Lời mời không hợp lệ",
+    "invalidDesc": "Liên kết này không hợp lệ hoặc đã hết hạn.",
+    "acceptedTitle": "Đã chấp nhận",
+    "acceptedDesc": "Lời mời này đã được chấp nhận trước đó.",
+    "mismatchTitle": "Email không khớp",
+    "mismatchDesc": "Lời mời được gửi tới {email}, nhưng bạn đang đăng nhập bằng {current}.",
+    "mismatchHint": "Vui lòng đăng xuất rồi đăng nhập bằng đúng email.",
+    "joinTitle": "Tham gia nhóm",
+    "joinDesc": "Bạn được mời tham gia {business} với vai trò {role}.",
+    "accept": "Chấp nhận lời mời",
+    "acceptedToast": "Đã chấp nhận lời mời! Chào mừng bạn."
   }
 }

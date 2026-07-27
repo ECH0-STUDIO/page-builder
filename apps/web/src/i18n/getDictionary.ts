@@ -12,11 +12,11 @@ export const getDictionary = async (locale?: Locale) => {
   if (!locale) {
     const cookieStore = await cookies()
     const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value as Locale
-    locale = cookieLocale || 'en'
+    locale = cookieLocale || 'vi'
   }
-  
+
   if (!dictionaries[locale]) {
-    locale = 'en'
+    locale = 'vi'
   }
 
   return dictionaries[locale]()

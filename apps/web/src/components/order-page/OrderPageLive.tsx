@@ -100,6 +100,7 @@ export function OrderPageLive({
         paymentSettings={paymentSettings}
         locale={locale}
         fabOffsetClass="bottom-24"
+        brandColor={brandColor}
       />
     </>
   )

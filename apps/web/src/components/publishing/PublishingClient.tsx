@@ -412,7 +412,7 @@ export function PublishingClient({
                   {isOrderPublished ? t('publishing.orderLiveHint') : t('publishing.orderDraftHint')}
                 </p>
                 <a
-                  href="/dashboard/order-page"
+                  href="/dashboard/pages?page=order"
                   className="inline-block text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 mt-1"
                 >
                   {t('publishing.configureOrderPage')}

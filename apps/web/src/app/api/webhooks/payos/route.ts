@@ -17,66 +17,29 @@ export async function POST(req: NextRequest) {
 
     if (webhookData.code === '00') {
       const orderCode = webhookData.orderCode
-
       const adminClient = createAdminClient()
 
-      // 1. Get the order
-      const { data: order, error: orderError } = await (adminClient as any)
-        .from('credit_orders')
-        .select('*')
-        .eq('order_code', orderCode)
-        .single()
+      // Atomic fulfill: pending → paid + credit balance (idempotent if already paid)
+      const { data: fulfilled, error: fulfillError } = await (adminClient as any).rpc(
+        'fulfill_credit_order',
+        { p_order_code: orderCode },
+      )
 
-      if (orderError || !order) {
-        console.error('Order not found:', orderCode)
-        // Return 200 so PayOS dashboard accepts test webhooks or stops retrying invalid orders
+      if (fulfillError) {
+        console.error('fulfill_credit_order error:', fulfillError)
+        return NextResponse.json({ error: fulfillError.message }, { status: 500 })
+      }
+
+      if (!fulfilled) {
+        console.error('Order not found or not fulfillable:', orderCode)
+        // Soft-ack so PayOS stops retrying invalid / test webhooks
         return NextResponse.json({ success: true, message: 'Order not found (test webhook)' })
       }
-
-      if (order.status === 'paid') {
-        // Already processed
-        return NextResponse.json({ success: true, message: 'Already processed' })
-      }
-
-      // 2. Mark order as paid
-      await (adminClient as any)
-        .from('credit_orders')
-        .update({ status: 'paid' })
-        .eq('id', order.id)
-
-      // 3. Add to balance
-      const { data: currentBalance } = await (adminClient as any)
-        .from('credit_balances')
-        .select('balance')
-        .eq('business_id', order.business_id)
-        .single()
-
-      const newBalance = (currentBalance?.balance || 0) + order.amount_credits
-
-      await (adminClient as any)
-        .from('credit_balances')
-        .update({ balance: newBalance })
-        .eq('business_id', order.business_id)
-
-      // Update discount usage
-      if (order.discount_code_id) {
-        await (adminClient as any).rpc('increment_discount_uses', { d_id: order.discount_code_id })
-      }
-
-      // 4. Log transaction
-      await (adminClient as any)
-        .from('credit_transactions')
-        .insert({
-          business_id: order.business_id,
-          amount: order.amount_credits,
-          description: `PayOS Payment (Order ${orderCode})`,
-        })
 
       return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 })
-
   } catch (error: any) {
     console.error('PayOS Webhook error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
