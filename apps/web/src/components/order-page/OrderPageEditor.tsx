@@ -18,9 +18,7 @@ import {
   Eye,
   ImagePlus,
   Loader2,
-  Monitor,
   Redo2,
-  Smartphone,
   Trash2,
   Undo2,
   UtensilsCrossed,
@@ -33,10 +31,7 @@ import {
   OrderMenuConfigEditor,
   defaultOrderMenuConfig,
 } from '@/components/order-page/OrderMenuConfigEditor'
-import {
-  OrderPagePreview,
-  type PreviewDevice,
-} from '@/components/order-page/OrderPagePreview'
+import { OrderPagePreview } from '@/components/order-page/OrderPagePreview'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import {
   CAROUSEL_ASPECTS,
@@ -173,7 +168,6 @@ export function OrderPageEditor({
   const router = useRouter()
 
   const [tab, setTab] = useState<SettingsTab>('appearance')
-  const [device, setDevice] = useState<PreviewDevice>('desktop')
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
@@ -490,31 +484,6 @@ export function OrderPageEditor({
             )}
           </div>
 
-          <div className="flex items-center rounded-lg border border-border p-0.5 mr-1">
-            <button
-              type="button"
-              onClick={() => setDevice('desktop')}
-              className={cn(
-                'p-1.5 rounded-md transition-colors',
-                device === 'desktop' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
-              )}
-              title={t('orderPageAdmin.previewDesktop')}
-            >
-              <Monitor className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setDevice('mobile')}
-              className={cn(
-                'p-1.5 rounded-md transition-colors',
-                device === 'mobile' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
-              )}
-              title={t('orderPageAdmin.previewMobile')}
-            >
-              <Smartphone className="size-4" />
-            </button>
-          </div>
-
           <button
             type="button"
             onClick={handleCopy}
@@ -589,14 +558,9 @@ export function OrderPageEditor({
         <div className="flex-1 min-h-0 overflow-auto bg-[#eceff3] p-4 md:p-8">
           <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted-foreground">
             <Eye className="size-3.5" />
-            <span>
-              {device === 'desktop'
-                ? t('orderPageAdmin.previewDesktop')
-                : t('orderPageAdmin.previewMobile')}
-            </span>
+            <span>{t('orderPageAdmin.previewMobile')}</span>
           </div>
           <OrderPagePreview
-            device={device}
             businessName={businessName}
             logoUrl={logoUrl}
             brandColor={draft.brandColor}

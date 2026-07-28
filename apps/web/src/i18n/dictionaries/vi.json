@@ -536,7 +536,13 @@
       "Live music": "Nhạc sống",
       "Open late": "Mở cửa muộn",
       "Open 24/7": "Mở cửa 24/7"
-    }
+    },
+    "googleMapsUrl": "Link Google Maps",
+    "googleMapsUrlHint": "Dán liên kết Google Maps của quán. Dùng cho bản đồ trên trang.",
+    "googleMapsUrlPlaceholder": "https://maps.google.com/... hoặc https://maps.app.goo.gl/...",
+    "cityOther": "Khác",
+    "cityOtherPlaceholder": "Nhập tên thành phố / tỉnh",
+    "selectCity": "Chọn thành phố"
   },
   "settings": {
     "title": "Cài đặt tài khoản",
@@ -1167,7 +1173,8 @@
     "options": "tùy chọn",
     "option": "Tùy chọn",
     "availableLabel": "có sẵn",
-    "closeDetails": "Đóng"
+    "closeDetails": "Đóng",
+    "empty": "Chưa có món"
   },
   "orderPage": {
     "backToPage": "Trang chủ",
@@ -1186,7 +1193,11 @@
     "categoriesMenu": "Danh mục",
     "scrollTop": "Lên đầu trang",
     "carouselPrev": "Slide trước",
-    "carouselNext": "Slide sau"
+    "carouselNext": "Slide sau",
+    "quickActions": "Yêu cầu nhanh",
+    "viewOrder": "Xem đơn",
+    "itemsCount": "{{count}} món",
+    "callStaffMenu": "Gọi nhân viên"
   },
   "orderPageAdmin": {
     "title": "Trang đặt món",
