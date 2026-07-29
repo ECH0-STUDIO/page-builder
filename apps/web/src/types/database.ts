@@ -18,6 +18,7 @@ export interface Database {
           logo_url: string | null
           address: string | null
           city: string | null
+          google_maps_url: string | null
           phone: string | null
           email: string | null
           opening_hours: any | null
@@ -37,6 +38,7 @@ export interface Database {
           logo_url?: string | null
           address?: string | null
           city?: string | null
+          google_maps_url?: string | null
           phone?: string | null
           email?: string | null
           opening_hours?: any | null
@@ -56,6 +58,7 @@ export interface Database {
           logo_url?: string | null
           address?: string | null
           city?: string | null
+          google_maps_url?: string | null
           phone?: string | null
           email?: string | null
           opening_hours?: any | null

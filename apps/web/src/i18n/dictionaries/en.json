@@ -536,7 +536,13 @@
       "Live music": "Live music",
       "Open late": "Open late",
       "Open 24/7": "Open 24/7"
-    }
+    },
+    "googleMapsUrl": "Google Maps link",
+    "googleMapsUrlHint": "Paste your Google Maps place link. Used for the map on your page.",
+    "googleMapsUrlPlaceholder": "https://maps.google.com/... or https://maps.app.goo.gl/...",
+    "cityOther": "Other",
+    "cityOtherPlaceholder": "Enter city / province name",
+    "selectCity": "Select city"
   },
   "settings": {
     "title": "Account Settings",
@@ -1167,7 +1173,8 @@
     "options": "options",
     "option": "Option",
     "availableLabel": "available",
-    "closeDetails": "Close"
+    "closeDetails": "Close",
+    "empty": "No items yet"
   },
   "orderPage": {
     "backToPage": "Home",
@@ -1186,7 +1193,11 @@
     "categoriesMenu": "Categories",
     "scrollTop": "Back to top",
     "carouselPrev": "Previous slide",
-    "carouselNext": "Next slide"
+    "carouselNext": "Next slide",
+    "quickActions": "Quick actions",
+    "viewOrder": "View order",
+    "itemsCount": "{{count}} items",
+    "callStaffMenu": "Call staff"
   },
   "orderPageAdmin": {
     "title": "Order Page",

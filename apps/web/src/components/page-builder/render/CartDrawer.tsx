@@ -72,6 +72,8 @@ interface CartDrawerProps {
   fabOffsetClass?: string
   /** Brand / primary colour for FAB + checkout CTA */
   brandColor?: string
+  /** Hide floating FAB — cart is opened from the order bottom bar instead */
+  hideFab?: boolean
 }
 
 type DrawerStep = 'cart' | 'payment'
@@ -84,6 +86,7 @@ export function CartDrawer({
   locale = 'vi',
   fabOffsetClass = 'bottom-6',
   brandColor = '#E85D26',
+  hideFab = false,
 }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const activeLocale = toSupportedLocale(locale)
@@ -113,6 +116,15 @@ export function CartDrawer({
       setTableNumber('1')
     }
   }, [previewMode, tableFromUrl])
+
+  useEffect(() => {
+    const open = () => {
+      setStep('cart')
+      setOpen(true)
+    }
+    window.addEventListener('eatery-open-cart', open)
+    return () => window.removeEventListener('eatery-open-cart', open)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && businessId) {
@@ -195,7 +207,7 @@ export function CartDrawer({
   const ui = (
     <>
       {/* ── Floating cart button ── */}
-      {!open && step === 'cart' && totalItems > 0 && (
+      {!hideFab && !open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
           className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:opacity-90 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
@@ -216,7 +228,7 @@ export function CartDrawer({
       )}
 
       {/* ── Floating Receipt button ── */}
-      {!open && totalItems === 0 && pastOrders.length > 0 && (
+      {!hideFab && !open && totalItems === 0 && pastOrders.length > 0 && (
         <button
           onClick={() => { setStep('payment'); setOpen(true); }}
           className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}

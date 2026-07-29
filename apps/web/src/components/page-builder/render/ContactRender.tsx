@@ -9,6 +9,7 @@ import type { IconType } from 'react-icons'
 import { SiFacebook, SiInstagram, SiZalo, SiTiktok, SiYoutube } from 'react-icons/si'
 import type { ContactConfig } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { mapsEmbedFromBusiness } from '@/lib/google-maps-embed'
 
 const SOCIAL_PLATFORMS: { key: string; label: string; color: string; icon: IconType }[] = [
   { key: 'facebook', label: 'Facebook', color: '#1877F2', icon: SiFacebook },
@@ -30,6 +31,7 @@ interface ContactRenderProps {
     name?: string
     address?: string | null
     city?: string | null
+    google_maps_url?: string | null
     phone?: string | null
     email?: string | null
     opening_hours?: unknown
@@ -43,9 +45,11 @@ export function ContactRender({ config, business }: ContactRenderProps) {
   const hours = (business.opening_hours ?? []) as HoursEntry[]
   const addressParts = [business.address, business.city].filter(Boolean)
   const fullAddress = addressParts.join(', ')
-  const mapSrc = fullAddress
-    ? `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
-    : null
+  const mapSrc = mapsEmbedFromBusiness({
+    googleMapsUrl: business.google_maps_url,
+    address: business.address,
+    city: business.city,
+  })
 
   const shownSocials = SOCIAL_PLATFORMS.filter(
     s => config.socials_shown.includes(s.key) && socials[s.key]

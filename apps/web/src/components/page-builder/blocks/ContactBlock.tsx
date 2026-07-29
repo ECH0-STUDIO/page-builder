@@ -211,7 +211,7 @@ export function ContactSettings({
                 </button>
               ))}
             </div>
-            {!business.address && (
+            {!(business.address || business.google_maps_url) && (
               <p className="text-xs text-amber-600">
                 {t('contactBlock.noAddressSet')}
               </p>
