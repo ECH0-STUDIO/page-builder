@@ -110,3 +110,17 @@
   transform: translateY(-50%);
   border-top: 2px solid var(--puck-color-interactive);
 }
+
+/* Hero overlay: media/scrim must stay behind copy + CTAs (Puck overlays use z-index:1). */
+.eatery-puck [data-hero-overlay] {
+  isolation: isolate;
+}
+.eatery-puck [data-hero-media],
+.eatery-puck [data-hero-scrim] {
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+.eatery-puck [data-hero-content] {
+  position: relative !important;
+  z-index: 2 !important;
+}

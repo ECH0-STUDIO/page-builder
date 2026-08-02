@@ -30,15 +30,21 @@ export function getCtaInlineStyle(
   brandColor: string,
 ): React.CSSProperties {
   const color = resolveCtaColor(cta, brandColor)
+  // Keep CTAs fully opaque and above any section media/scrim siblings
+  const layer: React.CSSProperties = {
+    position: 'relative',
+    zIndex: 1,
+    opacity: 1,
+  }
   switch (cta.style) {
     case 'filled':
-      return { backgroundColor: color, color: contrastText(color) }
+      return { ...layer, backgroundColor: color, color: contrastText(color) }
     case 'outlined':
-      return { border: `2px solid ${color}`, color, backgroundColor: 'transparent' }
+      return { ...layer, border: `2px solid ${color}`, color, backgroundColor: 'transparent' }
     case 'text':
-      return { color, textDecoration: 'underline', textUnderlineOffset: '4px' }
+      return { ...layer, color, textDecoration: 'underline', textUnderlineOffset: '4px' }
     default:
-      return {}
+      return layer
   }
 }
 

@@ -212,58 +212,82 @@ export function HeroRender({
   }
 
   // ── Centered (legacy) + Overlay ─────────────────────────────────────────────
-  // Pure black dimmer (never theme page background). 0% = clear; 100% = solid black.
-  // Use rgba() — not element opacity — so the theme background cannot tint the overlay.
+  // Media stack (image + pure-black scrim) is a single absolute layer BEHIND content.
+  // Scrim is always #000 — never theme --page-bg / background_color.
+  // Content is a sibling above that stack so the scrim cannot cover text or buttons.
   const parsedOpacity = Number(config.overlay_opacity)
-  const overlayOpacity = Math.min(100, Math.max(0, Number.isFinite(parsedOpacity) ? parsedOpacity : 0)) / 100
+  const overlayAlpha = Math.min(100, Math.max(0, Number.isFinite(parsedOpacity) ? parsedOpacity : 0)) / 100
+  const safeImageUrl = typeof config.image_url === 'string' ? config.image_url.trim() : ''
+  const cssImageUrl = safeImageUrl
+    ? `url("${safeImageUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`
+    : undefined
 
   return (
     <section
+      data-hero-overlay
       className="overflow-hidden"
       style={{
         position: 'relative',
-        // Solid black base so theme --page-bg never shows through the hero shell
+        isolation: 'isolate',
+        // Always black under the media stack — theme page background must never show through
         backgroundColor: '#000000',
+        // Neutralize inherited theme tokens inside this section
+        ['--page-bg' as string]: '#000000',
         ...heightBase,
-        ...(config.image_url
-          ? {}
-          : { background: 'linear-gradient(135deg,#1a1a2e 0%,#0f3460 100%)' }),
       }}
     >
-      {config.image_url && (
-        <Image
-          src={config.image_url}
-          alt={heading}
-          fill
-          style={{ objectFit: 'cover', objectPosition: objectPos, zIndex: 0 }}
-          sizes="100vw"
-        />
-      )}
-      {overlayOpacity > 0 && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 1,
-            backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
-            pointerEvents: 'none',
-          }}
-        />
-      )}
-      <div style={{
-        position: 'relative',
-        zIndex: 2,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: justifyForAlign(align),
-        width: '100%',
-        boxSizing: 'border-box',
-        ...(isFullscreen ? { minHeight: '100vh' } : customMinHeight ? { minHeight: `${customMinHeight}px` } : {}),
-        ...inset,
-      }}>
-        <div style={{ textAlign: align, maxWidth: '800px', width: '100%' }}>
-          <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
+      {/* Background stack only — never wraps heading / CTAs */}
+      <div
+        data-hero-media
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          backgroundColor: '#000000',
+          backgroundImage: cssImageUrl
+            ?? 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
+          backgroundSize: 'cover',
+          backgroundPosition: objectPos,
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {overlayAlpha > 0 && (
+          <div
+            data-hero-scrim
+            style={{
+              position: 'absolute',
+              inset: 0,
+              // Hard-coded black channel only (not currentColor / theme tokens)
+              backgroundColor: '#000000',
+              opacity: overlayAlpha,
+            }}
+          />
+        )}
+      </div>
+
+      {/* Content above media stack */}
+      <div
+        data-hero-content
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          isolation: 'isolate',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: justifyForAlign(align),
+          width: '100%',
+          boxSizing: 'border-box',
+          // Keep section text colour explicit so theme --page-text cannot wash CTAs/copy
+          color: textColor,
+          ...(isFullscreen ? { minHeight: '100vh' } : customMinHeight ? { minHeight: `${customMinHeight}px` } : {}),
+          ...inset,
+        }}
+      >
+        <div style={{ textAlign: align, maxWidth: '800px', width: '100%', position: 'relative', zIndex: 2 }}>
+          <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: safeImageUrl ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
           {body && (
             <p
               style={{

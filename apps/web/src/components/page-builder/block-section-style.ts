@@ -105,9 +105,15 @@ export function getBlockSectionSurface(block: PageBlock): CSSProperties {
       }
       return {}
     }
-    // Hero paints its own full-bleed visuals inside the shell
-    case 'hero':
+    // Overlay heroes: keep shell black so theme page background never tints the section.
+    // Split / text_only paint their own surfaces inside HeroRender.
+    case 'hero': {
+      const c = config as HeroConfig
+      if (c.layout === 'overlay' || c.layout === 'centered' || !c.layout) {
+        return { backgroundColor: '#000000' }
+      }
       return {}
+    }
     default:
       return {}
   }
