@@ -15,11 +15,11 @@ import {
 import { cn } from '@/lib/utils'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
-import { CtaEditor } from './CtaEditor'
+import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { plainText } from '@/i18n/locale'
 import type {
-  HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock, ContentAlign,
+  HeroConfig, HeroLayout, BlockHeight, ImagePosition, SplitImageSide, PageBlock, ContentAlign,
 } from '../types'
 import { resolveHeroHeight } from '../hero-utils'
 
@@ -144,7 +144,6 @@ export function HeroSettings({
     }
   }
 
-  const emptyCtaDefaults: CtaButton = { label: '', action: 'url', value: '', style: 'filled' }
   const isTextOnly = config.layout === 'text_only'
   const isSplit = config.layout === 'split'
   const hasImage = !isTextOnly
@@ -410,7 +409,7 @@ export function HeroSettings({
           />
         ) : (
           <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8"
-            onClick={() => set('cta', { ...emptyCtaDefaults })}
+            onClick={() => set('cta', { ...DEFAULT_CTA_BUTTON })}
           >
             {t('heroBlock.addPrimary')}
           </Button>
@@ -427,7 +426,7 @@ export function HeroSettings({
             />
           ) : (
             <Button type="button" variant="ghost" size="sm" className="w-full text-xs h-7 text-muted-foreground"
-              onClick={() => set('cta_secondary', { ...emptyCtaDefaults })}
+              onClick={() => set('cta_secondary', { ...DEFAULT_CTA_BUTTON })}
             >
               {t('heroBlock.addSecondary')}
             </Button>

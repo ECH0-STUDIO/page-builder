@@ -19,9 +19,9 @@ import { ImageUploader } from '@/components/shared/ImageUploader'
 import { RadiusPicker } from '@/components/shared/RadiusPicker'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
-  BlockBackground, CtaButton, BorderRadius, PageBlock, ContentAlign,
+  BlockBackground, BorderRadius, PageBlock, ContentAlign,
 } from '../types'
-import { CtaEditor } from './CtaEditor'
+import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -140,8 +140,6 @@ export function TextImageSettings({
       if (fileRef.current) fileRef.current.value = ''
     }
   }
-
-  const emptyCtaDefaults: CtaButton = { label: '', action: 'url', value: '', style: 'outlined' }
 
   return (
     <div className="space-y-5">
@@ -326,7 +324,7 @@ export function TextImageSettings({
             />
           ) : (
             <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8"
-              onClick={() => set('cta', emptyCtaDefaults)}>
+              onClick={() => set('cta', { ...DEFAULT_CTA_BUTTON })}>
               {t('textImageBlock.addCta')}
             </Button>
           )}
@@ -401,7 +399,7 @@ export function TextImageSettings({
         </div>
 
         {/* Roundness */}
-        {config.layout !== 'text_only' && config.layout !== 'img_only' && (
+        {config.layout !== 'text_only' && (
           <RadiusPicker
             label={t('textImageBlock.imageRoundness')}
             value={config.border_radius}
