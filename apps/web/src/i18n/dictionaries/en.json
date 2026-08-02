@@ -554,6 +554,7 @@
   },
   "explore": {
     "title": "Explore businesses on Eateryvn",
+    "metaDescription": "Discover cafes, restaurants, and local businesses with live pages on Eateryvn.",
     "search": "Search",
     "city": "City",
     "category": "Category",
@@ -1101,6 +1102,8 @@
     "notificationsEnabled": "Notifications enabled",
     "notificationsDenied": "Notifications blocked by the browser",
     "notificationsUnsupported": "Notifications are not supported on this device",
+    "notificationsNotConfigured": "Push notifications are not configured yet. Contact support.",
+    "notificationsSetupFailed": "Could not enable notifications. Try again or check browser settings.",
     "actor": "By",
     "reason": "Reason",
     "action": "Action",

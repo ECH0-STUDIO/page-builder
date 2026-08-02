@@ -248,21 +248,27 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       const registration = await navigator.serviceWorker.register('/sw-push.js')
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
-      if (vapidKey) {
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        })
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
-        })
+      if (!vapidKey) {
+        toast.error(t('orders.notificationsNotConfigured'))
+        return
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
+      })
+      if (!res.ok) {
+        throw new Error('subscribe failed')
       }
 
       toast.success(t('orders.notificationsEnabled'))
     } catch {
-      toast.success(t('orders.notificationsEnabled'))
+      toast.error(t('orders.notificationsSetupFailed'))
     }
   }
 

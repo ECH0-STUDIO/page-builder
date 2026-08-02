@@ -554,6 +554,7 @@
   },
   "explore": {
     "title": "Khám phá các cửa hàng tại Eateryvn",
+    "metaDescription": "Khám phá quán cà phê, nhà hàng và cửa hàng địa phương có trang web trên Eateryvn.",
     "search": "Tìm kiếm",
     "city": "Thành phố",
     "category": "Danh mục",
@@ -1101,6 +1102,8 @@
     "notificationsEnabled": "Đã bật thông báo",
     "notificationsDenied": "Trình duyệt đã chặn thông báo",
     "notificationsUnsupported": "Thiết bị này không hỗ trợ thông báo",
+    "notificationsNotConfigured": "Thông báo đẩy chưa được cấu hình. Vui lòng liên hệ hỗ trợ.",
+    "notificationsSetupFailed": "Không thể bật thông báo. Thử lại hoặc kiểm tra cài đặt trình duyệt.",
     "actor": "Bởi",
     "reason": "Lý do",
     "action": "Hành động",

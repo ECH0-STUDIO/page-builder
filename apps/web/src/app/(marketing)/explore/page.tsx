@@ -11,10 +11,16 @@ import { appPath } from '@/lib/site-urls'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Explore businesses on Eateryvn',
-  description:
-    'Discover cafes, restaurants, and local businesses with live pages on Eateryvn.',
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'vi'
+  const dictionary = await getDictionary(locale)
+  const explore = (dictionary as { explore: Record<string, string> }).explore
+
+  return {
+    title: explore.title,
+    description: explore.metaDescription,
+  }
 }
 
 type SearchParams = Promise<{
@@ -54,10 +60,7 @@ export default async function ExplorePage({
     dictionary as { businessProfile?: { tagsList?: Record<string, string> } }
   ).businessProfile?.tagsList ?? {}
 
-  const title =
-    locale === 'en'
-      ? 'Explore businesses on Eateryvn'
-      : 'Khám phá các cửa hàng tại Eateryvn'
+  const title = explore.title
 
   const categoryLabels: Record<string, string> = {}
   for (const c of BUSINESS_CATEGORIES) {
