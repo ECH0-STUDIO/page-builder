@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
+import { recordOrderEvent } from '@/lib/order-events'
 
 export type ServiceRequestType = 'call_staff' | 'request_check'
 export type ServiceRequestStatus = 'open' | 'acknowledged' | 'dismissed'
@@ -66,6 +68,19 @@ export async function updateServiceRequestStatusAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  const { business, role } = await getActiveBusiness(supabase, user.id)
+  if (!business || !role) return { success: false, error: 'No business access' }
+
+  const admin = createAdminClient()
+  const { data: existing } = await admin
+    .from('service_requests')
+    .select('id, business_id, type, status, table_number')
+    .eq('id', requestId)
+    .eq('business_id', business.id)
+    .maybeSingle()
+
+  if (!existing) return { success: false, error: 'Request not found' }
+
   const patch = {
     status,
     ...(status === 'acknowledged'
@@ -73,11 +88,31 @@ export async function updateServiceRequestStatusAction(
       : {}),
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('service_requests')
     .update(patch)
     .eq('id', requestId)
 
   if (error) return { success: false, error: error.message }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  await recordOrderEvent({
+    businessId: business.id,
+    orderId: null,
+    entityType: 'service_request',
+    entityId: requestId,
+    action: status === 'acknowledged' ? 'request_accepted' : 'request_dismissed',
+    actorUserId: user.id,
+    actorName: profile?.full_name || user.email || 'Team member',
+    actorRole: role,
+    before: { status: existing.status, type: existing.type, table_number: existing.table_number },
+    after: { status },
+  })
+
   return { success: true, data: undefined }
 }

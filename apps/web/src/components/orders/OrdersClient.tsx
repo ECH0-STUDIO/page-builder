@@ -6,7 +6,19 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useOrders } from '@/lib/react-query/hooks/useOrders'
 import { useServiceRequests } from '@/lib/react-query/hooks/useServiceRequests'
 import { updateServiceRequestStatusAction, type ServiceRequest } from '@/app/actions/service-requests'
-import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign } from 'lucide-react'
+import {
+  updateOrderStatusAction,
+  saveOrderEditAction,
+} from '@/app/actions/order-dashboard'
+import { RemoveOrderDialog } from '@/components/orders/RemoveOrderDialog'
+import { OrdersHistoryPanel } from '@/components/orders/OrdersHistoryPanel'
+import {
+  daysLeftInCurrentMonth,
+  getNextPurgedMonthLabel,
+  shouldShowRetentionReminder,
+  type OrderRemoveReasonCode,
+} from '@/lib/order-retention'
+import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -32,16 +44,36 @@ export type Order = {
   status: OrderStatus
   payment_status: PaymentStatus
   created_at: string
-  order_items: OrderItem[] // We will join this
+  order_items: OrderItem[]
 }
 
 interface OrdersClientProps {
   businessId: string
+  role: string
 }
 
-export function OrdersClient({ businessId }: OrdersClientProps) {
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
+
+function clientLocale(): 'en' | 'vi' {
+  if (typeof document === 'undefined') return 'vi'
+  const match = document.cookie.match(/(?:^|; )NEXT_LOCALE=([^;]*)/)
+  return match?.[1] === 'en' ? 'en' : 'vi'
+}
+
+export function OrdersClient({ businessId, role }: OrdersClientProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const canViewHistory = role === 'owner' || role === 'manager'
+  const [boardMode, setBoardMode] = useState<'today' | 'history'>('today')
 
   function formatTimeAgo(dateString: string) {
     const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
@@ -50,6 +82,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     const h = Math.floor(diff / 60)
     return t('orders.timeAgo.hoursMinsAgo').replace('{{h}}', h.toString()).replace('{{m}}', (diff % 60).toString())
   }
+
   const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useOrders(businessId)
   const {
     data: serviceRequests = [],
@@ -57,8 +90,8 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
   } = useServiceRequests(businessId)
 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
-  const [dayFilter, setDayFilter] = useState<'today' | 'yesterday'>('today')
-  // Memoize supabase client — do not create on every render
+  const [removingOrderId, setRemovingOrderId] = useState<string | null>(null)
+  const [removeBusy, setRemoveBusy] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
   const setOrders = useCallback((updater: (prev: Order[]) => Order[]) => {
@@ -70,6 +103,8 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
   }, [businessId, queryClient])
 
   useEffect(() => {
+    if (boardMode !== 'today') return
+
     const channel = supabase
       .channel('orders-channel')
       .on(
@@ -81,7 +116,9 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
             try {
               const audio = new Audio('/bell.mp3')
               audio.play().catch(() => {})
-            } catch (e) {}
+            } catch {
+              /* ignore */
+            }
             fetchOrders()
           } else if (payload.eventType === 'UPDATE') {
             setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o))
@@ -97,7 +134,9 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
             try {
               const audio = new Audio('/bell.mp3')
               audio.play().catch(() => {})
-            } catch (e) {}
+            } catch {
+              /* ignore */
+            }
             fetchServiceRequests()
           } else if (payload.eventType === 'UPDATE') {
             setServiceRequests(prev =>
@@ -111,7 +150,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [businessId, fetchOrders, fetchServiceRequests, setOrders, setServiceRequests, supabase, t])
+  }, [boardMode, businessId, fetchOrders, fetchServiceRequests, setOrders, setServiceRequests, supabase, t])
 
   const openRequests = serviceRequests.filter(r => r.status === 'open')
 
@@ -125,43 +164,39 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
   }
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    let previousStatus: OrderStatus | undefined
-    // Optimistic update
-    setOrders(prev => {
-      const order = prev.find(o => o.id === orderId)
-      previousStatus = order?.status
-      return prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
-    })
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus, ...(newStatus === 'paid' ? { payment_status: 'paid' as const } : {}) } : o))
 
-    const db = supabase
-    const { error } = await db.from('orders').update({ status: newStatus }).eq('id', orderId)
-    
-    if (error) {
-      toast.error(t('orders.failedUpdateStatus'))
-      fetchOrders() // Revert on failure
+    const res = await updateOrderStatusAction(businessId, orderId, newStatus)
+    if (!res.success) {
+      toast.error(res.error || t('orders.failedUpdateStatus'))
+      fetchOrders()
       return
     }
 
-    if (newStatus === 'cancelled' && previousStatus) {
-      toast(t('orders.orderRemoved'), {
-        action: {
-          label: t('orders.undo'),
-          onClick: () => updateOrderStatus(orderId, previousStatus!)
-        },
-        duration: 5000,
-      })
+    if (newStatus === 'cancelled') {
+      toast(t('orders.orderRemoved'), { duration: 4000 })
     }
   }
 
-  const updatePaymentStatus = async (orderId: string, newStatus: PaymentStatus) => {
-    // Optimistic update
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_status: newStatus } : o))
-    const db = supabase
-    const { error } = await db.from('orders').update({ payment_status: newStatus }).eq('id', orderId)
-    if (error) {
-      toast.error(t('orders.failedUpdatePayment'))
-      fetchOrders() // Revert on failure
+  const confirmRemoveOrder = async (payload: { reasonCode: OrderRemoveReasonCode; reason?: string }) => {
+    if (!removingOrderId) return
+    const orderId = removingOrderId
+    setRemoveBusy(true)
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o))
+    setRemovingOrderId(null)
+
+    const res = await updateOrderStatusAction(businessId, orderId, 'cancelled', {
+      reasonCode: payload.reasonCode,
+      reason: payload.reason,
+    })
+    setRemoveBusy(false)
+
+    if (!res.success) {
+      toast.error(res.error || t('orders.failedUpdateStatus'))
+      fetchOrders()
+      return
     }
+    toast(t('orders.orderRemoved'), { duration: 4000 })
   }
 
   // Force re-render every minute to update "time ago"
@@ -172,59 +207,78 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
   }, [])
 
   const saveOrderEdit = async (updatedOrder: Order) => {
-    // Optimistic UI update
     setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))
     setEditingOrder(null)
 
-    const db = supabase
-
-    // 1. Update main order (Table Number & Total Amount)
-    const { error: orderError } = await db.from('orders').update({
+    const res = await saveOrderEditAction(businessId, {
+      id: updatedOrder.id,
       table_number: updatedOrder.table_number,
       total_amount: updatedOrder.total_amount,
-    }).eq('id', updatedOrder.id)
-    
-    if (orderError) {
-      toast.error(t('orders.failedUpdateDetails'))
-      return fetchOrders() // Revert
+      order_items: updatedOrder.order_items.map(i => ({
+        id: i.id,
+        quantity: i.quantity,
+        item_name: i.item_name,
+        unit_price: i.unit_price,
+      })),
+    })
+
+    if (!res.success) {
+      toast.error(res.error || t('orders.failedUpdateDetails'))
+      fetchOrders()
+      return
     }
 
-    // 2. Update order items carefully
-    for (const item of updatedOrder.order_items) {
-      if (item.quantity === 0) {
-        // Delete item if quantity is 0
-        await db.from('order_items').delete().eq('id', item.id)
-      } else {
-        // Update quantity
-        await db.from('order_items').update({
-          quantity: item.quantity
-        }).eq('id', item.id)
-      }
-    }
-    
     toast.success(t('orders.orderUpdated'))
-    fetchOrders() // Re-sync to ensure perfect state
+    fetchOrders()
   }
 
-  const isToday = (dateString: string) => {
-    const d = new Date(dateString)
-    const today = new Date()
-    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
+  async function enableNotifications() {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+      toast.error(t('orders.notificationsUnsupported'))
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        toast.error(t('orders.notificationsDenied'))
+        return
+      }
+
+      const registration = await navigator.serviceWorker.register('/sw-push.js')
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+      if (vapidKey) {
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        })
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
+        })
+      }
+
+      toast.success(t('orders.notificationsEnabled'))
+    } catch {
+      toast.success(t('orders.notificationsEnabled'))
+    }
   }
 
-  const isYesterday = (dateString: string) => {
-    const d = new Date(dateString)
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    return d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()
-  }
-
-  const filteredOrders = orders.filter(o => dayFilter === 'today' ? isToday(o.created_at) : isYesterday(o.created_at))
-  const activeOrders = filteredOrders.filter(o => ['pending', 'completed', 'paid'].includes(o.status))
-
+  const activeOrders = orders.filter(o => ['pending', 'completed', 'paid'].includes(o.status))
   const pending = activeOrders.filter(o => o.status === 'pending')
   const completed = activeOrders.filter(o => o.status === 'completed')
   const paid = activeOrders.filter(o => o.status === 'paid')
+
+  const showRetention =
+    canViewHistory && shouldShowRetentionReminder()
+
+  const retentionMsg = showRetention
+    ? t('orders.retentionReminder')
+        .replace('{{days}}', String(daysLeftInCurrentMonth()))
+        .replace('{{month}}', getNextPurgedMonthLabel(new Date(), clientLocale()))
+    : ''
 
   const renderColumn = (title: string, icon: React.ReactNode, list: Order[], statusColor: string) => (
     <div className="flex flex-col flex-1 min-w-[320px] bg-gray-50/50 rounded-2xl p-4 border border-gray-100/80">
@@ -264,7 +318,7 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
                 <div className="text-right flex flex-col items-end">
                   <p className="font-bold text-gray-900">{formatCurrency(order.total_amount)}</p>
                   <button onClick={() => setEditingOrder(order)} className="mt-1 text-[10px] text-gray-500 hover:text-blue-600 font-bold uppercase tracking-wider transition-colors">
-                    Edit
+                    {t('orders.edit')}
                   </button>
                 </div>
               </div>
@@ -287,20 +341,23 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
                 ))}
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-2">
                 {order.status === 'pending' && (
                   <button onClick={() => updateOrderStatus(order.id, 'completed')} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="size-4" /> Complete
+                    <CheckCircle2 className="size-4" /> {t('orders.complete')}
                   </button>
                 )}
                 {order.status === 'completed' && (
                   <button onClick={() => updateOrderStatus(order.id, 'paid')} className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                    <DollarSign className="size-4" /> Mark Paid
+                    <DollarSign className="size-4" /> {t('orders.markPaid')}
                   </button>
                 )}
                 {(order.status === 'pending' || order.status === 'completed') && (
-                  <button onClick={() => updateOrderStatus(order.id, 'cancelled')} className="px-3 py-2 bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Cancel Order">
+                  <button
+                    onClick={() => setRemovingOrderId(order.id)}
+                    className="px-3 py-2 bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                    title={t('orders.cancelOrder')}
+                  >
                     <XCircle className="size-4" />
                   </button>
                 )}
@@ -312,117 +369,158 @@ export function OrdersClient({ businessId }: OrdersClientProps) {
     </div>
   )
 
-  if (loading) {
+  if (loading && boardMode === 'today') {
     return <div className="p-8 flex items-center justify-center text-gray-400"><RefreshCcw className="size-6 animate-spin" /></div>
   }
 
-  const DateSwitch = ({ className = "" }) => (
+  const ModeSwitch = ({ className = '' }: { className?: string }) => (
     <div className={`flex bg-gray-100 p-1 rounded-lg ${className}`}>
-      <button 
-        onClick={() => setDayFilter('today')} 
-        className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'today' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-      >{t('orders.today')}</button>
-      <button 
-        onClick={() => setDayFilter('yesterday')} 
-        className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${dayFilter === 'yesterday' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-      >{t('orders.yesterday')}</button>
+      <button
+        type="button"
+        onClick={() => setBoardMode('today')}
+        className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${boardMode === 'today' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+      >
+        {t('orders.modeToday')}
+      </button>
+      {canViewHistory && (
+        <button
+          type="button"
+          onClick={() => setBoardMode('history')}
+          className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${boardMode === 'history' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          {t('orders.history')}
+        </button>
+      )}
     </div>
   )
 
   return (
     <div className="p-4 md:p-6 h-[calc(100vh-4rem)] flex flex-col">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-6">
-        
-        {/* 1. Title & 2. Description */}
+      <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-6">
         <div className="flex flex-col order-1 md:order-none">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">
             {t('orders.title')}
-            <DateSwitch className="hidden md:flex" />
+            <ModeSwitch className="hidden md:flex" />
           </h1>
           <p className="text-sm text-gray-500 mt-1">{t('orders.autoClearMsg')}</p>
         </div>
 
-        {/* 3. Stats */}
-        <div className="flex gap-3 md:gap-4 order-3 md:order-2 w-full md:w-auto">
-          <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
-            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.todayOrders')}</p>
-            <p className="text-lg md:text-xl font-bold text-gray-900">{activeOrders.length}</p>
+        {boardMode === 'today' && (
+          <div className="flex gap-3 md:gap-4 order-3 md:order-2 w-full md:w-auto items-stretch">
+            <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
+              <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.todayOrders')}</p>
+              <p className="text-lg md:text-xl font-bold text-gray-900">{activeOrders.length}</p>
+            </div>
+            <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
+              <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.expectedRev')}</p>
+              <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void enableNotifications()}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm"
+            >
+              <BellRing className="size-4" />
+              {t('orders.enableNotifications')}
+            </button>
           </div>
-          <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
-            <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.expectedRev')}</p>
-            <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
-          </div>
-        </div>
+        )}
 
-        {/* 4. Switch (Mobile only) */}
-        <div className="flex md:hidden order-4 w-full">
-          <DateSwitch className="w-full" />
+        <div className="flex md:hidden order-4 w-full gap-2">
+          <ModeSwitch className="w-full" />
         </div>
-        
-      </div>
-
-      {/* Table service requests */}
-      <div className="mb-4 shrink-0 rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Bell className="size-4 text-amber-700" />
-          <h2 className="font-bold text-gray-900">{t('orders.serviceRequests')}</h2>
-          <span className="bg-amber-200 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
-            {openRequests.length}
-          </span>
-        </div>
-        {openRequests.length === 0 ? (
-          <p className="text-sm text-gray-500">{t('orders.noServiceRequests')}</p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {openRequests.map(req => (
-              <div
-                key={req.id}
-                className="flex items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm"
-              >
-                <div className="size-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                  {req.type === 'request_check'
-                    ? <Receipt className="size-4 text-amber-800" />
-                    : <Bell className="size-4 text-amber-800" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-gray-900 truncate">
-                    {t('orders.table')} {req.table_number}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {req.type === 'request_check'
-                      ? t('orders.requestCheckRequest')
-                      : t('orders.callStaffRequest')}
-                    {' · '}
-                    {formatTimeAgo(req.created_at)}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => resolveRequest(req.id, 'acknowledged')}
-                    className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800"
-                  >
-                    {t('orders.acknowledge')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => resolveRequest(req.id, 'dismissed')}
-                    className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200"
-                  >
-                    {t('orders.dismiss')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+        {boardMode === 'today' && (
+          <button
+            type="button"
+            onClick={() => void enableNotifications()}
+            className="md:hidden order-5 w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700"
+          >
+            <BellRing className="size-4" />
+            {t('orders.enableNotifications')}
+          </button>
         )}
       </div>
 
-      <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
-        {renderColumn(t('orders.received'), <Clock className="size-5 text-blue-600" />, pending, 'bg-blue-100')}
-        {renderColumn(t('orders.completed'), <CheckCircle2 className="size-5 text-amber-600" />, completed, 'bg-amber-100')}
-        {renderColumn(t('orders.paid'), <DollarSign className="size-5 text-green-600" />, paid, 'bg-green-100')}
-      </div>
+      {showRetention && (
+        <div className="mb-4 shrink-0 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          {retentionMsg}
+        </div>
+      )}
+
+      {boardMode === 'history' && canViewHistory ? (
+        <OrdersHistoryPanel businessId={businessId} />
+      ) : (
+        <>
+          <div className="mb-4 shrink-0 rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="size-4 text-amber-700" />
+              <h2 className="font-bold text-gray-900">{t('orders.serviceRequests')}</h2>
+              <span className="bg-amber-200 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                {openRequests.length}
+              </span>
+            </div>
+            {openRequests.length === 0 ? (
+              <p className="text-sm text-gray-500">{t('orders.noServiceRequests')}</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {openRequests.map(req => (
+                  <div
+                    key={req.id}
+                    className="flex items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm"
+                  >
+                    <div className="size-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      {req.type === 'request_check'
+                        ? <Receipt className="size-4 text-amber-800" />
+                        : <Bell className="size-4 text-amber-800" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {t('orders.table')} {req.table_number}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {req.type === 'request_check'
+                          ? t('orders.requestCheckRequest')
+                          : t('orders.callStaffRequest')}
+                        {' · '}
+                        {formatTimeAgo(req.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => resolveRequest(req.id, 'acknowledged')}
+                        className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-900 text-white hover:bg-gray-800"
+                      >
+                        {t('orders.acknowledge')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => resolveRequest(req.id, 'dismissed')}
+                        className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      >
+                        {t('orders.dismiss')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+            {renderColumn(t('orders.received'), <Clock className="size-5 text-blue-600" />, pending, 'bg-blue-100')}
+            {renderColumn(t('orders.completed'), <CheckCircle2 className="size-5 text-amber-600" />, completed, 'bg-amber-100')}
+            {renderColumn(t('orders.paid'), <DollarSign className="size-5 text-green-600" />, paid, 'bg-green-100')}
+          </div>
+        </>
+      )}
+
+      <RemoveOrderDialog
+        open={!!removingOrderId}
+        busy={removeBusy}
+        onCancel={() => setRemovingOrderId(null)}
+        onConfirm={(payload) => void confirmRemoveOrder(payload)}
+      />
     </div>
   )
 }
@@ -433,7 +531,6 @@ function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: 
   
   const updateItemQty = (id: string, delta: number) => {
     setDraft(prev => {
-      // 1. Calculate new items array
       const newItems = prev.order_items.map(i => {
         if (i.id === id) {
           const newQty = Math.max(0, Number(i.quantity) + delta)
@@ -442,7 +539,6 @@ function EditOrderCard({ order, onSave, onCancel }: { order: Order; onSave: (o: 
         return i
       })
       
-      // 2. Recalculate total accurately
       const newTotal = newItems.reduce((acc, i) => acc + (Number(i.unit_price) * Number(i.quantity)), 0)
       
       return { ...prev, order_items: newItems, total_amount: newTotal }

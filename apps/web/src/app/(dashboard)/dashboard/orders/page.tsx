@@ -11,10 +11,7 @@ export default async function OrdersPage() {
   const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
-
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-  return <OrdersClient businessId={business.id} />
+  return <OrdersClient businessId={business.id} role={role ?? 'staff'} />
 }

@@ -1,7 +1,8 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import type { CartItem } from '@/components/page-builder/render/CartContext'
+import { recordOrderEvent } from '@/lib/order-events'
 
 export async function createOrderAction(
   businessId: string,
@@ -47,6 +48,21 @@ export async function createOrderAction(
   if (itemsError) {
     return { success: false, error: itemsError.message }
   }
+
+  await recordOrderEvent({
+    businessId,
+    orderId: order.id,
+    entityType: 'order',
+    entityId: order.id,
+    action: 'created',
+    actorName: 'Customer',
+    actorRole: 'customer',
+    after: {
+      table_number: tableNumber || null,
+      total_amount: totalAmount,
+      item_count: items.length,
+    },
+  })
 
   return { success: true, orderId: order.id }
 }
