@@ -9,6 +9,7 @@ import { BUSINESS_CATEGORIES, BUSINESS_TAGS } from '@/lib/constants'
 import { getMarketingLocaleFromRequest } from '@/lib/marketing-locale'
 import { loadMarketingHtmlDocument } from '@/lib/marketing-webflow'
 import {
+  buildExploreClientAssets,
   parseExploreFilters,
   renderExplorePageHtml,
   type ExploreRenderLabels,
@@ -85,14 +86,16 @@ export async function GET(request: Request) {
     locale,
   )
 
-  return new Response(
-    finalizeMarketingHtml(rendered, request, locale, {
-      seo: {
-        title: labels.title,
-        description: labels.metaDescription,
-        canonicalPath: '/explore',
-      },
-    }),
-    { headers: HTML_HEADERS },
-  )
+  const finalized = finalizeMarketingHtml(rendered, request, locale, {
+    seo: {
+      title: labels.title,
+      description: labels.metaDescription,
+      canonicalPath: '/explore',
+    },
+  })
+
+  const clientAssets = buildExploreClientAssets(allBusinesses, labels, locale)
+  const html = finalized.replace(/<\/body>/i, `${clientAssets}\n</body>`)
+
+  return new Response(html, { headers: HTML_HEADERS })
 }

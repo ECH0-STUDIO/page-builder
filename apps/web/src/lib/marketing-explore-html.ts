@@ -233,6 +233,14 @@ const EXPLORE_STYLES = `<style id="explore-page-styles">
 }
 </style>`
 
+export function buildExploreClientAssets(
+  businesses: ExploreBusinessSearchMeta[],
+  labels: ExploreRenderLabels,
+  locale: SupportedLocale,
+): string {
+  return buildExploreClientScript(businesses, labels, locale)
+}
+
 function buildExploreClientScript(
   businesses: ExploreBusinessSearchMeta[],
   labels: ExploreRenderLabels,
@@ -499,15 +507,12 @@ export function renderExplorePageHtml(
   <div class="padding-section-medium"></div>
 </section>`
 
-  const clientScript = buildExploreClientScript(allBusinesses, labels, locale)
-
   let html = baseHtml
   if (!EXPLORE_SECTION_RE.test(html)) {
     return html
   }
   html = html.replace(EXPLORE_SECTION_RE, section)
   html = html.replace(/<\/head>/i, `${EXPLORE_STYLES}\n</head>`)
-  html = html.replace(/<\/body>/i, `${clientScript}\n</body>`)
   return html
 }
 

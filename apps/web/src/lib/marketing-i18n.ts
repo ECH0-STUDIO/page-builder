@@ -98,7 +98,11 @@ function translateString(text: string, pairs: [string, string][]): string {
 }
 
 function applyReplacements(html: string, pairs: [string, string][]): string {
-  let out = html
+  const scripts: string[] = []
+  let out = html.replace(/<script\b[\s\S]*?<\/script>/gi, (match) => {
+    scripts.push(match)
+    return `\x00SCRIPT_${scripts.length - 1}\x00`
+  })
 
   // Text nodes between tags
   out = out.replace(/>([^<]+)</g, (full, text: string) => {
@@ -117,6 +121,7 @@ function applyReplacements(html: string, pairs: [string, string][]): string {
     },
   )
 
+  out = out.replace(/\x00SCRIPT_(\d+)\x00/g, (_, index: string) => scripts[Number(index)] ?? '')
   return out
 }
 
