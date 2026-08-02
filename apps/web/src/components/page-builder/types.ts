@@ -408,11 +408,14 @@ export const defaultNavbarConfig: NavbarConfig = {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 export interface FooterConfig {
+  show_logo?: boolean
   show_business_name: boolean
   copyright_text: string
   background_color: string
   background_image?: string
   text_color: string
+  /** Section spacing preset — preferred over raw padding_* in the editor */
+  spacing_size?: 'small' | 'medium' | 'large'
   padding_top: number
   padding_right: number
   padding_bottom: number
@@ -420,11 +423,13 @@ export interface FooterConfig {
 }
 
 export const defaultFooterConfig: FooterConfig = {
+  show_logo: false,
   show_business_name: true,
   copyright_text: 'All rights reserved.',
   background_color: '#111111',
   background_image: '',
   text_color: '#ffffff',
+  spacing_size: 'medium',
   padding_top: 32,
   padding_right: 24,
   padding_bottom: 32,

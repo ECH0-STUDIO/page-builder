@@ -2,7 +2,7 @@
  * Section spacing presets — small / medium / large instead of manual px controls.
  */
 
-import type { BlockType, BlockSpacing, HeroConfig } from './types'
+import type { BlockType, BlockSpacing, FooterConfig, HeroConfig } from './types'
 import { defaultSpacing, SECTION_SIDE_PADDING } from './types'
 import { resolveHeroHeight } from './hero-utils'
 
@@ -113,4 +113,41 @@ export function inferSpacingSize(
 
 export function defaultSpacingSize(): SectionSize {
   return 'medium'
+}
+
+/** Footer chrome padding presets (medium matches legacy 32/24 defaults). */
+export function footerSpacingFromSize(size: SectionSize): Pick<
+  FooterConfig,
+  'padding_top' | 'padding_right' | 'padding_bottom' | 'padding_left'
+> {
+  const mult = SIZE_MULTIPLIER[size]
+  const side = SIDE_PADDING_BY_SIZE[size]
+  const vertical = Math.round(32 * mult)
+  return {
+    padding_top: vertical,
+    padding_right: side,
+    padding_bottom: vertical,
+    padding_left: side,
+  }
+}
+
+/** Infer footer preset from saved numeric padding (legacy footers). */
+export function inferFooterSpacingSize(
+  config: Pick<FooterConfig, 'padding_top' | 'spacing_size'>,
+): SectionSize {
+  if (config.spacing_size === 'small' || config.spacing_size === 'medium' || config.spacing_size === 'large') {
+    return config.spacing_size
+  }
+  const targetTop = config.padding_top ?? 32
+  let best: SectionSize = 'medium'
+  let bestDiff = Infinity
+  for (const size of ['small', 'medium', 'large'] as SectionSize[]) {
+    const preset = footerSpacingFromSize(size)
+    const diff = Math.abs(preset.padding_top - targetTop)
+    if (diff < bestDiff) {
+      bestDiff = diff
+      best = size
+    }
+  }
+  return best
 }

@@ -1121,6 +1121,7 @@ export function EditorShell({
               config={footerConfig}
               onChange={handleFooterChange}
               businessId={business.id}
+              hasLogo={Boolean(business.logo_url)}
             />
           </div>
         </>
@@ -1365,6 +1366,7 @@ export function EditorShell({
                 <FooterRender
                   config={footerConfig}
                   businessName={business.name}
+                  logoUrl={business.logo_url}
                   inEditor={!isPreviewMode}
                 />
                 </div>

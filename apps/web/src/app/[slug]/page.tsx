@@ -373,6 +373,7 @@ export default async function SlugPage({
       <FooterRender
         config={footerConfig}
         businessName={business.name}
+        logoUrl={business.logo_url}
       />
 
       {/* Landing is browse-only — cart/order lives on /{slug}/order */}

@@ -199,6 +199,11 @@ export function renderSiteFooter(props: PuckBlockProps, ctx: PuckRenderContext) 
   const inEditor = !ctx.previewInteractive
 
   return (
-    <FooterRender config={config} businessName={ctx.business.name} inEditor={inEditor} />
+    <FooterRender
+      config={config}
+      businessName={ctx.business.name}
+      logoUrl={ctx.business.logo_url}
+      inEditor={inEditor}
+    />
   )
 }

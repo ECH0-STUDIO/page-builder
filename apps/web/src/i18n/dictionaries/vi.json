@@ -475,7 +475,9 @@
     "content": "Nội dung",
     "outlineEmpty": "Chưa có phần nào. Kéo khối từ tab Khối.",
     "toggleBlocks": "Bật/tắt bảng khối",
-    "toggleSettings": "Bật/tắt bảng cài đặt"
+    "toggleSettings": "Bật/tắt bảng cài đặt",
+    "moveBlockUp": "Di chuyển phần lên",
+    "moveBlockDown": "Di chuyển phần xuống"
   },
   "businessProfile": {
     "logo": "Logo",
@@ -866,6 +868,8 @@
   "footerBlock": {
     "footerSettings": "Cài đặt chân trang",
     "appearsBottom": "Hiển thị ở dưới cùng của trang.",
+    "showLogo": "Hiển thị logo",
+    "noLogoSet": "Tải logo lên trong Cài đặt doanh nghiệp để bật tùy chọn này.",
     "showBusinessName": "Hiển thị tên doanh nghiệp",
     "copyrightText": "Văn bản bản quyền",
     "colours": "Màu sắc",
@@ -874,6 +878,8 @@
     "backgroundImage": "Ảnh nền",
     "backgroundImageHelp": "Ảnh tùy chọn phía sau nội dung chân trang. Màu nền hiển thị nếu ảnh không phủ kín.",
     "clickToUpload": "Nhấn để tải lên",
+    "gallery": "Thư viện",
+    "sectionSpacingHelp": "Khoảng đệm bên trong nền chân trang, bao quanh nội dung.",
     "saveFooter": "Lưu chân trang",
     "footerSaved": "Đã lưu chân trang",
     "saveFailed": "Lưu thất bại:",

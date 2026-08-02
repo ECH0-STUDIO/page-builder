@@ -93,6 +93,21 @@ export function NavbarSettings({
   return (
     <div className="space-y-5">
 
+      {/* Sticky scroll — own section so it’s easy to find */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <Label htmlFor="nav-sticky" className="text-xs cursor-pointer font-medium">{t('navbarBlock.stickyNavbar')}</Label>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">{t('navbarBlock.stickyHelp')}</p>
+        </div>
+        <Switch
+          id="nav-sticky"
+          checked={config.sticky !== false}
+          onCheckedChange={v => set('sticky', v)}
+        />
+      </div>
+
+      <Separator />
+
       {/* Logo / Brand */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('navbarBlock.logoBrand')}</Label>
@@ -282,13 +297,6 @@ export function NavbarSettings({
           })}
         </div>
 
-        <div className="flex items-center justify-between pt-1">
-          <div>
-            <Label htmlFor="nav-sticky" className="text-xs cursor-pointer">{t('navbarBlock.stickyNavbar')}</Label>
-            <p className="text-[11px] text-muted-foreground">{t('navbarBlock.stickyHelp')}</p>
-          </div>
-          <Switch id="nav-sticky" checked={config.sticky} onCheckedChange={v => set('sticky', v)} />
-        </div>
       </div>
     </div>
   )

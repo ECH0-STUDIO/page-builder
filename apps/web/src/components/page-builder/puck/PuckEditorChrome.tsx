@@ -5,7 +5,7 @@
  * Preview sync must stay mounted while preview is active (not inside headerActions only).
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -74,6 +74,56 @@ export function PuckPreviewSync({
       recordHistory: false,
     })
   }, [previewMode, viewMode, dispatch])
+
+  return null
+}
+
+/**
+ * Recover from stuck Puck drag state (isDragging never cleared after a lost
+ * pointerup / cancelled capture). Without this, canvas DnD can die until refresh.
+ */
+export function PuckDragRecovery() {
+  const { appState, dispatch } = usePuck()
+  const isDraggingRef = useRef(false)
+  isDraggingRef.current = Boolean(appState.ui.isDragging)
+
+  useEffect(() => {
+    let stuckTimer: ReturnType<typeof setTimeout> | undefined
+
+    function clearStuckDrag() {
+      if (!isDraggingRef.current) return
+      dispatch({
+        type: 'setUi',
+        ui: { isDragging: false },
+        recordHistory: false,
+      })
+      document.documentElement.removeAttribute('data-puck-dragging')
+      document.body.removeAttribute('data-puck-dragging')
+    }
+
+    function scheduleRecovery() {
+      if (stuckTimer) clearTimeout(stuckTimer)
+      // Allow normal drag-end animation to finish; only force-clear if still stuck.
+      stuckTimer = setTimeout(clearStuckDrag, 1500)
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') clearStuckDrag()
+    }
+
+    window.addEventListener('pointerup', scheduleRecovery)
+    window.addEventListener('pointercancel', scheduleRecovery)
+    window.addEventListener('blur', scheduleRecovery)
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      if (stuckTimer) clearTimeout(stuckTimer)
+      window.removeEventListener('pointerup', scheduleRecovery)
+      window.removeEventListener('pointercancel', scheduleRecovery)
+      window.removeEventListener('blur', scheduleRecovery)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [dispatch])
 
   return null
 }

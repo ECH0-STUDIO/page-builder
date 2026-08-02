@@ -475,7 +475,9 @@
     "content": "Content",
     "outlineEmpty": "No sections yet. Drag blocks from the Blocks tab.",
     "toggleBlocks": "Toggle blocks panel",
-    "toggleSettings": "Toggle settings panel"
+    "toggleSettings": "Toggle settings panel",
+    "moveBlockUp": "Move section up",
+    "moveBlockDown": "Move section down"
   },
   "businessProfile": {
     "logo": "Logo",
@@ -866,6 +868,8 @@
   "footerBlock": {
     "footerSettings": "Footer Settings",
     "appearsBottom": "Appears at the bottom of your page.",
+    "showLogo": "Show logo",
+    "noLogoSet": "Upload a logo in Business settings to enable this.",
     "showBusinessName": "Show business name",
     "copyrightText": "Copyright Text",
     "colours": "Colours",
@@ -874,6 +878,8 @@
     "backgroundImage": "Background image",
     "backgroundImageHelp": "Optional image behind footer content. Background colour shows if the image does not cover the area.",
     "clickToUpload": "Click to upload",
+    "gallery": "Gallery",
+    "sectionSpacingHelp": "Padding inside the footer background around the content.",
     "saveFooter": "Save footer",
     "footerSaved": "Footer saved",
     "saveFailed": "Save failed:",

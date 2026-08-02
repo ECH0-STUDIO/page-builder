@@ -13,21 +13,36 @@ import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
-import { SpacingControls } from './SpacingControls'
+import { cn } from '@/lib/utils'
+import {
+  footerSpacingFromSize,
+  inferFooterSpacingSize,
+  type SectionSize,
+} from '../spacing-presets'
 
 export function FooterSettings({
   config,
   onChange,
   businessId,
+  hasLogo = false,
 }: {
   config: FooterConfig
   onChange: (config: FooterConfig) => void
   businessId: string
+  /** Whether the business profile has a logo URL (toggle disabled when false) */
+  hasLogo?: boolean
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const set = (k: keyof FooterConfig, v: FooterConfig[keyof FooterConfig]) => onChange({ ...config, [k]: v })
+  const spacingSize = inferFooterSpacingSize(config)
+
+  const SPACING_OPTIONS: { value: SectionSize; label: string }[] = [
+    { value: 'small', label: t('pageBuilder.spacingSmall') },
+    { value: 'medium', label: t('pageBuilder.spacingMedium') },
+    { value: 'large', label: t('pageBuilder.spacingLarge') },
+  ]
 
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -47,6 +62,14 @@ export function FooterSettings({
     }
   }
 
+  function setSpacingSize(size: SectionSize) {
+    onChange({
+      ...config,
+      spacing_size: size,
+      ...footerSpacingFromSize(size),
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -55,6 +78,26 @@ export function FooterSettings({
       </div>
 
       <div className="space-y-4">
+        <div className={cn('space-y-1', !hasLogo && 'opacity-50')}>
+          <div className="flex items-center justify-between gap-3">
+            <Label
+              htmlFor="footer-show-logo"
+              className={cn('text-xs', hasLogo ? 'cursor-pointer' : 'cursor-not-allowed')}
+            >
+              {t('footerBlock.showLogo')}
+            </Label>
+            <Switch
+              id="footer-show-logo"
+              checked={hasLogo && Boolean(config.show_logo)}
+              disabled={!hasLogo}
+              onCheckedChange={v => set('show_logo', v)}
+            />
+          </div>
+          {!hasLogo && (
+            <p className="text-[11px] text-muted-foreground">{t('footerBlock.noLogoSet')}</p>
+          )}
+        </div>
+
         <div className="flex items-center justify-between gap-3">
           <Label htmlFor="footer-show-business-name" className="text-xs cursor-pointer">{t('footerBlock.showBusinessName')}</Label>
           <Switch
@@ -133,7 +176,7 @@ export function FooterSettings({
                   className="w-1/3 h-20 rounded-lg border border-border hover:bg-muted flex flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
                 >
                   <ImageIcon className="size-4" />
-                  <span className="text-[10px] uppercase font-bold tracking-wider">Gallery</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">{t('footerBlock.gallery')}</span>
                 </button>
               </div>
             )}
@@ -143,24 +186,31 @@ export function FooterSettings({
 
       <Separator />
 
-      <SpacingControls
-        paddingOnly
-        spacing={{
-          padding_top: config.padding_top ?? 32,
-          padding_right: config.padding_right ?? 24,
-          padding_bottom: config.padding_bottom ?? 32,
-          padding_left: config.padding_left ?? 24,
-          margin_top: 0,
-          margin_bottom: 0,
-        }}
-        onChange={s => onChange({
-          ...config,
-          padding_top: s.padding_top,
-          padding_right: s.padding_right,
-          padding_bottom: s.padding_bottom,
-          padding_left: s.padding_left,
-        })}
-      />
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t('pageBuilder.sectionSpacing')}
+        </Label>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          {t('footerBlock.sectionSpacingHelp')}
+        </p>
+        <div className="flex gap-1.5">
+          {SPACING_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setSpacingSize(opt.value)}
+              className={cn(
+                'flex-1 py-1.5 rounded border text-xs transition-colors',
+                spacingSize === opt.value
+                  ? 'border-primary bg-primary/5 text-primary font-medium'
+                  : 'border-border hover:border-foreground/30',
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
