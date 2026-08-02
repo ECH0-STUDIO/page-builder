@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { ExploreClient, type ExploreLabels } from '@/components/explore/ExploreClient'
+import { MarketingWebflowShell } from '@/components/marketing/MarketingWebflowShell'
 import {
   listExploreBusinesses,
   listExploreCities,
 } from '@/lib/explore-directory'
 import { getDictionary } from '@/i18n/getDictionary'
 import { BUSINESS_CATEGORIES, BUSINESS_TAGS } from '@/lib/constants'
-import { appPath } from '@/lib/site-urls'
+import type { SupportedLocale } from '@/i18n/locale'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +51,8 @@ export default async function ExplorePage({
   const sort: 'az' | 'za' = sortRaw === 'za' ? 'za' : 'az'
 
   const cookieStore = await cookies()
-  const locale = cookieStore.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'vi'
+  const locale: SupportedLocale =
+    cookieStore.get('NEXT_LOCALE')?.value === 'en' ? 'en' : 'vi'
   const dictionary = await getDictionary(locale)
   const explore = (dictionary as { explore: Record<string, string> }).explore
   const onboardingCategories = (
@@ -59,8 +61,6 @@ export default async function ExplorePage({
   const tagsList = (
     dictionary as { businessProfile?: { tagsList?: Record<string, string> } }
   ).businessProfile?.tagsList ?? {}
-
-  const title = explore.title
 
   const categoryLabels: Record<string, string> = {}
   for (const c of BUSINESS_CATEGORIES) {
@@ -72,7 +72,7 @@ export default async function ExplorePage({
   }
 
   const labels: ExploreLabels = {
-    title,
+    title: explore.title,
     search: explore.search,
     city: explore.city,
     category: explore.category,
@@ -90,30 +90,19 @@ export default async function ExplorePage({
   }
 
   const [businesses, citySource] = await Promise.all([
-    listExploreBusinesses({ q, city, category, tag, sort }),
-    listExploreBusinesses({ sort: 'az' }),
+    listExploreBusinesses({ q, city, category, tag, sort }, locale),
+    listExploreBusinesses({ sort: 'az' }, locale),
   ])
   const citiesFromData = listExploreCities(citySource)
 
   return (
-    <>
-      <link rel="stylesheet" href="/marketing/css/normalize.css" />
-      <link rel="stylesheet" href="/marketing/css/webflow.css" />
-      <link
-        rel="stylesheet"
-        href="/marketing/css/thais-fantabulous-site-defac5.webflow.css"
-      />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      />
+    <MarketingWebflowShell locale={locale} pathname="/explore">
       <ExploreClient
         businesses={businesses}
         citiesFromData={citiesFromData}
         initialFilters={{ q, city, category, tag, sort }}
         labels={labels}
-        loginUrl={appPath('/login')}
       />
-    </>
+    </MarketingWebflowShell>
   )
 }

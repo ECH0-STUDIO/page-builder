@@ -16,7 +16,6 @@ import {
   daysLeftInCurrentMonth,
   getNextPurgedMonthLabel,
   shouldShowRetentionReminder,
-  type OrderRemoveReasonCode,
 } from '@/lib/order-retention'
 import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
@@ -178,7 +177,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     }
   }
 
-  const confirmRemoveOrder = async (payload: { reasonCode: OrderRemoveReasonCode; reason?: string }) => {
+  const confirmRemoveOrder = async (payload: { reason: string }) => {
     if (!removingOrderId) return
     const orderId = removingOrderId
     setRemoveBusy(true)
@@ -186,7 +185,6 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     setRemovingOrderId(null)
 
     const res = await updateOrderStatusAction(businessId, orderId, 'cancelled', {
-      reasonCode: payload.reasonCode,
       reason: payload.reason,
     })
     setRemoveBusy(false)

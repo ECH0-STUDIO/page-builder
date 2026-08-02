@@ -5,8 +5,6 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { recordOrderEvent } from '@/lib/order-events'
 import {
   getOrderRetentionCutoffIso,
-  ORDER_REMOVE_REASONS,
-  type OrderRemoveReasonCode,
 } from '@/lib/order-retention'
 
 type ActionResult<T = void> =
@@ -60,20 +58,16 @@ export async function updateOrderStatusAction(
   businessId: string,
   orderId: string,
   newStatus: 'pending' | 'completed' | 'paid' | 'cancelled',
-  opts?: { reason?: string | null; reasonCode?: OrderRemoveReasonCode | null },
+  opts?: { reason?: string | null },
 ): Promise<ActionResult> {
   const actorRes = await requireTeamActor(businessId)
   if (!actorRes.success) return actorRes
   const actor = actorRes.data
 
   if (newStatus === 'cancelled') {
-    const code = opts?.reasonCode
-    const custom = (opts?.reason || '').trim()
-    if (!code && !custom) {
+    const reasonText = (opts?.reason || '').trim()
+    if (!reasonText) {
       return { success: false, error: 'A removal reason is required' }
-    }
-    if (code && !ORDER_REMOVE_REASONS.includes(code)) {
-      return { success: false, error: 'Invalid removal reason' }
     }
   }
 
@@ -110,9 +104,7 @@ export async function updateOrderStatusAction(
   else if (newStatus === 'pending' && prev === 'cancelled') action = 'restored'
 
   const reason =
-    newStatus === 'cancelled'
-      ? [opts?.reasonCode, opts?.reason?.trim()].filter(Boolean).join(': ') || null
-      : null
+    newStatus === 'cancelled' ? (opts?.reason || '').trim() || null : null
 
   await recordOrderEvent({
     businessId,
