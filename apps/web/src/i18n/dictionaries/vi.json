@@ -1088,7 +1088,7 @@
     "applyFilter": "Áp dụng",
     "noHistory": "Không có dữ liệu trong khoảng này.",
     "removeTitle": "Xóa đơn",
-    "removeHelp": "Chọn lý do nhanh hoặc nhập lý do khác. Lý do sẽ được lưu trong nhật ký.",
+    "removeHelp": "Nhập lý do, hoặc chọn lý do nhanh bên dưới. Lý do sẽ được lưu trong nhật ký.",
     "removeReasonLabel": "Lý do",
     "removeReasonPlaceholder": "Vì sao đơn này bị xóa?",
     "removeReasonCustom": "Khác (tự nhập)",

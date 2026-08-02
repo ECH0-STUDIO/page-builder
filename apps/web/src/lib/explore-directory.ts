@@ -18,10 +18,16 @@ export type ExploreBusiness = {
   websiteUrl: string
 }
 
-function searchTerms(q: string): string[] {
-  return q
-    .trim()
+/** Fold Vietnamese diacritics for loose keyword matching (Giao → giao hàng). */
+function foldSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+}
+
+function searchTerms(q: string): string[] {
+  return foldSearchText(q)
     .split(/\s+/)
     .filter(Boolean)
 }
@@ -29,7 +35,7 @@ function searchTerms(q: string): string[] {
 function matchesSearch(haystackParts: string[], q: string): boolean {
   const terms = searchTerms(q)
   if (terms.length === 0) return true
-  const haystack = haystackParts.filter(Boolean).join(' ').toLowerCase()
+  const haystack = foldSearchText(haystackParts.filter(Boolean).join(' '))
   return terms.every((term) => haystack.includes(term))
 }
 
@@ -69,7 +75,7 @@ export async function listExploreBusinesses(
 
   const { data: businesses, error: businessesError } = await db
     .from('businesses')
-    .select('id, name, slug, logo_url, category, tags, address, city')
+    .select('id, name, slug, logo_url, category, tags, address, city, google_maps_url')
     .eq('marketplace_listed', true)
     .in('id', publishedIds)
     .limit(500)
@@ -101,6 +107,7 @@ export async function listExploreBusinesses(
           b.slug,
           b.address,
           b.city,
+          b.google_maps_url,
           ...categoryLabels,
           ...tagLabels,
         ].filter((part): part is string => Boolean(part))

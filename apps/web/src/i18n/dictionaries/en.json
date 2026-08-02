@@ -1088,7 +1088,7 @@
     "applyFilter": "Apply",
     "noHistory": "No history in this range.",
     "removeTitle": "Remove order",
-    "removeHelp": "Pick a quick reason or enter your own. This is saved in the activity log.",
+    "removeHelp": "Enter a reason, or tap a quick option to fill it in. Saved in the activity log.",
     "removeReasonLabel": "Reason",
     "removeReasonPlaceholder": "Why is this order being removed?",
     "removeReasonCustom": "Other (custom reason)",

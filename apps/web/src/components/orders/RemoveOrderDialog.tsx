@@ -1,13 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-  ORDER_REMOVE_REASONS,
-  type OrderRemoveReasonCode,
-} from '@/lib/order-retention'
+import { ORDER_REMOVE_REASONS, type OrderRemoveReasonCode } from '@/lib/order-retention'
 import { useTranslation } from '@/i18n/I18nProvider'
-
-type ReasonChoice = OrderRemoveReasonCode | 'custom'
 
 interface RemoveOrderDialogProps {
   open: boolean
@@ -18,30 +13,20 @@ interface RemoveOrderDialogProps {
 
 export function RemoveOrderDialog({ open, onCancel, onConfirm, busy }: RemoveOrderDialogProps) {
   const { t } = useTranslation()
-  const [choice, setChoice] = useState<ReasonChoice>('customer_cancels')
   const [reason, setReason] = useState('')
 
   useEffect(() => {
     if (!open) return
-    const defaultLabel = t('orders.removeReasons.customer_cancels')
-    setChoice('customer_cancels')
-    setReason(defaultLabel)
-  }, [open, t])
+    setReason('')
+  }, [open])
 
   if (!open) return null
 
-  function selectQuick(code: OrderRemoveReasonCode) {
-    setChoice(code)
+  const trimmed = reason.trim()
+
+  function applyQuick(code: OrderRemoveReasonCode) {
     setReason(t(`orders.removeReasons.${code}`))
   }
-
-  function selectCustom() {
-    setChoice('custom')
-    setReason('')
-  }
-
-  const trimmed = reason.trim()
-  const canConfirm = trimmed.length > 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -55,44 +40,6 @@ export function RemoveOrderDialog({ open, onCancel, onConfirm, busy }: RemoveOrd
           <p className="text-sm text-gray-500 mt-1">{t('orders.removeHelp')}</p>
         </div>
 
-        <div className="space-y-2">
-          {ORDER_REMOVE_REASONS.map((code) => (
-            <label
-              key={code}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                choice === code ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              <input
-                type="radio"
-                name="remove-reason"
-                checked={choice === code}
-                onChange={() => selectQuick(code)}
-                className="accent-gray-900"
-              />
-              <span className="text-sm font-medium text-gray-800">
-                {t(`orders.removeReasons.${code}`)}
-              </span>
-            </label>
-          ))}
-          <label
-            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-              choice === 'custom' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <input
-              type="radio"
-              name="remove-reason"
-              checked={choice === 'custom'}
-              onChange={selectCustom}
-              className="accent-gray-900"
-            />
-            <span className="text-sm font-medium text-gray-800">
-              {t('orders.removeReasonCustom')}
-            </span>
-          </label>
-        </div>
-
         <div>
           <label className="text-xs font-semibold text-gray-500 mb-1 block">
             {t('orders.removeReasonLabel')}
@@ -100,13 +47,23 @@ export function RemoveOrderDialog({ open, onCancel, onConfirm, busy }: RemoveOrd
           <input
             type="text"
             value={reason}
-            onChange={(e) => {
-              setReason(e.target.value)
-              if (choice !== 'custom') setChoice('custom')
-            }}
+            onChange={(e) => setReason(e.target.value)}
             placeholder={t('orders.removeReasonPlaceholder')}
             className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
           />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {ORDER_REMOVE_REASONS.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => applyQuick(code)}
+              className="px-3 py-1.5 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              {t(`orders.removeReasons.${code}`)}
+            </button>
+          ))}
         </div>
 
         <div className="flex gap-2 pt-1">
@@ -120,7 +77,7 @@ export function RemoveOrderDialog({ open, onCancel, onConfirm, busy }: RemoveOrd
           </button>
           <button
             type="button"
-            disabled={busy || !canConfirm}
+            disabled={busy || !trimmed}
             onClick={() => onConfirm({ reason: trimmed })}
             className="flex-1 h-10 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
           >
