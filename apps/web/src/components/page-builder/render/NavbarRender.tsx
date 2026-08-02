@@ -7,12 +7,20 @@
  *  - logo_type='none': links center-aligned
  *  - sticky: uses position:sticky top:0 z-[9999] — must NOT be inside overflow:hidden parent
  *  - anchor links: href uses block-{id} format, smooth scroll via CSS
- *  - burger menu collapses on mobile (≤640px)
+ *  - burger menu collapses on mobile (≤640px) or when isMobilePreview / preview layout is mobile
  */
 
 import { useState } from 'react'
 import Image from 'next/image'
-import type { NavbarConfig } from '../types'
+import Link from 'next/link'
+import type { NavbarConfig, NavLink } from '../types'
+import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { usePreviewLayout } from '../puck/PreviewLayoutContext'
+
+function isInternalPath(href: string) {
+  return href.startsWith('/') && !href.startsWith('//')
+}
 
 interface NavbarRenderProps {
   config: NavbarConfig
@@ -21,26 +29,34 @@ interface NavbarRenderProps {
   /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
   isMobilePreview?: boolean
+  locale?: string
 }
 
-export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor, isMobilePreview }: NavbarRenderProps) {
+export function NavbarRender({
+  config,
+  businessName = 'Brand',
+  logoUrl,
+  inEditor,
+  isMobilePreview,
+  locale,
+}: NavbarRenderProps) {
+  const activeLocale = toSupportedLocale(locale)
   const [open, setOpen] = useState(false)
+  const previewLayout = usePreviewLayout()
+  const forceMobile = Boolean(isMobilePreview) || previewLayout === 'mobile'
 
   const isTransparent = config.background_color === 'transparent'
   const bg = isTransparent ? 'rgba(255,255,255,0.85)' : config.background_color
   const hasLinks = config.links && config.links.length > 0
 
   const containerStyle: React.CSSProperties = {
-    // Sticky must be on the element itself. z-index high enough to sit above all page content.
-    position: config.sticky ? 'sticky' : 'relative',
+    position: config.sticky !== false ? 'sticky' : 'relative',
     top: 0,
     zIndex: 9999,
     backgroundColor: bg,
     backdropFilter: isTransparent ? 'blur(12px)' : undefined,
     WebkitBackdropFilter: isTransparent ? 'blur(12px)' : undefined,
     borderBottom: '1px solid rgba(0,0,0,0.06)',
-    // Ensure sticky works even inside overflow:auto containers
-    willChange: 'transform',
   }
 
   const linkStyle: React.CSSProperties = {
@@ -55,20 +71,26 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
 
   function handleLinkClick(href: string) {
     if (inEditor) return
-    if (href.startsWith('block-')) {
-      const el = document.getElementById(href)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = document.getElementById(href)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else if (href.startsWith('block-')) {
+      const fallback = document.getElementById(href)
+      fallback?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
   function getHref(link: { href: string; anchor: boolean }) {
-    if (link.anchor) return `#${link.href}`
-    return link.href
+    return resolveNavHref(link)
+  }
+
+  function linkTarget(link: NavLink) {
+    return navLinkOpensNewTab(link) ? '_blank' : undefined
   }
 
   return (
     <nav style={containerStyle} id="page-navbar">
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative' }}>
 
         {/* Main bar */}
         <div style={{
@@ -81,12 +103,12 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
 
           {/* Logo / brand */}
           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-            <a 
+            <a
               href="#"
               onClick={(e) => {
                 e.preventDefault()
                 if (!inEditor) {
-                  window.location.reload()
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
                 }
               }}
               style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', cursor: inEditor ? 'default' : 'pointer' }}
@@ -114,23 +136,43 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
                 marginLeft: 'auto',
               }}
             >
-            {config.links.map((link, i) => (
-              <a
-                key={i}
-                href={getHref(link)}
-                style={{ ...linkStyle, opacity: 0.85 }}
-                onClick={e => {
-                  if (link.anchor && !inEditor) {
-                    e.preventDefault()
-                    handleLinkClick(link.href)
-                  }
-                }}
-                onMouseEnter={e => !inEditor && (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => !inEditor && (e.currentTarget.style.opacity = '0.85')}
-              >
-                {link.label}
-              </a>
-            ))}
+            {config.links.map((link, i) => {
+              const href = getHref(link)
+              const label = pickLocale(link.label, activeLocale)
+              const sharedProps = {
+                style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
+                onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  if (!inEditor) e.currentTarget.style.opacity = '1'
+                },
+                onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  if (!inEditor) e.currentTarget.style.opacity = '0.85'
+                },
+              }
+              if (!link.anchor && isInternalPath(href) && !navLinkOpensNewTab(link)) {
+                return (
+                  <Link key={i} href={href} {...sharedProps}>
+                    {label}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={i}
+                  href={href}
+                  target={linkTarget(link)}
+                  rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
+                  {...sharedProps}
+                  onClick={e => {
+                    if (link.anchor && !inEditor) {
+                      e.preventDefault()
+                      handleLinkClick(link.href)
+                    }
+                  }}
+                >
+                  {label}
+                </a>
+              )
+            })}
           </div>
           )}
 
@@ -183,22 +225,42 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
               display: 'none', // overridden by responsive CSS below
             }}
           >
-            {config.links.map((link, i) => (
-              <a
-                key={i}
-                href={getHref(link)}
-                onClick={() => setOpen(false)}
-                style={{
-                  ...linkStyle,
-                  display: 'block',
-                  padding: '12px 0',
-                  opacity: 1,
-                  borderBottom: i < config.links.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
-                }}
-              >
-                {link.label}
-              </a>
-            ))}
+            {config.links.map((link, i) => {
+              const href = getHref(link)
+              const label = pickLocale(link.label, activeLocale)
+              const style: React.CSSProperties = {
+                ...linkStyle,
+                display: 'block',
+                padding: '12px 0',
+                opacity: 1,
+                borderBottom: i < config.links.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
+              }
+              if (!link.anchor && isInternalPath(href) && !navLinkOpensNewTab(link)) {
+                return (
+                  <Link key={i} href={href} style={style} onClick={() => setOpen(false)}>
+                    {label}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={i}
+                  href={href}
+                  target={linkTarget(link)}
+                  rel={navLinkOpensNewTab(link) ? 'noopener noreferrer' : undefined}
+                  onClick={e => {
+                    if (link.anchor && !inEditor) {
+                      e.preventDefault()
+                      handleLinkClick(link.href)
+                    }
+                    setOpen(false)
+                  }}
+                  style={style}
+                >
+                  {label}
+                </a>
+              )
+            })}
           </div>
         )}
       </div>
@@ -210,7 +272,7 @@ export function NavbarRender({ config, businessName = 'Brand', logoUrl, inEditor
           .nav-burger-btn    { display: flex !important; }
           .nav-mobile-panel  { display: block !important; }
         }
-        ${isMobilePreview ? `
+        ${forceMobile ? `
           .nav-desktop-links { display: none !important; }
           .nav-burger-btn    { display: flex !important; }
           .nav-mobile-panel  { display: block !important; }

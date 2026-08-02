@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { Download, Copy, Check, QrCode, ExternalLink, Palette } from 'lucide-react'
+import { Download, Copy, Check, QrCode, Palette } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { updateBusinessAction } from '@/app/actions/business'
@@ -212,7 +212,7 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
             return (
               <SimpleQRCard
                 key={num}
-                url={`${origin}/${slug}?table=${num}`}
+                url={`${origin}/${slug}/order?table=${num}`}
                 label={`${t('qr.tableLabel')} ${num}`}
                 sublabel={t('qr.autoAssigns')}
                 filename={`table-${num}-qr.png`}
@@ -263,10 +263,6 @@ export function QRManager({ businessId, paymentSettings, slug, categories, items
             {t.icon}{t.label}
           </button>
         ))}
-        <a href={`/${slug}`} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-gray-600 transition-colors ml-2">
-          <ExternalLink className="size-3.5" />{t('qr.tabLive')}
-        </a>
       </div>
       </div>
 

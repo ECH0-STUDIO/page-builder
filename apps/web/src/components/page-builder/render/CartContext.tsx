@@ -115,3 +115,22 @@ export function useCart() {
   if (!ctx) throw new Error('useCart must be used within CartProvider')
   return ctx
 }
+
+/** No-op cart for browse-only surfaces (landing page). Prevents ordering without CartDrawer. */
+const BROWSE_ONLY_CART: CartContextValue = {
+  items: [],
+  addItem: () => {},
+  removeItem: () => {},
+  updateQuantity: () => {},
+  clearCart: () => {},
+  totalItems: 0,
+  totalPrice: 0,
+}
+
+export function BrowseOnlyCartProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <CartContext.Provider value={BROWSE_ONLY_CART}>
+      {children}
+    </CartContext.Provider>
+  )
+}

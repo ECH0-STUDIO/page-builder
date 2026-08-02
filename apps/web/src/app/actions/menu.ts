@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ async function userOwnsVariantOptionBusiness(supabase: Awaited<ReturnType<typeof
 
 export async function addCategoryAction(
   businessId: string,
-  name: string
+  name: string,
 ): Promise<ActionResult<MenuCategory>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -117,20 +118,26 @@ export async function addCategoryAction(
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
+  const trimmed = name.trim()
+
   const { data, error } = await db
     .from('menu_categories')
-    .insert({ business_id: businessId, name: name.trim(), sort_order: nextOrder })
+    .insert({ business_id: businessId, name: trimmed, sort_order: nextOrder })
     .select()
     .single()
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/menu')
-  return { success: true, data }
+  return { success: true, data: normalizeMenuCategory(data as Record<string, unknown>) }
 }
 
 export async function updateCategoryAction(
   id: string,
-  update: { name?: string; visible?: boolean; sort_order?: number }
+  update: {
+    name?: string
+    visible?: boolean
+    sort_order?: number
+  }
 ): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -140,10 +147,12 @@ export async function updateCategoryAction(
     return { success: false, error: 'Forbidden' }
   }
 
+  const payload = { ...update }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_categories')
-    .update(update)
+    .update(payload)
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }
@@ -218,7 +227,7 @@ export async function addItemAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/menu')
-  return { success: true, data }
+  return { success: true, data: normalizeMenuItem(data as Record<string, unknown>) }
 }
 
 export async function updateItemAction(
@@ -242,10 +251,12 @@ export async function updateItemAction(
     return { success: false, error: 'Forbidden' }
   }
 
+  const payload = { ...update }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_items')
-    .update(update)
+    .update(payload)
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }

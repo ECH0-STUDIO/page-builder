@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings, Layers, X,
+  PanelBottom, Settings, Layers, X, Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -57,19 +57,35 @@ import { FooterRender } from './render/FooterRender'
 import { MenuGridRender } from './render/MenuGridRender'
 import type { MenuGridData } from './render/MenuGridRender'
 import { QRCodeRender } from './render/QRCodeRender'
-import { CartProvider } from './render/CartContext'
-import { CartDrawer } from './render/CartDrawer'
+import { BrowseOnlyCartProvider } from './render/CartContext'
+import type { PaymentSettings } from '@/lib/vietqr-utils'
+import type { PreviewLayout } from './render/preview-layout'
 
-import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction } from '@/app/actions/page-builder'
+import { savePageBlocksAction, togglePublishAction, saveThemeAction, savePublishingSettingsAction, saveNavbarAction, saveFooterAction } from '@/app/actions/page-builder'
 import { scopeCSS } from '@/lib/scope-css'
+import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
+import { normalizePageBlock, getInitialBlockSpacing, resolveBlockSpacing } from './spacing-utils'
+import { getBlockSurfaceLayers } from './block-section-style'
+import { SectionShellOverlay, SectionShellContent } from './SectionShellOverlay'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
-  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig,
+  PublishingSettings, BlockSpacing, ThemeSettings, NavbarConfig, FooterConfig,
 } from './types'
-import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings } from './types'
+import { defaultSpacing, defaultNavbarConfig, defaultQRCodeConfig, defaultFooterConfig, defaultThemeSettings, BLOCK_DEFAULT_SPACING } from './types'
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+
+// ─── Canvas layout ─────────────────────────────────────────────────────────────
+
+const CANVAS_DESKTOP_WIDTH = 1440
+const CANVAS_MAX_WIDTH = CANVAS_DESKTOP_WIDTH
+const MAX_UNDO_STEPS = 20
+
+type EditorSnapshot = {
+  blocks: PageBlock[]
+  theme: ThemeSettings | null
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -173,18 +189,21 @@ function SidebarBlockItem({
 // ─── WYSIWYG canvas block card ─────────────────────────────────────────────────
 
 function LiveBlockCard({
-  block, isSelected, business, menuGridData, onClick, isMobilePreview,
+  block, isSelected, business, menuGridData, onClick, previewLayout, interactive, brandColor, defaultTextColor,
 }: {
   block: PageBlock
   isSelected: boolean
   business: Business
   menuGridData: MenuGridData
   onClick: () => void
-  isMobilePreview?: boolean
+  previewLayout?: PreviewLayout
+  interactive?: boolean
+  brandColor: string
+  defaultTextColor: string
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const spacing = block.spacing ?? defaultSpacing
+  const { margin, shell, contentInset, overlayOpacity } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -211,9 +230,9 @@ function LiveBlockCard({
 
   return (
     <div
-      onClick={onClick}
-      style={{ marginTop: spacing.margin_top, marginBottom: spacing.margin_bottom }}
-      className="relative group cursor-pointer"
+      onClick={interactive ? undefined : onClick}
+      style={margin}
+      className={cn('relative group', interactive ? '' : 'cursor-pointer')}
     >
       {/* Scoped custom CSS */}
       {block.custom_css && (
@@ -222,16 +241,18 @@ function LiveBlockCard({
         }} />
       )}
 
-      {/* Selection / hover overlay */}
-      <div className={cn(
-        'absolute inset-0 z-10 pointer-events-none transition-all duration-150',
-        isSelected
-          ? 'ring-2 ring-primary ring-inset'
-          : 'ring-1 ring-transparent group-hover:ring-primary/40 ring-inset'
-      )} />
+      {/* Selection / hover overlay — edit mode only */}
+      {!interactive && (
+        <div className={cn(
+          'absolute inset-0 z-10 pointer-events-none transition-all duration-150',
+          isSelected
+            ? 'ring-2 ring-primary ring-inset'
+            : 'ring-1 ring-transparent group-hover:ring-primary/40 ring-inset'
+        )} />
+      )}
 
       {/* Block label (selected) */}
-      {isSelected && (
+      {!interactive && isSelected && (
         <div className="absolute top-2 left-2 z-20 pointer-events-none">
           <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-[11px] font-semibold px-2 py-0.5 rounded shadow-md">
             {blockIcon(block.type)} {t(`pageBuilder.blocks.${block.type}.label`)}
@@ -239,36 +260,53 @@ function LiveBlockCard({
         </div>
       )}
 
-      {/* Actual rendered content — pointer-events:none prevents link clicks */}
+      {/* Full-width section shell: background + padding */}
       <div
         data-block-id={block.id}
         style={{
-          paddingTop: spacing.padding_top,
-          paddingRight: spacing.padding_right,
-          paddingBottom: spacing.padding_bottom,
-          paddingLeft: spacing.padding_left,
-          pointerEvents: 'none',
-          userSelect: 'none',
+          ...shell,
+          pointerEvents: interactive ? 'auto' : 'none',
+          userSelect: interactive ? 'auto' : 'none',
         }}
       >
-        {block.type === 'hero' && <HeroRender config={block.config as HeroConfig} businessName={business.name} isMobilePreview={isMobilePreview} />}
-        {block.type === 'text_image' && <TextImageRender config={block.config as TextImageConfig} isMobilePreview={isMobilePreview} />}
-        {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
-        {block.type === 'menu_grid' && (
-          <MenuGridRender
-            config={block.config as MenuGridConfig}
-            data={menuGridData}
-            isMobilePreview={isMobilePreview}
-          />
-        )}
-        {block.type === 'qr_code' && (
-          <QRCodeRender
-            config={block.config as QRCodeConfig}
-            targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
-            paymentSettings={business.payment_settings}
-            downloadLabel={t('qrCodeBlock.saveQrCode')}
-          />
-        )}
+        <SectionShellOverlay opacity={overlayOpacity} />
+        <SectionShellContent overlayOpacity={overlayOpacity}>
+          {block.type === 'hero' && (
+            <HeroRender
+              config={block.config as HeroConfig}
+              businessName={business.name}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              contentInset={contentInset}
+            />
+          )}
+          {block.type === 'text_image' && (
+            <TextImageRender
+              config={block.config as TextImageConfig}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              defaultTextColor={defaultTextColor}
+            />
+          )}
+          {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
+          {block.type === 'menu_grid' && (
+            <MenuGridRender
+              config={block.config as MenuGridConfig}
+              data={menuGridData}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              browseOnly
+            />
+          )}
+          {block.type === 'qr_code' && (
+            <QRCodeRender
+              config={block.config as QRCodeConfig}
+              targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
+              paymentSettings={business.payment_settings}
+              downloadLabel={t('qrCodeBlock.saveQrCode')}
+            />
+          )}
+        </SectionShellContent>
       </div>
     </div>
   )
@@ -277,17 +315,23 @@ function LiveBlockCard({
 // ─── Settings panel ────────────────────────────────────────────────────────────
 
 function BlockSettingsPanel({
-  block, business, blocks, categories, items, onChange,
+  block, business, blocks, categories, items, brandColor, onChange,
 }: {
   block: PageBlock
   business: Business
   blocks: PageBlock[]
   categories: MenuCategory[]
   items: MenuItem[]
+  brandColor: string
   onChange: (b: PageBlock) => void
 }) {
   const { t } = useTranslation()
   const anchorId = block.block_anchor_id ?? ''
+  const displaySpacing = resolveBlockSpacing(
+    block.type,
+    block.spacing,
+    block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
+  )
 
   return (
     <div className="space-y-6">
@@ -303,11 +347,19 @@ function BlockSettingsPanel({
       {block.type === 'hero' && (
         <HeroSettings config={block.config as HeroConfig} businessId={business.id}
           blocks={blocks}
-          onChange={c => onChange({ ...block, config: c })} />
+          brandColor={brandColor}
+          onChange={c => onChange({ ...block, config: c })}
+          onHeightChange={height => onChange({
+            ...block,
+            config: { ...(block.config as HeroConfig), height },
+            spacing: getInitialBlockSpacing('hero', { ...(block.config as HeroConfig), height }),
+          })}
+        />
       )}
       {block.type === 'text_image' && (
         <TextImageSettings config={block.config as TextImageConfig} businessId={business.id}
           blocks={blocks}
+          brandColor={brandColor}
           onChange={c => onChange({ ...block, config: c })} />
       )}
       {block.type === 'contact' && (
@@ -356,7 +408,7 @@ function BlockSettingsPanel({
       {/* Outer spacing — common */}
       <div className="space-y-3">
         <SpacingControls
-          spacing={block.spacing ?? defaultSpacing}
+          spacing={displaySpacing}
           onChange={s => onChange({ ...block, spacing: s })}
         />
       </div>
@@ -435,12 +487,7 @@ export function EditorShell({
   const [blocks, setBlocks] = useState<PageBlock[]>(() =>
     initialBlocks
       .filter(b => (b.type as string) !== 'navbar')
-      .map(b => ({
-        ...b,
-        spacing: b.spacing ?? { ...defaultSpacing },
-        custom_css: b.custom_css ?? '',
-        block_anchor_id: b.block_anchor_id ?? null,
-      }))
+      .map(b => normalizePageBlock(b as PageBlock))
   )
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -457,17 +504,23 @@ export function EditorShell({
   const [rightPanel, setRightPanel] = useState<RightPanel>('theme')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved')
   const [published, setPublished] = useState(initialPublishing?.published ?? false)
+  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
+    initialPublishing?.has_unpublished_changes ?? false
+  )
   const [publishing, setPublishing] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
+  const [desktopZoom, setDesktopZoom] = useState(1)
+  const canvasScrollRef = useRef<HTMLDivElement>(null)
+  const [canvasWidth, setCanvasWidth] = useState(0)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(initialPublishing)
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false)
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
   const [_isPreviewMode, setIsPreviewMode] = useState(false)
-  const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(initialPublishing?.has_unpublished_changes ?? false)
 
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
@@ -479,17 +532,17 @@ export function EditorShell({
     }
   }, [])
 
+  const dirtySinceSyncRef = useRef(false)
+
   useEffect(() => {
     if (data) {
       setBlocks(prev => {
-        return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => ({
-          ...b,
-          spacing: b.spacing ?? { ...defaultSpacing },
-          custom_css: b.custom_css ?? '',
-          block_anchor_id: b.block_anchor_id ?? null,
-        }))
+        return prev.length === data.blocks.length ? prev : data.blocks.filter(b => (b.type as string) !== 'navbar').map(b => normalizePageBlock(b as PageBlock))
       })
       setPublished(data.publishing?.published ?? false)
+      if (!dirtySinceSyncRef.current) {
+        setHasUnpublishedChanges(data.publishing?.has_unpublished_changes ?? false)
+      }
       setTheme(data.theme)
       setPublishingSettings(data.publishing)
     }
@@ -509,11 +562,138 @@ export function EditorShell({
 
   const isFirstRender = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blocksRef = useRef(blocks)
+  const themeRef = useRef(theme)
+  const skipHistoryRef = useRef(false)
+  const undoStackRef = useRef<EditorSnapshot[]>([])
+  const redoStackRef = useRef<EditorSnapshot[]>([])
+  const historyBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+  useEffect(() => { themeRef.current = theme }, [theme])
+
+  const cloneSnapshot = useCallback((): EditorSnapshot => ({
+    blocks: structuredClone(blocksRef.current),
+    theme: themeRef.current ? structuredClone(themeRef.current) : null,
+  }), [])
+
+  const pushHistory = useCallback(() => {
+    if (skipHistoryRef.current) return
+    undoStackRef.current = [
+      ...undoStackRef.current.slice(-(MAX_UNDO_STEPS - 1)),
+      cloneSnapshot(),
+    ]
+    redoStackRef.current = []
+  }, [cloneSnapshot])
+
+  /** Coalesce rapid edits (typing, color drag) into one undo step per burst */
+  const scheduleHistorySnapshot = useCallback(() => {
+    if (skipHistoryRef.current) return
+    if (!historyBurstTimerRef.current) {
+      pushHistory()
+    }
+    if (historyBurstTimerRef.current) clearTimeout(historyBurstTimerRef.current)
+    historyBurstTimerRef.current = setTimeout(() => {
+      historyBurstTimerRef.current = null
+    }, 800)
+  }, [pushHistory])
+
+  const applySnapshot = useCallback((snap: EditorSnapshot) => {
+    skipHistoryRef.current = true
+    setBlocks(snap.blocks)
+    setTheme(snap.theme)
+    skipHistoryRef.current = false
+  }, [])
+
+  const markPendingSave = useCallback(() => {
+    dirtySinceSyncRef.current = true
+    setSaveStatus('idle')
+    if (published) setHasUnpublishedChanges(true)
+  }, [published])
+
+  const undo = useCallback(() => {
+    if (undoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToUndo'))
+      return
+    }
+    redoStackRef.current.push(cloneSnapshot())
+    const prev = undoStackRef.current.pop()!
+    applySnapshot(prev)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  const redo = useCallback(() => {
+    if (redoStackRef.current.length === 0) {
+      toast.info(t('pageBuilder.nothingToRedo'))
+      return
+    }
+    undoStackRef.current.push(cloneSnapshot())
+    const next = redoStackRef.current.pop()!
+    applySnapshot(next)
+    markPendingSave()
+  }, [applySnapshot, cloneSnapshot, markPendingSave, t])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [undo, redo])
+
   const selectedBlock = blocks.find(b => b.id === selectedId) ?? null
   const fontFamily = theme?.font_family ?? 'Inter'
   const headingFont = theme?.heading_font_family ?? 'Inter'
   const navbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig = theme?.footer_config ?? defaultFooterConfig
+  const themeTokens = resolveThemeTokens(theme)
+  const paymentSettings: PaymentSettings = (business.payment_settings as PaymentSettings | null) ?? {}
+
+  const canvasPreviewLayout: PreviewLayout =
+    viewMode === 'mobile'
+      ? 'mobile'
+      : isMobileDevice
+        ? 'desktop'
+        : 'responsive'
+
+  const fitDesktopZoom = canvasWidth > 0
+    ? Math.min(1, (canvasWidth - 32) / CANVAS_DESKTOP_WIDTH)
+    : 1
+  const displayDesktopZoom = fitDesktopZoom * desktopZoom
+  const useFixedDesktopCanvas = isMobileDevice && viewMode === 'desktop'
+  const showDesktopZoomControls = useFixedDesktopCanvas && canvasWidth > 0 && canvasWidth < CANVAS_DESKTOP_WIDTH
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobileDevice(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    const el = canvasScrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(entries => {
+      setCanvasWidth(entries[0]?.contentRect.width ?? 0)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    setDesktopZoom(1)
+  }, [viewMode])
 
   // Derive which panel to show on the right
   const activeRightPanel: RightPanel =
@@ -532,41 +712,103 @@ export function EditorShell({
     setRightPanel('theme')
   }
 
-  // ── Debounced Theme & Publishing saving ─────────────────────────────────────
+  // ── Debounced Theme, Navbar, Footer & Publishing saving ───────────────────
   const saveThemeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveNavbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleThemeChange = useCallback((updated: Partial<ThemeSettings>) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
     setTheme(prev => {
       const next = prev ? { ...prev, ...updated } : { ...defaultThemeSettings, business_id: business.id, id: '', ...updated } as ThemeSettings
       if (saveThemeTimer.current) clearTimeout(saveThemeTimer.current)
       saveThemeTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         saveThemeAction(business.id, {
           primary_color: next.primary_color,
           background_color: next.background_color,
+          text_color: next.text_color ?? defaultThemeSettings.text_color,
           font_family: next.font_family,
           heading_font_family: next.heading_font_family || 'Inter',
-        }).then(() => {
-          setHasUnpublishedChanges(true)
-        }).catch(err => toast.error('Failed to save theme: ' + String(err)))
+        }).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save theme')
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save theme: ' + String(err))
+        })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
 
-  const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleNavbarChange = useCallback((updated: NavbarConfig) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, navbar_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', navbar_config: updated } as ThemeSettings
+      if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
+      saveNavbarTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
+        saveNavbarAction(business.id, updated).then(res => {
+          setSaveStatus(res.success ? 'saved' : 'idle')
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save navbar: ' + res.error)
+        }).catch(err => {
+          setSaveStatus('idle')
+          toast.error('Failed to save navbar: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
+
+  const handleFooterChange = useCallback((updated: FooterConfig) => {
+    scheduleHistorySnapshot()
+    markPendingSave()
+    setTheme(prev => {
+      const next = prev ? { ...prev, footer_config: updated } : { ...defaultThemeSettings, business_id: business.id, id: '', footer_config: updated } as ThemeSettings
+      if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
+      saveFooterTimer.current = setTimeout(() => {
+        saveFooterAction(business.id, updated).then(res => {
+          if (res.success) setHasUnpublishedChanges(true)
+          if (!res.success) toast.error('Failed to save footer: ' + res.error)
+        }).catch(err => {
+          toast.error('Failed to save footer: ' + String(err))
+        })
+      }, 1000)
+      return next
+    })
+  }, [business.id, markPendingSave, scheduleHistorySnapshot])
+
   const handlePublishingChange = useCallback((updated: Partial<PublishingSettings>) => {
+    markPendingSave()
     setPublishingSettings(prev => {
       const next = prev ? { ...prev, ...updated } : { business_id: business.id, ...updated } as PublishingSettings
       if (savePubTimer.current) clearTimeout(savePubTimer.current)
       savePubTimer.current = setTimeout(() => {
+        setSaveStatus('saving')
         savePublishingSettingsAction(business.id, updated)
-          .then(() => {
-            setHasUnpublishedChanges(true)
+          .then(res => {
+            if (res.success) {
+              setSaveStatus('saved')
+            } else {
+              setSaveStatus('idle')
+              toast.error(res.error)
+            }
           })
-          .catch(err => toast.error('Failed to save settings: ' + String(err)))
+          .catch(err => {
+            setSaveStatus('idle')
+            toast.error('Failed to save settings: ' + String(err))
+          })
       }, 1000)
       return next
     })
-  }, [business.id])
+  }, [business.id, markPendingSave])
+
   // ── Load Google Fonts for canvas preview (body + heading) ─────────────────
   useEffect(() => {
     const families = [...new Set([fontFamily, headingFont])]
@@ -588,7 +830,7 @@ export function EditorShell({
       const res = await savePageBlocksAction(business.id, blocksToSave)
       if (res.success) {
         setSaveStatus('saved')
-        setHasUnpublishedChanges(true)
+        if (published) setHasUnpublishedChanges(true)
       } else {
         setSaveStatus('idle')
         console.error('Failed to auto-save:', res.error)
@@ -597,7 +839,7 @@ export function EditorShell({
       setSaveStatus('idle')
       console.error('Save error:', e)
     }
-  }, [business.id])
+  }, [business.id, published])
 
   const triggerAutoSave = useCallback((newBlocks: PageBlock[]) => {
     setSaveStatus('idle')
@@ -618,14 +860,17 @@ export function EditorShell({
 
   // ── Block mutations ───────────────────────────────────────────────────────
   function addBlock(type: BlockType) {
+    pushHistory()
+    markPendingSave()
+    const config = getDefaultConfig(type) as PageBlock['config']
     const newBlock: PageBlock = {
       id: makeId(),
       business_id: business.id,
       type,
       sort_order: blocks.length,
       visible: true,
-      config: getDefaultConfig(type) as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      config,
+      spacing: getInitialBlockSpacing(type, config),
       custom_css: '',
     }
     setBlocks(prev => [...prev, newBlock])
@@ -633,6 +878,8 @@ export function EditorShell({
   }
 
   function deleteBlock(id: string) {
+    pushHistory()
+    markPendingSave()
     const next = blocks.filter(b => b.id !== id)
     setBlocks(next)
     if (selectedId === id) setSelectedId(next[0]?.id ?? null)
@@ -641,6 +888,8 @@ export function EditorShell({
   function duplicateBlock(id: string) {
     const original = blocks.find(b => b.id === id)
     if (!original) return
+    pushHistory()
+    markPendingSave()
     const idx = blocks.findIndex(b => b.id === id)
     const copy: PageBlock = { ...original, id: makeId() }
     setBlocks(prev => [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)])
@@ -648,10 +897,14 @@ export function EditorShell({
   }
 
   function toggleVisible(id: string) {
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
   }
 
   function updateBlock(updated: PageBlock) {
+    scheduleHistorySnapshot()
+    markPendingSave()
     setBlocks(prev => prev.map(b => b.id === updated.id ? updated : b))
   }
 
@@ -664,6 +917,8 @@ export function EditorShell({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
+    pushHistory()
+    markPendingSave()
     setBlocks(prev => {
       const oldIdx = prev.findIndex(b => b.id === active.id)
       const newIdx = prev.findIndex(b => b.id === over.id)
@@ -675,6 +930,8 @@ export function EditorShell({
   function applyTemplate(templateId: string) {
     const template = PAGE_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
+    pushHistory()
+    markPendingSave()
     const newBlocks: PageBlock[] = template.blocks.map((tb, i) => ({
       id: makeId(),
       business_id: business.id,
@@ -685,7 +942,10 @@ export function EditorShell({
         ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
         ...(tb.config ?? {}),
       } as PageBlock['config'],
-      spacing: { ...defaultSpacing },
+      spacing: getInitialBlockSpacing(tb.type, {
+        ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
+        ...(tb.config ?? {}),
+      } as PageBlock['config']),
       custom_css: '',
     }))
     setBlocks(newBlocks)
@@ -710,7 +970,8 @@ export function EditorShell({
       if (res.success) {
         setPublished(state)
         setPublishingSettings(res.data)
-        if (state) setHasUnpublishedChanges(false)
+        dirtySinceSyncRef.current = false
+        setHasUnpublishedChanges(res.data?.has_unpublished_changes ?? false)
         toast.success(state ? 'Page published successfully! 🎉' : 'Page unpublished')
       } else {
         toast.error(res.error)
@@ -721,7 +982,7 @@ export function EditorShell({
     setPublishing(false)
   }
 
-  const renderLeftSidebarContent = () => (
+  const renderLeftSidebarContent = ({ showGlobalSettings = true }: { showGlobalSettings?: boolean } = {}) => (
     <>
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
@@ -799,7 +1060,7 @@ export function EditorShell({
         </div>
       </div>
 
-      {/* Page Settings */}
+      {showGlobalSettings && (
       <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0">
         <button
           type="button"
@@ -815,6 +1076,7 @@ export function EditorShell({
           Global Settings
         </button>
       </div>
+      )}
     </>
   )
 
@@ -830,7 +1092,7 @@ export function EditorShell({
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} onChange={updateBlock} />
+              <BlockSettingsPanel block={selectedBlock} business={business} blocks={blocks} categories={categories} items={initialItems} brandColor={themeTokens.brandColor} onChange={updateBlock} />
           </div>
         </>
       ) : activeRightPanel === 'navbar' ? (
@@ -844,7 +1106,7 @@ export function EditorShell({
               config={navbarConfig}
               businessId={business.id}
               blocks={blocks}
-              onChange={updated => setTheme(t => t ? { ...t, navbar_config: updated } : t)}
+              onChange={handleNavbarChange}
             />
           </div>
         </>
@@ -857,8 +1119,9 @@ export function EditorShell({
           <div className="flex-1 overflow-y-auto p-4">
             <FooterSettings
               config={footerConfig}
-              onChange={updated => setTheme(t => t ? { ...t, footer_config: updated } : t)}
+              onChange={handleFooterChange}
               businessId={business.id}
+              hasLogo={Boolean(business.logo_url)}
             />
           </div>
         </>
@@ -882,7 +1145,6 @@ export function EditorShell({
   )
 
   return (
-    // Fix-position overlay covers the full viewport including the dashboard sidebar
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
 
       {/* Top bar */}
@@ -910,7 +1172,6 @@ export function EditorShell({
           saveStatus={saveStatus}
           onPublish={handlePublish}
           publishing={publishing}
-          onSaveNow={saveNow}
           onTogglePreview={() => setIsPreviewMode(true)}
         />
       )}
@@ -960,8 +1221,8 @@ export function EditorShell({
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-hidden flex flex-col bg-[#e8e8ed] dark:bg-[#1a1a1f] relative">
 
-          {/* Viewport toggle */}
-          <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80">
+          {/* Viewport toggle + desktop zoom */}
+          <div className="flex items-center justify-center gap-2 py-2 px-4 border-b border-black/10 dark:border-white/5 bg-[#e8e8ed]/80 dark:bg-[#1a1a1f]/80 flex-wrap">
             <div className="flex items-center bg-white dark:bg-gray-900 rounded-lg p-0.5 gap-0.5 shadow-sm border border-black/5 dark:border-white/5">
               <button
                 type="button"
@@ -984,31 +1245,82 @@ export function EditorShell({
                 <Smartphone className="size-3.5" /> {t('pageBuilder.mobile')}
               </button>
             </div>
+
+            {showDesktopZoomControls && (
+              <div className="flex items-center gap-1 bg-white dark:bg-gray-900 rounded-lg px-1 py-0.5 shadow-sm border border-black/5 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.max(0.25, Math.round((z - 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom out"
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <span className="text-xs font-medium tabular-nums min-w-[3rem] text-center">
+                  {Math.round(displayDesktopZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(z => Math.min(2, Math.round((z + 0.1) * 10) / 10))}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Zoom in"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopZoom(1)}
+                  className="px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Canvas scroll — overflow-y-auto (NOT hidden) so sticky navbar works */}
-          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          <div ref={canvasScrollRef} className="flex-1 overflow-y-auto overflow-x-auto pb-16 lg:pb-0">
             <div className="py-6 px-4 min-h-full">
-              <CartProvider>
+              <BrowseOnlyCartProvider>
               <div
                 className={cn(
                   'mx-auto bg-white shadow-xl transition-all duration-300 relative',
-                  // No overflow-hidden here — it breaks position:sticky
-                  viewMode === 'mobile' ? 'w-[375px] rounded-[32px] overflow-hidden' : 'w-full max-w-[1440px] rounded-xl',
+                  viewMode === 'mobile'
+                    ? 'w-[375px] rounded-[32px]'
+                    : useFixedDesktopCanvas
+                      ? 'rounded-xl'
+                      : 'w-full rounded-xl',
+                  (isPreviewMode || viewMode === 'mobile') && 'overflow-hidden',
                 )}
-                style={{ fontFamily: `'${fontFamily}', sans-serif` }}
+                style={{
+                  fontFamily: `'${fontFamily}', sans-serif`,
+                  ...buildThemeStyle(theme),
+                  ...(viewMode === 'desktop' && useFixedDesktopCanvas
+                    ? {
+                        width: CANVAS_DESKTOP_WIDTH,
+                        maxWidth: 'none',
+                        ...(displayDesktopZoom < 1 ? { zoom: displayDesktopZoom } : {}),
+                      }
+                    : viewMode === 'desktop'
+                      ? { maxWidth: CANVAS_MAX_WIDTH }
+                      : {}),
+                  ...(isPreviewMode
+                    ? { height: 'min(calc(100dvh - 8.5rem), 860px)' }
+                    : {}),
+                }}
               >
                 {/* Heading font scoped to this canvas frame */}
                 <style dangerouslySetInnerHTML={{ __html: `
                   h1, h2, h3, h4, h5, h6 { font-family: '${headingFont}', sans-serif !important; }
                 ` }} />
 
+                <div className={cn(isPreviewMode && 'absolute inset-0 overflow-y-auto overflow-x-hidden')}>
                 {/* ── PERMANENT NAVBAR always at top ── */}
                 <NavbarRender
                   config={navbarConfig}
                   businessName={business.name}
                   logoUrl={business.logo_url ?? undefined}
-                  inEditor
+                  inEditor={!isPreviewMode}
                   isMobilePreview={viewMode === 'mobile'}
                 />
 
@@ -1035,13 +1347,16 @@ export function EditorShell({
                 )}
 
                 {blocks.map(block => (
-                  <div key={block.id} id={`block-${block.id}`}>
+                  <div key={block.id} id={block.block_anchor_id ?? `block-${block.id}`}>
                     <LiveBlockCard
                       block={block}
-                      isSelected={block.id === selectedId}
+                      isSelected={!isPreviewMode && block.id === selectedId}
                       business={business}
                       menuGridData={menuGridData}
-                      isMobilePreview={viewMode === 'mobile'}
+                      previewLayout={canvasPreviewLayout}
+                      interactive={isPreviewMode}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
                       onClick={() => { if (!isStaff) { setSelectedId(block.id); setRightPanel('block'); openMobileSettingsIfNeed(); } }}
                     />
                   </div>
@@ -1051,12 +1366,13 @@ export function EditorShell({
                 <FooterRender
                   config={footerConfig}
                   businessName={business.name}
-                  inEditor
+                  logoUrl={business.logo_url}
+                  inEditor={!isPreviewMode}
                 />
+                </div>
 
-                <CartDrawer />
               </div>
-              </CartProvider>
+              </BrowseOnlyCartProvider>
             </div>
           </div>
         </main>
@@ -1069,6 +1385,7 @@ export function EditorShell({
         )}
 
         {/* ── Mobile Action Bar ────────────────────────────────────────────── */}
+        {!isPreviewMode && (
         <div className="lg:hidden absolute bottom-0 left-0 right-0 h-14 bg-background border-t border-border flex items-center justify-around z-20 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
           <Drawer open={mobileBlocksOpen} onOpenChange={setMobileBlocksOpen}>
             <DrawerTrigger asChild>
@@ -1079,7 +1396,7 @@ export function EditorShell({
             </DrawerTrigger>
             <DrawerContent className="h-[80vh] flex flex-col p-0">
               <VisuallyHidden><DrawerTitle>Sections</DrawerTitle></VisuallyHidden>
-              {renderLeftSidebarContent()}
+              {renderLeftSidebarContent({ showGlobalSettings: false })}
             </DrawerContent>
           </Drawer>
 
@@ -1098,6 +1415,7 @@ export function EditorShell({
             </DrawerContent>
           </Drawer>
         </div>
+        )}
       </div>
 
       {/* Add block modal */}

@@ -1,0 +1,126 @@
+/* Puck editor shell — use Eatery design system tokens, NOT business page brand color */
+.eatery-puck {
+  --puck-font-family: var(--font-sans-stack, 'Plus Jakarta Sans', system-ui, sans-serif);
+
+  /* Map Puck interactive UI to platform --primary (emerald green from globals.css) */
+  --puck-color-interactive: var(--primary);
+  --puck-color-interactive-hover: color-mix(in srgb, var(--primary) 88%, black);
+  --puck-color-interactive-active: color-mix(in srgb, var(--primary) 76%, black);
+  --puck-color-interactive-subtle: color-mix(in srgb, var(--primary) 14%, transparent);
+  --puck-color-interactive-soft: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.eatery-puck .Puck {
+  font-family: var(--puck-font-family);
+}
+
+.eatery-puck-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--background, #fff);
+}
+
+.eatery-puck-editor {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.eatery-puck-editor > .Puck,
+.eatery-puck-editor .PuckLayout {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Allow scrolling inside the canvas preview */
+.eatery-puck-editor [class*='PuckCanvas'],
+.eatery-puck-editor [class*='PuckPreview'] {
+  overflow: auto !important;
+  min-height: 0;
+}
+
+.eatery-puck-header {
+  /* Do not force background — edit vs preview headers set their own */
+}
+
+.eatery-puck-header--preview {
+  background: var(--primary) !important;
+  color: var(--primary-foreground, #fff) !important;
+}
+
+/* Hide any leftover default Puck header chrome if present */
+.eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
+  display: none;
+}
+
+/* Clickable drawer items — preserve Puck drawer item padding when wrapping */
+.eatery-puck [data-puck-drawer-item] > button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: inherit;
+  font: inherit;
+}
+
+/* Sidebar plugin panels (blocks + outline) — restore Puck default inset */
+.eatery-puck .puck-plugin-panel {
+  padding: var(--puck-space-4, 16px);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Pin Global Settings to the bottom of the left plugin bar (desktop) */
+@media (min-width: 638px) {
+  .eatery-puck [class*='Nav-list'] {
+    height: 100%;
+  }
+
+  .eatery-puck [class*='NavItem']:has([data-puck-plugin='settings']) {
+    margin-top: auto;
+    margin-bottom: var(--puck-space-4, 16px);
+  }
+}
+
+/* Puck insertion zones between blocks:
+   keep a usable hit target (shrinking to 8px made drops unreliable),
+   while the visual rail stays a thin line via ::before. */
+.eatery-puck [class*='DropZone-hitbox'] {
+  bottom: -12px !important;
+  height: 24px !important;
+}
+
+.eatery-puck [class*='DropZone--isAreaSelected'],
+.eatery-puck [class*='DropZone--hoveringOverArea'] {
+  background: transparent !important;
+  outline: none !important;
+}
+
+/* Insertion rail only while hovering a drop target — not while a block is merely selected. */
+.eatery-puck [class*='DropZone--hoveringOverArea']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 2px solid var(--puck-color-interactive);
+}
+
+/* Hero overlay: media/scrim must stay behind copy + CTAs (Puck overlays use z-index:1). */
+.eatery-puck [data-hero-overlay] {
+  isolation: isolate;
+}
+.eatery-puck [data-hero-media],
+.eatery-puck [data-hero-scrim] {
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+.eatery-puck [data-hero-content] {
+  position: relative !important;
+  z-index: 2 !important;
+}

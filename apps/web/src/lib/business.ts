@@ -24,27 +24,28 @@ export async function checkSlugAvailable(slug: string, excludeId?: string): Prom
   return data.available
 }
 
-/** Fetch all businesses for the current user */
+/** Fetch all businesses for the current user (via server API — no direct Supabase auth on client). */
 export async function getUserBusinesses(): Promise<Business[]> {
   try {
     const res = await fetch('/api/user-businesses', {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Ensure we don't aggressively cache if the user switches teams
-      cache: 'no-store'
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      credentials: 'same-origin',
     })
-    
+
+    if (res.status === 401) return []
+
     if (!res.ok) {
-      throw new Error('Failed to fetch user businesses')
+      const body = await res.text().catch(() => '')
+      throw new Error(`Failed to fetch user businesses (${res.status})${body ? `: ${body}` : ''}`)
     }
-    
+
     const data = await res.json()
     return (data.businesses ?? []) as Business[]
   } catch (error) {
-    console.error('Error fetching businesses:', error)
-    return []
+    console.error('[getUserBusinesses]', error)
+    throw error
   }
 }
 

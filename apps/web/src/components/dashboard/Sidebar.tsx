@@ -18,7 +18,7 @@ import {
   Settings,
   Menu,
   Coins,
-  Image as ImageIcon
+  Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'

@@ -18,8 +18,11 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import type { MenuGridConfig } from '../types'
+import { plainText } from '@/i18n/locale'
+import type { BorderRadius, MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
+import { RadiusPicker } from '@/components/shared/RadiusPicker'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -31,7 +34,7 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
       <div className="flex items-center gap-2">
         <div className="size-8 rounded bg-muted flex items-center justify-center text-base">🍽️</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold">{config.heading || t('menuGridBlock.menu')}</p>
+          <p className="text-xs font-semibold">{plainText(config.heading) || t('menuGridBlock.menu')}</p>
           <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? t('menuGridBlock.tabsOn') : t('menuGridBlock.noTabs')}</p>
         </div>
       </div>
@@ -50,13 +53,20 @@ export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
 
 interface MenuGridSettingsProps {
   config: MenuGridConfig
-  /** All categories for this business, so user can pick which to show */
   categories: MenuCategory[]
   items: MenuItem[]
   onChange: (c: MenuGridConfig) => void
+  /** Order page: layout/display only — no category/item picking */
+  layoutOnly?: boolean
 }
 
-export function MenuGridSettings({ config, categories, items, onChange }: MenuGridSettingsProps) {
+export function MenuGridSettings({
+  config,
+  categories,
+  items,
+  onChange,
+  layoutOnly = false,
+}: MenuGridSettingsProps) {
   const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCatId, setFilterCatId] = useState('all')
@@ -80,9 +90,17 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
   }
 
   const allSelected = config.category_ids.length === 0
+  const isCustomMode = config.selection_mode === 'custom_items'
+  const selectedItemIds = config.item_ids || []
 
   // Number of categories that will actually appear on the live page
-  const activeCatCount = allSelected ? categories.length : config.category_ids.length
+  const activeCatCount = isCustomMode
+    ? new Set(
+        items
+          .filter(item => selectedItemIds.includes(item.id))
+          .map(item => item.category_id),
+      ).size
+    : allSelected ? categories.length : config.category_ids.length
   // Tabs are auto-forced when 2+ categories are displayed (user can't turn them off)
   const tabsAutoForced = activeCatCount >= 2
 
@@ -93,7 +111,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
         <Input
-          value={config.heading}
+          value={plainText(config.heading)}
           onChange={e => set('heading', e.target.value)}
           placeholder={t('menuGridBlock.headingPlaceholder')}
           className="h-8 text-sm"
@@ -104,7 +122,7 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
         <Textarea
-          value={config.description ?? ''}
+          value={plainText(config.description ?? '')}
           onChange={e => set('description', e.target.value)}
           placeholder={t('menuGridBlock.descPlaceholder')}
           className="text-sm min-h-[60px]"
@@ -137,6 +155,8 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
 
       <Separator />
 
+      {!layoutOnly && (
+        <>
       {/* Tabs Layout */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.tabsLayout')}</Label>
@@ -333,6 +353,14 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
       )}
 
       <Separator />
+        </>
+      )}
+
+      {layoutOnly && (
+        <p className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2">
+          {t('orderPageAdmin.menuAllCategoriesNote')}
+        </p>
+      )}
 
       {/* Display toggles */}
       <div className="space-y-2">
@@ -371,39 +399,95 @@ export function MenuGridSettings({ config, categories, items, onChange }: MenuGr
               />
             </div>
           ))}
+
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="menu-toggle-pagination" className="text-xs cursor-pointer">{t('menuGridBlock.pagination')}</Label>
+            <Switch
+              id="menu-toggle-pagination"
+              checked={!!config.pagination_enabled}
+              onCheckedChange={v => set('pagination_enabled', v)}
+            />
+          </div>
+          {config.pagination_enabled && (
+            <div className="space-y-1.5 pl-1">
+              <Label htmlFor="menu-items-per-page" className="text-xs">{t('menuGridBlock.itemsPerPage')}</Label>
+              <Input
+                id="menu-items-per-page"
+                type="number"
+                min={1}
+                max={100}
+                value={config.items_per_page ?? 12}
+                onChange={e => set('items_per_page', Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 12)))}
+                className="h-8 text-xs"
+              />
+            </div>
+          )}
         </div>
       </div>
 
 
 
-      {/* Colours */}
+      {/* Section colours — landing page builder only (order page uses Appearance) */}
+      {!layoutOnly && (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{t('menuGridBlock.coloursHint')}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ColorSwatchField
+              label={t('menuGridBlock.background')}
+              value={config.background_color}
+              fallback="#ffffff"
+              onChange={v => set('background_color', v)}
+            />
+            <ColorSwatchField
+              label={t('menuGridBlock.text')}
+              value={config.text_color}
+              fallback="#111111"
+              onChange={v => set('text_color', v)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Card style */}
       <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.colours')}</Label>
+        <div className="space-y-1">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('menuGridBlock.cardStyle')}
+          </Label>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            {t('menuGridBlock.cardStyleHint')}
+          </p>
+        </div>
+
+        <RadiusPicker
+          label={t('menuGridBlock.cardRadius')}
+          value={config.card_border_radius || 'md'}
+          onChange={v => set('card_border_radius', v as BorderRadius)}
+        />
+
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('menuGridBlock.background')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.background_color}
-                onChange={e => set('background_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.background_color}</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('menuGridBlock.text')}</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={config.text_color}
-                onChange={e => set('text_color', e.target.value)}
-                className="size-8 rounded border border-border cursor-pointer"
-              />
-              <span className="text-[11px] font-mono text-muted-foreground truncate">{config.text_color}</span>
-            </div>
-          </div>
+          <ColorSwatchField
+            label={t('menuGridBlock.cardBackground')}
+            value={config.card_background_color || '#ffffff'}
+            fallback="#ffffff"
+            onChange={v => set('card_background_color', v)}
+          />
+          <ColorSwatchField
+            label={t('menuGridBlock.cardText')}
+            value={config.card_text_color || '#111111'}
+            fallback="#111111"
+            onChange={v => set('card_text_color', v)}
+          />
+          <ColorSwatchField
+            label={t('menuGridBlock.cardBorder')}
+            value={config.card_border_color || '#f3f4f6'}
+            fallback="#f3f4f6"
+            onChange={v => set('card_border_color', v)}
+            wrapperClassName="col-span-2"
+          />
         </div>
       </div>
     </div>

@@ -3,6 +3,16 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PageBlock, PublishingSettings, ThemeSettings, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
+import {
+  normalizeOrderPromoSlides,
+  normalizeCarouselAspect,
+  normalizeCarouselAspectMobile,
+  MAX_ORDER_PROMO_SLIDES,
+  type CarouselAspect,
+  type CarouselAspectMobile,
+  type OrderPromoSlide,
+} from '@/components/order-page/promo-slides'
+import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import {
   addDomainToProject,
@@ -14,13 +24,64 @@ import {
   isVercelDomainsConfigured,
   type DnsRecord,
 } from '@/lib/vercel-domains'
+import {
+  normalizeFacebookPixelId,
+  normalizeGoogleAnalyticsId,
+  normalizeGscVerification,
+  normalizeTikTokPixelId,
+} from '@/lib/tracking-ids'
 export type { PublishingSettings } from '@/components/page-builder/types'
+
+function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
+  if (!row) return null
+  const published = Boolean(row.published)
+  return {
+    ...(row as unknown as PublishingSettings),
+    published,
+    // Fall back to landing publish if column not yet migrated
+    order_published: row.order_published == null ? published : Boolean(row.order_published),
+    order_promo_slides: normalizeOrderPromoSlides(row.order_promo_slides),
+    order_menu_config: normalizeOrderMenuConfig(row.order_menu_config) ?? undefined,
+    order_background_color: typeof row.order_background_color === 'string'
+      ? row.order_background_color
+      : null,
+    order_background_image_url: typeof row.order_background_image_url === 'string'
+      ? row.order_background_image_url
+      : null,
+    order_carousel_aspect_desktop: normalizeCarouselAspect(
+      row.order_carousel_aspect_desktop,
+      '16/9',
+    ),
+    order_carousel_aspect_mobile: normalizeCarouselAspectMobile(
+      row.order_carousel_aspect_mobile ?? 'same',
+    ),
+  }
+}
+
+export type PublishPage = 'landing' | 'order'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }
+
+/** Revalidate the public store page for a business (by slug). */
+async function revalidateLiveStore(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  businessId: string
+) {
+  const { data } = await db
+    .from('businesses')
+    .select('slug')
+    .eq('id', businessId)
+    .maybeSingle()
+  if (data?.slug) {
+    revalidatePath(`/${data.slug}`)
+    revalidatePath(`/${data.slug}/order`)
+  }
+}
 
 // ─── Load page data ───────────────────────────────────────────────────────────
 
@@ -29,29 +90,38 @@ export async function getPageDataAction(businessId: string): Promise<{
   publishing: PublishingSettings | null
   theme: ThemeSettings | null
 }> {
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
+  try {
+    const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase
 
-  const [blocksRes, pubRes, themeRes] = await Promise.all([
-    db.from('page_blocks')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('sort_order', { ascending: true }),
-    db.from('publishing_settings')
-      .select('*')
-      .eq('business_id', businessId)
-      .single(),
-    db.from('theme_settings')
-      .select('*')
-      .eq('business_id', businessId)
-      .single(),
-  ])
+    const [blocksRes, pubRes, themeRes] = await Promise.all([
+      db.from('page_blocks')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('sort_order', { ascending: true }),
+      db.from('publishing_settings')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+      db.from('theme_settings')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+    ])
 
-  return {
-    blocks: (blocksRes.data as any) ?? [],
-    publishing: pubRes.data ?? null,
-    theme: themeRes.data ?? null,
+    if (blocksRes.error) console.error('[getPageDataAction] blocks:', blocksRes.error.message)
+    if (pubRes.error) console.error('[getPageDataAction] publishing:', pubRes.error.message)
+    if (themeRes.error) console.error('[getPageDataAction] theme:', themeRes.error.message)
+
+    return {
+      blocks: (blocksRes.data as PageBlock[]) ?? [],
+      publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
+      theme: (themeRes.data as ThemeSettings | null) ?? null,
+    }
+  } catch (err) {
+    console.error('[getPageDataAction] unexpected:', err)
+    return { blocks: [], publishing: null, theme: null }
   }
 }
 
@@ -115,7 +185,7 @@ export async function savePageBlocksAction(
     .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
 
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
 
@@ -123,16 +193,33 @@ export async function savePageBlocksAction(
 
 export async function togglePublishAction(
   businessId: string,
-  published: boolean
+  published: boolean,
+  page: PublishPage = 'landing'
 ): Promise<ActionResult<PublishingSettings>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
-  // If we are publishing, we must snapshot the draft state
+  if (page === 'order') {
+    const { data, error } = await supabase
+      .from('publishing_settings')
+      .upsert(
+        { business_id: businessId, order_published: published },
+        { onConflict: 'business_id' }
+      )
+      .select()
+      .single()
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/publishing')
+    await revalidateLiveStore(supabase, businessId)
+    return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+  }
+
+  // Landing publish — snapshot draft blocks/theme into the live snapshot
   let published_blocks = undefined
   let published_theme = undefined
-  
+
   if (published) {
     const [blocksRes, themeRes] = await Promise.all([
       supabase.from('page_blocks').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
@@ -142,13 +229,12 @@ export async function togglePublishAction(
     if (themeRes.data) published_theme = themeRes.data
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
-      { 
-        business_id: businessId, 
-        published, 
+      {
+        business_id: businessId,
+        published,
         ...(published ? { has_unpublished_changes: false, published_blocks, published_theme } : {})
       },
       { onConflict: 'business_id' }
@@ -158,15 +244,228 @@ export async function togglePublishAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
-  return { success: true, data }
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+}
+
+export async function saveOrderPromoSlidesAction(
+  businessId: string,
+  slides: OrderPromoSlide[],
+): Promise<ActionResult<OrderPromoSlide[]>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const cleaned = normalizeOrderPromoSlides(slides).slice(0, MAX_ORDER_PROMO_SLIDES)
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_promo_slides: cleaned as unknown as never },
+      { onConflict: 'business_id' },
+    )
+    .select('order_promo_slides')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/pages')
+  await revalidateLiveStore(supabase, businessId)
+  return {
+    success: true,
+    data: normalizeOrderPromoSlides(data?.order_promo_slides),
+  }
+}
+
+export async function saveOrderMenuConfigAction(
+  businessId: string,
+  config: import('@/components/page-builder/types').MenuGridConfig,
+): Promise<ActionResult<import('@/components/page-builder/types').MenuGridConfig>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const cleaned = normalizeOrderMenuConfig(config)
+  if (!cleaned) return { success: false, error: 'Invalid menu config' }
+
+  // Order page never filters by category/item — always show full menu
+  const orderCleaned = {
+    ...cleaned,
+    selection_mode: 'category' as const,
+    category_ids: [] as string[],
+    item_ids: [] as string[],
+  }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_menu_config: orderCleaned as unknown as never },
+      { onConflict: 'business_id' },
+    )
+    .select('order_menu_config')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  const saved = normalizeOrderMenuConfig(data?.order_menu_config)
+  if (!saved) return { success: false, error: 'Failed to save menu config' }
+  const orderSaved = {
+    ...saved,
+    selection_mode: 'category' as const,
+    category_ids: [] as string[],
+    item_ids: [] as string[],
+  }
+  revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/pages')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: orderSaved }
+}
+
+export async function clearOrderMenuConfigAction(
+  businessId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      { business_id: businessId, order_menu_config: null },
+      { onConflict: 'business_id' },
+    )
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard/pages')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: undefined }
+}
+
+export async function saveOrderAppearanceAction(
+  businessId: string,
+  fields: {
+    order_background_color?: string | null
+    order_background_image_url?: string | null
+  },
+): Promise<ActionResult<PublishingSettings>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_background_color: fields.order_background_color ?? null,
+        order_background_image_url: fields.order_background_image_url ?? null,
+      },
+      { onConflict: 'business_id' },
+    )
+    .select()
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/pages')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+}
+
+export async function saveOrderCarouselAspectAction(
+  businessId: string,
+  fields: {
+    desktop: CarouselAspect
+    mobile: CarouselAspectMobile
+  },
+): Promise<ActionResult<{ desktop: CarouselAspect; mobile: CarouselAspectMobile }>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const desktop = normalizeCarouselAspect(fields.desktop, '16/9')
+  const mobile = normalizeCarouselAspectMobile(fields.mobile)
+
+  const { error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_carousel_aspect_desktop: desktop as unknown as never,
+        order_carousel_aspect_mobile: mobile as unknown as never,
+      },
+      { onConflict: 'business_id' },
+    )
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/pages')
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: { desktop, mobile } }
+}
+
+/** Unified autosave for the Order Page builder (appearance + carousel + menu). */
+export async function saveOrderPageDraftAction(
+  businessId: string,
+  draft: {
+    order_background_color?: string | null
+    order_background_image_url?: string | null
+    order_promo_slides: OrderPromoSlide[]
+    order_carousel_aspect_desktop: CarouselAspect
+    order_carousel_aspect_mobile: CarouselAspectMobile
+    /** null clears custom config and falls back to defaults */
+    order_menu_config: import('@/components/page-builder/types').MenuGridConfig | null
+  },
+): Promise<ActionResult<PublishingSettings>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  const slides = normalizeOrderPromoSlides(draft.order_promo_slides).slice(0, MAX_ORDER_PROMO_SLIDES)
+  const desktop = normalizeCarouselAspect(draft.order_carousel_aspect_desktop, '16/9')
+  const mobile = normalizeCarouselAspectMobile(draft.order_carousel_aspect_mobile)
+
+  let menuPayload: unknown = null
+  if (draft.order_menu_config != null) {
+    const cleaned = normalizeOrderMenuConfig(draft.order_menu_config)
+    if (!cleaned) return { success: false, error: 'Invalid menu config' }
+    menuPayload = {
+      ...cleaned,
+      selection_mode: 'category' as const,
+      category_ids: [] as string[],
+      item_ids: [] as string[],
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('publishing_settings')
+    .upsert(
+      {
+        business_id: businessId,
+        order_background_color: draft.order_background_color ?? null,
+        order_background_image_url: draft.order_background_image_url ?? null,
+        order_promo_slides: slides as unknown as never,
+        order_carousel_aspect_desktop: desktop as unknown as never,
+        order_carousel_aspect_mobile: mobile as unknown as never,
+        order_menu_config: menuPayload as never,
+      },
+      { onConflict: 'business_id' },
+    )
+    .select()
+    .single()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/dashboard/pages')
+  revalidatePath('/dashboard/publishing')
+  await revalidateLiveStore(supabase, businessId)
+  return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────────
 
 export async function saveThemeAction(
   businessId: string,
-  theme: { primary_color: string; background_color: string; font_family: string; heading_font_family: string }
+  theme: { primary_color: string; background_color: string; text_color: string; font_family: string; heading_font_family: string }
 ): Promise<ActionResult<ThemeSettings>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -187,7 +486,7 @@ export async function saveThemeAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -216,7 +515,7 @@ export async function saveNavbarAction(
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -240,9 +539,14 @@ export async function saveFooterAction(
   await supabase.from('publishing_settings')
     .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
 
-  if (error) return { success: false, error: error.message }
+  if (error) {
+    const message = error.message.includes('footer_config')
+      ? 'Footer settings could not be saved. Run database migration 034_footer_config.sql on your Supabase project, then retry.'
+      : error.message
+    return { success: false, error: message }
+  }
   revalidatePath('/dashboard/pages')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data }
 }
 
@@ -262,7 +566,7 @@ export async function getPublishingAction(businessId: string): Promise<{
   ])
 
   return {
-    publishing: pubRes.data ?? null,
+    publishing: normalizePublishing(pubRes.data as Record<string, unknown> | null),
     slug: bizRes.data?.slug ?? null,
   }
 }
@@ -285,29 +589,72 @@ export async function savePublishingSettingsAction(
     tiktok_pixel_id?: string | null
   }
 ): Promise<ActionResult<PublishingSettings>> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Not authenticated' }
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
 
-  if ('custom_domain' in fields) {
-    fields.custom_domain_verified = false
-    fields.custom_domain_billed_until = null
+    if ('custom_domain' in fields) {
+      fields.custom_domain_verified = false
+      fields.custom_domain_billed_until = null
+    }
+
+    // Sanitize tracking / verification fields — empty → null; extract GSC content from full meta tags
+    if ('google_analytics_id' in fields) {
+      const trimmed = typeof fields.google_analytics_id === 'string' ? fields.google_analytics_id.trim() : ''
+      fields.google_analytics_id = trimmed
+        ? (normalizeGoogleAnalyticsId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('facebook_pixel_id' in fields) {
+      const trimmed = typeof fields.facebook_pixel_id === 'string' ? fields.facebook_pixel_id.trim() : ''
+      fields.facebook_pixel_id = trimmed
+        ? (normalizeFacebookPixelId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('tiktok_pixel_id' in fields) {
+      const trimmed = typeof fields.tiktok_pixel_id === 'string' ? fields.tiktok_pixel_id.trim() : ''
+      fields.tiktok_pixel_id = trimmed
+        ? (normalizeTikTokPixelId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('gsc_verification' in fields) {
+      const trimmed = typeof fields.gsc_verification === 'string' ? fields.gsc_verification.trim() : ''
+      if (!trimmed) {
+        fields.gsc_verification = null
+      } else {
+        const normalized = normalizeGscVerification(trimmed)
+        const extracted = trimmed.match(/content\s*=\s*["']([^"']+)["']/i)?.[1]?.trim()
+        fields.gsc_verification = normalized ?? extracted ?? trimmed
+      }
+    }
+    if ('seo_title' in fields && typeof fields.seo_title === 'string') {
+      fields.seo_title = fields.seo_title.trim() || null
+    }
+    if ('seo_description' in fields && typeof fields.seo_description === 'string') {
+      fields.seo_description = fields.seo_description.trim() || null
+    }
+
+    const payload: Record<string, unknown> = { business_id: businessId, ...fields }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('publishing_settings')
+      .upsert(payload, { onConflict: 'business_id' })
+      .select()
+      .single()
+
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/dashboard/publishing')
+    await revalidateLiveStore(supabase, businessId)
+    return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
+  } catch (err) {
+    console.error('[savePublishingSettingsAction]', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to save publishing settings',
+    }
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from('publishing_settings')
-    .upsert(
-      { business_id: businessId, ...fields },
-      { onConflict: 'business_id' }
-    )
-    .select()
-    .single()
-
-  if (error) return { success: false, error: error.message }
-  revalidatePath('/dashboard/publishing')
-  revalidatePath(`/[slug]`)
-  return { success: true, data }
 }
 
 // ─── Page view analytics ──────────────────────────────────────────────────────
@@ -322,6 +669,10 @@ export async function getPageViewsAction(
   periodTotal: number
   daily: DayViewStat[]  // last `period` days, oldest → newest, gaps filled with 0
 }> {
+  // Safety-net reconcile for page-view credit charges (primary path is /api/view)
+  const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
+  await billPageViewsIfDueAction(businessId)
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -475,7 +826,7 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/dashboard/publishing')
-  revalidatePath(`/[slug]`)
+  await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
 
@@ -525,7 +876,7 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
     }
 
     revalidatePath('/dashboard/publishing')
-    revalidatePath(`/[slug]`)
+    await revalidateLiveStore(supabase, businessId)
     return { success: true, data: undefined }
   } catch {
     return { success: false, error: 'Không thể xác minh tên miền. Vui lòng thử lại.' }

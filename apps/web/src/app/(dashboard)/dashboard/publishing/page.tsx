@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
+import { billCustomDomainIfDueAction, billPageViewsIfDueAction } from '@/app/actions/credits'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
+import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'Publishing' }
@@ -17,19 +18,22 @@ export default async function PublishingPage() {
 
   const { t } = await getServerTranslation()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
-
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+
+  // Opportunistic billing while owner is on Publishing (no cron needed)
+  await Promise.all([
+    billCustomDomainIfDueAction(business.id),
+    billPageViewsIfDueAction(business.id),
+  ])
+
   const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),
     getCustomDomainSetupAction(business.id),
   ])
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
+  const siteOrigin = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
 
   return (
     <div className="p-4 md:p-8 max-w-5xl">
@@ -45,7 +49,7 @@ export default async function PublishingPage() {
         publishing={publishing}
         slug={slug ?? business.id}
         analytics={analytics}
-        baseUrl={baseUrl}
+        baseUrl={siteOrigin}
         initialDomainSetup={domainSetup}
       />
     </div>

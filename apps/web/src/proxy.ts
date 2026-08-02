@@ -1,5 +1,23 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { isSupportedLocale } from '@/i18n/locale'
+import { currencyForLocale, localeCookieOptions } from '@/lib/locale-cookie'
+import {
+  inferMarketingLocaleFromCountry,
+  isMarketingRoute,
+  MARKETING_LANG_PARAM,
+} from '@/lib/marketing-locale'
+import {
+  appPath,
+  getAppHostname,
+  getMarketingHostname,
+  isAppHostname,
+  isAppOnlyPath,
+  isMarketingHostname,
+  isMarketingPath,
+  isSplitDomainDeployment,
+  marketingPath,
+} from '@/lib/site-urls'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -25,29 +43,50 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // -- Localization Auto-Detection --
   const country = request.headers.get('x-vercel-ip-country') || 'US'
   const langCookie = request.cookies.get('NEXT_LOCALE')?.value
   const currencyCookie = request.cookies.get('NEXT_CURRENCY')?.value
+  const cookieOptions = localeCookieOptions()
 
-  if (!langCookie) {
-    const countryLangMap: Record<string, string> = {
-      VN: 'vi', // Vietnam → Vietnamese
-      TH: 'th', // Thailand → Thai
-      CN: 'zh', HK: 'zh', TW: 'zh', MO: 'zh', // Chinese-speaking
-      JP: 'ja', // Japan → Japanese
-      KR: 'ko', // Korea → Korean
-      FR: 'fr', BE: 'fr', CH: 'fr', // French-speaking
-      DE: 'de', AT: 'de', // German-speaking
-      ES: 'es', MX: 'es', AR: 'es', CO: 'es', // Spanish-speaking
-      ID: 'id', // Indonesia → Bahasa Indonesia
-      MY: 'ms', SG: 'ms', BN: 'ms', // Malay-speaking
+  const { pathname, search } = request.nextUrl
+  const langParam = request.nextUrl.searchParams.get(MARKETING_LANG_PARAM)
+  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
+
+  if (isMarketingRoute(pathname)) {
+    if (langParam === 'en') {
+      supabaseResponse.cookies.set('NEXT_LOCALE', 'en', cookieOptions)
+      supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('en'), cookieOptions)
+    } else if (langParam === 'vi') {
+      const cleanUrl = request.nextUrl.clone()
+      cleanUrl.searchParams.delete(MARKETING_LANG_PARAM)
+      const response = NextResponse.redirect(cleanUrl)
+      response.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+      response.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
+      return response
+    } else {
+      // Clean URL (no ?lang=) is always Vietnamese.
+      if (!langCookie || langCookie !== 'vi') {
+        supabaseResponse.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+        supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
+      }
+      // First visit from outside Vietnam → send to English URL.
+      if (!langCookie && inferMarketingLocaleFromCountry(country, host) === 'en') {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.searchParams.set(MARKETING_LANG_PARAM, 'en')
+        const response = NextResponse.redirect(redirectUrl)
+        response.cookies.set('NEXT_LOCALE', 'en', cookieOptions)
+        response.cookies.set('NEXT_CURRENCY', currencyForLocale('en'), cookieOptions)
+        return response
+      }
     }
-    const defaultLang = countryLangMap[country] ?? 'en'
-    supabaseResponse.cookies.set('NEXT_LOCALE', defaultLang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+  } else if (!langCookie) {
+    supabaseResponse.cookies.set('NEXT_LOCALE', 'vi', cookieOptions)
+    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('vi'), cookieOptions)
   }
-  
-  if (!currencyCookie) {
+
+  if (!currencyCookie && langCookie && isSupportedLocale(langCookie)) {
+    supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale(langCookie), cookieOptions)
+  } else if (!currencyCookie) {
     const countryCurrencyMap: Record<string, string> = {
       VN: 'VND', TH: 'THB', JP: 'JPY', KR: 'KRW',
       ID: 'IDR', MY: 'MYR', SG: 'SGD',
@@ -55,21 +94,30 @@ export async function proxy(request: NextRequest) {
       FR: 'EUR', DE: 'EUR', ES: 'EUR', AT: 'EUR', BE: 'EUR',
     }
     const defaultCurrency = countryCurrencyMap[country] ?? 'USD'
-    supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+    supabaseResponse.cookies.set('NEXT_CURRENCY', defaultCurrency, cookieOptions)
   }
 
-  // Pass country header to downstream components
   supabaseResponse.headers.set('x-user-country', country)
-  // ---------------------------------
 
-  // Refresh session if expired
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
+  const marketingHost = getMarketingHostname()
+  const appHost = getAppHostname()
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1'
+  const splitDomains = isSplitDomainDeployment() && !isLocalHost
 
-  // Supabase may redirect to Site URL root with ?code= (legacy misconfig). Forward to callback.
+  const isMarketingHost = splitDomains && isMarketingHostname(host, marketingHost)
+  const isAppHost = splitDomains && isAppHostname(host, appHost)
+
+  const isPlatformHost =
+    isLocalHost ||
+    isAppHostname(host, appHost) ||
+    isMarketingHostname(host, marketingHost) ||
+    (host?.endsWith('.vercel.app') ?? false)
+
+  // Supabase may redirect with ?code= on Site URL root
   const authCode = request.nextUrl.searchParams.get('code')
   if (authCode && !pathname.startsWith('/api/auth/callback')) {
     const callbackUrl = request.nextUrl.clone()
@@ -77,34 +125,45 @@ export async function proxy(request: NextRequest) {
     if (!callbackUrl.searchParams.has('next')) {
       callbackUrl.searchParams.set('next', '/dashboard')
     }
+    if (isMarketingHost) {
+      const appCallback = new URL('/api/auth/callback' + callbackUrl.search, appPath('/'))
+      return NextResponse.redirect(appCallback)
+    }
     return NextResponse.redirect(callbackUrl)
   }
 
-  // ── Custom domain routing ──
-  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const appHost = new URL(appUrl).hostname.toLowerCase()
-  const isLocalHost = host === 'localhost' || host === '127.0.0.1'
-  const isPlatformHost =
-    isLocalHost ||
-    host === appHost ||
-    (host?.endsWith('.vercel.app') ?? false)
+  // ── Marketing vs app subdomain routing ──
+  // Marketing host wins when both could match (misconfigured APP_URL on apex/www).
+  if (isMarketingHost) {
+    if (isAppOnlyPath(pathname)) {
+      return NextResponse.redirect(appPath(pathname + search))
+    }
+  } else if (isAppHost) {
+    if (pathname === '/') {
+      const dest = user ? '/dashboard' : '/login'
+      return NextResponse.redirect(new URL(dest, request.url))
+    }
+    if (isMarketingPath(pathname) && pathname !== '/') {
+      return NextResponse.redirect(marketingPath(pathname + search))
+    }
+  }
 
+  // ── Custom domain routing ──
+  // Preserve subpaths (e.g. /order, /order?table=3) when rewriting to /{slug}/…
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
     const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
     if (slug) {
       const rewriteUrl = request.nextUrl.clone()
-      rewriteUrl.pathname = `/${slug}`
+      const suffix = pathname === '/' ? '' : pathname
+      rewriteUrl.pathname = `/${slug}${suffix}`
       return NextResponse.rewrite(rewriteUrl)
     }
   }
 
-  // Protect dashboard and onboarding routes
   if ((pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged-in users away from auth pages
   if (
     user &&
     (pathname === '/login' ||
@@ -119,6 +178,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    // Skip Next.js internals (incl. RSC flight requests under /_next) and static assets.
+    '/((?!_next|favicon.ico|icon.png|robots.txt|sitemap.xml|api/).*)',
   ],
 }

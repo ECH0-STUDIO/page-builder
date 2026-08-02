@@ -35,6 +35,7 @@ import {
   HOURS,
   SOCIAL_LINKS_CONFIG,
 } from '@/lib/constants'
+import { VIETNAM_CITIES, VIETNAM_CITY_OTHER, isKnownVietnamCity } from '@/lib/vietnam-cities'
 import { useBusiness } from '@/context/BusinessContext'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { ImageUploader } from '@/components/shared/ImageUploader'
@@ -119,7 +120,14 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
   // Contact
   const [address, setAddress] = useState(business.address ?? '')
-  const [city, setCity] = useState(business.city ?? '')
+  const initialCity = business.city ?? ''
+  const [citySelect, setCitySelect] = useState<string>(() =>
+    isKnownVietnamCity(initialCity) ? initialCity : (initialCity ? VIETNAM_CITY_OTHER : ''),
+  )
+  const [cityOther, setCityOther] = useState(() =>
+    isKnownVietnamCity(initialCity) || !initialCity ? '' : initialCity,
+  )
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(business.google_maps_url ?? '')
   const [phone, setPhone] = useState(business.phone ?? '')
   const [email, setEmail] = useState(business.email ?? '')
 
@@ -229,13 +237,19 @@ export function BusinessProfileForm({ business }: { business: Business }) {
 
     setSaving(true)
 
+    const resolvedCity =
+      citySelect === VIETNAM_CITY_OTHER
+        ? cityOther.trim() || null
+        : citySelect || null
+
     try {
       await updateBusiness(business.id, {
         name,
         category: category ? [category] : [],
         tags,
         address: address || null,
-        city: city || null,
+        city: resolvedCity,
+        google_maps_url: googleMapsUrl.trim() || null,
         phone: phone || null,
         email: email || null,
         opening_hours: hours,
@@ -335,7 +349,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               </SelectTrigger>
               <SelectContent>
                 {BUSINESS_CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{t(`onboarding.categories.${c.value}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -424,14 +438,45 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               onChange={e => setAddress(e.target.value)}
             />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="prof-maps">{t('businessProfile.googleMapsUrl')}</Label>
+            <Input
+              id="prof-maps"
+              type="url"
+              placeholder={t('businessProfile.googleMapsUrlPlaceholder')}
+              value={googleMapsUrl}
+              onChange={e => setGoogleMapsUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{t('businessProfile.googleMapsUrlHint')}</p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="prof-city">{t('businessProfile.city')}</Label>
-            <Input
-              id="prof-city"
-              placeholder="Ho Chi Minh City"
-              value={city}
-              onChange={e => setCity(e.target.value)}
-            />
+            <Select
+              value={citySelect}
+              onValueChange={v => {
+                setCitySelect(v)
+                if (v !== VIETNAM_CITY_OTHER) setCityOther('')
+              }}
+            >
+              <SelectTrigger id="prof-city">
+                <SelectValue placeholder={t('businessProfile.selectCity')} />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {VIETNAM_CITIES.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+                <SelectItem value={VIETNAM_CITY_OTHER}>{t('businessProfile.cityOther')}</SelectItem>
+              </SelectContent>
+            </Select>
+            {citySelect === VIETNAM_CITY_OTHER && (
+              <Input
+                id="prof-city-other"
+                placeholder={t('businessProfile.cityOtherPlaceholder')}
+                value={cityOther}
+                onChange={e => setCityOther(e.target.value)}
+                className="mt-2"
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="prof-phone">{t('businessProfile.phone')}</Label>
@@ -442,7 +487,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               onChange={e => setPhone(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="prof-email">{t('businessProfile.email')}</Label>
             <Input
               id="prof-email"

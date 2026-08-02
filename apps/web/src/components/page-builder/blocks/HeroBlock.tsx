@@ -15,18 +15,21 @@ import {
 import { cn } from '@/lib/utils'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
-import { CtaEditor } from './CtaEditor'
+import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { plainText } from '@/i18n/locale'
 import type {
-  HeroConfig, HeroLayout, BlockHeight, ImagePosition, CtaButton, SplitImageSide, PageBlock,
+  HeroConfig, HeroLayout, BlockHeight, ImagePosition, SplitImageSide, PageBlock, ContentAlign,
 } from '../types'
+import { resolveHeroHeight } from '../hero-utils'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
 export function HeroPreview({ config }: { config: HeroConfig }) {
   const { t } = useTranslation()
+  const heading = plainText(config.heading)
   const layoutLabels: Record<HeroLayout, string> = {
-    centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay at 40%
+    centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay
     split: t('heroBlock.split'),
     overlay: t('heroBlock.overlay'),
     text_only: t('heroBlock.textOnly'),
@@ -38,7 +41,7 @@ export function HeroPreview({ config }: { config: HeroConfig }) {
         <div
           className={cn(
             'bg-muted flex items-center justify-center',
-            config.height === 'fullscreen' ? 'h-24' : config.height === 'medium' ? 'h-16' : 'h-12',
+            config.height === 'fullscreen' ? 'h-24' : 'h-12',
             config.layout === 'split' ? 'w-1/2 ml-auto' : 'w-full'
           )}
         >
@@ -52,13 +55,10 @@ export function HeroPreview({ config }: { config: HeroConfig }) {
       )}
       <div className="p-3 space-y-0.5">
         <p className="text-xs font-semibold truncate">
-          {config.heading || <span className="text-muted-foreground italic">{t('heroBlock.heading')}…</span>}
+          {heading || <span className="text-muted-foreground italic">{t('heroBlock.heading')}…</span>}
         </p>
-        {config.tagline && (
-          <p className="text-xs text-muted-foreground truncate">{config.tagline}</p>
-        )}
         <p className="text-[10px] text-muted-foreground/60 pt-1">
-          {layoutLabels[config.layout]} · {config.height}
+          {layoutLabels[config.layout]} · {resolveHeroHeight(config.height)}
         </p>
       </div>
     </div>
@@ -71,13 +71,22 @@ export function HeroSettings({
   config,
   businessId,
   blocks,
+  brandColor = '#E85D26',
   onChange,
+  onHeightChange,
+  omitLayout = false,
+  omitHeight = false,
 }: {
   config: HeroConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
+  brandColor?: string
   onChange: (c: HeroConfig) => void
+  /** Called when block height mode changes — resets outer padding defaults */
+  onHeightChange?: (height: BlockHeight) => void
+  omitLayout?: boolean
+  omitHeight?: boolean
 }) {
   const { t } = useTranslation()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -91,7 +100,6 @@ export function HeroSettings({
 
   const HEIGHTS: { value: BlockHeight; label: string }[] = [
     { value: 'custom', label: t('heroBlock.custom') },
-    { value: 'medium', label: t('heroBlock.medium') },
     { value: 'fullscreen', label: t('heroBlock.fullscreen') },
   ]
 
@@ -106,7 +114,16 @@ export function HeroSettings({
   }
 
   function resolvedHeight(): BlockHeight {
-    return (config.height as string) === 'auto' ? 'custom' : config.height
+    return resolveHeroHeight(config.height)
+  }
+
+  function setHeight(height: BlockHeight) {
+    if (height === resolvedHeight()) return
+    if (onHeightChange) {
+      onHeightChange(height)
+    } else {
+      set('height', height)
+    }
   }
 
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -127,8 +144,6 @@ export function HeroSettings({
     }
   }
 
-  const emptyCtaDefaults: CtaButton = { label: '', action: 'url', value: '', style: 'filled' }
-  const isCustomHeight = resolvedHeight() === 'custom'
   const isTextOnly = config.layout === 'text_only'
   const isSplit = config.layout === 'split'
   const hasImage = !isTextOnly
@@ -137,29 +152,33 @@ export function HeroSettings({
     <div className="space-y-5">
 
       {/* Layout */}
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.layout')}</Label>
-        <div className="grid grid-cols-1 gap-1.5">
-          {LAYOUTS.map(l => (
-            <button
-              key={l.value}
-              type="button"
-              onClick={() => set('layout', l.value)}
-              className={cn(
-                'text-left px-3 py-2 rounded-lg border text-xs transition-colors',
-                config.layout === l.value
-                  ? 'border-primary bg-primary/5 text-primary font-medium'
-                  : 'border-border hover:border-foreground/30'
-              )}
-            >
-              <span className="font-medium">{l.label}</span>
-              <span className="text-muted-foreground ml-2">{l.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {!omitLayout && (
+        <>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.layout')}</Label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {LAYOUTS.map(l => (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => set('layout', l.value)}
+                  className={cn(
+                    'text-left px-3 py-2 rounded-lg border text-xs transition-colors',
+                    config.layout === l.value
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      : 'border-border hover:border-foreground/30'
+                  )}
+                >
+                  <span className="font-medium">{l.label}</span>
+                  <span className="text-muted-foreground ml-2">{l.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <Separator />
+          <Separator />
+        </>
+      )}
 
       {/* Image (hidden for text_only) */}
       {hasImage && (
@@ -217,16 +236,18 @@ export function HeroSettings({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.imagePositionHelp')}</p>
             </div>
-            {config.layout === 'overlay' && (
+            {(config.layout === 'overlay' || config.layout === 'centered') && (
               <div className="space-y-1.5">
-                <Label className="text-xs">{t('heroBlock.overlayOpacity')}: {config.overlay_opacity}%</Label>
+                <Label className="text-xs">{t('heroBlock.overlayOpacity')}: {Math.min(100, Math.max(0, Number(config.overlay_opacity) || 0))}%</Label>
                 <Slider
-                  min={0} max={80} step={5}
-                  value={[config.overlay_opacity]}
+                  min={0} max={100} step={5}
+                  value={[Math.min(100, Math.max(0, Number(config.overlay_opacity) || 0))]}
                   onValueChange={([v]) => set('overlay_opacity', v)}
                   className="mt-2"
                 />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.overlayOpacityHelp')}</p>
               </div>
             )}
           </div>
@@ -339,16 +360,36 @@ export function HeroSettings({
       <div className="space-y-3">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.content')}</Label>
         <div className="space-y-1.5">
-          <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
-          <Input id="hero-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+          <Label className="text-xs">{t('heroBlock.contentAlign')}</Label>
+          <div className="flex gap-1.5">
+            {([
+              { value: 'left' as ContentAlign, label: t('heroBlock.alignLeft') },
+              { value: 'center' as ContentAlign, label: t('heroBlock.alignCenter') },
+              { value: 'right' as ContentAlign, label: t('heroBlock.alignRight') },
+            ]).map(a => (
+              <button
+                key={a.value}
+                type="button"
+                onClick={() => set('content_align', a.value)}
+                className={cn(
+                  'flex-1 py-1.5 rounded border text-xs transition-colors',
+                  (config.content_align ?? 'center') === a.value
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-border hover:border-foreground/30',
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="hero-tagline" className="text-xs">{t('heroBlock.tagline')}</Label>
-          <Input id="hero-tagline" value={config.tagline} onChange={e => set('tagline', e.target.value)} placeholder={t('heroBlock.taglinePlaceholder')} className="h-8 text-sm" />
+          <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
+          <Input id="hero-heading" value={plainText(config.heading)} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
-          <Textarea id="hero-body" value={config.body} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+          <Textarea id="hero-body" value={plainText(config.body)} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
         </div>
       </div>
 
@@ -362,12 +403,13 @@ export function HeroSettings({
             label={t('heroBlock.primaryButton')}
             value={config.cta}
             blocks={blocks}
+            brandColor={brandColor}
             onChange={v => set('cta', v)}
             onRemove={() => set('cta', null)}
           />
         ) : (
           <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8"
-            onClick={() => set('cta', { ...emptyCtaDefaults })}
+            onClick={() => set('cta', { ...DEFAULT_CTA_BUTTON })}
           >
             {t('heroBlock.addPrimary')}
           </Button>
@@ -375,15 +417,16 @@ export function HeroSettings({
         {config.cta && (
           config.cta_secondary ? (
             <CtaEditor
-              label={t('heroBlock.secondaryLink')}
+              label={t('heroBlock.secondaryButton')}
               value={config.cta_secondary}
               blocks={blocks}
+              brandColor={brandColor}
               onChange={v => set('cta_secondary', v)}
               onRemove={() => set('cta_secondary', null)}
             />
           ) : (
             <Button type="button" variant="ghost" size="sm" className="w-full text-xs h-7 text-muted-foreground"
-              onClick={() => set('cta_secondary', { label: '', action: 'url', value: '', style: 'text' })}
+              onClick={() => set('cta_secondary', { ...DEFAULT_CTA_BUTTON })}
             >
               {t('heroBlock.addSecondary')}
             </Button>
@@ -393,16 +436,14 @@ export function HeroSettings({
 
       <Separator />
 
-      {/* Styling — only for overlay/text_only */}
-      {!isSplit && (
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.styling')}</Label>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('heroBlock.blockHeight')}</Label>
+      {/* Block height — all layouts */}
+      <div className="space-y-3">
+        {!omitHeight && (
+          <>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.blockHeight')}</Label>
             <div className="flex gap-1.5">
               {HEIGHTS.map(h => (
-                <button key={h.value} type="button" onClick={() => set('height', h.value)}
+                <button key={h.value} type="button" onClick={() => setHeight(h.value)}
                   className={cn('flex-1 py-1.5 rounded-md border text-xs transition-colors',
                     resolvedHeight() === h.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-foreground/30'
                   )}
@@ -411,20 +452,47 @@ export function HeroSettings({
                 </button>
               ))}
             </div>
-          </div>
-
-          {isCustomHeight && (
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center justify-between">
-                <span>{t('heroBlock.verticalPadding')}</span>
-                <span className="font-mono text-muted-foreground">{config.section_padding_y ?? 80}px</span>
-              </Label>
-              <Slider min={0} max={300} step={8}
-                value={[config.section_padding_y ?? 80]}
-                onValueChange={([v]) => set('section_padding_y', v)} />
-              <p className="text-[11px] text-muted-foreground">{t('heroBlock.paddingHelp')}</p>
+          </>
+        )}
+        {resolvedHeight() === 'custom' && (
+          <div className="space-y-1.5">
+            {omitHeight && (
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.blockHeight')}</Label>
+            )}
+            <Label htmlFor="hero-min-height" className="text-xs">{t('heroBlock.minHeight')}</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="hero-min-height"
+                type="number"
+                min={0}
+                step={10}
+                value={config.min_height && config.min_height > 0 ? config.min_height : ''}
+                onChange={e => {
+                  const raw = e.target.value.trim()
+                  if (raw === '') {
+                    set('min_height', null)
+                    return
+                  }
+                  const n = Number(raw)
+                  set('min_height', Number.isFinite(n) && n > 0 ? Math.round(n) : null)
+                }}
+                placeholder={t('heroBlock.minHeightPlaceholder')}
+                className="h-8 text-sm"
+              />
+              <span className="text-xs text-muted-foreground shrink-0">px</span>
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.customHeightHelp')}</p>
+          </div>
+        )}
+        {!omitHeight && resolvedHeight() === 'fullscreen' && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed">{t('heroBlock.fullscreenHeightHelp')}</p>
+        )}
+      </div>
+
+      {/* Styling — text colour for overlay/text_only */}
+      {!isSplit && (
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('heroBlock.styling')}</Label>
 
           <div className="space-y-1.5">
             <Label className="text-xs">{t('heroBlock.textColour')}</Label>

@@ -44,7 +44,6 @@ export function TemplatePicker({ onSelect, onClose, canClose }: TemplatePickerPr
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary'
               )}
             >
-              <div className="text-2xl mb-2">{tmpl.emoji}</div>
               <p className="font-semibold text-sm">{t(tmpl.label)}</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t(tmpl.description)}</p>
               {tmpl.blocks.length > 0 && (

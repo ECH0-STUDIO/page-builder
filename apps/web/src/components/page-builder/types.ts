@@ -2,6 +2,12 @@
  * Page Builder — shared type definitions
  */
 
+import type {
+  CarouselAspect,
+  CarouselAspectMobile,
+  OrderPromoSlide,
+} from '@/components/order-page/promo-slides'
+
 // ─── Block types ──────────────────────────────────────────────────────────────
 
 export type BlockType = 'hero' | 'text_image' | 'contact' | 'menu_grid' | 'qr_code'
@@ -26,14 +32,17 @@ export const defaultSpacing: BlockSpacing = {
   margin_bottom: 0,
 }
 
+/** Default horizontal inset applied on the section shell for content blocks. */
+export const SECTION_SIDE_PADDING = 24
+
 /** Natural outer spacing defaults per block type (matches each block's built-in design rhythm) */
 export const BLOCK_DEFAULT_SPACING: Partial<Record<BlockType, BlockSpacing>> = {
-  // Hero inner vertical padding is via section_padding_y; outer spacing is 0
-  hero: { ...defaultSpacing },
-  // TextImage outer spacing — compact/normal/spacious controls inner padding via its own setting
-  text_image: { ...defaultSpacing },
-  // Contact section has its own internal padding
-  contact: { ...defaultSpacing },
+  hero: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  text_image: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  // Contact / menu / QR — vertical + horizontal rhythm on the section shell
+  contact: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  menu_grid: { padding_top: 64, padding_right: SECTION_SIDE_PADDING, padding_bottom: 64, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
+  qr_code: { padding_top: 48, padding_right: SECTION_SIDE_PADDING, padding_bottom: 48, padding_left: SECTION_SIDE_PADDING, margin_top: 0, margin_bottom: 0 },
 }
 
 // ─── Google Fonts curated list ────────────────────────────────────────────────
@@ -103,18 +112,24 @@ export interface CtaButton {
   action: CtaAction
   value: string
   style: CtaStyle
+  /** Custom button colour; null/undefined = use brand colour from theme */
+  color?: string | null
+  /** When action is url, open link in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 export type HeroLayout = 'centered' | 'split' | 'overlay' | 'text_only'
-export type BlockHeight = 'custom' | 'medium' | 'fullscreen'
+export type BlockHeight = 'custom' | 'fullscreen'
 export type ImagePosition = 'top' | 'center' | 'bottom'
 export type SplitImageSide = 'left' | 'right'
+export type ContentAlign = 'left' | 'center' | 'right'
 
 export interface HeroConfig {
   layout: HeroLayout
   heading: string
+  /** @deprecated Removed from hero UI — kept for legacy saved pages */
   tagline: string
   body: string
   image_url: string
@@ -124,8 +139,12 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
-  /** Vertical padding (px) inside the hero's background area — only used when height='custom' */
-  section_padding_y: number
+  /** Min height in px when height is custom; omit/0 = hug content */
+  min_height?: number | null
+  /** Content alignment for heading / body / CTAs */
+  content_align?: ContentAlign
+  /** @deprecated Use block spacing (outer padding) instead */
+  section_padding_y?: number
   /** --- Split layout specific --- */
   /** Which side the image sits on in the Split layout */
   split_image_side: SplitImageSide
@@ -150,8 +169,9 @@ export const defaultHeroConfig: HeroConfig = {
   cta: null,
   cta_secondary: null,
   text_color: 'auto',
-  height: 'medium',
-  section_padding_y: 80,
+  height: 'custom',
+  min_height: null,
+  content_align: 'center',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',
   split_text_color: '#ffffff',
@@ -177,6 +197,10 @@ export interface TextImageConfig {
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
+  /** Custom ratio width when aspect_ratio === 'free' */
+  aspect_ratio_width?: number
+  /** Custom ratio height when aspect_ratio === 'free' */
+  aspect_ratio_height?: number
   image_fit: ImageFit
   background: BlockBackground
   background_color: string
@@ -187,6 +211,8 @@ export interface TextImageConfig {
   padding: PaddingSize
   /** image corner radius level */
   border_radius: BorderRadius
+  /** Content alignment for heading / body / CTA */
+  content_align?: ContentAlign
 }
 
 export const defaultTextImageConfig: TextImageConfig = {
@@ -196,6 +222,8 @@ export const defaultTextImageConfig: TextImageConfig = {
   cta: null,
   image_url: '',
   aspect_ratio: '4_3',
+  aspect_ratio_width: 4,
+  aspect_ratio_height: 3,
   image_fit: 'cover',
   background: 'transparent',
   background_color: '#f9f9f9',
@@ -203,12 +231,14 @@ export const defaultTextImageConfig: TextImageConfig = {
   gradient_to: '#e8e8e8',
   padding: 'normal',
   border_radius: 'md',
+  content_align: 'left',
 }
 
 // ─── Contact ──────────────────────────────────────────────────────────────────
 
 export type MapHeight = 'small' | 'medium' | 'large'
 export type ContactLayout = 'vertical' | 'map_left'
+export type ContactBackground = 'solid' | 'gradient' | 'image'
 
 export interface ContactConfig {
   layout: ContactLayout
@@ -219,8 +249,18 @@ export interface ContactConfig {
   show_address: boolean
   show_hours: boolean
   socials_shown: string[]
-  /** section background colour */
+  /** Section background mode */
+  background?: ContactBackground
+  /** Solid background colour (also fallback under image) */
   background_color: string
+  /** Gradient start (background === 'gradient') */
+  gradient_from?: string
+  /** Gradient end (background === 'gradient') */
+  gradient_to?: string
+  /** Cover image URL (background === 'image') */
+  background_image?: string
+  /** Black overlay opacity 0–100 over background image */
+  overlay_opacity?: number
   /** labels/heading colour */
   text_color: string
 }
@@ -234,7 +274,12 @@ export const defaultContactConfig: ContactConfig = {
   show_address: true,
   show_hours: true,
   socials_shown: ['facebook', 'instagram', 'zalo'],
+  background: 'solid',
   background_color: '#f8f8f8',
+  gradient_from: '#f8f8f8',
+  gradient_to: '#e8e8e8',
+  background_image: '',
+  overlay_opacity: 40,
   text_color: '#111111',
 }
 
@@ -253,8 +298,16 @@ export interface MenuGridConfig {
   show_category_tabs: boolean
   /** Section background colour */
   background_color: string
-  /** Heading + text colour */
+  /** Heading + category chrome text colour */
   text_color: string
+  /** Menu item card background */
+  card_background_color?: string
+  /** Menu item card title / price text */
+  card_text_color?: string
+  /** Menu item card border */
+  card_border_color?: string
+  /** Menu item card corner radius */
+  card_border_radius?: BorderRadius
   /** Description shown below heading */
   description?: string
   /** Selection mode: 'category' (default) or 'custom_items' */
@@ -263,6 +316,10 @@ export interface MenuGridConfig {
   item_ids?: string[]
   /** Layout for tabs on desktop (horizontal scroll vs sidebar) */
   tabs_layout?: 'horizontal' | 'sidebar'
+  /** Paginate items on the live page */
+  pagination_enabled?: boolean
+  /** Items shown per page when pagination is enabled */
+  items_per_page?: number
 }
 
 export const defaultMenuGridConfig: MenuGridConfig = {
@@ -276,10 +333,16 @@ export const defaultMenuGridConfig: MenuGridConfig = {
   show_category_tabs: true,
   background_color: '#ffffff',
   text_color: '#111111',
+  card_background_color: '#ffffff',
+  card_text_color: '#111111',
+  card_border_color: '#f3f4f6',
+  card_border_radius: 'md',
   description: '',
   selection_mode: 'category',
   item_ids: [],
   tabs_layout: 'sidebar',
+  pagination_enabled: false,
+  items_per_page: 12,
 }
 
 // ─── QR Code Block ────────────────────────────────────────────────────────────
@@ -293,6 +356,9 @@ export interface QRCodeConfig {
   show_download: boolean
   background_color: string
   background_image?: string
+  /** QR module (foreground) colour */
+  qr_color: string
+  /** Label text colour */
   text_color: string
   alignment: 'left' | 'center' | 'right'
   border_radius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
@@ -305,6 +371,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
   label: 'Scan to pay',
   show_download: true,
   background_color: '#ffffff',
+  qr_color: '#111111',
   text_color: '#111111',
   alignment: 'center',
   border_radius: '2xl',
@@ -318,6 +385,8 @@ export interface NavLink {
   label: string
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
+  /** External URL only — open in a new browser tab */
+  open_in_new_tab?: boolean
 }
 
 export interface NavbarConfig {
@@ -326,8 +395,6 @@ export interface NavbarConfig {
   sticky: boolean
   background_color: string
   text_color: string
-  /** px, 0 = sharp */
-  border_radius: number
 }
 
 export const defaultNavbarConfig: NavbarConfig = {
@@ -336,23 +403,37 @@ export const defaultNavbarConfig: NavbarConfig = {
   sticky: true,
   background_color: '#ffffff',
   text_color: '#111111',
-  border_radius: 0,
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 export interface FooterConfig {
+  show_logo?: boolean
   show_business_name: boolean
   copyright_text: string
   background_color: string
+  background_image?: string
   text_color: string
+  /** Section spacing preset — preferred over raw padding_* in the editor */
+  spacing_size?: 'small' | 'medium' | 'large'
+  padding_top: number
+  padding_right: number
+  padding_bottom: number
+  padding_left: number
 }
 
 export const defaultFooterConfig: FooterConfig = {
+  show_logo: false,
   show_business_name: true,
   copyright_text: 'All rights reserved.',
   background_color: '#111111',
+  background_image: '',
   text_color: '#ffffff',
+  spacing_size: 'medium',
+  padding_top: 32,
+  padding_right: 24,
+  padding_bottom: 32,
+  padding_left: 24,
 }
 
 // ─── Publishing / Theme ───────────────────────────────────────────────────────
@@ -360,7 +441,20 @@ export const defaultFooterConfig: FooterConfig = {
 export interface PublishingSettings {
   id: string
   business_id: string
+  /** Landing page (/{slug}) go-live flag */
   published: boolean
+  /** Order page (/{slug}/order) go-live flag — independent of landing */
+  order_published: boolean
+  /** Custom promo carousel slides for the order page (empty = auto fallback) */
+  order_promo_slides?: OrderPromoSlide[]
+  /** Independent menu config for the order page (null/undefined = auto fallback) */
+  order_menu_config?: MenuGridConfig | null
+  order_background_color?: string | null
+  order_background_image_url?: string | null
+  /** Carousel frame ratio on desktop (default 16/9) */
+  order_carousel_aspect_desktop?: CarouselAspect | null
+  /** Carousel frame on mobile — `same` uses desktop ratio */
+  order_carousel_aspect_mobile?: CarouselAspectMobile | null
   custom_domain: string | null
   seo_title: string | null
   seo_description: string | null
@@ -370,6 +464,9 @@ export interface PublishingSettings {
   language: string
   gsc_verification: string | null
   has_unpublished_changes: boolean | null
+  google_analytics_id?: string | null
+  facebook_pixel_id?: string | null
+  tiktok_pixel_id?: string | null
 }
 
 export interface ThemeSettings {
@@ -377,6 +474,8 @@ export interface ThemeSettings {
   business_id: string
   primary_color: string
   background_color: string
+  /** Default body/heading text colour for sections that don't override */
+  text_color: string
   font_family: string            // body / paragraph font
   heading_font_family: string | null    // h1, h2, h3 font
   navbar_config?: NavbarConfig | null
@@ -386,6 +485,7 @@ export interface ThemeSettings {
 export const defaultThemeSettings: Omit<ThemeSettings, 'id' | 'business_id'> = {
   primary_color: '#E85D26',
   background_color: '#FFFFFF',
+  text_color: '#111111',
   font_family: 'Inter',
   heading_font_family: 'Inter',
   navbar_config: null,

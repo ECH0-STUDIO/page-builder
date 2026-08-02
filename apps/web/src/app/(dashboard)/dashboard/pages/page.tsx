@@ -1,37 +1,58 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
-import { EditorShell } from '@/components/page-builder/EditorShell'
-import { getPageDataAction } from '@/app/actions/page-builder'
+import { PuckEditorShell } from '@/components/page-builder/puck/PuckEditorShell'
+import { OrderPageEditor } from '@/components/order-page/OrderPageEditor'
+import { getPageDataAction, getPublishingAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import { getPublicStoreUrl } from '@/lib/site-urls'
+import { defaultThemeSettings } from '@/components/page-builder/types'
+import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
 
 export const metadata: Metadata = { title: 'Page Builder' }
 
 // The page builder owns its own full-screen layout — no dashboard padding
 export const dynamic = 'force-dynamic'
 
-export default async function PagesPage() {
+function resolveMode(raw: string | string[] | undefined): BuilderPageMode {
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return value === 'order' ? 'order' : 'landing'
+}
+
+export default async function PagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string | string[] }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
+  const mode = resolveMode((await searchParams).page)
 
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
-  const [{ blocks, publishing, theme }, { data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
+
+  const [
+    { blocks, publishing: landingPublishing, theme },
+    { publishing: orderPublishing, slug },
+    { data: categoriesRaw },
+    { data: itemsRaw },
+  ] = await Promise.all([
     getPageDataAction(business.id),
+    getPublishingAction(business.id),
     db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
   ])
 
-  const categories: MenuCategory[] = categoriesRaw ?? []
-  const items: MenuItem[] = itemsRaw ?? []
+  const categories = normalizeMenuCategories((categoriesRaw ?? []) as Record<string, unknown>[])
+  const items = normalizeMenuItems((itemsRaw ?? []) as Record<string, unknown>[])
+  const publishing = landingPublishing ?? orderPublishing
 
-  // Fetch variants only if there are items (avoids redundant query)
+  // Variants for interactive menu (landing canvas + order preview mode)
   let variantGroups: VariantGroup[] = []
   let variantOptions: VariantOption[] = []
   if (items.length > 0) {
@@ -45,8 +66,38 @@ export default async function PagesPage() {
     }
   }
 
+  if (mode === 'order') {
+    const resolvedSlug = slug ?? business.slug
+    const orderUrl = `${getPublicStoreUrl(resolvedSlug)}/order`
+    const orderPath = `/${resolvedSlug}/order`
+    const orderPublished =
+      publishing?.order_published == null
+        ? Boolean(publishing?.published)
+        : Boolean(publishing.order_published)
+
+    return (
+      <OrderPageEditor
+        businessId={business.id}
+        businessName={business.name}
+        logoUrl={business.logo_url}
+        slug={resolvedSlug}
+        orderUrl={orderUrl}
+        orderPath={orderPath}
+        orderPublished={orderPublished}
+        publishing={publishing}
+        initialTheme={theme ?? defaultThemeSettings}
+        categories={categories}
+        items={items}
+        variantGroups={variantGroups}
+        variantOptions={variantOptions}
+        paymentSettings={business.payment_settings}
+        builderMode="order"
+      />
+    )
+  }
+
   return (
-    <EditorShell
+    <PuckEditorShell
       business={business}
       initialBlocks={blocks}
       initialPublishing={publishing}
@@ -55,6 +106,7 @@ export default async function PagesPage() {
       initialItems={items}
       initialVariantGroups={variantGroups}
       initialVariantOptions={variantOptions}
+      builderMode="landing"
     />
   )
 }

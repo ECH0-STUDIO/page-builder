@@ -1,26 +1,39 @@
 'use client'
 
 /**
- * Shared CtaEditor — reusable CTA button editor used by HeroBlock and TextImageBlock.
+ * Shared CtaEditor — the single button-settings UI for every block that has a CTA.
+ * (Hero, Text + Image, and any future block with a button.)
  *
  * Features:
  *  - Actions: URL, Phone (tel), Email (mailto), Scroll to section (anchor)
  *  - Style: Filled, Outlined, Text link
+ *  - Button colour with brand-colour reset
+ *  - Open in new tab (URL actions)
  *  - Scroll-to shows a dropdown of blocks that have a user-defined anchor ID
  */
 
+import { useId } from 'react'
 import { X, LinkIcon, Phone, Anchor, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
-import { ctaHref } from '../cta-utils'
+import { resolveCtaColor } from '../cta-styles'
+import { plainText } from '@/i18n/locale'
 // Re-export so existing client-side imports from CtaEditor still resolve
 export { ctaHref } from '../cta-utils'
+
+/** Default CTA when adding a new button on any block. */
+export const DEFAULT_CTA_BUTTON: CtaButton = {
+  label: '',
+  action: 'url',
+  value: '',
+  style: 'filled',
+}
 
 /** Blocks that a scroll-to anchor can link to (must have a block_anchor_id) */
 export interface AnchorOption {
@@ -51,6 +64,7 @@ export function CtaEditor({
   value,
   label: fieldLabel,
   blocks,
+  brandColor = '#E85D26',
   onChange,
   onRemove,
 }: {
@@ -58,6 +72,8 @@ export function CtaEditor({
   label: string
   /** Full block list — used to populate the 'scroll to' section dropdown */
   blocks: PageBlock[]
+  /** Theme brand colour — used when CTA has no custom colour override */
+  brandColor?: string
   onChange: (v: CtaButton) => void
   onRemove: () => void
 }) {
@@ -73,8 +89,11 @@ export function CtaEditor({
     { value: 'outlined', label: t('ctaEditor.outlined') },
     { value: 'text', label: t('ctaEditor.textLink') },
   ]
+  const switchId = useId()
   const anchorOptions = getAnchorOptions(blocks)
   const isAnchor = value.action === 'anchor'
+  const effectiveColor = resolveCtaColor(value, brandColor)
+  const hasCustomColor = value.color != null && value.color !== ''
 
   return (
     <div className="space-y-2 p-3 rounded-lg border border-border/60 bg-muted/20">
@@ -89,7 +108,7 @@ export function CtaEditor({
       {/* Label */}
       <Input
         placeholder={t('ctaEditor.buttonLabel')}
-        value={value.label}
+        value={plainText(value.label)}
         onChange={e => onChange({ ...value, label: e.target.value })}
         className="h-8 text-sm"
       />
@@ -121,6 +140,31 @@ export function CtaEditor({
         </Select>
       </div>
 
+      {/* Button colour — brand default with optional override */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground">{t('ctaEditor.buttonColor')}</Label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={effectiveColor}
+            onChange={e => onChange({ ...value, color: e.target.value })}
+            className="size-8 rounded border border-border cursor-pointer shrink-0"
+          />
+          <span className="text-[11px] font-mono text-muted-foreground truncate flex-1">
+            {hasCustomColor ? effectiveColor : `${effectiveColor} (${t('ctaEditor.brandDefault')})`}
+          </span>
+          {hasCustomColor && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...value, color: null })}
+              className="text-[11px] text-primary hover:underline shrink-0"
+            >
+              {t('ctaEditor.resetToBrand')}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Value input — changes based on action */}
       {isAnchor ? (
         anchorOptions.length > 0 ? (
@@ -150,42 +194,31 @@ export function CtaEditor({
           </div>
         )
       ) : (
-        <Input
-          placeholder={
-            value.action === 'tel' ? '+84 9xx xxx xxx'
-            : value.action === 'email' ? 'hello@example.com'
-            : 'https://…'
-          }
-          value={value.value}
-          onChange={e => onChange({ ...value, value: e.target.value })}
-          className="h-8 text-sm"
-        />
+        <div className="space-y-2">
+          <Input
+            placeholder={
+              value.action === 'tel' ? '+84 9xx xxx xxx'
+              : value.action === 'email' ? 'hello@example.com'
+              : t('ctaEditor.urlPlaceholder')
+            }
+            value={value.value}
+            onChange={e => onChange({ ...value, value: e.target.value })}
+            className="h-8 text-sm"
+          />
+          {value.action === 'url' && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor={switchId} className="text-xs font-normal cursor-pointer text-muted-foreground">
+                {t('ctaEditor.openInNewTab')}
+              </Label>
+              <Switch
+                id={switchId}
+                checked={value.open_in_new_tab ?? false}
+                onCheckedChange={v => onChange({ ...value, open_in_new_tab: v })}
+              />
+            </div>
+          )}
+        </div>
       )}
-    </div>
-  )
-}
-
-/** A simple single-field styling picker (filled/outlined/text), no action logic */
-export function SimpleCtaEditor({
-  value,
-  blocks,
-  onChange,
-  onRemove,
-}: {
-  value: CtaButton
-  blocks: PageBlock[]
-  onChange: (v: CtaButton) => void
-  onRemove: () => void
-}) {
-  return (
-    <div className="space-y-2 p-3 rounded-lg border border-border/60 bg-muted/20">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CTA Button</span>
-        <button type="button" onClick={onRemove} className="text-muted-foreground hover:text-destructive transition-colors">
-          <X className="size-3.5" />
-        </button>
-      </div>
-      <CtaEditor value={value} label="" blocks={blocks} onChange={onChange} onRemove={onRemove} />
     </div>
   )
 }

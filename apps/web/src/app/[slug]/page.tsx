@@ -1,4 +1,5 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Script from 'next/script'
 import type { Metadata } from 'next'
@@ -10,17 +11,24 @@ import { NavbarRender } from '@/components/page-builder/render/NavbarRender'
 import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
 import { QRCodeRender } from '@/components/page-builder/render/QRCodeRender'
 import { FooterRender } from '@/components/page-builder/render/FooterRender'
-import { PaymentDrawer } from '@/components/page-builder/render/PaymentDrawer'
-import { CartProvider } from '@/components/page-builder/render/CartContext'
-import { CartDrawer } from '@/components/page-builder/render/CartDrawer'
-import { defaultSpacing, defaultNavbarConfig, defaultFooterConfig, type FooterConfig } from '@/components/page-builder/types'
+import { BrowseOnlyCartProvider } from '@/components/page-builder/render/CartContext'
+import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
+import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
+import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
+import { SectionShellOverlay, SectionShellContent } from '@/components/page-builder/SectionShellOverlay'
+import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
+import { AnalyticsScripts } from '@/components/AnalyticsScripts'
+import { resolveTrackingIds } from '@/lib/tracking-ids'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
+import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import { resolveLiveLocale } from '@/i18n/locale'
+import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -50,9 +58,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
-    openGraph: pub?.og_image_url
-      ? { title, description, images: [{ url: pub.og_image_url }] }
-      : undefined,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      ...(pub?.og_image_url ? { images: [{ url: pub.og_image_url }] } : {}),
+    },
+    twitter: {
+      card: pub?.og_image_url ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(pub?.og_image_url ? { images: [pub.og_image_url] } : {}),
+    },
     icons: {
       icon: pub?.favicon_url ? [{ url: pub.favicon_url, sizes: '48x48', type: 'image/png' }] : undefined,
       apple: pub?.apple_touch_icon_url ? [{ url: pub.apple_touch_icon_url, sizes: '256x256', type: 'image/png' }] : undefined,
@@ -62,8 +79,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function SlugPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SlugPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ table?: string }>
+}) {
   const { slug } = await params
+  const sp = await searchParams
+  const tableParam = (sp.table ?? '').trim()
+  if (tableParam) {
+    redirect(`/${slug}/order?table=${encodeURIComponent(tableParam)}`)
+  }
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -95,9 +124,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         .eq('visible', true)
         .order('sort_order', { ascending: true }),
       db.from('theme_settings')
-        .select('font_family, heading_font_family, navbar_config, footer_config')
+        .select('*')
         .eq('business_id', business.id)
-        .single(),
+        .maybeSingle(),
     ])
     pageBlocksRaw = (blocksRes.data as PageBlock[]) ?? []
     themeRaw = themeRes.data
@@ -107,6 +136,12 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const bodyFont: string = themeRaw?.font_family ?? 'Inter'
   const headingFontRaw: string = themeRaw?.heading_font_family ?? 'Inter'
+  const themeForTokens: Partial<ThemeSettings> = {
+    primary_color: themeRaw?.primary_color ?? defaultThemeSettings.primary_color,
+    background_color: themeRaw?.background_color ?? defaultThemeSettings.background_color,
+    text_color: themeRaw?.text_color ?? defaultThemeSettings.text_color,
+  }
+  const themeTokens = resolveThemeTokens(themeForTokens)
   const navbarConfig: NavbarConfig = (themeRaw?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
   const footerConfig: FooterConfig = (themeRaw?.footer_config as FooterConfig | null) ?? defaultFooterConfig
 
@@ -120,10 +155,16 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
 
   const pageBlocks: PageBlock[] = (pageBlocksRaw ?? []).map(b => ({
     ...b,
-    spacing: b.spacing ?? defaultSpacing,
+    spacing: resolveBlockSpacing(
+      b.type,
+      b.spacing,
+      b.type === 'hero' ? { heroConfig: b.config as HeroConfig } : undefined,
+    ),
     custom_css: b.custom_css ?? '',
     block_anchor_id: b.block_anchor_id ?? null,
   }))
+
+  const tracking = resolveTrackingIds(pubSettings)
 
   // Fetch menu data only if page has a menu_grid block
   const hasMenuGrid = pageBlocks.some(b => b.type === 'menu_grid')
@@ -137,8 +178,8 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
       db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     ])
-    menuCategories = cats ?? []
-    menuItems = itms ?? []
+    menuCategories = normalizeMenuCategories((cats ?? []) as Record<string, unknown>[])
+    menuItems = normalizeMenuItems((itms ?? []) as Record<string, unknown>[])
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)
@@ -160,10 +201,9 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     }
   }
 
-  // Resolved base URL for QR Code blocks (avoids window usage on server)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'localhost:3000'
-  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
-  const pageUrl = `${baseUrl}/${slug}`
+  // Resolved base URL for QR Code blocks and schema.org
+  const baseUrl = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
+  const pageUrl = getPublicStoreUrl(slug)
 
   // ─── Schema.org JSON-LD ─────────────────────────────────────────────────────
   const pubInfo = {
@@ -180,16 +220,22 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
   }
   const schemaJson = serializeSchemas(schemas)
 
-  // Language for html[lang]
-  const pageLanguage = pubSettings?.language ?? 'en'
+  const cookieStore = await cookies()
+  const visitorLocale = resolveLiveLocale(
+    cookieStore.get('NEXT_LOCALE')?.value,
+    pubSettings?.language ?? null,
+  )
 
   return (
-    <CartProvider>
+    <BrowseOnlyCartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
-      lang={pageLanguage}
-      className="min-h-screen bg-white w-full max-w-[1440px] mx-auto relative shadow-2xl overflow-hidden flex flex-col"
-      style={{ fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined }}
+      lang={visitorLocale}
+      className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col"
+      style={{
+        fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
+        ...buildThemeStyle(themeForTokens),
+      }}
     >
       {/* Silent visit tracker */}
       <ViewTracker slug={slug} />
@@ -198,64 +244,18 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       <link rel="canonical" href={pageUrl} />
       {pubSettings?.favicon_url && <link rel="icon" href={pubSettings.favicon_url} />}
       {pubSettings?.apple_touch_icon_url && <link rel="apple-touch-icon" href={pubSettings.apple_touch_icon_url} />}
-      {pubSettings?.gsc_verification && (
-        <meta name="google-site-verification" content={pubSettings.gsc_verification} />
+      {tracking.gscVerification && (
+        <meta name="google-site-verification" content={tracking.gscVerification} />
       )}
-      <link rel="alternate" hrefLang={pageLanguage} href={pageUrl} />
-      {/* Twitter card */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={pubSettings?.seo_title || business.name} />
-      {pubSettings?.seo_description && <meta name="twitter:description" content={pubSettings.seo_description} />}
-      {pubSettings?.og_image_url && <meta name="twitter:image" content={pubSettings.og_image_url} />}
+      <link rel="alternate" hrefLang={visitorLocale} href={pageUrl} />
       {/* Schema.org JSON-LD */}
       <Script id="schema-json" type="application/ld+json" dangerouslySetInnerHTML={{ __html: schemaJson }} />
 
-      {/* Analytics & Tracking */}
-      {(pubSettings as any)?.google_analytics_id && (
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${(pubSettings as any).google_analytics_id}`}
-          strategy="afterInteractive"
-        />
-      )}
-      {(pubSettings as any)?.google_analytics_id && (
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${(pubSettings as any).google_analytics_id}');
-          `}
-        </Script>
-      )}
-
-      {(pubSettings as any)?.facebook_pixel_id && (
-        <Script id="facebook-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '${(pubSettings as any).facebook_pixel_id}');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-      )}
-
-      {(pubSettings as any)?.tiktok_pixel_id && (
-        <Script id="tiktok-pixel" strategy="afterInteractive">
-          {`
-            !function (w, d, t) {
-              w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
-              ttq.load('${(pubSettings as any).tiktok_pixel_id}');
-              ttq.page();
-            }(window, document, 'ttq');
-          `}
-        </Script>
-      )}
+      <AnalyticsScripts
+        google_analytics_id={pubSettings?.google_analytics_id}
+        facebook_pixel_id={pubSettings?.facebook_pixel_id}
+        tiktok_pixel_id={pubSettings?.tiktok_pixel_id}
+      />
 
       {/* Google Fonts & Typography */}
       {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
@@ -275,35 +275,36 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const spacing = block.spacing ?? defaultSpacing
-            const blockStyle: React.CSSProperties = {
-              marginTop: spacing.margin_top,
-              marginBottom: spacing.margin_bottom,
-            }
-            const innerStyle: React.CSSProperties = {
-              paddingTop: spacing.padding_top,
-              paddingRight: spacing.padding_right,
-              paddingBottom: spacing.padding_bottom,
-              paddingLeft: spacing.padding_left,
-            }
+            const { margin, shell, contentInset, overlayOpacity } = getBlockSurfaceLayers(block)
 
             return (
               <div
                 key={block.id}
                 id={block.block_anchor_id ?? `block-${block.id}`}
-                style={blockStyle}
+                style={margin}
               >
                 {block.custom_css && (
                   <style dangerouslySetInnerHTML={{
                     __html: scopeCSS(block.custom_css, `[data-live-block="${block.id}"]`),
                   }} />
                 )}
-                <div data-live-block={block.id} style={innerStyle}>
+                <div data-live-block={block.id} style={shell}>
+                  <SectionShellOverlay opacity={overlayOpacity} />
+                  <SectionShellContent overlayOpacity={overlayOpacity}>
                   {block.type === 'hero' && (
-                    <HeroRender config={block.config as HeroConfig} businessName={business.name} />
+                    <HeroRender
+                      config={block.config as HeroConfig}
+                      businessName={business.name}
+                      brandColor={themeTokens.brandColor}
+                      contentInset={contentInset}
+                    />
                   )}
                   {block.type === 'text_image' && (
-                    <TextImageRender config={block.config as TextImageConfig} />
+                    <TextImageRender
+                      config={block.config as TextImageConfig}
+                      brandColor={themeTokens.brandColor}
+                      defaultTextColor={themeTokens.pageText}
+                    />
                   )}
                   {block.type === 'contact' && (
                     <ContactRender
@@ -321,6 +322,8 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                         variantOptions,
                         businessSlug: slug,
                       }}
+                      brandColor={themeTokens.brandColor}
+                      browseOnly
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -330,6 +333,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                       : `${baseUrl}/${slug}`
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
+                  </SectionShellContent>
                 </div>
               </div>
             )
@@ -340,12 +344,12 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
       <FooterRender
         config={footerConfig}
         businessName={business.name}
+        logoUrl={business.logo_url}
       />
 
-      <CartDrawer businessId={business.id} paymentSettings={paymentSettings} />
-      <PaymentDrawer paymentSettings={paymentSettings} />
+      {/* Landing is browse-only — cart/order lives on /{slug}/order */}
     </div>
     </div>
-    </CartProvider>
+    </BrowseOnlyCartProvider>
   )
 }

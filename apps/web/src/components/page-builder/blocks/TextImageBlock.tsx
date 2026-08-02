@@ -13,13 +13,15 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
+import { RadiusPicker } from '@/components/shared/RadiusPicker'
 import type {
   TextImageConfig, TextImageLayout, AspectRatio, ImageFit,
-  BlockBackground, PaddingSize, CtaButton, BorderRadius, PageBlock,
+  BlockBackground, BorderRadius, PageBlock, ContentAlign,
 } from '../types'
-import { CtaEditor } from './CtaEditor'
+import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 
 // ─── Canvas Preview ────────────────────────────────────────────────────────────
 
@@ -57,18 +59,18 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
         )}
         {config.layout !== 'img_only' && (
           <div className="flex-1 space-y-0.5 min-w-0">
-            {config.heading && <p className="text-xs font-semibold truncate">{config.heading}</p>}
-            {config.body && (
-              <p className="text-[10px] text-muted-foreground line-clamp-2">{config.body}</p>
+            {plainText(config.heading) && <p className="text-xs font-semibold truncate">{plainText(config.heading)}</p>}
+            {plainText(config.body) && (
+              <p className="text-[10px] text-muted-foreground line-clamp-2">{plainText(config.body)}</p>
             )}
-            {!config.heading && !config.body && (
+            {!plainText(config.heading) && !plainText(config.body) && (
               <p className="text-[10px] text-muted-foreground/50 italic">{t('textImageBlock.textContentPlaceholder')}…</p>
             )}
           </div>
         )}
       </div>
       <div className="px-3 pb-2">
-        <p className="text-[10px] text-muted-foreground/60">{layoutLabels[config.layout]} · {config.padding} padding</p>
+        <p className="text-[10px] text-muted-foreground/60">{layoutLabels[config.layout]}</p>
       </div>
     </div>
   )
@@ -80,12 +82,14 @@ export function TextImageSettings({
   config,
   businessId,
   blocks,
+  brandColor = '#E85D26',
   onChange,
 }: {
   config: TextImageConfig
   businessId: string
   /** Full block list for CTA anchor dropdown */
   blocks: PageBlock[]
+  brandColor?: string
   onChange: (c: TextImageConfig) => void
 }) {
   const { t } = useTranslation()
@@ -107,11 +111,6 @@ export function TextImageSettings({
     { value: 'free', label: t('textImageBlock.free') },
   ]
 
-  const PADDINGS: { value: PaddingSize; label: string }[] = [
-    { value: 'compact', label: t('textImageBlock.compact') },
-    { value: 'normal', label: t('textImageBlock.normal') },
-    { value: 'spacious', label: t('textImageBlock.spacious') },
-  ]
 
   const BACKGROUNDS: { value: BlockBackground; label: string }[] = [
     { value: 'transparent', label: t('textImageBlock.transparent') },
@@ -141,8 +140,6 @@ export function TextImageSettings({
       if (fileRef.current) fileRef.current.value = ''
     }
   }
-
-  const emptyCtaDefaults: CtaButton = { label: '', action: 'url', value: '', style: 'outlined' }
 
   return (
     <div className="space-y-5">
@@ -236,6 +233,30 @@ export function TextImageSettings({
               </Select>
             </div>
           </div>
+          {config.aspect_ratio === 'free' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('textImageBlock.customAspectRatio')}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.aspect_ratio_width ?? 4}
+                  onChange={e => set('aspect_ratio_width', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="h-8 text-xs text-center"
+                  aria-label={t('textImageBlock.aspectRatioWidth')}
+                />
+                <span className="text-xs text-muted-foreground shrink-0">:</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.aspect_ratio_height ?? 3}
+                  onChange={e => set('aspect_ratio_height', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="h-8 text-xs text-center"
+                  aria-label={t('textImageBlock.aspectRatioHeight')}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -246,14 +267,44 @@ export function TextImageSettings({
         <div className="space-y-3">
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('textImageBlock.content')}</Label>
           <div className="space-y-1.5">
+            <Label className="text-xs">{t('textImageBlock.contentAlign')}</Label>
+            <div className="flex gap-1.5">
+              {([
+                { value: 'left' as ContentAlign, label: t('textImageBlock.alignLeft') },
+                { value: 'center' as ContentAlign, label: t('textImageBlock.alignCenter') },
+                { value: 'right' as ContentAlign, label: t('textImageBlock.alignRight') },
+              ]).map(a => (
+                <button
+                  key={a.value}
+                  type="button"
+                  onClick={() => set('content_align', a.value)}
+                  className={cn(
+                    'flex-1 py-1.5 rounded border text-xs transition-colors',
+                    (config.content_align ?? (config.layout === 'text_only' ? 'center' : 'left')) === a.value
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      : 'border-border hover:border-foreground/30',
+                  )}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <Input id="ti-heading" value={config.heading} onChange={e => set('heading', e.target.value)} placeholder={t('textImageBlock.headingPlaceholder')} className="h-8 text-sm" />
+            <Input
+              id="ti-heading"
+              value={plainText(config.heading)}
+              onChange={e => set('heading', e.target.value)}
+              placeholder={t('textImageBlock.headingPlaceholder')}
+              className="h-8 text-sm"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
             <Textarea
               id="ti-body"
-              value={config.body}
+              value={plainText(config.body)}
               onChange={e => set('body', e.target.value)}
               placeholder="Write your content here…&#10;Line breaks are preserved."
               rows={5}
@@ -267,12 +318,13 @@ export function TextImageSettings({
               label={t('textImageBlock.ctaButton')}
               value={config.cta}
               blocks={blocks}
+              brandColor={brandColor}
               onChange={v => set('cta', v)}
               onRemove={() => set('cta', null)}
             />
           ) : (
             <Button type="button" variant="outline" size="sm" className="w-full text-xs h-8"
-              onClick={() => set('cta', emptyCtaDefaults)}>
+              onClick={() => set('cta', { ...DEFAULT_CTA_BUTTON })}>
               {t('textImageBlock.addCta')}
             </Button>
           )}
@@ -346,51 +398,22 @@ export function TextImageSettings({
           )}
         </div>
 
-        {/* Padding */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">{t('textImageBlock.padding')}</Label>
-          <div className="flex gap-1.5">
-            {PADDINGS.map(p => (
-              <button key={p.value} type="button" onClick={() => set('padding', p.value)}
-                className={cn('flex-1 py-1.5 rounded border text-xs transition-colors',
-                  config.padding === p.value ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-foreground/30'
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Roundness */}
-        {config.layout !== 'text_only' && config.layout !== 'img_only' && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t('textImageBlock.imageRoundness')}</Label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {([
-                { value: 'none', label: t('textImageBlock.none') },
-                { value: 'sm', label: t('textImageBlock.small') },
-                { value: 'md', label: t('textImageBlock.medium') },
-                { value: 'lg', label: t('textImageBlock.large') },
-                { value: 'xl', label: t('textImageBlock.xlarge') },
-                { value: 'full', label: t('textImageBlock.pill') },
-              ] as { value: BorderRadius; label: string }[]).map(r => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => set('border_radius', r.value)}
-                  className={cn(
-                    'py-1.5 rounded border text-xs transition-colors',
-                    config.border_radius === r.value
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
-                      : 'border-border hover:border-foreground/30'
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {config.layout !== 'text_only' && (
+          <RadiusPicker
+            label={t('textImageBlock.imageRoundness')}
+            value={config.border_radius}
+            layout="grid"
+            options={[
+              { value: 'none', label: t('textImageBlock.none') },
+              { value: 'sm', label: t('textImageBlock.small') },
+              { value: 'md', label: t('textImageBlock.medium') },
+              { value: 'lg', label: t('textImageBlock.large') },
+              { value: 'xl', label: t('textImageBlock.xlarge') },
+              { value: 'full', label: t('textImageBlock.pill') },
+            ]}
+            onChange={v => set('border_radius', v as BorderRadius)}
+          />
         )}
       </div>
     </div>

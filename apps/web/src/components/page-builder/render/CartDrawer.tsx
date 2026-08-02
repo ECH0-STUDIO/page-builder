@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useTransition } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, usePathname } from 'next/navigation'
 import { ShoppingBag, Plus, Minus, Trash2, ChevronRight, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { useCart, type CartItem } from './CartContext'
@@ -14,11 +14,15 @@ import { createOrderAction } from '@/app/actions/orders'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 import { toast } from 'sonner'
+import { useTranslationWithFallback } from '@/i18n/I18nProvider'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 // ─── Cart Item Row ─────────────────────────────────────────────────────────────
 
-function CartItemRow({ item }: { item: CartItem }) {
+function CartItemRow({ item, locale }: { item: CartItem; locale: SupportedLocale }) {
   const { removeItem, updateQuantity } = useCart()
+  const activeLocale = toSupportedLocale(locale)
+  const { t } = useTranslationWithFallback(activeLocale)
 
   return (
     <div className="flex gap-3 py-4 border-b border-gray-100 last:border-0">
@@ -37,7 +41,7 @@ function CartItemRow({ item }: { item: CartItem }) {
         <p className="text-sm font-bold text-gray-800 mt-1">{formatCurrency(item.totalPrice)}</p>
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
-        <button onClick={() => removeItem(item.cartId)} className="text-gray-300 hover:text-red-400 transition-colors p-0.5" aria-label="Remove item">
+        <button onClick={() => removeItem(item.cartId)} className="text-gray-300 hover:text-red-400 transition-colors p-0.5" aria-label={t('cart.removeItem')}>
           <Trash2 className="size-3.5" />
         </button>
         <div className="flex items-center gap-2">
@@ -59,13 +63,37 @@ function CartItemRow({ item }: { item: CartItem }) {
 interface CartDrawerProps {
   businessId?: string
   paymentSettings?: PaymentSettings
+  /** When true, cart UI works but placing orders is blocked. */
+  previewMode?: boolean
+  /** Pin overlays inside a relative canvas (page builder) instead of the viewport */
+  contained?: boolean
+  locale?: string
+  /** Tailwind bottom offset for the floating cart FAB (e.g. bottom-24 above service bar) */
+  fabOffsetClass?: string
+  /** Brand / primary colour for FAB + checkout CTA */
+  brandColor?: string
+  /** Hide floating FAB — cart is opened from the order bottom bar instead */
+  hideFab?: boolean
 }
 
 type DrawerStep = 'cart' | 'payment'
 
-export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
+export function CartDrawer({
+  businessId,
+  paymentSettings,
+  previewMode,
+  contained,
+  locale = 'vi',
+  fabOffsetClass = 'bottom-6',
+  brandColor = '#E85D26',
+  hideFab = false,
+}: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
+  const activeLocale = toSupportedLocale(locale)
+  const { t } = useTranslationWithFallback(activeLocale)
+  const actionColor = brandColor || '#E85D26'
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const tableFromUrl = searchParams.get('table') ?? ''
 
   const [open, setOpen] = useState(false)
@@ -73,6 +101,30 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
   const [tableNumber, setTableNumber] = useState(tableFromUrl)
   const [isPending, startTransition] = useTransition()
   const [pastOrders, setPastOrders] = useState<any[]>([])
+
+  const effectiveTable = (tableFromUrl || tableNumber).trim()
+  const position = contained ? 'absolute' : 'fixed'
+
+  // Hard guard: never show cart chrome on marketing/landing (/{slug}).
+  const isOrderRoute = Boolean(
+    pathname && /(^|\/)order\/?$/.test(pathname.split('?')[0] ?? ''),
+  )
+  const cartAllowed = Boolean(contained || previewMode || isOrderRoute)
+
+  useEffect(() => {
+    if (previewMode && !tableFromUrl) {
+      setTableNumber('1')
+    }
+  }, [previewMode, tableFromUrl])
+
+  useEffect(() => {
+    const open = () => {
+      setStep('cart')
+      setOpen(true)
+    }
+    window.addEventListener('eatery-open-cart', open)
+    return () => window.removeEventListener('eatery-open-cart', open)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && businessId) {
@@ -102,25 +154,32 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
   }, [businessId])
 
   // Close drawer when cart empties IF we are still on cart step
-  if (totalItems === 0 && open && step === 'cart') {
+  if (cartAllowed && totalItems === 0 && open && step === 'cart') {
     setOpen(false)
   }
 
-  // Hide entirely if empty cart and closed
+  // Hide entirely if empty cart and closed — or if not on an order surface
+  if (!cartAllowed) return null
   if (totalItems === 0 && !open && step === 'cart' && pastOrders.length === 0) return null
 
   async function handlePlaceOrder() {
-    if (!businessId) {
-      toast.error('Unable to place order: Business ID missing')
+    if (previewMode) {
+      toast.info(t('cart.previewDisabled'))
       return
     }
-    if (!tableNumber.trim()) {
-      toast.error('Please enter your table number')
+    if (!businessId) {
+      toast.error(t('cart.businessIdMissing'))
+      return
+    }
+    if (!tableNumber.trim() && !tableFromUrl) {
+      toast.error(t('cart.enterTableNumber'))
       return
     }
 
+    const tableForOrder = effectiveTable
+
     startTransition(async () => {
-      const res = await createOrderAction(businessId, tableNumber, items, totalPrice)
+      const res = await createOrderAction(businessId, tableForOrder, items, totalPrice)
       if (res.success) {
         const orderData = { id: res.orderId, items, total: totalPrice, timestamp: Date.now() }
         const updatedOrders = [orderData, ...pastOrders]
@@ -131,7 +190,7 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
         clearCart()
         setStep('payment')
       } else {
-        toast.error('Failed to place order: ' + res.error)
+        toast.error(`${t('cart.placeOrderFailed')} ${res.error}`)
       }
     })
   }
@@ -145,14 +204,15 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
 
   const hasVietQR = paymentSettings?.vietqr && paymentSettings.vietqr.bank_code
 
-  return (
+  const ui = (
     <>
       {/* ── Floating cart button ── */}
-      {!open && step === 'cart' && totalItems > 0 && (
+      {!hideFab && !open && step === 'cart' && totalItems > 0 && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-gray-900 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:bg-gray-800 active:scale-95 transition-all"
-          aria-label="View order"
+          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:opacity-90 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
+          style={{ backgroundColor: actionColor }}
+          aria-label={t('cart.viewOrder')}
         >
           <div className="relative">
             <ShoppingBag className="size-5" />
@@ -161,24 +221,24 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
             </span>
           </div>
           <div className="text-sm leading-tight text-left">
-            <p className="font-semibold">View order</p>
+            <p className="font-semibold">{t('cart.viewOrder')}</p>
             <p className="text-white/60 text-xs">{formatCurrency(totalPrice)}</p>
           </div>
         </button>
       )}
 
       {/* ── Floating Receipt button ── */}
-      {!open && totalItems === 0 && pastOrders.length > 0 && (
+      {!hideFab && !open && totalItems === 0 && pastOrders.length > 0 && (
         <button
           onClick={() => { setStep('payment'); setOpen(true); }}
-          className="fixed bottom-6 right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all"
+          className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
         >
           <div className="relative">
             <CheckCircle2 className="size-5 text-green-500" />
           </div>
           <div className="text-sm leading-tight text-left">
-            <p className="font-semibold">My Order</p>
-            <p className="text-gray-500 text-xs">View placed order</p>
+            <p className="font-semibold">{t('cart.myOrder')}</p>
+            <p className="text-gray-500 text-xs">{t('cart.viewPlacedOrder')}</p>
           </div>
         </button>
       )}
@@ -186,14 +246,14 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
       {/* ── Backdrop ── */}
       {open && (
         <div
-          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+          className={`${position} inset-0 z-[100] bg-black/40 backdrop-blur-sm ${contained ? 'pointer-events-auto' : ''}`}
           onClick={handleClose}
         />
       )}
 
       {/* ── Right side drawer ── */}
       <div
-        className={`fixed top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${
+        className={`${position} top-0 bottom-0 right-0 z-[110] bg-white shadow-2xl transition-transform duration-300 ease-out flex flex-col w-full sm:w-[400px] max-w-[100vw] ${contained ? 'pointer-events-auto' : ''} ${
           open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
       >
@@ -202,7 +262,7 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
           <div className="flex items-center gap-2">
             {step === 'cart' ? <UtensilsCrossed className="size-4 text-gray-400" /> : <CheckCircle2 className="size-5 text-green-500" />}
             <h2 className="font-bold text-gray-900 text-base">
-              {step === 'cart' ? 'Your Order' : 'Order Sent to Kitchen!'}
+              {step === 'cart' ? t('cart.yourOrder') : t('cart.orderSent')}
             </h2>
           </div>
           <button
@@ -218,7 +278,7 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
           <>
             <div className="flex-1 overflow-y-auto px-5">
               {items.map(item => (
-                <CartItemRow key={item.cartId} item={item} />
+                <CartItemRow key={item.cartId} item={item} locale={activeLocale} />
               ))}
             </div>
 
@@ -227,17 +287,17 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
               {paymentSettings?.kds_enabled !== false && (
                 tableFromUrl ? (
                   <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Table Number</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{t('cart.tableNumber')}</span>
                     <span className="text-sm font-bold text-gray-900 px-3 py-1 bg-gray-100 rounded-lg">{tableFromUrl}</span>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Table Number</label>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">{t('cart.tableNumber')}</label>
                     <input 
                       type="text" 
                       value={tableNumber} 
                       onChange={e => setTableNumber(e.target.value)}
-                      placeholder="e.g. 12"
+                      placeholder={t('cart.tablePlaceholder')}
                       className="h-10 px-3 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 text-sm font-medium"
                     />
                   </div>
@@ -246,26 +306,27 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
 
               {/* Total */}
               <div className="flex items-center justify-between pt-2">
-                <span className="text-gray-500 text-sm">Total</span>
+                <span className="text-gray-500 text-sm">{t('cart.total')}</span>
                 <span className="text-xl font-bold text-gray-900">{formatCurrency(totalPrice)}</span>
               </div>
 
               {/* Place Order button */}
               {paymentSettings?.kds_enabled === false ? (
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center mt-2">
-                  <p className="text-sm text-orange-800 font-medium">Please call for a waiter to place your order.</p>
+                  <p className="text-sm text-orange-800 font-medium">{t('cart.callWaiter')}</p>
                 </div>
-              ) : !tableFromUrl ? (
+              ) : !effectiveTable ? (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center mt-2">
-                  <p className="text-sm text-gray-600 font-medium">Please scan the QR code on your table to place an order.</p>
+                  <p className="text-sm text-gray-600 font-medium">{t('cart.enterTableOrScan')}</p>
                 </div>
               ) : (
                 <button
                   onClick={handlePlaceOrder}
                   disabled={isPending || items.length === 0}
-                  className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-base flex items-center justify-center gap-2.5 hover:bg-gray-800 active:scale-[0.98] transition-all shadow-lg shadow-gray-900/20 disabled:opacity-70 disabled:pointer-events-none"
+                  className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg disabled:opacity-70 disabled:pointer-events-none"
+                  style={{ backgroundColor: actionColor }}
                 >
-                  {isPending ? <Loader2 className="size-5 animate-spin" /> : 'Place Order'}
+                  {isPending ? <Loader2 className="size-5 animate-spin" /> : previewMode ? t('cart.testPlaceOrder') : t('cart.placeOrder')}
                 </button>
               )}
             </div>
@@ -278,8 +339,8 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
             {pastOrders.length > 0 && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-end mb-4">
-                  <h4 className="font-bold text-gray-900 text-sm">Your Order History</h4>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{pastOrders.length} order{pastOrders.length > 1 ? 's' : ''}</span>
+                  <h4 className="font-bold text-gray-900 text-sm">{t('cart.orderHistory')}</h4>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{pastOrders.length} {pastOrders.length > 1 ? t('cart.orders') : t('cart.order')}</span>
                 </div>
                 
                 <div className="space-y-4 mb-4">
@@ -309,7 +370,7 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
                 </div>
                 
                 <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <span className="font-bold text-gray-900">Grand Total</span>
+                  <span className="font-bold text-gray-900">{t('cart.grandTotal')}</span>
                   <span className="font-bold text-xl text-gray-900">
                     {formatCurrency(pastOrders.reduce((acc, o) => acc + o.total, 0))}
                   </span>
@@ -328,8 +389,8 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
                   <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-50 -ml-10 -mb-10 pointer-events-none" />
 
                   <div className="relative z-10 w-full flex flex-col items-center gap-4 text-center mb-2">
-                    <h3 className="font-bold text-gray-900 text-lg">Pay with your Banking App</h3>
-                    <p className="text-sm text-gray-500">Scan the QR code below to complete your payment. Please show the payment confirmation to our staff if requested.</p>
+                    <h3 className="font-bold text-gray-900 text-lg">{t('cart.payWithBankingApp')}</h3>
+                    <p className="text-sm text-gray-500">{t('cart.scanQrToPay')}</p>
                   </div>
 
                   <div className="relative z-10 w-full flex flex-col items-center gap-6">
@@ -342,7 +403,7 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
                       <p className="font-bold text-gray-900 text-lg leading-tight">{vietqr.account_name}</p>
                       <p className="text-sm text-gray-600 font-medium">{bankName}</p>
                       <div className="inline-flex items-center gap-2 mt-1 px-3 py-1 bg-gray-100/80 rounded-lg">
-                        <span className="text-xs text-gray-500 font-semibold uppercase">A/C No.</span>
+                        <span className="text-xs text-gray-500 font-semibold uppercase">{t('cart.accountNumber')}</span>
                         <p className="text-sm text-gray-900 font-bold tracking-wide">{vietqr.account_number}</p>
                       </div>
                     </div>
@@ -354,15 +415,15 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
                 <div className="size-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="size-8 text-green-500" />
                 </div>
-                <h3 className="font-bold text-xl text-gray-900">Order Received!</h3>
-                <p className="text-gray-500">Your order has been sent to the kitchen. Please pay at the counter or wait for staff to assist you.</p>
+                <h3 className="font-bold text-xl text-gray-900">{t('cart.orderReceived')}</h3>
+                <p className="text-gray-500">{t('cart.orderSentKitchen')}</p>
               </div>
             )}
 
             <div className="text-center px-4">
-              <p className="text-xs text-gray-400">Need to modify or cancel your order?<br/>Please notify a staff member directly.</p>
+              <p className="text-xs text-gray-400">{t('cart.modifyCancel')}<br/>{t('cart.notifyStaff')}</p>
               <button onClick={handleClose} className="mt-6 px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-full transition-colors text-sm">
-                Close & Return to Menu
+                {t('cart.closeReturnMenu')}
               </button>
             </div>
           </div>
@@ -370,4 +431,14 @@ export function CartDrawer({ businessId, paymentSettings }: CartDrawerProps) {
       </div>
     </>
   )
+
+  if (contained) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[100]">
+        {ui}
+      </div>
+    )
+  }
+
+  return ui
 }

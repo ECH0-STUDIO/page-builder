@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { PAGE_VIEWS_PER_CREDIT } from '@/lib/credit-packs'
 
 /**
  * POST /api/view/[slug]
  *
- * Increments the daily page_views counter for the given slug.
+ * Increments the daily page_views counter and bills 1 credit / 500 views.
  * Uses service-role key to bypass RLS (no auth needed from client).
  * Called silently on every public live-page visit.
  */
@@ -30,22 +31,28 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
 
   const today = new Date().toISOString().slice(0, 10)
 
-  // Upsert: if a row for today exists, increment count; otherwise insert with count=1
-  // Supabase doesn't support atomic increment via upsert directly, so we use rpc or
-  // a two-step approach. Using rpc is cleanest:
-  const { error } = await supabase.rpc('increment_page_view', {
+  // Atomic increment + bill when a new 500-view block is crossed
+  const { error } = await supabase.rpc('increment_page_view_and_bill', {
     p_business_id: biz.id,
     p_date: today,
+    p_views_per_credit: PAGE_VIEWS_PER_CREDIT,
   })
 
   if (error) {
-    // Fallback: try a raw upsert (non-atomic but good enough for analytics)
-    await supabase
-      .from('page_views')
-      .upsert(
-        { business_id: biz.id, viewed_at: today, count: 1 },
-        { onConflict: 'business_id,viewed_at', ignoreDuplicates: false }
-      )
+    // Fallback: count the view even if billing RPC is unavailable (pre-migration)
+    console.error('increment_page_view_and_bill error:', error.message)
+    const { error: legacyErr } = await supabase.rpc('increment_page_view', {
+      p_business_id: biz.id,
+      p_date: today,
+    })
+    if (legacyErr) {
+      await supabase
+        .from('page_views')
+        .upsert(
+          { business_id: biz.id, viewed_at: today, count: 1 },
+          { onConflict: 'business_id,viewed_at', ignoreDuplicates: false },
+        )
+    }
   }
 
   return NextResponse.json({ ok: true })
