@@ -13,6 +13,12 @@ import { ImageUploader } from '@/components/shared/ImageUploader'
 import type { ThemeSettings, PublishingSettings } from '../types'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { ThemeAppearanceFields } from '@/components/shared/ThemeAppearanceFields'
+import {
+  isValidFacebookPixelId,
+  isValidGoogleAnalyticsId,
+  isValidGscVerification,
+  isValidTikTokPixelId,
+} from '@/lib/tracking-ids'
 
 interface GlobalSettingsPanelProps {
   theme: ThemeSettings | null
@@ -274,37 +280,49 @@ export function GlobalSettingsPanel({
             <Label className="text-xs">{t('pageBuilder.gaId')}</Label>
             <Input
               value={p.google_analytics_id || ''}
-              onChange={e => onPublishingChange({ google_analytics_id: e.target.value })}
+              onChange={e => onPublishingChange({ google_analytics_id: e.target.value || null })}
               placeholder="G-XXXXXXXXXX"
               className="text-xs"
             />
+            {!isValidGoogleAnalyticsId(p.google_analytics_id) && (
+              <p className="text-[11px] text-destructive">{t('pageBuilder.gaIdInvalid')}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.fbPixel')}</Label>
             <Input
               value={p.facebook_pixel_id || ''}
-              onChange={e => onPublishingChange({ facebook_pixel_id: e.target.value })}
+              onChange={e => onPublishingChange({ facebook_pixel_id: e.target.value || null })}
               placeholder="1234567890"
               className="text-xs"
             />
+            {!isValidFacebookPixelId(p.facebook_pixel_id) && (
+              <p className="text-[11px] text-destructive">{t('pageBuilder.fbPixelInvalid')}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.tiktokPixel')}</Label>
             <Input
               value={p.tiktok_pixel_id || ''}
-              onChange={e => onPublishingChange({ tiktok_pixel_id: e.target.value })}
+              onChange={e => onPublishingChange({ tiktok_pixel_id: e.target.value || null })}
               placeholder="CXXXXXXXXXXXXXXXXX"
               className="text-xs"
             />
+            {!isValidTikTokPixelId(p.tiktok_pixel_id) && (
+              <p className="text-[11px] text-destructive">{t('pageBuilder.tiktokPixelInvalid')}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.gscTag')}</Label>
             <Input
               value={p.gsc_verification || ''}
-              onChange={e => onPublishingChange({ gsc_verification: e.target.value })}
+              onChange={e => onPublishingChange({ gsc_verification: e.target.value || null })}
               placeholder={t('pageBuilder.gscPlaceholder')}
               className="text-xs"
             />
+            {!isValidGscVerification(p.gsc_verification) && (
+              <p className="text-[11px] text-destructive">{t('pageBuilder.gscInvalid')}</p>
+            )}
           </div>
         </div>
       </div>

@@ -36,10 +36,11 @@ const SIZE_MARGIN: Record<SectionSize, { margin_top: number; margin_bottom: numb
   large: { margin_top: 0, margin_bottom: 0 },
 }
 
+/** Horizontal inset is constant across sizes/block types so mobile L/R padding stays consistent. */
 const SIDE_PADDING_BY_SIZE: Record<SectionSize, number> = {
-  small: 16,
+  small: SECTION_SIDE_PADDING,
   medium: SECTION_SIDE_PADDING,
-  large: 32,
+  large: SECTION_SIDE_PADDING,
 }
 
 function mediumSpacingForType(type: BlockType): BlockSpacing {

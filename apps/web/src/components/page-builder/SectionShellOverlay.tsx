@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-/** Black dimmer layer for section shells that support background-image overlays. */
+/** Pure black dimmer (rgba) — never inherits / blends with theme page background. */
 export function SectionShellOverlay({ opacity }: { opacity: number }) {
-  if (opacity <= 0) return null
+  const parsed = Number(opacity)
+  const alpha = Math.min(100, Math.max(0, Number.isFinite(parsed) ? parsed : 0)) / 100
+  if (alpha <= 0) return null
   return (
     <div
       aria-hidden
@@ -10,8 +12,7 @@ export function SectionShellOverlay({ opacity }: { opacity: number }) {
         position: 'absolute',
         inset: 0,
         zIndex: 0,
-        backgroundColor: '#000000',
-        opacity: Math.min(100, Math.max(0, opacity)) / 100,
+        backgroundColor: `rgba(0, 0, 0, ${alpha})`,
         pointerEvents: 'none',
       }}
     />

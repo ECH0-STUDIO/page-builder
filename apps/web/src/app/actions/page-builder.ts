@@ -24,6 +24,12 @@ import {
   isVercelDomainsConfigured,
   type DnsRecord,
 } from '@/lib/vercel-domains'
+import {
+  normalizeFacebookPixelId,
+  normalizeGoogleAnalyticsId,
+  normalizeGscVerification,
+  normalizeTikTokPixelId,
+} from '@/lib/tracking-ids'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
 function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
@@ -591,6 +597,42 @@ export async function savePublishingSettingsAction(
     if ('custom_domain' in fields) {
       fields.custom_domain_verified = false
       fields.custom_domain_billed_until = null
+    }
+
+    // Sanitize tracking / verification fields — empty → null; extract GSC content from full meta tags
+    if ('google_analytics_id' in fields) {
+      const trimmed = typeof fields.google_analytics_id === 'string' ? fields.google_analytics_id.trim() : ''
+      fields.google_analytics_id = trimmed
+        ? (normalizeGoogleAnalyticsId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('facebook_pixel_id' in fields) {
+      const trimmed = typeof fields.facebook_pixel_id === 'string' ? fields.facebook_pixel_id.trim() : ''
+      fields.facebook_pixel_id = trimmed
+        ? (normalizeFacebookPixelId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('tiktok_pixel_id' in fields) {
+      const trimmed = typeof fields.tiktok_pixel_id === 'string' ? fields.tiktok_pixel_id.trim() : ''
+      fields.tiktok_pixel_id = trimmed
+        ? (normalizeTikTokPixelId(trimmed) ?? trimmed)
+        : null
+    }
+    if ('gsc_verification' in fields) {
+      const trimmed = typeof fields.gsc_verification === 'string' ? fields.gsc_verification.trim() : ''
+      if (!trimmed) {
+        fields.gsc_verification = null
+      } else {
+        const normalized = normalizeGscVerification(trimmed)
+        const extracted = trimmed.match(/content\s*=\s*["']([^"']+)["']/i)?.[1]?.trim()
+        fields.gsc_verification = normalized ?? extracted ?? trimmed
+      }
+    }
+    if ('seo_title' in fields && typeof fields.seo_title === 'string') {
+      fields.seo_title = fields.seo_title.trim() || null
+    }
+    if ('seo_description' in fields && typeof fields.seo_description === 'string') {
+      fields.seo_description = fields.seo_description.trim() || null
     }
 
     const payload: Record<string, unknown> = { business_id: businessId, ...fields }

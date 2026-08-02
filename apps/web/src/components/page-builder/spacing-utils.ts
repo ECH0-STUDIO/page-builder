@@ -12,10 +12,14 @@ const SIDE_PADDING_TYPES = new Set<BlockType>(['hero', 'text_image', 'contact', 
 
 function applySectionSidePadding(type: BlockType, spacing: BlockSpacing): BlockSpacing {
   if (!SIDE_PADDING_TYPES.has(type)) return spacing
+  // Fullscreen hero / explicit zero box — leave untouched
+  if (isUnsetSpacing(spacing)) return spacing
+  // Always normalize L/R to the shared constant — size presets only scale vertical padding.
+  // (Legacy blocks may have 16/32 from older small/large presets.)
   return {
     ...spacing,
-    padding_left: spacing.padding_left > 0 ? spacing.padding_left : SECTION_SIDE_PADDING,
-    padding_right: spacing.padding_right > 0 ? spacing.padding_right : SECTION_SIDE_PADDING,
+    padding_left: SECTION_SIDE_PADDING,
+    padding_right: SECTION_SIDE_PADDING,
   }
 }
 

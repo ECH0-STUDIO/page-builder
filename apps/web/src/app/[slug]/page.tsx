@@ -19,6 +19,8 @@ import { SectionShellOverlay, SectionShellContent } from '@/components/page-buil
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
+import { AnalyticsScripts } from '@/components/AnalyticsScripts'
+import { resolveTrackingIds } from '@/lib/tracking-ids'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
@@ -56,9 +58,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
-    openGraph: pub?.og_image_url
-      ? { title, description, images: [{ url: pub.og_image_url }] }
-      : undefined,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      ...(pub?.og_image_url ? { images: [{ url: pub.og_image_url }] } : {}),
+    },
+    twitter: {
+      card: pub?.og_image_url ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(pub?.og_image_url ? { images: [pub.og_image_url] } : {}),
+    },
     icons: {
       icon: pub?.favicon_url ? [{ url: pub.favicon_url, sizes: '48x48', type: 'image/png' }] : undefined,
       apple: pub?.apple_touch_icon_url ? [{ url: pub.apple_touch_icon_url, sizes: '256x256', type: 'image/png' }] : undefined,
@@ -144,10 +155,16 @@ export default async function SlugPage({
 
   const pageBlocks: PageBlock[] = (pageBlocksRaw ?? []).map(b => ({
     ...b,
-    spacing: resolveBlockSpacing(b.type, b.spacing),
+    spacing: resolveBlockSpacing(
+      b.type,
+      b.spacing,
+      b.type === 'hero' ? { heroConfig: b.config as HeroConfig } : undefined,
+    ),
     custom_css: b.custom_css ?? '',
     block_anchor_id: b.block_anchor_id ?? null,
   }))
+
+  const tracking = resolveTrackingIds(pubSettings)
 
   // Fetch menu data only if page has a menu_grid block
   const hasMenuGrid = pageBlocks.some(b => b.type === 'menu_grid')
@@ -227,64 +244,18 @@ export default async function SlugPage({
       <link rel="canonical" href={pageUrl} />
       {pubSettings?.favicon_url && <link rel="icon" href={pubSettings.favicon_url} />}
       {pubSettings?.apple_touch_icon_url && <link rel="apple-touch-icon" href={pubSettings.apple_touch_icon_url} />}
-      {pubSettings?.gsc_verification && (
-        <meta name="google-site-verification" content={pubSettings.gsc_verification} />
+      {tracking.gscVerification && (
+        <meta name="google-site-verification" content={tracking.gscVerification} />
       )}
       <link rel="alternate" hrefLang={visitorLocale} href={pageUrl} />
-      {/* Twitter card */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={pubSettings?.seo_title || business.name} />
-      {pubSettings?.seo_description && <meta name="twitter:description" content={pubSettings.seo_description} />}
-      {pubSettings?.og_image_url && <meta name="twitter:image" content={pubSettings.og_image_url} />}
       {/* Schema.org JSON-LD */}
       <Script id="schema-json" type="application/ld+json" dangerouslySetInnerHTML={{ __html: schemaJson }} />
 
-      {/* Analytics & Tracking */}
-      {(pubSettings as any)?.google_analytics_id && (
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${(pubSettings as any).google_analytics_id}`}
-          strategy="afterInteractive"
-        />
-      )}
-      {(pubSettings as any)?.google_analytics_id && (
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${(pubSettings as any).google_analytics_id}');
-          `}
-        </Script>
-      )}
-
-      {(pubSettings as any)?.facebook_pixel_id && (
-        <Script id="facebook-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '${(pubSettings as any).facebook_pixel_id}');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-      )}
-
-      {(pubSettings as any)?.tiktok_pixel_id && (
-        <Script id="tiktok-pixel" strategy="afterInteractive">
-          {`
-            !function (w, d, t) {
-              w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
-              ttq.load('${(pubSettings as any).tiktok_pixel_id}');
-              ttq.page();
-            }(window, document, 'ttq');
-          `}
-        </Script>
-      )}
+      <AnalyticsScripts
+        google_analytics_id={pubSettings?.google_analytics_id}
+        facebook_pixel_id={pubSettings?.facebook_pixel_id}
+        tiktok_pixel_id={pubSettings?.tiktok_pixel_id}
+      />
 
       {/* Google Fonts & Typography */}
       {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
