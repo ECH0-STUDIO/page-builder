@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { recordOrderEvent } from '@/lib/order-events'
+import { notifyBusinessPush } from '@/lib/push-notify'
 
 export type ServiceRequestType = 'call_staff' | 'request_check'
 export type ServiceRequestStatus = 'open' | 'acknowledged' | 'dismissed'
@@ -57,6 +58,16 @@ export async function createServiceRequestAction(
     }
     return { success: false, error: msg }
   }
+
+  void notifyBusinessPush(businessId, {
+    title: 'New table request',
+    body:
+      type === 'request_check'
+        ? `Table ${table} requested the check`
+        : `Table ${table} called staff`,
+    url: '/dashboard/orders',
+  })
+
   return { success: true, data: { id: data.id } }
 }
 

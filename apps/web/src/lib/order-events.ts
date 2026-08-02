@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import type { Json } from '@/types/database'
 
 export type OrderEventAction =
   | 'created'
@@ -40,8 +41,8 @@ export async function recordOrderEvent(input: OrderEventInput): Promise<void> {
       actor_name: input.actorName ?? null,
       actor_role: input.actorRole ?? null,
       reason: input.reason ?? null,
-      before: input.before ?? null,
-      after: input.after ?? null,
+      before: (input.before ?? null) as Json | null,
+      after: (input.after ?? null) as Json | null,
     })
     if (error) {
       console.error('[recordOrderEvent]', error.message)

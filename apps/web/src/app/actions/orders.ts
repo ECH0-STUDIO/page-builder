@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import type { CartItem } from '@/components/page-builder/render/CartContext'
 import { recordOrderEvent } from '@/lib/order-events'
+import { notifyBusinessPush } from '@/lib/push-notify'
 
 export async function createOrderAction(
   businessId: string,
@@ -62,6 +63,14 @@ export async function createOrderAction(
       total_amount: totalAmount,
       item_count: items.length,
     },
+  })
+
+  void notifyBusinessPush(businessId, {
+    title: 'New order',
+    body: tableNumber
+      ? `Table ${tableNumber} · ${items.length} item(s)`
+      : `Takeaway · ${items.length} item(s)`,
+    url: '/dashboard/orders',
   })
 
   return { success: true, orderId: order.id }

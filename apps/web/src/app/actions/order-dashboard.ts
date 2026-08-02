@@ -87,7 +87,11 @@ export async function updateOrderStatusAction(
 
   if (fetchErr || !existing) return { success: false, error: 'Order not found' }
 
-  const patch: Record<string, unknown> = {
+  const patch: {
+    status: typeof newStatus
+    updated_at: string
+    payment_status?: string
+  } = {
     status: newStatus,
     updated_at: new Date().toISOString(),
   }
