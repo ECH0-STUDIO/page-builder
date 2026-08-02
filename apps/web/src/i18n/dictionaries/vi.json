@@ -434,7 +434,7 @@
     "blocks": {
       "hero": {
         "label": "Anh bia (Hero)",
-        "description": "Ảnh bìa, tiêu đề, khẩu hiệu và nút kêu gọi hành động."
+        "description": "Ảnh bìa, tiêu đề và nút kêu gọi hành động."
       },
       "text_image": {
         "label": "Văn bản + Hình ảnh",
@@ -624,6 +624,7 @@
     "center": "Giữa",
     "bottom": "Dưới",
     "overlayOpacity": "Độ mờ lớp phủ",
+    "overlayOpacityHelp": "Làm tối ảnh bìa phía sau chữ. 0% = không phủ, 100% = đen đặc.",
     "background": "Nền",
     "solidColour": "Màu đơn sắc",
     "gradient": "Màu chuyển sắc",
@@ -639,7 +640,7 @@
     "alignCenter": "Giữa",
     "alignRight": "Phải",
     "heading": "Tiêu đề",
-    "headingPlaceholder": "Tên doanh nghiệp của bạn",
+    "headingPlaceholder": "Nhập tiêu đề",
     "tagline": "Khẩu hiệu",
     "taglinePlaceholder": "Mô tả ngắn",
     "bodyText": "Văn bản (tùy chọn)",
@@ -647,13 +648,16 @@
     "cta": "Nút kêu gọi hành động",
     "primaryButton": "Nút chính",
     "addPrimary": "+ Thêm nút chính",
-    "secondaryLink": "Liên kết phụ",
-    "addSecondary": "+ Thêm liên kết phụ",
+    "secondaryLink": "Nút phụ",
+    "secondaryButton": "Nút phụ",
+    "addSecondary": "+ Thêm nút phụ",
     "styling": "Định dạng",
     "blockHeight": "Chiều cao khối",
     "custom": "Tùy chỉnh",
     "fullscreen": "Toàn màn hình",
-    "customHeightHelp": "Chiều cao phần theo nội dung. Điều chỉnh khoảng đệm trên/dưới bằng điều khiển Khoảng đệm ngoài bên dưới.",
+    "minHeight": "Chiều cao tối thiểu",
+    "minHeightPlaceholder": "Tự động (theo nội dung)",
+    "customHeightHelp": "Để trống để chiều cao theo nội dung, hoặc nhập chiều cao tối thiểu (px).",
     "fullscreenHeightHelp": "Hero chiếm toàn bộ chiều cao màn hình (100vh).",
     "textColour": "Màu chữ & nút",
     "auto": "Tự động",

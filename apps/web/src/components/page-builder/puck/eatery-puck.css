@@ -99,7 +99,7 @@
   outline: none !important;
 }
 
-.eatery-puck [class*='DropZone--isAreaSelected']::before,
+/* Insertion rail only while hovering a drop target — not while a block is merely selected. */
 .eatery-puck [class*='DropZone--hoveringOverArea']::before {
   content: '';
   position: absolute;

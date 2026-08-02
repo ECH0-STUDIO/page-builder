@@ -129,6 +129,7 @@ export type ContentAlign = 'left' | 'center' | 'right'
 export interface HeroConfig {
   layout: HeroLayout
   heading: string
+  /** @deprecated Removed from hero UI — kept for legacy saved pages */
   tagline: string
   body: string
   image_url: string
@@ -138,6 +139,8 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
+  /** Min height in px when height is custom; omit/0 = hug content */
+  min_height?: number | null
   /** Content alignment for heading / body / CTAs */
   content_align?: ContentAlign
   /** @deprecated Use block spacing (outer padding) instead */
@@ -167,6 +170,7 @@ export const defaultHeroConfig: HeroConfig = {
   cta_secondary: null,
   text_color: 'auto',
   height: 'custom',
+  min_height: null,
   content_align: 'center',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',

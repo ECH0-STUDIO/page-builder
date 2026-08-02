@@ -31,7 +31,7 @@ export const BLOCK_REGISTRY: BlockMeta[] = [
   {
     type: 'hero',
     label: 'Hero',
-    description: 'Cover image, headline, tagline, and call to action.',
+    description: 'Cover image, headline, and call to action.',
     icon: 'Sparkles',
     phase: 4,
     defaultConfig: defaultHeroConfig,

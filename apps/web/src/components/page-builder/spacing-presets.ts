@@ -29,10 +29,11 @@ const SIZE_MULTIPLIER: Record<SectionSize, number> = {
   large: 1.5,
 }
 
+/** Outer margin stays 0 for every size — section spacing only scales padding. */
 const SIZE_MARGIN: Record<SectionSize, { margin_top: number; margin_bottom: number }> = {
   small: { margin_top: 0, margin_bottom: 0 },
   medium: { margin_top: 0, margin_bottom: 0 },
-  large: { margin_top: 16, margin_bottom: 16 },
+  large: { margin_top: 0, margin_bottom: 0 },
 }
 
 const SIDE_PADDING_BY_SIZE: Record<SectionSize, number> = {

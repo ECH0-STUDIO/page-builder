@@ -434,7 +434,7 @@
     "blocks": {
       "hero": {
         "label": "Hero",
-        "description": "Cover image, headline, tagline, and call to action."
+        "description": "Cover image, headline, and call to action."
       },
       "text_image": {
         "label": "Text + Image",
@@ -624,6 +624,7 @@
     "center": "Center",
     "bottom": "Bottom",
     "overlayOpacity": "Overlay opacity",
+    "overlayOpacityHelp": "Darkens the cover image behind your text. 0% = none, 100% = solid black.",
     "background": "Background",
     "solidColour": "Solid colour",
     "gradient": "Gradient",
@@ -638,8 +639,8 @@
     "alignLeft": "Left",
     "alignCenter": "Center",
     "alignRight": "Right",
-    "heading": "Heading",
-    "headingPlaceholder": "Your business name",
+    "heading": "Title",
+    "headingPlaceholder": "Enter a title",
     "tagline": "Tagline",
     "taglinePlaceholder": "Short description",
     "bodyText": "Body text (optional)",
@@ -647,13 +648,16 @@
     "cta": "Call to Action",
     "primaryButton": "Primary button",
     "addPrimary": "+ Add primary button",
-    "secondaryLink": "Secondary link",
-    "addSecondary": "+ Add secondary link",
+    "secondaryLink": "Secondary button",
+    "secondaryButton": "Secondary button",
+    "addSecondary": "+ Add secondary button",
     "styling": "Styling",
     "blockHeight": "Block height",
     "custom": "Custom",
     "fullscreen": "Fullscreen",
-    "customHeightHelp": "Section height follows your content. Adjust top and bottom spacing with the Outer padding control below.",
+    "minHeight": "Minimum height",
+    "minHeightPlaceholder": "Auto (content height)",
+    "customHeightHelp": "Leave empty to size the hero to its content, or set a minimum height in pixels.",
     "fullscreenHeightHelp": "Hero fills the full viewport height (100vh).",
     "textColour": "Text & button colour",
     "auto": "Auto",
