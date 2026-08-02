@@ -51,6 +51,17 @@ const MARKETING_PAGE_SEO: Record<string, PageSeo> = {
     },
     schema: 'page',
   },
+  explore: {
+    title: {
+      vi: 'Khám phá các cửa hàng tại Eateryvn',
+      en: 'Explore businesses on Eateryvn',
+    },
+    description: {
+      vi: 'Khám phá quán cà phê, nhà hàng và cửa hàng địa phương có trang web trên Eateryvn.',
+      en: 'Discover cafes, restaurants, and local businesses with live pages on Eateryvn.',
+    },
+    schema: 'page',
+  },
   contact: {
     title: {
       vi: 'Liên hệ — Eatery VN',

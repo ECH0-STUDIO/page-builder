@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import { billCustomDomainIfDueAction, billPageViewsIfDueAction } from '@/app/actions/credits'
@@ -12,8 +12,7 @@ export const metadata: Metadata = { title: 'Publishing' }
 export const dynamic = 'force-dynamic'
 
 export default async function PublishingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const { t } = await getServerTranslation()

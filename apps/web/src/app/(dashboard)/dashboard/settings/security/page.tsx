@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { redirect } from 'next/navigation'
 import { SecurityForm } from './SecurityForm'
 import type { Metadata } from 'next'
@@ -7,8 +7,7 @@ import { getServerTranslation } from '@/i18n/getDictionary'
 export const metadata: Metadata = { title: 'Security Settings' }
 
 export default async function SecurityPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user } = await getAuthUser()
 
   if (!user) redirect('/login')
 

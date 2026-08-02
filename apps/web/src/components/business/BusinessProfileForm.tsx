@@ -148,6 +148,11 @@ export function BusinessProfileForm({ business }: { business: Business }) {
   const [logoUploading, setLogoUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Marketplace discoverability (default true)
+  const [marketplaceListed, setMarketplaceListed] = useState(
+    business.marketplace_listed !== false,
+  )
+
   const [saving, setSaving] = useState(false)
 
   function toggleTag(tag: string) {
@@ -254,6 +259,7 @@ export function BusinessProfileForm({ business }: { business: Business }) {
         email: email || null,
         opening_hours: hours,
         social_links: socials,
+        marketplace_listed: marketplaceListed,
       })
       await refreshBusinesses()
       toast.success(t('businessProfile.toastSaved'))
@@ -354,6 +360,22 @@ export function BusinessProfileForm({ business }: { business: Business }) {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border px-4 py-3">
+          <div className="space-y-1">
+            <Label htmlFor="prof-discoverable" className="cursor-pointer">
+              {t('businessProfile.discoverable')}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t('businessProfile.discoverableHelp')}
+            </p>
+          </div>
+          <Switch
+            id="prof-discoverable"
+            checked={marketplaceListed}
+            onCheckedChange={setMarketplaceListed}
+          />
         </div>
 
         {/* Tags */}

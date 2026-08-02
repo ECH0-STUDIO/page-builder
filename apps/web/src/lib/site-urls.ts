@@ -94,6 +94,7 @@ export const MARKETING_PATH_PREFIXES = [
   '/features',
   '/contact',
   '/blog',
+  '/explore',
 ] as const
 
 export function isMarketingPath(pathname: string): boolean {
@@ -135,6 +136,7 @@ export function isPublicSlugPath(pathname: string): boolean {
     'features',
     'contact',
     'blog',
+    'explore',
     'login',
     'signup',
     'dashboard',

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { PuckEditorShell } from '@/components/page-builder/puck/PuckEditorShell'
 import { OrderPageEditor } from '@/components/order-page/OrderPageEditor'
@@ -26,8 +26,7 @@ export default async function PagesPage({
 }: {
   searchParams: Promise<{ page?: string | string[] }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const db = supabase

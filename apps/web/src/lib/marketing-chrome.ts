@@ -87,5 +87,14 @@ export function injectMarketingChrome(
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/login[^"]*"/gi, `href="${loginUrl}"`)
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/signup[^"]*"/gi, `href="${signupUrl}"`)
 
+  // Soft-add Explore link into the primary nav list (skip if already present)
+  if (!/href=["']\/explore["']/i.test(out) && out.includes('class="navbar_list"')) {
+    const exploreLabel = locale === 'en' ? 'Explore' : 'Khám phá'
+    out = out.replace(
+      /(<div class="navbar_list">)/i,
+      `$1\n                  <a href="/explore" navbar="item" class="nav_links w-nav-link">${exploreLabel}</a>`,
+    )
+  }
+
   return out
 }

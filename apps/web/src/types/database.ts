@@ -574,6 +574,84 @@ export interface Database {
       credit_balances: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_orders: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_transactions: { Row: any; Insert: any; Update: any; Relationships: any }
+      order_events: {
+        Row: {
+          id: string
+          business_id: string
+          order_id: string | null
+          entity_type: string
+          entity_id: string | null
+          action: string
+          actor_user_id: string | null
+          actor_name: string | null
+          actor_role: string | null
+          reason: string | null
+          before: Json | null
+          after: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          order_id?: string | null
+          entity_type: string
+          entity_id?: string | null
+          action: string
+          actor_user_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          reason?: string | null
+          before?: Json | null
+          after?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          order_id?: string | null
+          entity_type?: string
+          entity_id?: string | null
+          action?: string
+          actor_user_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          reason?: string | null
+          before?: Json | null
+          after?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          business_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          business_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          business_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       print_menus: {
         Row: {
           id: string
@@ -766,6 +844,10 @@ export interface Database {
       increment_page_view: {
         Args: { p_business_id: string, p_date: string }
         Returns: undefined
+      }
+      purge_orders_outside_retention: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
 

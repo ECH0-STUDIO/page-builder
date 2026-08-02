@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { redirect } from 'next/navigation'
 import { ArrowRight, Store, Palette, UtensilsCrossed, Globe, QrCode, CreditCard, Eye, BarChart3, CheckCircle2 } from 'lucide-react'
@@ -10,8 +10,7 @@ import { getPublicStoreUrl } from '@/lib/site-urls'
 import { OverviewLiveLinks } from '@/components/dashboard/OverviewLiveLinks'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const { t } = await getServerTranslation()

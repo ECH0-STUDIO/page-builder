@@ -26,7 +26,7 @@ type FinalizeOptions = {
   seo?: MarketingSeoOverrides
 }
 
-function finalizeMarketingHtml(
+export function finalizeMarketingHtml(
   html: string,
   request: Request,
   locale: SupportedLocale,
