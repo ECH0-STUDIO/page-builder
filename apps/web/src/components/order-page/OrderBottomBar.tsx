@@ -18,9 +18,18 @@ import { cn } from '@/lib/utils'
 interface OrderBottomBarProps {
   businessId: string
   brandColor: string
+  /** Pin bar inside a relative parent (builder phone frame) instead of the viewport */
+  contained?: boolean
+  /** Builder preview — cart open works; staff requests are simulated only */
+  previewMode?: boolean
 }
 
-export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) {
+export function OrderBottomBar({
+  businessId,
+  brandColor,
+  contained = false,
+  previewMode = false,
+}: OrderBottomBarProps) {
   const searchParams = useSearchParams()
   const tableFromUrl = (searchParams.get('table') ?? '').trim()
   const { t } = useTranslation()
@@ -31,6 +40,9 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
   const [actionsOpen, setActionsOpen] = useState(false)
   const [promptType, setPromptType] = useState<ServiceRequestType | null>(null)
   const [manualTable, setManualTable] = useState('')
+
+  const overlayPos = contained ? 'absolute' : 'fixed'
+  const barPos = contained ? 'absolute' : 'fixed'
 
   function startCooldown(type: ServiceRequestType) {
     setCooldown(prev => ({ ...prev, [type]: true }))
@@ -43,6 +55,15 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
     const tableNumber = table.trim()
     if (!tableNumber) {
       toast.error(t('orderPage.enterTableFirst'))
+      return
+    }
+
+    if (previewMode) {
+      startCooldown(type)
+      setPromptType(null)
+      setActionsOpen(false)
+      setManualTable('')
+      toast.info(t('cart.previewDisabled'))
       return
     }
 
@@ -68,6 +89,11 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
 
   function handleAction(type: ServiceRequestType) {
     if (cooldown[type] || isPending) return
+    if (previewMode) {
+      toast.info(t('cart.previewDisabled'))
+      setActionsOpen(false)
+      return
+    }
     if (tableFromUrl) {
       submit(type, tableFromUrl)
       return
@@ -81,7 +107,13 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
 
   return (
     <>
-      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-black/6 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
+      <div
+        className={cn(
+          'bottom-0 inset-x-0 z-40 border-t border-black/6 bg-white/95 backdrop-blur-md',
+          barPos,
+          !contained && 'pb-[env(safe-area-inset-bottom)]',
+        )}
+      >
         <div className="mx-auto flex max-w-[430px] gap-2 px-3 py-2.5">
           <button
             type="button"
@@ -120,7 +152,7 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
 
       {/* Quick actions sheet */}
       {actionsOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className={cn('inset-0 z-50 flex items-end justify-center', overlayPos)}>
           <button
             type="button"
             className="absolute inset-0 bg-black/40"
@@ -181,7 +213,7 @@ export function OrderBottomBar({ businessId, brandColor }: OrderBottomBarProps) 
       )}
 
       {promptType && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+        <div className={cn('inset-0 z-[60] flex items-end sm:items-center justify-center p-4', overlayPos)}>
           <button
             type="button"
             className="absolute inset-0 bg-black/40"

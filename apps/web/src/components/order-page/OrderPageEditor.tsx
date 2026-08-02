@@ -16,12 +16,14 @@ import {
   Copy,
   ExternalLink,
   Eye,
+  Globe,
   ImagePlus,
   Loader2,
   Redo2,
   Trash2,
   Undo2,
   UtensilsCrossed,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -57,7 +59,8 @@ import {
   type ThemeSettings,
 } from '@/components/page-builder/types'
 import type { SaveStatus } from '@/components/page-builder/PublishBar'
-import type { MenuCategory, MenuItem } from '@/app/actions/menu'
+import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -111,6 +114,10 @@ interface OrderPageEditorProps {
   initialTheme: Partial<ThemeSettings> | null
   categories: MenuCategory[]
   items: MenuItem[]
+  variantGroups?: VariantGroup[]
+  variantOptions?: VariantOption[]
+  paymentSettings?: PaymentSettings | null
+  locale?: string
   /** Unified builder mode — shows Landing | Order switcher when set */
   builderMode?: BuilderPageMode
 }
@@ -162,6 +169,10 @@ export function OrderPageEditor({
   initialTheme,
   categories,
   items,
+  variantGroups = [],
+  variantOptions = [],
+  paymentSettings = {},
+  locale,
   builderMode = 'order',
 }: OrderPageEditorProps) {
   const { t } = useTranslation()
@@ -173,6 +184,7 @@ export function OrderPageEditor({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublished)
   const [publishingBusy, setPublishingBusy] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
   const [draft, setDraft] = useState<OrderDraft>(() => draftFromSources(publishing, initialTheme))
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
@@ -425,6 +437,51 @@ export function OrderPageEditor({
     draft.aspectMobile === 'same' ? draft.aspectDesktop : draft.aspectMobile
   const mobileGuide = CAROUSEL_ASPECT_GUIDE[mobileResolved]
 
+  if (previewMode) {
+    return (
+      <div className="flex flex-col h-dvh w-full overflow-hidden bg-background">
+        <header className="shrink-0 flex items-center justify-center h-12 px-3 border-b border-primary/20 bg-primary text-primary-foreground z-20 relative">
+          <span className="text-sm font-medium tracking-wide flex items-center gap-2">
+            <Eye className="size-4" />
+            {t('pageBuilder.preview')}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPreviewMode(false)}
+            className="absolute right-2 sm:right-3 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium bg-primary-foreground/15 hover:bg-primary-foreground/25"
+          >
+            <X className="size-3.5" />
+            <span className="hidden sm:inline">{t('pageBuilder.closePreview')}</span>
+          </button>
+        </header>
+        <div className="flex-1 min-h-0 overflow-auto bg-[#eceff3] p-4 md:p-8">
+          <OrderPagePreview
+            businessId={businessId}
+            businessName={businessName}
+            logoUrl={logoUrl}
+            brandColor={draft.brandColor}
+            bgColor={draft.bgColor}
+            bgImage={draft.bgImage}
+            headingFont={draft.headingFont}
+            bodyFont={draft.bodyFont}
+            slides={previewSlides}
+            aspectDesktop={draft.aspectDesktop}
+            aspectMobile={draft.aspectMobile}
+            menuConfig={previewMenuConfig}
+            categories={categories}
+            items={items}
+            variantGroups={variantGroups}
+            variantOptions={variantOptions}
+            slug={slug}
+            paymentSettings={paymentSettings}
+            locale={locale}
+            previewMode
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-dvh w-full overflow-hidden bg-background">
       <header className="shrink-0 flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-x-auto">
@@ -483,6 +540,16 @@ export function OrderPageEditor({
               </span>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setPreviewMode(true)}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            title={t('pageBuilder.preview')}
+          >
+            <Globe className="size-4" />
+            <span className="hidden sm:inline">{t('pageBuilder.preview')}</span>
+          </button>
 
           <button
             type="button"
@@ -561,6 +628,7 @@ export function OrderPageEditor({
             <span>{t('orderPageAdmin.previewMobile')}</span>
           </div>
           <OrderPagePreview
+            businessId={businessId}
             businessName={businessName}
             logoUrl={logoUrl}
             brandColor={draft.brandColor}
@@ -574,7 +642,11 @@ export function OrderPageEditor({
             menuConfig={previewMenuConfig}
             categories={categories}
             items={items}
+            variantGroups={variantGroups}
+            variantOptions={variantOptions}
             slug={slug}
+            paymentSettings={paymentSettings}
+            locale={locale}
           />
         </div>
 
