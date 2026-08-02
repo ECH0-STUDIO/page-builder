@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { BusinessProfileForm } from '@/components/business/BusinessProfileForm'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Business Profile' }
 
 export default async function BusinessProfilePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   // Get current business — we read from the first one for now

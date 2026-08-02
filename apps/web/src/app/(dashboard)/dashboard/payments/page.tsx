@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { getPaymentSettingsAction } from '@/app/actions/payments'
 import type { Metadata } from 'next'
 import { VietQRSettings } from '@/components/payments/VietQRSettings'
@@ -12,8 +11,7 @@ export const metadata: Metadata = { title: 'Payment Settings' }
 export const dynamic = 'force-dynamic'
 
 export default async function PaymentsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const { t } = await getServerTranslation()

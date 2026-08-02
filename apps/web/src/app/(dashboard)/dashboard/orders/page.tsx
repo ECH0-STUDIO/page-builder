@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { OrdersClient } from '@/components/orders/OrdersClient'
 import type { Metadata } from 'next'
 
@@ -9,8 +8,7 @@ export const metadata: Metadata = { title: 'Live Orders' }
 export const dynamic = 'force-dynamic'
 
 export default async function OrdersPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

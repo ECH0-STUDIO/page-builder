@@ -1,4 +1,5 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -8,8 +9,7 @@ import { getServerTranslation } from '@/i18n/getDictionary'
 export const metadata: Metadata = { title: 'Team Management' }
 
 export default async function TeamPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
 
   if (!user) redirect('/login')
 

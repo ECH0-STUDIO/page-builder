@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
-// import { createClient } from '@/lib/supabase/server'
 import { PrintMenuShell } from '@/components/print/PrintMenuShell'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -13,8 +12,7 @@ export const metadata: Metadata = { title: 'Print Menu' }
 export const dynamic = 'force-dynamic'
 
 export default async function PrintMenuPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
   const { t } = await getServerTranslation()

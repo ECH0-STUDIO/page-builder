@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-server'
 import { redirect } from 'next/navigation'
 import { LocalizationForm } from './LocalizationForm'
 import type { Metadata } from 'next'
@@ -7,8 +7,7 @@ import { getServerTranslation } from '@/i18n/getDictionary'
 export const metadata: Metadata = { title: 'Localization Settings' }
 
 export default async function LocalizationPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getAuthUser()
 
   if (!user) redirect('/login')
 
