@@ -13,7 +13,7 @@ import { resolveThemeTokens } from '../theme-tokens'
 import { pageBlocksToPuckData, puckDataToPageBlocks, extractChromeFromData, ensureChromeBlocks } from './adapters'
 import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
-import { PuckCustomHeader, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
+import { PuckCustomHeader, PuckDragRecovery, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
 import { PreviewLayoutProvider } from './PreviewLayoutContext'
 import { createPuckPlugins, PuckSettingsContext } from './plugins'
 
@@ -320,6 +320,7 @@ export function PuckEditorShell({
       header: ({ actions }) => (
         <>
           <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
+          <PuckDragRecovery />
           <PuckCustomHeader
             builderMode={builderMode}
             previewMode={previewMode}

@@ -104,7 +104,8 @@ export function TextImageRender({
     align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
 
   // Single relative + aspect-ratio box so Next/Image fill respects the ratio on live + editor
-  const aspect = isImgOnly ? '16/6' : resolveAspectRatio(config)
+  // (including img_only — previously hardcoded to 16/6 and ignored the dimension control)
+  const aspect = resolveAspectRatio(config)
   const imageEl = config.image_url && !isTextOnly && (
     <div style={{
       flex: '0 0 auto',
@@ -115,7 +116,7 @@ export function TextImageRender({
       borderRadius: radius,
       background: '#f0f0f0',
       flexShrink: 0,
-      alignSelf: isStacked ? 'stretch' : undefined,
+      alignSelf: isStacked || isImgOnly ? 'stretch' : undefined,
     }}>
       <Image
         src={config.image_url}
@@ -124,7 +125,7 @@ export function TextImageRender({
         style={{
           objectFit: config.image_fit === 'contain' ? 'contain' : 'cover',
         }}
-        sizes="(max-width: 768px) 100vw, 50vw"
+        sizes={isImgOnly || isStacked ? '100vw' : '(max-width: 768px) 100vw, 50vw'}
       />
     </div>
   )
@@ -173,14 +174,14 @@ export function TextImageRender({
 
   const innerStyle: React.CSSProperties = {
     display: 'flex',
-    flexDirection: isStacked || isTextOnly ? 'column' : 'row',
-    flexWrap: isStacked || isTextOnly ? 'nowrap' : 'wrap',
-    gap: isTextOnly ? '0' : '40px',
-    alignItems: isTextOnly || isStacked
+    flexDirection: isStacked || isTextOnly || isImgOnly ? 'column' : 'row',
+    flexWrap: isStacked || isTextOnly || isImgOnly ? 'nowrap' : 'wrap',
+    gap: isTextOnly || isImgOnly ? '0' : '40px',
+    alignItems: isTextOnly || isStacked || isImgOnly
       ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
       : 'center',
-    justifyContent: isTextOnly ? justify : 'flex-start',
-    maxWidth: isTextOnly ? '760px' : '1100px',
+    justifyContent: isTextOnly || isImgOnly ? justify : 'flex-start',
+    maxWidth: isTextOnly ? '760px' : isImgOnly ? '100%' : '1100px',
     margin: '0 auto',
     width: '100%',
   }

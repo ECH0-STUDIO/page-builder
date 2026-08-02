@@ -186,6 +186,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               <FooterSettings
                 config={{ ...defaultFooterConfig, ...value } as FooterConfig}
                 businessId={shell.business.id}
+                hasLogo={Boolean(shell.business.logo_url)}
                 onChange={c => onChange(c as unknown as Record<string, unknown>)}
               />
             )

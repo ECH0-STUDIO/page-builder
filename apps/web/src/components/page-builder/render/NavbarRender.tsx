@@ -50,7 +50,7 @@ export function NavbarRender({
   const hasLinks = config.links && config.links.length > 0
 
   const containerStyle: React.CSSProperties = {
-    position: config.sticky ? 'sticky' : 'relative',
+    position: config.sticky !== false ? 'sticky' : 'relative',
     top: 0,
     zIndex: 9999,
     backgroundColor: bg,

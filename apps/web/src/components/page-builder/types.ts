@@ -129,6 +129,7 @@ export type ContentAlign = 'left' | 'center' | 'right'
 export interface HeroConfig {
   layout: HeroLayout
   heading: string
+  /** @deprecated Removed from hero UI — kept for legacy saved pages */
   tagline: string
   body: string
   image_url: string
@@ -138,6 +139,8 @@ export interface HeroConfig {
   cta_secondary: CtaButton | null
   text_color: 'auto' | string
   height: BlockHeight
+  /** Min height in px when height is custom; omit/0 = hug content */
+  min_height?: number | null
   /** Content alignment for heading / body / CTAs */
   content_align?: ContentAlign
   /** @deprecated Use block spacing (outer padding) instead */
@@ -167,6 +170,7 @@ export const defaultHeroConfig: HeroConfig = {
   cta_secondary: null,
   text_color: 'auto',
   height: 'custom',
+  min_height: null,
   content_align: 'center',
   split_image_side: 'right',
   split_bg_color: '#1a1a2e',
@@ -234,6 +238,7 @@ export const defaultTextImageConfig: TextImageConfig = {
 
 export type MapHeight = 'small' | 'medium' | 'large'
 export type ContactLayout = 'vertical' | 'map_left'
+export type ContactBackground = 'solid' | 'gradient' | 'image'
 
 export interface ContactConfig {
   layout: ContactLayout
@@ -244,8 +249,18 @@ export interface ContactConfig {
   show_address: boolean
   show_hours: boolean
   socials_shown: string[]
-  /** section background colour */
+  /** Section background mode */
+  background?: ContactBackground
+  /** Solid background colour (also fallback under image) */
   background_color: string
+  /** Gradient start (background === 'gradient') */
+  gradient_from?: string
+  /** Gradient end (background === 'gradient') */
+  gradient_to?: string
+  /** Cover image URL (background === 'image') */
+  background_image?: string
+  /** Black overlay opacity 0–100 over background image */
+  overlay_opacity?: number
   /** labels/heading colour */
   text_color: string
 }
@@ -259,7 +274,12 @@ export const defaultContactConfig: ContactConfig = {
   show_address: true,
   show_hours: true,
   socials_shown: ['facebook', 'instagram', 'zalo'],
+  background: 'solid',
   background_color: '#f8f8f8',
+  gradient_from: '#f8f8f8',
+  gradient_to: '#e8e8e8',
+  background_image: '',
+  overlay_opacity: 40,
   text_color: '#111111',
 }
 
@@ -388,11 +408,14 @@ export const defaultNavbarConfig: NavbarConfig = {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 export interface FooterConfig {
+  show_logo?: boolean
   show_business_name: boolean
   copyright_text: string
   background_color: string
   background_image?: string
   text_color: string
+  /** Section spacing preset — preferred over raw padding_* in the editor */
+  spacing_size?: 'small' | 'medium' | 'large'
   padding_top: number
   padding_right: number
   padding_bottom: number
@@ -400,11 +423,13 @@ export interface FooterConfig {
 }
 
 export const defaultFooterConfig: FooterConfig = {
+  show_logo: false,
   show_business_name: true,
   copyright_text: 'All rights reserved.',
   background_color: '#111111',
   background_image: '',
   text_color: '#ffffff',
+  spacing_size: 'medium',
   padding_top: 32,
   padding_right: 24,
   padding_bottom: 32,

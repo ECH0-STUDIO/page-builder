@@ -15,6 +15,7 @@ import { BrowseOnlyCartProvider } from '@/components/page-builder/render/CartCon
 import { defaultNavbarConfig, defaultFooterConfig, defaultThemeSettings, type FooterConfig, type ThemeSettings } from '@/components/page-builder/types'
 import { resolveBlockSpacing } from '@/components/page-builder/spacing-utils'
 import { getBlockSurfaceLayers } from '@/components/page-builder/block-section-style'
+import { SectionShellOverlay, SectionShellContent } from '@/components/page-builder/SectionShellOverlay'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
@@ -303,7 +304,7 @@ export default async function SlugPage({
         {pageBlocks
           .filter(b => (b.type as string) !== 'navbar')
           .map(block => {
-            const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
+            const { margin, shell, contentInset, overlayOpacity } = getBlockSurfaceLayers(block)
 
             return (
               <div
@@ -317,6 +318,8 @@ export default async function SlugPage({
                   }} />
                 )}
                 <div data-live-block={block.id} style={shell}>
+                  <SectionShellOverlay opacity={overlayOpacity} />
+                  <SectionShellContent overlayOpacity={overlayOpacity}>
                   {block.type === 'hero' && (
                     <HeroRender
                       config={block.config as HeroConfig}
@@ -359,6 +362,7 @@ export default async function SlugPage({
                       : `${baseUrl}/${slug}`
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
+                  </SectionShellContent>
                 </div>
               </div>
             )
@@ -369,6 +373,7 @@ export default async function SlugPage({
       <FooterRender
         config={footerConfig}
         businessName={business.name}
+        logoUrl={business.logo_url}
       />
 
       {/* Landing is browse-only — cart/order lives on /{slug}/order */}

@@ -61,8 +61,8 @@ export function ContactRender({ config, business }: ContactRenderProps) {
   const mapWidthFlex = config.layout === 'map_left' ? '1 1 300px' : '1 1 100%'
   const contentWidthFlex = (config.layout === 'map_left' && config.show_map) ? '1 1 300px' : '1 1 100%'
 
-  const dayShort = (day: string) => {
-    const key = `contactBlock.daysShort.${day}`
+  const dayLabel = (day: string) => {
+    const key = `contactBlock.days.${day}`
     const translated = t(key)
     return translated === key ? day : translated
   }
@@ -120,7 +120,7 @@ export function ContactRender({ config, business }: ContactRenderProps) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {hours.map((h, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', maxWidth: '300px', gap: '12px' }}>
-                        <span style={{ fontWeight: 600, color: textColor }}>{dayShort(h.day)}</span>
+                        <span style={{ fontWeight: 600, color: textColor }}>{dayLabel(h.day)}</span>
                         <span style={{ color: h.open ? textColor + 'cc' : labelColor, fontWeight: 500 }}>
                           {h.open ? `${h.from} – ${h.to}` : t('contactBlock.closed')}
                         </span>

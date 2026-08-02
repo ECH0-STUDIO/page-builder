@@ -7,10 +7,10 @@
  *  - overlay    → Full-width image + dark overlay (opacity-controlled)
  *  - split      → Two-column: content pane (custom bg/text) + image pane, side configurable
  *  - text_only  → Solid or gradient background, no image
- *  - centered   → Legacy alias for overlay at 40% opacity
+ *  - centered   → Legacy alias for overlay (uses overlay_opacity)
  *
  * height:
- *  - custom     → content height; vertical spacing from outer padding control
+ *  - custom     → content height, optional min_height (px)
  *  - fullscreen → min-height 100vh
  */
 
@@ -56,6 +56,35 @@ function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: stri
   )
 }
 
+function CtaRow({
+  config,
+  brandColor,
+  locale,
+  align,
+}: {
+  config: HeroConfig
+  brandColor: string
+  locale: SupportedLocale
+  align: ContentAlign
+}) {
+  if (!config.cta && !config.cta_secondary) return null
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '12px',
+        marginTop: '36px',
+        justifyContent: justifyForAlign(align),
+      }}
+    >
+      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} />}
+      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} />}
+    </div>
+  )
+}
+
 export function HeroRender({
   config,
   businessName,
@@ -85,24 +114,30 @@ export function HeroRender({
   const align = resolveAlign(config)
 
   const heading = pickLocale(config.heading, activeLocale) || businessName || 'Welcome'
-  const tagline = pickLocale(config.tagline, activeLocale)
   const body = pickLocale(config.body, activeLocale)
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const typography = getTypography(mobileLayout)
   const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
+  const customMinHeight =
+    !isFullscreen && typeof config.min_height === 'number' && config.min_height > 0
+      ? config.min_height
+      : null
 
   const objectPos =
     config.image_position === 'top'    ? 'top'
     : config.image_position === 'bottom' ? 'bottom'
     : 'center'
 
-  const heightBase: React.CSSProperties = isFullscreen ? { minHeight: '100vh' } : {}
+  const heightBase: React.CSSProperties = isFullscreen
+    ? { minHeight: '100vh' }
+    : customMinHeight
+      ? { minHeight: `${customMinHeight}px` }
+      : {}
   const inset = contentInsetStyle(contentInset ?? { padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0 })
 
-  const contentBlock = (color: string, opts?: { maxWidth?: string; bodyCentered?: boolean }) => (
+  const contentBlock = (color: string, opts?: { maxWidth?: string }) => (
     <div style={{ textAlign: align, maxWidth: opts?.maxWidth ?? '800px', width: '100%' }}>
       <h1 style={{ color, ...typography.h1, margin: 0, wordBreak: 'break-word' }}>{heading}</h1>
-      {tagline && <p style={{ color, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
       {body && (
         <p
           style={{
@@ -113,26 +148,12 @@ export function HeroRender({
             maxWidth: '600px',
             marginLeft: align === 'center' ? 'auto' : align === 'right' ? 'auto' : 0,
             marginRight: align === 'center' ? 'auto' : align === 'left' ? 'auto' : 0,
-            ...(opts?.bodyCentered ? {} : {}),
           }}
         >
           {body}
         </p>
       )}
-      {(config.cta || config.cta_secondary) && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '12px',
-            marginTop: '36px',
-            justifyContent: justifyForAlign(align),
-          }}
-        >
-          {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
-          {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
-        </div>
-      )}
+      <CtaRow config={config} brandColor={brandColor} locale={activeLocale} align={align} />
     </div>
   )
 
@@ -191,7 +212,9 @@ export function HeroRender({
   }
 
   // ── Centered (legacy) + Overlay ─────────────────────────────────────────────
-  const overlayOpacity = config.layout === 'overlay' ? config.overlay_opacity / 100 : 0.4
+  // Black dimmer under content. 0% = no overlay; 100% = fully black.
+  const rawOpacity = Number.isFinite(config.overlay_opacity) ? config.overlay_opacity : 0
+  const overlayOpacity = Math.min(100, Math.max(0, rawOpacity)) / 100
 
   return (
     <section
@@ -205,23 +228,40 @@ export function HeroRender({
       }}
     >
       {config.image_url && (
-        <Image src={config.image_url} alt={heading} fill style={{ objectFit: 'cover', objectPosition: objectPos }} sizes="100vw" />
+        <Image
+          src={config.image_url}
+          alt={heading}
+          fill
+          style={{ objectFit: 'cover', objectPosition: objectPos, zIndex: 0 }}
+          sizes="100vw"
+        />
       )}
-      <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${overlayOpacity})` }} />
+      {overlayOpacity > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            backgroundColor: '#000000',
+            opacity: overlayOpacity,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <div style={{
         position: 'relative',
-        zIndex: 1,
+        zIndex: 2,
         display: 'flex',
         alignItems: 'center',
         justifyContent: justifyForAlign(align),
         width: '100%',
         boxSizing: 'border-box',
-        ...(isFullscreen ? { minHeight: '100vh' } : {}),
+        ...(isFullscreen ? { minHeight: '100vh' } : customMinHeight ? { minHeight: `${customMinHeight}px` } : {}),
         ...inset,
       }}>
         <div style={{ textAlign: align, maxWidth: '800px', width: '100%' }}>
           <h1 style={{ color: textColor, ...typography.h1, margin: 0, textShadow: config.image_url ? '0 2px 20px rgba(0,0,0,0.3)' : 'none', wordBreak: 'break-word' }}>{heading}</h1>
-          {tagline && <p style={{ color: textColor, ...typography.bodyLg, marginTop: '20px' }}>{tagline}</p>}
           {body && (
             <p
               style={{
@@ -237,12 +277,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          {(config.cta || config.cta_secondary) && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '36px', justifyContent: justifyForAlign(align) }}>
-              {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />}
-              {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={activeLocale} />}
-            </div>
-          )}
+          <CtaRow config={config} brandColor={brandColor} locale={activeLocale} align={align} />
         </div>
       </div>
     </section>

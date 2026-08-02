@@ -52,10 +52,10 @@ export default async function PagesPage({
   const items = normalizeMenuItems((itemsRaw ?? []) as Record<string, unknown>[])
   const publishing = landingPublishing ?? orderPublishing
 
-  // Variants only needed for landing menu interactivity
+  // Variants for interactive menu (landing canvas + order preview mode)
   let variantGroups: VariantGroup[] = []
   let variantOptions: VariantOption[] = []
-  if (mode === 'landing' && items.length > 0) {
+  if (items.length > 0) {
     const itemIds = items.map((i: MenuItem) => i.id)
     const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', itemIds).order('sort_order')
     variantGroups = vGroups ?? []
@@ -88,6 +88,9 @@ export default async function PagesPage({
         initialTheme={theme ?? defaultThemeSettings}
         categories={categories}
         items={items}
+        variantGroups={variantGroups}
+        variantOptions={variantOptions}
+        paymentSettings={business.payment_settings}
         builderMode="order"
       />
     )
