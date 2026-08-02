@@ -548,7 +548,24 @@
     "googleMapsUrlPlaceholder": "https://maps.google.com/... or https://maps.app.goo.gl/...",
     "cityOther": "Other",
     "cityOtherPlaceholder": "Enter city / province name",
-    "selectCity": "Select city"
+    "selectCity": "Select city",
+    "discoverable": "Discoverable on Explore",
+    "discoverableHelp": "When enabled, your published business can appear in the public Explore directory."
+  },
+  "explore": {
+    "title": "Explore businesses on Eateryvn",
+    "search": "Search",
+    "city": "City",
+    "category": "Category",
+    "tags": "Tags",
+    "sort": "Sort",
+    "sortAz": "A–Z",
+    "sortZa": "Z–A",
+    "visitWebsite": "Visit website",
+    "noResults": "No businesses match your filters.",
+    "allCities": "All cities",
+    "allCategories": "All categories",
+    "allTags": "All tags"
   },
   "settings": {
     "title": "Account Settings",

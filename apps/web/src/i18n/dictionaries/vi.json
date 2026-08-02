@@ -548,7 +548,24 @@
     "googleMapsUrlPlaceholder": "https://maps.google.com/... hoặc https://maps.app.goo.gl/...",
     "cityOther": "Khác",
     "cityOtherPlaceholder": "Nhập tên thành phố / tỉnh",
-    "selectCity": "Chọn thành phố"
+    "selectCity": "Chọn thành phố",
+    "discoverable": "Hiển thị trên Khám phá",
+    "discoverableHelp": "Khi bật, doanh nghiệp đã xuất bản của bạn có thể xuất hiện trong danh mục Khám phá công khai."
+  },
+  "explore": {
+    "title": "Khám phá các cửa hàng tại Eateryvn",
+    "search": "Tìm kiếm",
+    "city": "Thành phố",
+    "category": "Danh mục",
+    "tags": "Nhãn",
+    "sort": "Sắp xếp",
+    "sortAz": "A–Z",
+    "sortZa": "Z–A",
+    "visitWebsite": "Xem trang web",
+    "noResults": "Không có cửa hàng phù hợp với bộ lọc của bạn.",
+    "allCities": "Tất cả thành phố",
+    "allCategories": "Tất cả danh mục",
+    "allTags": "Tất cả nhãn"
   },
   "settings": {
     "title": "Cài đặt tài khoản",
