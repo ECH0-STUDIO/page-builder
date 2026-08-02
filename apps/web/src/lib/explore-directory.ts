@@ -138,6 +138,43 @@ export async function listExploreBusinesses(
   return results.slice(0, EXPLORE_LIMIT)
 }
 
+export type ExploreBusinessSearchMeta = ExploreBusiness & {
+  /** Pre-folded haystack for client-side keyword matching. */
+  searchText: string
+}
+
+/** Build folded search haystack for one business (server + client filter parity). */
+export function buildExploreSearchText(
+  biz: Pick<
+    ExploreBusiness,
+    'name' | 'slug' | 'address' | 'city' | 'category' | 'tags'
+  >,
+  categoryLabels: Record<string, string>,
+  tagLabels: Record<string, string>,
+): string {
+  const categoryParts = (biz.category ?? []).flatMap((c) => [
+    c,
+    categoryLabels[c],
+  ])
+  const tagParts = (biz.tags ?? []).flatMap((t) => [t, tagLabels[t]])
+  return foldSearchText(
+    [biz.name, biz.slug, biz.address, biz.city, ...categoryParts, ...tagParts]
+      .filter(Boolean)
+      .join(' '),
+  )
+}
+
+export function withExploreSearchMeta(
+  businesses: ExploreBusiness[],
+  categoryLabels: Record<string, string>,
+  tagLabels: Record<string, string>,
+): ExploreBusinessSearchMeta[] {
+  return businesses.map((biz) => ({
+    ...biz,
+    searchText: buildExploreSearchText(biz, categoryLabels, tagLabels),
+  }))
+}
+
 /** Distinct non-empty cities from an explore result set (sorted). */
 export function listExploreCities(businesses: ExploreBusiness[]): string[] {
   const cities = new Set<string>()

@@ -2,6 +2,7 @@ import { finalizeMarketingHtml } from '@/lib/marketing-html-response'
 import {
   listExploreBusinesses,
   listExploreCities,
+  withExploreSearchMeta,
 } from '@/lib/explore-directory'
 import { getDictionary } from '@/i18n/getDictionary'
 import { BUSINESS_CATEGORIES, BUSINESS_TAGS } from '@/lib/constants'
@@ -62,11 +63,12 @@ export async function GET(request: Request) {
     tagLabels,
   }
 
-  const [businesses, citySource] = await Promise.all([
-    listExploreBusinesses(filters, locale),
-    listExploreBusinesses({ sort: 'az' }, locale),
-  ])
-  const citiesFromData = listExploreCities(citySource)
+  const allBusinesses = withExploreSearchMeta(
+    await listExploreBusinesses({ sort: 'az' }, locale),
+    categoryLabels,
+    tagLabels,
+  )
+  const citiesFromData = listExploreCities(allBusinesses)
 
   const base =
     loadMarketingHtmlDocument('pricing') ?? loadMarketingHtmlDocument('features')
@@ -76,7 +78,7 @@ export async function GET(request: Request) {
 
   const rendered = renderExplorePageHtml(
     base,
-    businesses,
+    allBusinesses,
     citiesFromData,
     filters,
     labels,
