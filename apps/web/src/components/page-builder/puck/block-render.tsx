@@ -6,6 +6,7 @@ import type { BlockType, PageBlock, NavbarConfig, FooterConfig } from '../types'
 import type { HeroConfig } from '../types'
 import { defaultNavbarConfig, defaultFooterConfig } from '../types'
 import { getBlockSurfaceLayers } from '../block-section-style'
+import { SectionShellOverlay, SectionShellContent } from '../SectionShellOverlay'
 import { spacingFromSize } from '../spacing-presets'
 import type { PuckBlockProps } from './adapters'
 import { stripMetaFromProps } from './adapters'
@@ -69,7 +70,7 @@ export function PuckBlockShell({
   children: ReactNode
 }) {
   const block = propsToPageBlock(type, props, ctx.business.id)
-  const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
+  const { margin, shell, overlayOpacity } = getBlockSurfaceLayers(block)
   const hidden = props.visible === false
 
   return (
@@ -86,7 +87,10 @@ export function PuckBlockShell({
         data-block-id={block.id}
         style={shell as CSSProperties}
       >
-        {children}
+        <SectionShellOverlay opacity={overlayOpacity} />
+        <SectionShellContent overlayOpacity={overlayOpacity}>
+          {children}
+        </SectionShellContent>
       </div>
     </div>
   )

@@ -44,12 +44,40 @@ function spacingToInset(spacing: BlockSpacing): BlockContentInset {
   }
 }
 
+function contactSurface(config: ContactConfig): CSSProperties {
+  const mode = config.background ?? 'solid'
+  if (mode === 'gradient') {
+    return {
+      background: `linear-gradient(135deg, ${config.gradient_from ?? '#f8f8f8'} 0%, ${config.gradient_to ?? '#e8e8e8'} 100%)`,
+    }
+  }
+  if (mode === 'image' && config.background_image) {
+    return {
+      backgroundColor: config.background_color || '#f8f8f8',
+      backgroundImage: `url(${config.background_image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
+  }
+  return { backgroundColor: config.background_color ?? '#f8f8f8' }
+}
+
+/** Black dimmer opacity (0–100) for section shells that support image overlay. */
+export function getBlockSectionOverlayOpacity(block: PageBlock): number {
+  if (block.type !== 'contact') return 0
+  const config = block.config as ContactConfig
+  if ((config.background ?? 'solid') !== 'image' || !config.background_image) return 0
+  const raw = config.overlay_opacity ?? 0
+  if (!Number.isFinite(raw)) return 0
+  return Math.min(100, Math.max(0, raw))
+}
+
 export function getBlockSectionSurface(block: PageBlock): CSSProperties {
   const config = block.config
 
   switch (block.type) {
     case 'contact':
-      return { backgroundColor: (config as ContactConfig).background_color ?? '#f8f8f8' }
+      return contactSurface(config as ContactConfig)
     case 'menu_grid':
       return { backgroundColor: (config as MenuGridConfig).background_color || '#ffffff' }
     case 'qr_code': {
@@ -89,6 +117,8 @@ export function getBlockSectionSurface(block: PageBlock): CSSProperties {
 export function getBlockSurfaceLayers(block: PageBlock): {
   margin: CSSProperties
   shell: CSSProperties
+  /** 0–100 black overlay over shell background image (contact) */
+  overlayOpacity: number
   /** Hero only — padding applied inside render so visuals stay full-bleed */
   contentInset?: BlockContentInset
 } {
@@ -98,6 +128,7 @@ export function getBlockSurfaceLayers(block: PageBlock): {
     block.type === 'hero' ? { heroConfig: block.config as HeroConfig } : undefined,
   )
   const isHero = block.type === 'hero'
+  const overlayOpacity = getBlockSectionOverlayOpacity(block)
 
   return {
     margin: {
@@ -108,6 +139,7 @@ export function getBlockSurfaceLayers(block: PageBlock): {
       width: '100%',
       display: 'block',
       boxSizing: 'border-box',
+      ...(overlayOpacity > 0 ? { position: 'relative' as const } : {}),
       ...getBlockSectionSurface(block),
       ...(isHero
         ? {}
@@ -118,6 +150,7 @@ export function getBlockSurfaceLayers(block: PageBlock): {
             paddingLeft: spacing.padding_left,
           }),
     },
+    overlayOpacity,
     ...(isHero ? { contentInset: spacingToInset(spacing) } : {}),
   }
 }

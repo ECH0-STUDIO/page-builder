@@ -66,6 +66,7 @@ import { scopeCSS } from '@/lib/scope-css'
 import { buildThemeStyle, resolveThemeTokens } from './theme-tokens'
 import { normalizePageBlock, getInitialBlockSpacing, resolveBlockSpacing } from './spacing-utils'
 import { getBlockSurfaceLayers } from './block-section-style'
+import { SectionShellOverlay, SectionShellContent } from './SectionShellOverlay'
 
 import type {
   PageBlock, BlockType, HeroConfig, TextImageConfig, ContactConfig, MenuGridConfig, QRCodeConfig,
@@ -202,7 +203,7 @@ function LiveBlockCard({
 }) {
   const { t } = useTranslation()
   const meta = getBlockMeta(block.type)
-  const { margin, shell, contentInset } = getBlockSurfaceLayers(block)
+  const { margin, shell, contentInset, overlayOpacity } = getBlockSurfaceLayers(block)
 
   // Hidden blocks show as a compact placeholder strip (not rendered)
   if (!block.visible) {
@@ -268,41 +269,44 @@ function LiveBlockCard({
           userSelect: interactive ? 'auto' : 'none',
         }}
       >
-        {block.type === 'hero' && (
-          <HeroRender
-            config={block.config as HeroConfig}
-            businessName={business.name}
-            previewLayout={previewLayout}
-            brandColor={brandColor}
-            contentInset={contentInset}
-          />
-        )}
-        {block.type === 'text_image' && (
-          <TextImageRender
-            config={block.config as TextImageConfig}
-            previewLayout={previewLayout}
-            brandColor={brandColor}
-            defaultTextColor={defaultTextColor}
-          />
-        )}
-        {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
-        {block.type === 'menu_grid' && (
-          <MenuGridRender
-            config={block.config as MenuGridConfig}
-            data={menuGridData}
-            previewLayout={previewLayout}
-            brandColor={brandColor}
-            browseOnly
-          />
-        )}
-        {block.type === 'qr_code' && (
-          <QRCodeRender
-            config={block.config as QRCodeConfig}
-            targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
-            paymentSettings={business.payment_settings}
-            downloadLabel={t('qrCodeBlock.saveQrCode')}
-          />
-        )}
+        <SectionShellOverlay opacity={overlayOpacity} />
+        <SectionShellContent overlayOpacity={overlayOpacity}>
+          {block.type === 'hero' && (
+            <HeroRender
+              config={block.config as HeroConfig}
+              businessName={business.name}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              contentInset={contentInset}
+            />
+          )}
+          {block.type === 'text_image' && (
+            <TextImageRender
+              config={block.config as TextImageConfig}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              defaultTextColor={defaultTextColor}
+            />
+          )}
+          {block.type === 'contact' && <ContactRender config={block.config as ContactConfig} business={business} />}
+          {block.type === 'menu_grid' && (
+            <MenuGridRender
+              config={block.config as MenuGridConfig}
+              data={menuGridData}
+              previewLayout={previewLayout}
+              brandColor={brandColor}
+              browseOnly
+            />
+          )}
+          {block.type === 'qr_code' && (
+            <QRCodeRender
+              config={block.config as QRCodeConfig}
+              targetUrl={business.slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${business.slug}` : ''}
+              paymentSettings={business.payment_settings}
+              downloadLabel={t('qrCodeBlock.saveQrCode')}
+            />
+          )}
+        </SectionShellContent>
       </div>
     </div>
   )

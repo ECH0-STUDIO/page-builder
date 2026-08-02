@@ -238,6 +238,7 @@ export const defaultTextImageConfig: TextImageConfig = {
 
 export type MapHeight = 'small' | 'medium' | 'large'
 export type ContactLayout = 'vertical' | 'map_left'
+export type ContactBackground = 'solid' | 'gradient' | 'image'
 
 export interface ContactConfig {
   layout: ContactLayout
@@ -248,8 +249,18 @@ export interface ContactConfig {
   show_address: boolean
   show_hours: boolean
   socials_shown: string[]
-  /** section background colour */
+  /** Section background mode */
+  background?: ContactBackground
+  /** Solid background colour (also fallback under image) */
   background_color: string
+  /** Gradient start (background === 'gradient') */
+  gradient_from?: string
+  /** Gradient end (background === 'gradient') */
+  gradient_to?: string
+  /** Cover image URL (background === 'image') */
+  background_image?: string
+  /** Black overlay opacity 0–100 over background image */
+  overlay_opacity?: number
   /** labels/heading colour */
   text_color: string
 }
@@ -263,7 +274,12 @@ export const defaultContactConfig: ContactConfig = {
   show_address: true,
   show_hours: true,
   socials_shown: ['facebook', 'instagram', 'zalo'],
+  background: 'solid',
   background_color: '#f8f8f8',
+  gradient_from: '#f8f8f8',
+  gradient_to: '#e8e8e8',
+  background_image: '',
+  overlay_opacity: 40,
   text_color: '#111111',
 }
 
