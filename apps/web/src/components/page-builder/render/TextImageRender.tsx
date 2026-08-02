@@ -87,12 +87,16 @@ export function TextImageRender({
     ?? (isMobilePreview ? 'mobile' : undefined)
     ?? 'responsive'
   const radius   = RADIUS[config.border_radius ?? 'md']
-  const typography = getTypography(isForcedMobileLayout(layout))
+  const forceMobile = isForcedMobileLayout(layout)
+  const typography = getTypography(forceMobile)
 
   const isTextOnly = config.layout === 'text_only'
   const isStacked  = config.layout === 'stacked'
   const isImgOnly  = config.layout === 'img_only'
   const isReverse  = config.layout === 'img_right'
+  // Side-by-side layouts stack on forced mobile preview and on narrow viewports (CSS below)
+  const isSideBySide = !isStacked && !isTextOnly && !isImgOnly
+  const stackLayout = !isSideBySide || forceMobile
 
   const align =
     config.content_align === 'left' || config.content_align === 'right' || config.content_align === 'center'
@@ -107,17 +111,20 @@ export function TextImageRender({
   // (including img_only — previously hardcoded to 16/6 and ignored the dimension control)
   const aspect = resolveAspectRatio(config)
   const imageEl = config.image_url && !isTextOnly && (
-    <div style={{
-      flex: '0 0 auto',
-      width: isStacked || isImgOnly ? '100%' : 'min(45%, 480px)',
-      position: 'relative',
-      aspectRatio: aspect,
-      overflow: 'hidden',
-      borderRadius: radius,
-      background: '#f0f0f0',
-      flexShrink: 0,
-      alignSelf: isStacked || isImgOnly ? 'stretch' : undefined,
-    }}>
+    <div
+      className={isSideBySide ? 'ti-media' : undefined}
+      style={{
+        flex: '0 0 auto',
+        width: stackLayout ? '100%' : 'min(45%, 480px)',
+        position: 'relative',
+        aspectRatio: aspect,
+        overflow: 'hidden',
+        borderRadius: radius,
+        background: '#f0f0f0',
+        flexShrink: 0,
+        alignSelf: stackLayout ? 'stretch' : undefined,
+      }}
+    >
       <Image
         src={config.image_url}
         alt=""
@@ -125,23 +132,26 @@ export function TextImageRender({
         style={{
           objectFit: config.image_fit === 'contain' ? 'contain' : 'cover',
         }}
-        sizes={isImgOnly || isStacked ? '100vw' : '(max-width: 768px) 100vw, 50vw'}
+        sizes={stackLayout ? '100vw' : '(max-width: 768px) 100vw, 50vw'}
       />
     </div>
   )
 
   const textEl = !isImgOnly && (
-    <div style={{
-      flex: isTextOnly || isStacked ? '0 1 auto' : '1 1 280px',
-      minWidth: 0,
-      // Full width of section so text-align centers within the section, not a shrink-wrapped box
-      width: isTextOnly || isStacked ? '100%' : undefined,
-      maxWidth: isTextOnly ? '760px' : undefined,
-      textAlign: align,
-      alignSelf: isStacked || isTextOnly
-        ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
-        : undefined,
-    }}>
+    <div
+      className={isSideBySide ? 'ti-copy' : undefined}
+      style={{
+        flex: stackLayout ? '0 1 auto' : '1 1 280px',
+        minWidth: 0,
+        // Full width when stacked so text-align centers within the section
+        width: stackLayout ? '100%' : undefined,
+        maxWidth: isTextOnly ? '760px' : undefined,
+        textAlign: align,
+        alignSelf: stackLayout
+          ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
+          : undefined,
+      }}
+    >
       {heading && (
         <h2 style={{
           ...typography.h2,
@@ -174,10 +184,10 @@ export function TextImageRender({
 
   const innerStyle: React.CSSProperties = {
     display: 'flex',
-    flexDirection: isStacked || isTextOnly || isImgOnly ? 'column' : 'row',
-    flexWrap: isStacked || isTextOnly || isImgOnly ? 'nowrap' : 'wrap',
+    flexDirection: stackLayout ? 'column' : 'row',
+    flexWrap: stackLayout ? 'nowrap' : 'wrap',
     gap: isTextOnly || isImgOnly ? '0' : '40px',
-    alignItems: isTextOnly || isStacked || isImgOnly
+    alignItems: stackLayout
       ? (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'stretch')
       : 'center',
     justifyContent: isTextOnly || isImgOnly ? justify : 'flex-start',
@@ -188,7 +198,29 @@ export function TextImageRender({
 
   return (
     <section style={{ width: '100%' }}>
-      <div style={innerStyle}>
+      {/* Live responsive: stack side-by-side layouts and give copy full width on narrow screens */}
+      {isSideBySide && !forceMobile && (
+        <style>{`
+          @media (max-width: 767px) {
+            .ti-row-side {
+              flex-direction: column !important;
+              flex-wrap: nowrap !important;
+              align-items: stretch !important;
+            }
+            .ti-row-side > .ti-media,
+            .ti-row-side > .ti-copy {
+              width: 100% !important;
+              max-width: 100% !important;
+              flex: 0 1 auto !important;
+              align-self: stretch !important;
+            }
+          }
+        `}</style>
+      )}
+      <div
+        className={isSideBySide && !forceMobile ? 'ti-row-side' : undefined}
+        style={innerStyle}
+      >
         {isReverse ? <>{textEl}{imageEl}</> : <>{imageEl}{textEl}</>}
       </div>
     </section>

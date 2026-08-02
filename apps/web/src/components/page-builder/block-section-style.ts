@@ -67,7 +67,7 @@ export function getBlockSectionOverlayOpacity(block: PageBlock): number {
   if (block.type !== 'contact') return 0
   const config = block.config as ContactConfig
   if ((config.background ?? 'solid') !== 'image' || !config.background_image) return 0
-  const raw = config.overlay_opacity ?? 0
+  const raw = Number(config.overlay_opacity ?? 0)
   if (!Number.isFinite(raw)) return 0
   return Math.min(100, Math.max(0, raw))
 }

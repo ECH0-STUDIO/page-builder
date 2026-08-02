@@ -212,15 +212,18 @@ export function HeroRender({
   }
 
   // ── Centered (legacy) + Overlay ─────────────────────────────────────────────
-  // Black dimmer under content. 0% = no overlay; 100% = fully black.
-  const rawOpacity = Number.isFinite(config.overlay_opacity) ? config.overlay_opacity : 0
-  const overlayOpacity = Math.min(100, Math.max(0, rawOpacity)) / 100
+  // Pure black dimmer (never theme page background). 0% = clear; 100% = solid black.
+  // Use rgba() — not element opacity — so the theme background cannot tint the overlay.
+  const parsedOpacity = Number(config.overlay_opacity)
+  const overlayOpacity = Math.min(100, Math.max(0, Number.isFinite(parsedOpacity) ? parsedOpacity : 0)) / 100
 
   return (
     <section
       className="overflow-hidden"
       style={{
         position: 'relative',
+        // Solid black base so theme --page-bg never shows through the hero shell
+        backgroundColor: '#000000',
         ...heightBase,
         ...(config.image_url
           ? {}
@@ -243,8 +246,7 @@ export function HeroRender({
             position: 'absolute',
             inset: 0,
             zIndex: 1,
-            backgroundColor: '#000000',
-            opacity: overlayOpacity,
+            backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})`,
             pointerEvents: 'none',
           }}
         />

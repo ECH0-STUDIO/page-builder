@@ -8,6 +8,8 @@ import { defaultThemeSettings, type ThemeSettings } from '@/components/page-buil
 import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { ViewTracker } from '@/components/ViewTracker'
+import { AnalyticsScripts } from '@/components/AnalyticsScripts'
+import { resolveTrackingIds } from '@/lib/tracking-ids'
 import { getPublicStoreUrl } from '@/lib/site-urls'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
@@ -187,6 +189,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   )
 
   const pageUrl = `${getPublicStoreUrl(slug)}/order`
+  const tracking = resolveTrackingIds(pubSettings)
   const orderBgColor =
     (pubSettings as { order_background_color?: string | null } | null)?.order_background_color
     || '#ffffff'
@@ -222,6 +225,14 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
 
           <link rel="canonical" href={pageUrl} />
           {pubSettings?.favicon_url && <link rel="icon" href={pubSettings.favicon_url} />}
+          {tracking.gscVerification && (
+            <meta name="google-site-verification" content={tracking.gscVerification} />
+          )}
+          <AnalyticsScripts
+            google_analytics_id={pubSettings?.google_analytics_id}
+            facebook_pixel_id={pubSettings?.facebook_pixel_id}
+            tiktok_pixel_id={pubSettings?.tiktok_pixel_id}
+          />
           {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
           <style dangerouslySetInnerHTML={{ __html: `
             body { font-family: '${bodyFont}', sans-serif !important; }

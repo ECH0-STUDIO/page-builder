@@ -240,10 +240,10 @@ export function HeroSettings({
             </div>
             {(config.layout === 'overlay' || config.layout === 'centered') && (
               <div className="space-y-1.5">
-                <Label className="text-xs">{t('heroBlock.overlayOpacity')}: {config.overlay_opacity}%</Label>
+                <Label className="text-xs">{t('heroBlock.overlayOpacity')}: {Math.min(100, Math.max(0, Number(config.overlay_opacity) || 0))}%</Label>
                 <Slider
                   min={0} max={100} step={5}
-                  value={[Math.min(100, Math.max(0, config.overlay_opacity ?? 0))]}
+                  value={[Math.min(100, Math.max(0, Number(config.overlay_opacity) || 0))]}
                   onValueChange={([v]) => set('overlay_opacity', v)}
                   className="mt-2"
                 />
