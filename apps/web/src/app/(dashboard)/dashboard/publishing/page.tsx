@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
-import { billCustomDomainIfDueAction, billPageViewsIfDueAction } from '@/app/actions/credits'
+import { billCustomDomainIfDueAction, billPageViewsIfDueAction, refundPendingCustomDomainCharges } from '@/app/actions/credits'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
 import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
@@ -20,7 +20,9 @@ export default async function PublishingPage() {
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
 
-  // Opportunistic billing while owner is on Publishing (no cron needed)
+  // Opportunistic billing while owner is on Publishing (no cron needed).
+  // Refund first so false charges from pre-fix verifies are restored.
+  const refund = await refundPendingCustomDomainCharges(business.id)
   await Promise.all([
     billCustomDomainIfDueAction(business.id),
     billPageViewsIfDueAction(business.id),
@@ -33,6 +35,10 @@ export default async function PublishingPage() {
   ])
 
   const siteOrigin = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
+  const setupWithRefund = {
+    ...domainSetup,
+    refundedCredits: (domainSetup.refundedCredits ?? 0) + (refund.refunded ? refund.amount : 0),
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-5xl">
@@ -49,7 +55,7 @@ export default async function PublishingPage() {
         slug={slug ?? business.id}
         analytics={analytics}
         baseUrl={siteOrigin}
-        initialDomainSetup={domainSetup}
+        initialDomainSetup={setupWithRefund}
       />
     </div>
   )

@@ -191,6 +191,133 @@ export async function grantCreditsAction(
 }
 
 /**
+ * Refund custom-domain charges when DNS was never actually ready.
+ * Uses credit_transactions (not only billed_until) so reconnect/disconnect
+ * that cleared billing state still gets refunded.
+ */
+export async function refundUnconfiguredCustomDomainCredits(
+  businessId: string,
+  domain: string,
+): Promise<{ refunded: boolean; amount: number }> {
+  const adminClient = createAdminClient()
+  const normalized = domain.toLowerCase().trim()
+  if (!normalized) return { refunded: false, amount: 0 }
+
+  const { data: txs, error } = await (adminClient as any)
+    .from('credit_transactions')
+    .select('amount, description, created_at')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (error) {
+    console.error('refundUnconfiguredCustomDomainCredits query error:', error)
+    return { refunded: false, amount: 0 }
+  }
+
+  const chargeNeedle = `Tên miền tùy chỉnh (${normalized})`
+  let net = 0
+  for (const tx of txs ?? []) {
+    const desc = String(tx.description ?? '')
+    const amount = Number(tx.amount) || 0
+    if (amount < 0 && desc.includes(chargeNeedle)) {
+      net += amount
+      continue
+    }
+    if (
+      amount > 0 &&
+      desc.includes(normalized) &&
+      (desc.includes('Hoàn Credits tên miền') || desc.includes('Hoàn Credits'))
+    ) {
+      net += amount
+    }
+  }
+
+  // net < 0 means charges exceed refunds
+  if (net >= 0) return { refunded: false, amount: 0 }
+
+  const amount = Math.min(-net, CUSTOM_DOMAIN_CREDITS_PER_MONTH)
+  const grant = await grantCreditsAction(
+    businessId,
+    amount,
+    `Hoàn Credits tên miền chưa cấu hình DNS (${normalized})`,
+  )
+  if (!grant.success) {
+    console.error('refundUnconfiguredCustomDomainCredits grant failed:', grant.error)
+    return { refunded: false, amount: 0 }
+  }
+
+  await (adminClient as any)
+    .from('publishing_settings')
+    .update({ custom_domain_billed_until: null })
+    .eq('business_id', businessId)
+    .eq('custom_domain', normalized)
+
+  return { refunded: true, amount }
+}
+
+/**
+ * Refund any unreimbursed custom-domain charges for this business.
+ * Safe when the domain was disconnected after a false verification charge.
+ */
+export async function refundPendingCustomDomainCharges(
+  businessId: string,
+): Promise<{ refunded: boolean; amount: number; domains: string[] }> {
+  const adminClient = createAdminClient()
+  const { data: txs, error } = await (adminClient as any)
+    .from('credit_transactions')
+    .select('amount, description')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (error) {
+    console.error('refundPendingCustomDomainCharges query error:', error)
+    return { refunded: false, amount: 0, domains: [] }
+  }
+
+  const domains = new Set<string>()
+  for (const tx of txs ?? []) {
+    const desc = String(tx.description ?? '')
+    const amount = Number(tx.amount) || 0
+    if (amount >= 0) continue
+    const match = desc.match(/Tên miền tùy chỉnh \(([^)]+)\)/i)
+    if (match?.[1]) domains.add(match[1].toLowerCase().trim())
+  }
+
+  const { data: pub } = await (adminClient as any)
+    .from('publishing_settings')
+    .select('custom_domain, custom_domain_verified')
+    .eq('business_id', businessId)
+    .maybeSingle()
+
+  let total = 0
+  const refundedDomains: string[] = []
+
+  for (const domain of domains) {
+    const isActiveVerified =
+      pub?.custom_domain === domain && pub?.custom_domain_verified === true
+
+    if (isActiveVerified && isVercelDomainsConfigured()) {
+      try {
+        const assessment = await assessDomainConnection(domain)
+        if (assessment.ready) continue
+      } catch {
+        // Fall through to refund when DNS cannot be confirmed.
+      }
+    }
+
+    const result = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+    if (result.refunded) {
+      total += result.amount
+      refundedDomains.push(domain)
+    }
+  }
+
+  return { refunded: total > 0, amount: total, domains: refundedDomains }
+}
+
+/**
  * Bill custom domain hosting (50 credits / 30 days) while a verified domain is in use.
  * Idempotent until billed_until expires. No cron required — call from dashboard / verify.
  * On insufficient credits, suspends the domain (unverify) so it stops resolving.
@@ -205,40 +332,34 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
     .eq('business_id', businessId)
     .single()
 
-  if (!pub?.custom_domain || !pub.custom_domain_verified) {
+  if (!pub?.custom_domain) {
     return { success: true, billed: false }
   }
 
-  // Never bill (and unverify) if DNS no longer points at Vercel.
-  try {
-    if (isVercelDomainsConfigured()) {
+  // Never bill (and unverify) if DNS is not pointing at Vercel.
+  // Also refund unreimbursed charges even when already unverified.
+  if (isVercelDomainsConfigured()) {
+    try {
       const assessment = await assessDomainConnection(pub.custom_domain)
       if (!assessment.ready) {
-        const hadActiveBilling =
-          pub.custom_domain_billed_until &&
-          new Date(pub.custom_domain_billed_until) > new Date()
-
-        await (adminClient as any)
-          .from('publishing_settings')
-          .update({
-            custom_domain_verified: false,
-            ...(hadActiveBilling ? { custom_domain_billed_until: null } : {}),
-          })
-          .eq('business_id', businessId)
-
-        if (hadActiveBilling) {
-          await grantCreditsAction(
-            businessId,
-            CUSTOM_DOMAIN_CREDITS_PER_MONTH,
-            `Hoàn Credits tên miền chưa cấu hình DNS (${pub.custom_domain})`,
-          )
+        if (pub.custom_domain_verified) {
+          await (adminClient as any)
+            .from('publishing_settings')
+            .update({ custom_domain_verified: false, custom_domain_billed_until: null })
+            .eq('business_id', businessId)
         }
-
+        await refundUnconfiguredCustomDomainCredits(businessId, pub.custom_domain)
         return { success: true, billed: false, suspended: true }
       }
+    } catch (error) {
+      console.error('billCustomDomainIfDueAction DNS check error:', error)
+      // Do not charge when we cannot confirm DNS is ready.
+      return { success: true, billed: false }
     }
-  } catch (error) {
-    console.error('billCustomDomainIfDueAction DNS check error:', error)
+  }
+
+  if (!pub.custom_domain_verified) {
+    return { success: true, billed: false }
   }
 
   const billedUntil = pub.custom_domain_billed_until ? new Date(pub.custom_domain_billed_until) : null

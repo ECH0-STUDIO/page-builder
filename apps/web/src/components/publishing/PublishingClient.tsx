@@ -34,6 +34,7 @@ interface PublishingClientProps {
     domain: string | null
     verified: boolean
     dnsRecords: DnsRecord[]
+    refundedCredits?: number
   }
 }
 
@@ -124,6 +125,15 @@ export function PublishingClient({
   const [analytics, setAnalytics] = useState(initialAnalytics)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
   const { t } = useTranslation()
+
+  useEffect(() => {
+    const refunded = initialDomainSetup?.refundedCredits ?? 0
+    if (refunded > 0) {
+      toast.success(
+        t('publishing.domainCreditsRefunded').replace('{{n}}', String(refunded)),
+      )
+    }
+  }, [initialDomainSetup?.refundedCredits, t])
 
   // ── Slug state ──
   const [slug, setSlug] = useState(initialSlug)
