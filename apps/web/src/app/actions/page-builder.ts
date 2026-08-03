@@ -737,22 +737,25 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   }
 
   // Reconcile false positives + refund unreimbursed charges via transaction history.
+  // Do NOT call revalidatePath here — this runs during RSC page render.
   if (isVercelDomainsConfigured()) {
-    const assessment = await assessDomainConnection(domain)
-    if (!assessment.ready) {
-      if (verified) {
-        await (adminClient as any)
-          .from('publishing_settings')
-          .update({ custom_domain_verified: false, custom_domain_billed_until: null })
-          .eq('business_id', businessId)
-        verified = false
+    try {
+      const assessment = await assessDomainConnection(domain)
+      if (!assessment.ready) {
+        if (verified) {
+          await (adminClient as any)
+            .from('publishing_settings')
+            .update({ custom_domain_verified: false, custom_domain_billed_until: null })
+            .eq('business_id', businessId)
+          verified = false
+        }
+        const refund = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+        if (refund.refunded) {
+          refundedCredits = refund.amount
+        }
       }
-      const refund = await refundUnconfiguredCustomDomainCredits(businessId, domain)
-      if (refund.refunded) {
-        refundedCredits = refund.amount
-        revalidatePath('/dashboard/settings/credits')
-      }
-      revalidatePath('/dashboard/publishing')
+    } catch (error) {
+      console.error('getCustomDomainSetupAction DNS reconcile error:', error)
     }
   }
 

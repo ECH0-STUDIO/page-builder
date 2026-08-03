@@ -20,24 +20,37 @@ export default async function PublishingPage() {
   const { business } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
 
-  // Opportunistic billing while owner is on Publishing (no cron needed).
-  // Refund first so false charges from pre-fix verifies are restored.
-  const refund = await refundPendingCustomDomainCharges(business.id)
-  await Promise.all([
-    billCustomDomainIfDueAction(business.id),
-    billPageViewsIfDueAction(business.id),
-  ])
+  // Opportunistic billing / refund while owner is on Publishing (no cron needed).
+  // Must not throw — failures here previously crashed the whole page.
+  let refundedCredits = 0
+  try {
+    const refund = await refundPendingCustomDomainCharges(business.id)
+    if (refund.refunded) refundedCredits += refund.amount
+  } catch (error) {
+    console.error('Publishing page refund error:', error)
+  }
+  try {
+    await Promise.all([
+      billCustomDomainIfDueAction(business.id),
+      billPageViewsIfDueAction(business.id),
+    ])
+  } catch (error) {
+    console.error('Publishing page billing error:', error)
+  }
 
   const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
     getPublishingAction(business.id),
     getPageViewsAction(business.id, 7),
-    getCustomDomainSetupAction(business.id),
+    getCustomDomainSetupAction(business.id).catch((error) => {
+      console.error('Publishing page domain setup error:', error)
+      return { domain: null, verified: false, dnsRecords: [], refundedCredits: 0 }
+    }),
   ])
 
   const siteOrigin = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
   const setupWithRefund = {
     ...domainSetup,
-    refundedCredits: (domainSetup.refundedCredits ?? 0) + (refund.refunded ? refund.amount : 0),
+    refundedCredits: (domainSetup.refundedCredits ?? 0) + refundedCredits,
   }
 
   return (

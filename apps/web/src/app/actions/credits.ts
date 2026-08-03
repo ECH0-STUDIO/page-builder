@@ -138,7 +138,11 @@ export async function deductCreditsAction(
       description,
     })
 
-    revalidatePath('/dashboard/settings/credits')
+    try {
+      revalidatePath('/dashboard/settings/credits')
+    } catch {
+      // Safe to ignore when called during RSC render (e.g. Publishing page billing).
+    }
     return { success: true }
   } catch (error) {
     console.error('deductCreditsAction error:', error)
@@ -182,7 +186,11 @@ export async function grantCreditsAction(
       description,
     })
 
-    revalidatePath('/dashboard/settings/credits')
+    try {
+      revalidatePath('/dashboard/settings/credits')
+    } catch {
+      // Safe to ignore when called during RSC render (e.g. Publishing page refund).
+    }
     return { success: true }
   } catch (error) {
     console.error('grantCreditsAction error:', error)
