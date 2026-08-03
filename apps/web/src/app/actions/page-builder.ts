@@ -13,8 +13,7 @@ import {
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
-import { billCustomDomainIfDueAction, grantCreditsAction } from '@/app/actions/credits'
-import { CUSTOM_DOMAIN_CREDITS_PER_MONTH } from '@/lib/credit-packs'
+import { billCustomDomainIfDueAction, refundUnconfiguredCustomDomainCredits } from '@/app/actions/credits'
 import {
   addDomainToProject,
   getProjectDomain,
@@ -719,6 +718,7 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   domain: string | null
   verified: boolean
   dnsRecords: DnsRecord[]
+  refundedCredits?: number
 }> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -730,49 +730,40 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
 
   const domain = pub?.custom_domain ?? null
   let verified = pub?.custom_domain_verified === true
+  let refundedCredits = 0
 
   if (!domain) {
     return { domain: null, verified: false, dnsRecords: [] }
   }
 
-  // Reconcile false positives: ownership verified ≠ DNS pointing at Vercel.
-  if (verified && isVercelDomainsConfigured()) {
+  // Reconcile false positives + refund unreimbursed charges via transaction history.
+  if (isVercelDomainsConfigured()) {
     const assessment = await assessDomainConnection(domain)
     if (!assessment.ready) {
-      const hadActiveBilling =
-        pub?.custom_domain_billed_until &&
-        new Date(pub.custom_domain_billed_until) > new Date()
-
-      await (adminClient as any)
-        .from('publishing_settings')
-        .update({
-          custom_domain_verified: false,
-          ...(hadActiveBilling ? { custom_domain_billed_until: null } : {}),
-        })
-        .eq('business_id', businessId)
-
-      if (hadActiveBilling) {
-        await grantCreditsAction(
-          businessId,
-          CUSTOM_DOMAIN_CREDITS_PER_MONTH,
-          `Hoàn Credits tên miền chưa cấu hình DNS (${domain})`,
-        )
+      if (verified) {
+        await (adminClient as any)
+          .from('publishing_settings')
+          .update({ custom_domain_verified: false, custom_domain_billed_until: null })
+          .eq('business_id', businessId)
+        verified = false
       }
-
-      verified = false
+      const refund = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+      if (refund.refunded) {
+        refundedCredits = refund.amount
+        revalidatePath('/dashboard/settings/credits')
+      }
       revalidatePath('/dashboard/publishing')
-      revalidatePath('/dashboard/settings/credits')
     }
   }
 
   if (verified) {
-    return { domain, verified: true, dnsRecords: [] }
+    return { domain, verified: true, dnsRecords: [], refundedCredits }
   }
 
   const vercel = await getProjectDomain(domain)
   const dnsRecords = buildDnsRecords(domain, vercel.verification ?? undefined)
 
-  return { domain, verified: false, dnsRecords }
+  return { domain, verified: false, dnsRecords, refundedCredits }
 }
 
 export async function connectCustomDomainAction(
@@ -794,12 +785,16 @@ export async function connectCustomDomainAction(
 
   const { data: existing } = await (supabase as any)
     .from('publishing_settings')
-    .select('custom_domain')
+    .select('custom_domain, custom_domain_billed_until')
     .eq('business_id', businessId)
     .single()
 
   if (existing?.custom_domain && existing.custom_domain !== normalized) {
+    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
+  } else if (existing?.custom_domain === normalized) {
+    // Re-saving same domain must not wipe an unpaid charge without refunding.
+    await refundUnconfiguredCustomDomainCredits(businessId, normalized)
   }
 
   const vercel = await addDomainToProject(normalized)
@@ -839,6 +834,7 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
     .single()
 
   if (existing?.custom_domain) {
+    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   }
 

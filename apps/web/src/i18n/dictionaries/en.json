@@ -156,6 +156,7 @@
     "dnsVerified": "DNS is correctly configured and connected!",
     "dnsTarget": "cname.vercel-dns.com",
     "domainConnected": "Custom domain connected",
+    "domainCreditsRefunded": "Refunded {{n}} credits for a domain that was not DNS-ready.",
     "cancelDomain": "Remove domain",
     "verifyConnection": "Verify connection",
     "billingNotePrefix": "Billing Note:",

@@ -156,6 +156,7 @@
     "dnsVerified": "DNS đã được cấu hình và kết nối thành công!",
     "dnsTarget": "cname.vercel-dns.com",
     "domainConnected": "Tên miền đã kết nối",
+    "domainCreditsRefunded": "Đã hoàn {{n}} Credits vì tên miền chưa cấu hình DNS đúng.",
     "cancelDomain": "Gỡ tên miền",
     "verifyConnection": "Xác minh kết nối",
     "billingNotePrefix": "Lưu ý thanh toán:",
