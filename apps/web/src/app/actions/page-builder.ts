@@ -13,15 +13,15 @@ import {
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
-import { billCustomDomainIfDueAction } from '@/app/actions/credits'
+import { billCustomDomainIfDueAction, grantCreditsAction } from '@/app/actions/credits'
+import { CUSTOM_DOMAIN_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import {
   addDomainToProject,
-  verifyProjectDomain,
   getProjectDomain,
-  getDomainConfig,
   removeDomainFromProject,
   buildDnsRecords,
   isVercelDomainsConfigured,
+  assessDomainConnection,
   type DnsRecord,
 } from '@/lib/vercel-domains'
 import {
@@ -721,17 +721,48 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   dnsRecords: DnsRecord[]
 }> {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: pub } = await (supabase as any)
     .from('publishing_settings')
-    .select('custom_domain, custom_domain_verified')
+    .select('custom_domain, custom_domain_verified, custom_domain_billed_until')
     .eq('business_id', businessId)
     .single()
 
   const domain = pub?.custom_domain ?? null
-  const verified = pub?.custom_domain_verified === true
+  let verified = pub?.custom_domain_verified === true
 
   if (!domain) {
     return { domain: null, verified: false, dnsRecords: [] }
+  }
+
+  // Reconcile false positives: ownership verified ≠ DNS pointing at Vercel.
+  if (verified && isVercelDomainsConfigured()) {
+    const assessment = await assessDomainConnection(domain)
+    if (!assessment.ready) {
+      const hadActiveBilling =
+        pub?.custom_domain_billed_until &&
+        new Date(pub.custom_domain_billed_until) > new Date()
+
+      await (adminClient as any)
+        .from('publishing_settings')
+        .update({
+          custom_domain_verified: false,
+          ...(hadActiveBilling ? { custom_domain_billed_until: null } : {}),
+        })
+        .eq('business_id', businessId)
+
+      if (hadActiveBilling) {
+        await grantCreditsAction(
+          businessId,
+          CUSTOM_DOMAIN_CREDITS_PER_MONTH,
+          `Hoàn Credits tên miền chưa cấu hình DNS (${domain})`,
+        )
+      }
+
+      verified = false
+      revalidatePath('/dashboard/publishing')
+      revalidatePath('/dashboard/settings/credits')
+    }
   }
 
   if (verified) {
@@ -739,7 +770,7 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   }
 
   const vercel = await getProjectDomain(domain)
-  const dnsRecords = buildDnsRecords(domain, vercel.verification)
+  const dnsRecords = buildDnsRecords(domain, vercel.verification ?? undefined)
 
   return { domain, verified: false, dnsRecords }
 }
@@ -840,24 +871,33 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
   }
 
   try {
-    const verifyResult = await verifyProjectDomain(domain)
-    const configResult = await getDomainConfig(domain)
-    const projectDomain = await getProjectDomain(domain)
+    const assessment = await assessDomainConnection(domain)
 
-    const isVerified =
-      verifyResult.verified === true ||
-      projectDomain.verified === true ||
-      (verifyResult.ok && configResult.ok && configResult.misconfigured === false)
-
-    if (!isVerified && !verifyResult.ok) {
+    if (!assessment.ok) {
       return {
         success: false,
-        error: verifyResult.error || 'DNS chưa được cấu hình đúng. Kiểm tra bản ghi và thử lại sau vài phút.',
+        error: assessment.error || 'Không kiểm tra được DNS. Vui lòng thử lại sau vài phút.',
       }
     }
 
-    if (!isVerified) {
-      return { success: false, error: 'DNS chưa lan truyền. Vui lòng đợi vài phút rồi thử lại.' }
+    if (!assessment.ownershipVerified) {
+      return {
+        success: false,
+        error:
+          'Chưa xác minh quyền sở hữu tên miền. Thêm bản ghi TXT theo hướng dẫn rồi thử lại.',
+      }
+    }
+
+    if (!assessment.dnsConfigured) {
+      return {
+        success: false,
+        error:
+          'DNS chưa trỏ về Vercel. Thêm bản ghi A (76.76.21.21) cho tên miền gốc hoặc CNAME (cname.vercel-dns.com) cho subdomain, đợi DNS lan truyền rồi thử lại.',
+      }
+    }
+
+    if (!assessment.ready) {
+      return { success: false, error: 'DNS chưa sẵn sàng. Vui lòng đợi vài phút rồi thử lại.' }
     }
 
     const adminClient = createAdminClient()
