@@ -152,7 +152,12 @@ export async function getProjectDomain(domain: string): Promise<VercelDomainResu
   }
 }
 
-export async function getDomainConfig(domain: string): Promise<{ ok: boolean; misconfigured?: boolean; error?: string }> {
+export async function getDomainConfig(domain: string): Promise<{
+  ok: boolean
+  misconfigured?: boolean
+  configuredBy?: string | null
+  error?: string
+}> {
   const config = getConfig()
   if (!config) {
     return { ok: false, error: 'VERCEL_NOT_CONFIGURED' }
@@ -163,12 +168,61 @@ export async function getDomainConfig(domain: string): Promise<{ ok: boolean; mi
     const body = await res.json().catch(() => ({}))
 
     if (res.ok) {
-      return { ok: true, misconfigured: body.misconfigured === true }
+      return {
+        ok: true,
+        misconfigured: body.misconfigured === true,
+        configuredBy: body.configuredBy ?? null,
+      }
     }
 
     return { ok: false, error: body.error?.message || 'Config check failed' }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Config request failed' }
+  }
+}
+
+/**
+ * Ownership (`verified`) ≠ DNS ready. Vercel often returns verified=true as soon as
+ * a domain is added (no TXT challenge). Real connectivity requires DNS pointing at
+ * Vercel (`misconfigured === false` from /v6/domains/{domain}/config).
+ */
+export async function assessDomainConnection(domain: string): Promise<{
+  ok: boolean
+  ownershipVerified: boolean
+  dnsConfigured: boolean
+  ready: boolean
+  verification?: Array<{ type: string; domain: string; value: string }>
+  error?: string
+}> {
+  const [verifyResult, configResult, projectDomain] = await Promise.all([
+    verifyProjectDomain(domain),
+    getDomainConfig(domain),
+    getProjectDomain(domain),
+  ])
+
+  const ownershipVerified =
+    verifyResult.verified === true || projectDomain.verified === true
+
+  if (!configResult.ok) {
+    return {
+      ok: false,
+      ownershipVerified,
+      dnsConfigured: false,
+      ready: false,
+      verification: projectDomain.verification,
+      error: configResult.error || 'Không kiểm tra được cấu hình DNS.',
+    }
+  }
+
+  const dnsConfigured = configResult.misconfigured === false
+  const ready = ownershipVerified && dnsConfigured
+
+  return {
+    ok: true,
+    ownershipVerified,
+    dnsConfigured,
+    ready,
+    verification: projectDomain.verification,
   }
 }
 

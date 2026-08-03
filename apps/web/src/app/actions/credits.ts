@@ -9,6 +9,7 @@ import {
   STORAGE_CREDITS_PER_20MB,
   findCreditPack,
 } from '@/lib/credit-packs'
+import { assessDomainConnection, isVercelDomainsConfigured } from '@/lib/vercel-domains'
 
 export async function getCreditBalanceAction(businessId: string) {
   try {
@@ -145,10 +146,55 @@ export async function deductCreditsAction(
   }
 }
 
+/** Credit a business balance (refunds / adjustments). */
+export async function grantCreditsAction(
+  businessId: string,
+  amount: number,
+  description: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0) return { success: true }
+
+  try {
+    const adminClient = createAdminClient()
+
+    const { data: currentBalance } = await (adminClient as any)
+      .from('credit_balances')
+      .select('balance')
+      .eq('business_id', businessId)
+      .maybeSingle()
+
+    const balance = (currentBalance?.balance as number | undefined) ?? 0
+
+    if (currentBalance) {
+      await (adminClient as any)
+        .from('credit_balances')
+        .update({ balance: balance + amount })
+        .eq('business_id', businessId)
+    } else {
+      await (adminClient as any)
+        .from('credit_balances')
+        .insert({ business_id: businessId, balance: amount })
+    }
+
+    await (adminClient as any).from('credit_transactions').insert({
+      business_id: businessId,
+      amount,
+      description,
+    })
+
+    revalidatePath('/dashboard/settings/credits')
+    return { success: true }
+  } catch (error) {
+    console.error('grantCreditsAction error:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to grant credits' }
+  }
+}
+
 /**
  * Bill custom domain hosting (50 credits / 30 days) while a verified domain is in use.
  * Idempotent until billed_until expires. No cron required — call from dashboard / verify.
  * On insufficient credits, suspends the domain (unverify) so it stops resolving.
+ * Re-checks Vercel DNS before charging so ownership-only "verified" domains are not billed.
  */
 export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean; suspended?: boolean }> {
   const adminClient = createAdminClient()
@@ -161,6 +207,38 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
 
   if (!pub?.custom_domain || !pub.custom_domain_verified) {
     return { success: true, billed: false }
+  }
+
+  // Never bill (and unverify) if DNS no longer points at Vercel.
+  try {
+    if (isVercelDomainsConfigured()) {
+      const assessment = await assessDomainConnection(pub.custom_domain)
+      if (!assessment.ready) {
+        const hadActiveBilling =
+          pub.custom_domain_billed_until &&
+          new Date(pub.custom_domain_billed_until) > new Date()
+
+        await (adminClient as any)
+          .from('publishing_settings')
+          .update({
+            custom_domain_verified: false,
+            ...(hadActiveBilling ? { custom_domain_billed_until: null } : {}),
+          })
+          .eq('business_id', businessId)
+
+        if (hadActiveBilling) {
+          await grantCreditsAction(
+            businessId,
+            CUSTOM_DOMAIN_CREDITS_PER_MONTH,
+            `Hoàn Credits tên miền chưa cấu hình DNS (${pub.custom_domain})`,
+          )
+        }
+
+        return { success: true, billed: false, suspended: true }
+      }
+    }
+  } catch (error) {
+    console.error('billCustomDomainIfDueAction DNS check error:', error)
   }
 
   const billedUntil = pub.custom_domain_billed_until ? new Date(pub.custom_domain_billed_until) : null
