@@ -92,6 +92,7 @@ export function PuckEditorShell({
   )
   const [publishing, setPublishing] = useState(false)
   const [theme, setTheme] = useState<ThemeSettings | null>(initialTheme)
+  const [themeRevision, setThemeRevision] = useState(0)
   const [publishingSettings, setPublishingSettings] = useState<PublishingSettings | null>(
     initialPublishing,
   )
@@ -319,7 +320,11 @@ export function PuckEditorShell({
     () => ({
       header: ({ actions }) => (
         <>
-          <PuckPreviewSync previewMode={previewMode} viewMode={viewMode} />
+          <PuckPreviewSync
+            previewMode={previewMode}
+            viewMode={viewMode}
+            themeRevision={themeRevision}
+          />
           <PuckDragRecovery />
           <PuckCustomHeader
             builderMode={builderMode}
@@ -333,7 +338,17 @@ export function PuckEditorShell({
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, viewMode, builderMode],
+    [chromeProps, previewMode, viewMode, builderMode, themeRevision],
+  )
+
+  const puckIframe = useMemo(() => ({ enabled: false as const }), [])
+  const puckUi = useMemo(
+    () => ({
+      leftSideBarVisible: previewMode ? false : leftSideBarVisible,
+      rightSideBarVisible: previewMode ? false : rightSideBarVisible,
+      previewMode: previewMode ? ('interactive' as const) : ('edit' as const),
+    }),
+    [previewMode, leftSideBarVisible, rightSideBarVisible],
   )
 
   useEffect(() => {
@@ -382,6 +397,8 @@ export function PuckEditorShell({
         }, 1000)
         return next
       })
+      // Force Puck canvas to re-read theme refs (brand color, fonts, etc.)
+      setThemeRevision(r => r + 1)
     },
     [business.id, t],
   )
@@ -425,12 +442,8 @@ export function PuckEditorShell({
               onChange={handlePuckChange}
               plugins={puckPlugins}
               overrides={puckOverrides}
-              iframe={{ enabled: false }}
-              ui={{
-                leftSideBarVisible: previewMode ? false : leftSideBarVisible,
-                rightSideBarVisible: previewMode ? false : rightSideBarVisible,
-                previewMode: previewMode ? 'interactive' : 'edit',
-              }}
+              iframe={puckIframe}
+              ui={puckUi}
             />
           </PreviewLayoutProvider>
         </PuckSettingsContext.Provider>
