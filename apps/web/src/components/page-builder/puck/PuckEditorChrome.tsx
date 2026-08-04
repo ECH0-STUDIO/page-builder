@@ -44,13 +44,16 @@ import type { PreviewLayout } from '../render/preview-layout'
  * Keep Puck's internal UI in sync with shell state.
  * `ui` on <Puck> is initial-only — without this, viewport/preview toggles update
  * the header but the canvas keeps stale layout until something else re-renders it.
+ * `themeRevision` forces root + blocks to re-read editorRefs when brand colors change.
  */
 export function PuckPreviewSync({
   previewMode,
   viewMode = 'desktop',
+  themeRevision = 0,
 }: {
   previewMode: boolean
   viewMode?: 'desktop' | 'mobile'
+  themeRevision?: number
 }) {
   const { dispatch } = usePuck()
 
@@ -61,7 +64,7 @@ export function PuckPreviewSync({
         previewMode: previewMode ? 'interactive' : 'edit',
         leftSideBarVisible: !previewMode,
         rightSideBarVisible: !previewMode,
-        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop switch
+        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop/theme switch
         viewports: {
           controlsVisible: false,
           options: [],
@@ -73,7 +76,7 @@ export function PuckPreviewSync({
       },
       recordHistory: false,
     })
-  }, [previewMode, viewMode, dispatch])
+  }, [previewMode, viewMode, themeRevision, dispatch])
 
   return null
 }
