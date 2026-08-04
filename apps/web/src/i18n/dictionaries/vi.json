@@ -156,6 +156,7 @@
     "dnsVerified": "DNS đã được cấu hình và kết nối thành công!",
     "dnsTarget": "cname.vercel-dns.com",
     "domainConnected": "Tên miền đã kết nối",
+    "domainConnectedDnsNote": "DNS có thể mất vài phút (đôi khi đến 24 giờ) để cập nhật đầy đủ. Nếu trang chưa mở được, hãy đợi rồi thử lại.",
     "domainCreditsRefunded": "Đã hoàn {{n}} Credits vì tên miền chưa cấu hình DNS đúng.",
     "cancelDomain": "Gỡ tên miền",
     "verifyConnection": "Xác minh kết nối",
@@ -171,7 +172,7 @@
     "pageLanguage": "Ngôn ngữ trang",
     "langHint": "Đặt thuộc tính lang HTML và hreflang cho SEO.",
     "favicon": "Favicon",
-    "faviconHint": "PNG hoặc ICO 32×32px — hiển thị trên tab trình duyệt.",
+    "faviconHint": "PNG hoặc ICO 48×48px — hiển thị trên tab trình duyệt.",
     "webclip": "Webclip (Apple Touch Icon)",
     "webclipHint": "PNG 180×180px — hiển thị khi khách thêm trang vào màn hình chính iPhone.",
     "gsc": "Xác minh Google Search Console",
@@ -192,7 +193,7 @@
     "toastUrlFailed": "Cập nhật URL thất bại",
     "toastDomainUpdated": "Đã cập nhật tên miền thành công",
     "toastDomainFailed": "Lưu tên miền thất bại",
-    "faviconMustBeSquare": "Favicon phải có kích thước chính xác 32x32 pixel",
+    "faviconMustBeSquare": "Favicon phải có kích thước chính xác 48x48 pixel",
     "webclipMustBeSquare": "Webclip phải có kích thước chính xác 180x180 pixel"
   },
   "qr": {

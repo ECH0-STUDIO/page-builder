@@ -9,8 +9,7 @@ import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/theme-tokens'
 import { ViewTracker } from '@/components/ViewTracker'
 import { AnalyticsScripts } from '@/components/AnalyticsScripts'
-import { resolveTrackingIds } from '@/lib/tracking-ids'
-import { getPublicStoreUrl } from '@/lib/site-urls'
+import { buildStoreMetadata } from '@/lib/store-metadata'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
@@ -43,20 +42,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const { data: pub } = await db
     .from('publishing_settings')
-    .select('seo_title, favicon_url, apple_touch_icon_url')
+    .select(
+      'seo_title, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
+    )
     .eq('business_id', business.id)
     .single()
 
-  const title = `${business.name} — Order`
-
-  return {
-    title,
+  return buildStoreMetadata({
+    slug,
+    businessName: business.name,
+    pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
+    title: `${business.name} — Order`,
     description: `Order from ${business.name}`,
-    icons: {
-      icon: pub?.favicon_url ? [{ url: pub.favicon_url, sizes: '48x48', type: 'image/png' }] : undefined,
-      apple: pub?.apple_touch_icon_url ? [{ url: pub.apple_touch_icon_url, sizes: '256x256', type: 'image/png' }] : undefined,
-    },
-  }
+    pathSuffix: '/order',
+  })
 }
 
 export default async function OrderPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -188,8 +187,6 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     pubSettings?.language ?? null,
   )
 
-  const pageUrl = `${getPublicStoreUrl(slug)}/order`
-  const tracking = resolveTrackingIds(pubSettings)
   const orderBgColor =
     (pubSettings as { order_background_color?: string | null } | null)?.order_background_color
     || '#ffffff'
@@ -223,11 +220,6 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
         >
           <ViewTracker slug={slug} />
 
-          <link rel="canonical" href={pageUrl} />
-          {pubSettings?.favicon_url && <link rel="icon" href={pubSettings.favicon_url} />}
-          {tracking.gscVerification && (
-            <meta name="google-site-verification" content={tracking.gscVerification} />
-          )}
           <AnalyticsScripts
             google_analytics_id={pubSettings?.google_analytics_id}
             facebook_pixel_id={pubSettings?.facebook_pixel_id}

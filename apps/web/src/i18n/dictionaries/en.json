@@ -156,6 +156,7 @@
     "dnsVerified": "DNS is correctly configured and connected!",
     "dnsTarget": "cname.vercel-dns.com",
     "domainConnected": "Custom domain connected",
+    "domainConnectedDnsNote": "DNS can take a few minutes (sometimes up to 24 hours) to fully propagate. If the site does not load yet, wait and try again.",
     "domainCreditsRefunded": "Refunded {{n}} credits for a domain that was not DNS-ready.",
     "cancelDomain": "Remove domain",
     "verifyConnection": "Verify connection",
@@ -171,7 +172,7 @@
     "pageLanguage": "Page Language",
     "langHint": "Sets the HTML lang attribute and hreflang for SEO.",
     "favicon": "Favicon",
-    "faviconHint": "32×32px PNG or ICO — shown in browser tabs.",
+    "faviconHint": "48×48px PNG or ICO — shown in browser tabs.",
     "webclip": "Webclip (Apple Touch Icon)",
     "webclipHint": "180×180px PNG — shown when customers add your page to their iPhone home screen.",
     "gsc": "Google Search Console Verification",
@@ -192,7 +193,7 @@
     "toastUrlFailed": "Failed to update URL",
     "toastDomainUpdated": "Custom domain updated",
     "toastDomainFailed": "Failed to save domain",
-    "faviconMustBeSquare": "Favicon must be exactly 32x32 pixels",
+    "faviconMustBeSquare": "Favicon must be exactly 48x48 pixels",
     "webclipMustBeSquare": "Webclip must be exactly 180x180 pixels"
   },
   "qr": {

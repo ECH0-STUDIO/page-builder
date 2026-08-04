@@ -52,7 +52,39 @@ export async function proxy(request: NextRequest) {
   const langParam = request.nextUrl.searchParams.get(MARKETING_LANG_PARAM)
   const host = request.headers.get('host')?.split(':')[0]?.toLowerCase()
 
-  if (isMarketingRoute(pathname)) {
+  const marketingHost = getMarketingHostname()
+  const appHost = getAppHostname()
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1'
+  const splitDomains = isSplitDomainDeployment() && !isLocalHost
+
+  const isMarketingHost = splitDomains && isMarketingHostname(host, marketingHost)
+  const isAppHost = splitDomains && isAppHostname(host, appHost)
+
+  const isPlatformHost =
+    isLocalHost ||
+    isAppHostname(host, appHost) ||
+    isMarketingHostname(host, marketingHost) ||
+    (host?.endsWith('.vercel.app') ?? false)
+
+  // ── Custom domain routing (before marketing ?lang= logic) ──
+  // Published storefronts must never get ?lang=en — single language per business.
+  if (host && !isPlatformHost && !pathname.startsWith('/api')) {
+    const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
+    if (slug) {
+      if (request.nextUrl.searchParams.has(MARKETING_LANG_PARAM)) {
+        const cleanUrl = request.nextUrl.clone()
+        cleanUrl.searchParams.delete(MARKETING_LANG_PARAM)
+        return NextResponse.redirect(cleanUrl)
+      }
+      const rewriteUrl = request.nextUrl.clone()
+      const suffix = pathname === '/' ? '' : pathname
+      rewriteUrl.pathname = `/${slug}${suffix}`
+      return NextResponse.rewrite(rewriteUrl)
+    }
+  }
+
+  // Marketing locale URLs (?lang=en) only on platform marketing routes — not storefronts.
+  if (isMarketingRoute(pathname) && isPlatformHost) {
     if (langParam === 'en') {
       supabaseResponse.cookies.set('NEXT_LOCALE', 'en', cookieOptions)
       supabaseResponse.cookies.set('NEXT_CURRENCY', currencyForLocale('en'), cookieOptions)
@@ -103,20 +135,6 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const marketingHost = getMarketingHostname()
-  const appHost = getAppHostname()
-  const isLocalHost = host === 'localhost' || host === '127.0.0.1'
-  const splitDomains = isSplitDomainDeployment() && !isLocalHost
-
-  const isMarketingHost = splitDomains && isMarketingHostname(host, marketingHost)
-  const isAppHost = splitDomains && isAppHostname(host, appHost)
-
-  const isPlatformHost =
-    isLocalHost ||
-    isAppHostname(host, appHost) ||
-    isMarketingHostname(host, marketingHost) ||
-    (host?.endsWith('.vercel.app') ?? false)
-
   // Supabase may redirect with ?code= on Site URL root
   const authCode = request.nextUrl.searchParams.get('code')
   if (authCode && !pathname.startsWith('/api/auth/callback')) {
@@ -145,18 +163,6 @@ export async function proxy(request: NextRequest) {
     }
     if (isMarketingPath(pathname) && pathname !== '/') {
       return NextResponse.redirect(marketingPath(pathname + search))
-    }
-  }
-
-  // ── Custom domain routing ──
-  // Preserve subpaths (e.g. /order, /order?table=3) when rewriting to /{slug}/…
-  if (host && !isPlatformHost && !pathname.startsWith('/api')) {
-    const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
-    if (slug) {
-      const rewriteUrl = request.nextUrl.clone()
-      const suffix = pathname === '/' ? '' : pathname
-      rewriteUrl.pathname = `/${slug}${suffix}`
-      return NextResponse.rewrite(rewriteUrl)
     }
   }
 

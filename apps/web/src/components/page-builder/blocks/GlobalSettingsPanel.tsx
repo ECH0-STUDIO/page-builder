@@ -47,9 +47,9 @@ export function GlobalSettingsPanel({
   async function handleUploadFavicon(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const isValid = await validateImageDimensions(file, { exactWidth: 32, exactHeight: 32 })
+    const isValid = await validateImageDimensions(file, { exactWidth: 48, exactHeight: 48 })
     if (!isValid) {
-      toast.error('Favicon image must be exactly 32x32 pixels')
+      toast.error(t('publishing.faviconMustBeSquare'))
       if (faviconRef.current) faviconRef.current.value = ''
       return
     }
@@ -185,9 +185,9 @@ export function GlobalSettingsPanel({
                     </div>
                   )}
                   <ImageUploader businessId={p.business_id} onImageSelect={async (url) => {
-                    const isValid = await validateImageDimensions(url, { exactWidth: 32, exactHeight: 32 })
+                    const isValid = await validateImageDimensions(url, { exactWidth: 48, exactHeight: 48 })
                     if (!isValid) {
-                      toast.error('Favicon image must be exactly 32x32 pixels')
+                      toast.error(t('publishing.faviconMustBeSquare'))
                       return
                     }
                     onPublishingChange({ favicon_url: url })
