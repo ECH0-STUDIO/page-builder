@@ -493,17 +493,27 @@ export function PublishingClient({
           {customDomain && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 space-y-3">
               {domainVerified ? (
-                <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-                  <CheckCircle2 className="size-4 shrink-0" />
-                  <span className="text-sm font-medium">{t('publishing.domainConnected')}</span>
-                  <a
-                    href={`https://${customDomain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto text-xs underline"
-                  >
-                    https://{customDomain}
-                  </a>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                    <CheckCircle2 className="size-4 shrink-0" />
+                    <span className="text-sm font-medium">{t('publishing.domainConnected')}</span>
+                    <a
+                      href={`https://${customDomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-xs underline"
+                    >
+                      https://{customDomain}
+                    </a>
+                  </div>
+                  <p className="text-xs text-blue-700/80 italic px-1">
+                    {t('publishing.domainConnectedDnsNote')}
+                  </p>
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                      {t('publishing.cancelDomain')}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>

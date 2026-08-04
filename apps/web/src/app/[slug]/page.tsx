@@ -20,11 +20,11 @@ import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/t
 import { scopeCSS } from '@/lib/scope-css'
 import { ViewTracker } from '@/components/ViewTracker'
 import { AnalyticsScripts } from '@/components/AnalyticsScripts'
-import { resolveTrackingIds } from '@/lib/tracking-ids'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
-import { getMarketingBaseUrl, getPublicStoreUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
+import { getMarketingBaseUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
+import { buildStoreMetadata } from '@/lib/store-metadata'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
@@ -48,33 +48,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const { data: pub } = await db
     .from('publishing_settings')
-    .select('seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url')
+    .select(
+      'seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
+    )
     .eq('business_id', business.id)
     .single()
 
-  const title = pub?.seo_title || business.name
-  const description = pub?.seo_description || `Visit ${business.name} — menu, contact, and more.`
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      ...(pub?.og_image_url ? { images: [{ url: pub.og_image_url }] } : {}),
-    },
-    twitter: {
-      card: pub?.og_image_url ? 'summary_large_image' : 'summary',
-      title,
-      description,
-      ...(pub?.og_image_url ? { images: [pub.og_image_url] } : {}),
-    },
-    icons: {
-      icon: pub?.favicon_url ? [{ url: pub.favicon_url, sizes: '48x48', type: 'image/png' }] : undefined,
-      apple: pub?.apple_touch_icon_url ? [{ url: pub.apple_touch_icon_url, sizes: '256x256', type: 'image/png' }] : undefined,
-    },
-  }
+  return buildStoreMetadata({
+    slug,
+    businessName: business.name,
+    pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
+  })
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -164,8 +148,6 @@ export default async function SlugPage({
     block_anchor_id: b.block_anchor_id ?? null,
   }))
 
-  const tracking = resolveTrackingIds(pubSettings)
-
   // Fetch menu data only if page has a menu_grid block
   const hasMenuGrid = pageBlocks.some(b => b.type === 'menu_grid')
   let menuCategories: MenuCategory[] = []
@@ -203,7 +185,6 @@ export default async function SlugPage({
 
   // Resolved base URL for QR Code blocks and schema.org
   const baseUrl = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
-  const pageUrl = getPublicStoreUrl(slug)
 
   // ─── Schema.org JSON-LD ─────────────────────────────────────────────────────
   const pubInfo = {
@@ -240,15 +221,7 @@ export default async function SlugPage({
       {/* Silent visit tracker */}
       <ViewTracker slug={slug} />
 
-      {/* ── SEO head tags ── */}
-      <link rel="canonical" href={pageUrl} />
-      {pubSettings?.favicon_url && <link rel="icon" href={pubSettings.favicon_url} />}
-      {pubSettings?.apple_touch_icon_url && <link rel="apple-touch-icon" href={pubSettings.apple_touch_icon_url} />}
-      {tracking.gscVerification && (
-        <meta name="google-site-verification" content={tracking.gscVerification} />
-      )}
-      <link rel="alternate" hrefLang={visitorLocale} href={pageUrl} />
-      {/* Schema.org JSON-LD */}
+      {/* Schema.org JSON-LD + analytics (GSC/canonical/icons come from generateMetadata → <head>) */}
       <Script id="schema-json" type="application/ld+json" dangerouslySetInnerHTML={{ __html: schemaJson }} />
 
       <AnalyticsScripts
