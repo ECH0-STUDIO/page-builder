@@ -20,6 +20,7 @@ import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
+import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 
 function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
   const href = ctaHref(cta)
@@ -80,6 +81,7 @@ export function TextImageRender({
   const heading = pickLocale(config.heading, activeLocale)
   const body = pickLocale(config.body, activeLocale)
   const ctxLayout = usePreviewLayout()
+  const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
   const layout: PreviewLayout =
     (ctxLayout !== 'responsive' ? ctxLayout : undefined)
@@ -176,7 +178,7 @@ export function TextImageRender({
       )}
       {config.cta && (
         <div style={{ display: 'flex', justifyContent: justify }}>
-          <CtaLink cta={config.cta} brandColor={brandColor} locale={activeLocale} />
+          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} />
         </div>
       )}
     </div>
