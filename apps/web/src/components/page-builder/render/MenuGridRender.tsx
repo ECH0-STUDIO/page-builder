@@ -669,59 +669,60 @@ function MenuGridInner({
               ? 'flex flex-row gap-10 items-start'
               : 'flex flex-col md:flex-row gap-6 md:gap-10 md:items-start'
             : ''}>
-            {/* Category tabs */}
+            {/* Category tabs — border indicator (not pill buttons) to avoid CTA confusion */}
             {tabsEnabled && (
-              <div 
+              <div
                 className={cn(
-                  'flex gap-2 flex-nowrap overflow-x-auto hide-scrollbar pb-3 border-b border-gray-100 w-full',
-                  config.tabs_layout !== 'horizontal' && !mobileLayout
+                  'flex flex-nowrap overflow-x-auto hide-scrollbar w-full',
+                  sideTabs
                     ? desktopLayout
-                      ? 'mb-0 border-b-0 pb-0 flex-col w-56 shrink-0 sticky top-[100px]'
-                      : 'mb-2 md:mb-0 md:border-b-0 md:pb-0 md:flex-col md:w-56 md:shrink-0 md:sticky md:top-[100px]'
-                    : 'mb-8 md:mb-8'
+                      ? 'mb-0 flex-col gap-0 w-56 shrink-0 sticky top-[100px] border-r border-gray-100'
+                      : 'mb-2 gap-0 border-b border-gray-100 md:mb-0 md:border-b-0 md:border-r md:border-gray-100 md:flex-col md:w-56 md:shrink-0 md:sticky md:top-[100px]'
+                    : 'mb-8 gap-0 border-b border-gray-100',
                 )}
                 style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
               >
-                {visibleCats.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      if (activeCat === cat.id) return
-                      setIsLoading(true)
-                      
-                      // 1. Give React a moment to render the loading toast
-                      if (renderTimer.current) clearTimeout(renderTimer.current)
-                      renderTimer.current = setTimeout(() => {
-                        setActiveCatId(cat.id)
-                        
-                        // 2. Keep the loading toast on screen for a short minimum time so it doesn't just flash invisibly
-                        if (loadingTimer.current) clearTimeout(loadingTimer.current)
-                        loadingTimer.current = setTimeout(() => {
-                          setIsLoading(false)
-                        }, 400)
-                      }, 10)
-                    }}
-                    className={cn(
-                      'px-4 py-1.5 shrink-0 rounded-full text-sm font-medium transition-all',
-                      config.tabs_layout !== 'horizontal' && !mobileLayout
-                        ? desktopLayout
-                          ? 'w-full text-left px-4 py-2.5 rounded-xl'
-                          : 'md:w-full md:text-left md:px-4 md:py-2.5 md:rounded-xl'
-                        : ''
-                    )}
-                    style={
-                      activeCat === cat.id
-                        ? { backgroundColor: actionColor, color: '#ffffff', border: `1.5px solid ${actionColor}` }
-                        : {
-                            backgroundColor: 'transparent',
-                            color: textColor,
-                            border: `1.5px solid color-mix(in srgb, ${textColor} 28%, transparent)`,
-                          }
-                    }
-                  >
-                    {cat.name}
-                  </button>
-                ))}
+                {visibleCats.map(cat => {
+                  const active = activeCat === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        if (activeCat === cat.id) return
+                        setIsLoading(true)
+
+                        // 1. Give React a moment to render the loading toast
+                        if (renderTimer.current) clearTimeout(renderTimer.current)
+                        renderTimer.current = setTimeout(() => {
+                          setActiveCatId(cat.id)
+
+                          // 2. Keep the loading toast on screen for a short minimum time so it doesn't just flash invisibly
+                          if (loadingTimer.current) clearTimeout(loadingTimer.current)
+                          loadingTimer.current = setTimeout(() => {
+                            setIsLoading(false)
+                          }, 400)
+                        }, 10)
+                      }}
+                      className={cn(
+                        'shrink-0 rounded-none bg-transparent text-sm transition-colors',
+                        sideTabs
+                          ? desktopLayout
+                            ? 'w-full text-left px-4 py-2.5 border-r-2'
+                            : 'px-3.5 py-2 border-b-2 -mb-px md:w-full md:text-left md:px-4 md:py-2.5 md:border-b-0 md:mb-0 md:border-r-2'
+                          : 'px-3.5 py-2 border-b-2 -mb-px',
+                        active ? 'font-semibold' : 'font-medium',
+                      )}
+                      style={{
+                        color: active ? actionColor : textColor,
+                        opacity: active ? 1 : 0.55,
+                        borderColor: active ? actionColor : 'transparent',
+                      }}
+                    >
+                      {cat.name}
+                    </button>
+                  )
+                })}
               </div>
             )}
 
