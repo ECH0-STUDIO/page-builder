@@ -59,11 +59,14 @@ export function OrderPageLive({
   )
 
   // Order page is always a mobile list — ignore landing-style grid layouts.
+  // No section title/description (carousel + category tabs cover that).
   const orderMenuConfig: MenuGridConfig = {
     ...menuConfig,
     layout: 'list',
     show_category_tabs: false,
     tabs_layout: 'horizontal',
+    heading: '',
+    description: '',
   }
 
   function selectCategory(id: string) {
