@@ -12,6 +12,7 @@ import Image from 'next/image'
 import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
+import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import { defaultMenuGridConfig, defaultThemeSettings, type BorderRadius, type MenuGridConfig } from '../types'
@@ -527,6 +528,7 @@ function MenuGridInner({
   const sectionHeading = plainText(config.heading)
   const sectionDescription = plainText(config.description)
   const ctxLayout = usePreviewLayout()
+  const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
   const layout: PreviewLayout =
     (ctxLayout !== 'responsive' ? ctxLayout : undefined)
@@ -537,6 +539,7 @@ function MenuGridInner({
   const desktopLayout = layout === 'desktop'
 
   const { t } = useTranslation()
+  const actionColor = liveBrandColor || DEFAULT_BRAND
   const { categories, items, variantGroups, variantOptions } = data
   const { addItem } = useCart()
   const [internalActiveCatId, setInternalActiveCatId] = useState<string | null>(null)
@@ -563,7 +566,6 @@ function MenuGridInner({
   }, [])
 
   const textColor = config.text_color || '#111111'
-  const actionColor = brandColor || DEFAULT_BRAND
 
   const typography = getTypography(mobileLayout)
 

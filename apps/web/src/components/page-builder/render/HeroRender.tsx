@@ -25,6 +25,7 @@ import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
+import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 
 function resolveAlign(config: HeroConfig): ContentAlign {
   if (config.content_align === 'left' || config.content_align === 'right' || config.content_align === 'center') {
@@ -105,6 +106,7 @@ export function HeroRender({
 }) {
   const activeLocale = toSupportedLocale(locale)
   const ctxLayout = usePreviewLayout()
+  const liveBrandColor = useThemeBrandColor(brandColor)
   const layout: PreviewLayout =
     (ctxLayout !== 'responsive' ? ctxLayout : undefined)
     ?? previewLayout
@@ -153,7 +155,7 @@ export function HeroRender({
           {body}
         </p>
       )}
-      <CtaRow config={config} brandColor={brandColor} locale={activeLocale} align={align} />
+      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} align={align} />
     </div>
   )
 
@@ -303,7 +305,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          <CtaRow config={config} brandColor={brandColor} locale={activeLocale} align={align} />
+          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} align={align} />
         </div>
       </div>
     </section>

@@ -15,6 +15,7 @@ import { createStablePuckConfig, type PuckEditorRefs } from './config'
 import type { MenuGridData } from '../render/MenuGridRender'
 import { PuckCustomHeader, PuckDragRecovery, PuckHeaderActions, PuckPreviewSync } from './PuckEditorChrome'
 import { PreviewLayoutProvider } from './PreviewLayoutContext'
+import { ThemeTokensProvider } from './ThemeTokensContext'
 import { createPuckPlugins, PuckSettingsContext } from './plugins'
 
 import {
@@ -127,7 +128,12 @@ export function PuckEditorShell({
   const puckDataRef = useRef(puckData)
   puckDataRef.current = puckData
 
-  const themeTokens = resolveThemeTokens(theme)
+  const themeTokens = useMemo(() => resolveThemeTokens(theme), [
+    theme?.primary_color,
+    theme?.background_color,
+    theme?.text_color,
+  ])
+  const puckMetadata = useMemo(() => ({ themeRevision }), [themeRevision])
   const navbarConfig: NavbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig: FooterConfig = theme?.footer_config ?? defaultFooterConfig
   const fontFamily = theme?.font_family ?? defaultThemeSettings.font_family
@@ -436,6 +442,7 @@ export function PuckEditorShell({
       <div className="eatery-puck-editor">
         <PuckSettingsContext.Provider value={settingsContextValue}>
           <PreviewLayoutProvider value={canvasPreviewLayout}>
+            <ThemeTokensProvider value={themeTokens}>
             <Puck
               config={puckConfig}
               data={puckData}
@@ -444,7 +451,9 @@ export function PuckEditorShell({
               overrides={puckOverrides}
               iframe={puckIframe}
               ui={puckUi}
+              metadata={puckMetadata}
             />
+            </ThemeTokensProvider>
           </PreviewLayoutProvider>
         </PuckSettingsContext.Provider>
       </div>
