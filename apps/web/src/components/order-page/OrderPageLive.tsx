@@ -86,7 +86,7 @@ export function OrderPageLive({
 
       {visibleCats.length > 0 && (
         <div className="sticky top-0 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 py-2.5">
+          <div className="flex gap-0 overflow-x-auto no-scrollbar px-3">
             {visibleCats.map(cat => {
               const active = (activeCategoryId ?? visibleCats[0]?.id) === cat.id
               return (
@@ -95,10 +95,13 @@ export function OrderPageLive({
                   type="button"
                   onClick={() => selectCategory(cat.id)}
                   className={cn(
-                    'shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
-                    active ? 'text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                    'shrink-0 rounded-none bg-transparent px-3.5 py-2.5 text-sm transition-colors border-b-2 -mb-px',
+                    active ? 'font-semibold' : 'font-medium text-gray-500 hover:text-gray-800',
                   )}
-                  style={active ? { backgroundColor: brandColor } : undefined}
+                  style={{
+                    color: active ? brandColor : undefined,
+                    borderColor: active ? brandColor : 'transparent',
+                  }}
                 >
                   {cat.name}
                 </button>
