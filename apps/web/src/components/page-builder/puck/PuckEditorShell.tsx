@@ -17,6 +17,7 @@ import { PuckCustomHeader, PuckDragRecovery, PuckHeaderActions, PuckPreviewSync 
 import { PreviewLayoutProvider } from './PreviewLayoutContext'
 import { ThemeTokensProvider } from './ThemeTokensContext'
 import { createPuckPlugins, PuckSettingsContext } from './plugins'
+import { resolvePublicStoreUrl } from '@/lib/site-urls'
 
 import {
   savePageBlocksAction,
@@ -139,6 +140,10 @@ export function PuckEditorShell({
   const fontFamily = theme?.font_family ?? defaultThemeSettings.font_family
   const headingFont = theme?.heading_font_family ?? theme?.font_family ?? defaultThemeSettings.font_family
   const brandColor = themeTokens.brandColor
+  const storeUrl = resolvePublicStoreUrl(business.slug ?? '', {
+    custom_domain: publishingSettings?.custom_domain ?? null,
+    custom_domain_verified: publishingSettings?.custom_domain_verified ?? false,
+  })
 
   const menuGridData: MenuGridData = useMemo(
     () => ({
@@ -176,6 +181,7 @@ export function PuckEditorShell({
       brandColor,
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+      storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
     }),
@@ -203,6 +209,7 @@ export function PuckEditorShell({
       brandColor,
       defaultTextColor: themeTokens.pageText,
       qrDownloadLabel: t('qrCodeBlock.saveQrCode'),
+      storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
     }),
@@ -313,13 +320,14 @@ export function PuckEditorShell({
       hasUnpublishedChanges,
       publishing,
       slug: business.slug ?? '',
+      storeUrl,
       previewMode,
       viewMode,
       onTogglePreview: () => setPreviewMode(p => !p),
       onViewModeChange: setViewMode,
       onPublish: handlePublish,
     }),
-    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, previewMode, viewMode, handlePublish],
+    [saveStatus, published, hasUnpublishedChanges, publishing, business.slug, storeUrl, previewMode, viewMode, handlePublish],
   )
 
   const puckOverrides = useMemo<Partial<Overrides>>(

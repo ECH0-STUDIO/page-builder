@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { getServerTranslation } from '@/i18n/getDictionary'
 import { getPageViewsAction } from '@/app/actions/page-builder'
-import { getPublicStoreUrl } from '@/lib/site-urls'
+import { resolvePublicStoreUrl } from '@/lib/site-urls'
 import { OverviewLiveLinks } from '@/components/dashboard/OverviewLiveLinks'
 
 export default async function DashboardPage() {
@@ -23,20 +23,35 @@ export default async function DashboardPage() {
   const analytics = await getPageViewsAction(business.id, 7)
 
   const [
-    { data: publishing },
+    { data: publishingRaw },
     { count: menuCount },
     { count: blocksCount },
   ] = await Promise.all([
-    db.from('publishing_settings').select('published, order_published').eq('business_id', business.id).single(),
+    db.from('publishing_settings').select('published, order_published, custom_domain, custom_domain_verified').eq('business_id', business.id).single(),
     db.from('menu_categories').select('*', { count: 'exact', head: true }).eq('business_id', business.id),
     db.from('page_blocks').select('*', { count: 'exact', head: true }).eq('business_id', business.id),
   ])
+
+  // Generated DB types may lag migrations for custom_domain_verified
+  const publishing = publishingRaw as {
+    published?: boolean
+    order_published?: boolean | null
+    custom_domain?: string | null
+    custom_domain_verified?: boolean | null
+  } | null
 
   const landingPublished = publishing?.published === true
   const orderPublished =
     publishing?.order_published == null
       ? landingPublished
       : publishing.order_published === true
+
+  const storePub = {
+    custom_domain: publishing?.custom_domain ?? null,
+    custom_domain_verified: publishing?.custom_domain_verified === true,
+  }
+  const landingUrl = resolvePublicStoreUrl(business.slug, storePub)
+  const orderUrl = resolvePublicStoreUrl(business.slug, storePub, '/order')
 
   const stepsComplete = {
     businessProfile: !!(business.logo_url || business.address || business.phone),
@@ -92,8 +107,6 @@ export default async function DashboardPage() {
   ]
 
   const goToLabel = t('overview.steps.goTo')
-  const landingUrl = getPublicStoreUrl(business.slug)
-  const orderUrl = `${landingUrl}/order`
 
   return (
     <div className="p-4 md:p-6 lg:p-8 pb-12 md:pb-16 max-w-4xl space-y-10">
@@ -108,7 +121,7 @@ export default async function DashboardPage() {
       <OverviewLiveLinks
         landingUrl={landingUrl}
         orderUrl={orderUrl}
-        orderOpenHref={`/${business.slug}/order`}
+        orderOpenHref={orderUrl}
         landingPublished={landingPublished}
         orderPublished={orderPublished}
       />

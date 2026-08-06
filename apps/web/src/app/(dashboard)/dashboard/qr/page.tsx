@@ -4,8 +4,6 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { QRManager } from '@/components/qr/QRManager'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { MenuCategory, MenuItem } from '@/app/actions/menu'
-import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
 export const metadata: Metadata = { title: 'QR Codes' }
@@ -33,13 +31,16 @@ export default async function QRPage() {
     )
   }
 
-  const [{ data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
-    db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order'),
-    db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),
-  ])
+  const { data: publishingRaw } = await db
+    .from('publishing_settings')
+    .select('custom_domain, custom_domain_verified')
+    .eq('business_id', business.id)
+    .maybeSingle()
 
-  const categories = normalizeMenuCategories((categoriesRaw ?? []) as Record<string, unknown>[])
-  const items = normalizeMenuItems((itemsRaw ?? []) as Record<string, unknown>[])
+  const publishing = publishingRaw as {
+    custom_domain?: string | null
+    custom_domain_verified?: boolean | null
+  } | null
 
   return (
     <div className="p-4 md:p-8 max-w-6xl">
@@ -52,12 +53,14 @@ export default async function QRPage() {
 
       <QRManager
         businessId={business.id}
-        paymentSettings={(business as any).payment_settings ?? {}}
+        paymentSettings={(business as { payment_settings?: Record<string, unknown> }).payment_settings ?? {}}
         slug={business.slug}
-        categories={categories}
-        items={items}
         businessName={business.name}
         businessLogoUrl={business.logo_url ?? null}
+        storePub={{
+          custom_domain: publishing?.custom_domain ?? null,
+          custom_domain_verified: publishing?.custom_domain_verified === true,
+        }}
       />
     </div>
   )

@@ -80,6 +80,38 @@ export function getPublicStoreUrl(slug: string): string {
   return `${getAppBaseUrl()}/${clean}`
 }
 
+/** Publishing fields used to prefer a verified custom domain. */
+export type StorePublicUrlMeta = {
+  custom_domain?: string | null
+  custom_domain_verified?: boolean | null
+}
+
+/**
+ * Public storefront URL — prefer verified custom domain when connected.
+ * `pathSuffix` examples: '', '/order', '/order?table=3'
+ */
+export function resolvePublicStoreUrl(
+  slug: string,
+  pub?: StorePublicUrlMeta | null,
+  pathSuffix: string = '',
+): string {
+  const cleanSlug = slug.replace(/^\/+/, '')
+  let suffix = ''
+  if (pathSuffix) {
+    suffix = pathSuffix.startsWith('/') || pathSuffix.startsWith('?')
+      ? pathSuffix
+      : `/${pathSuffix}`
+  }
+
+  const domain = pub?.custom_domain?.trim().replace(/^https?:\/\//, '').replace(/\/$/, '')
+  if (pub?.custom_domain_verified && domain) {
+    // Custom domain root is the store landing (no /{slug} prefix after rewrite).
+    return `https://${domain}${suffix}`
+  }
+
+  return `${getPublicStoreUrl(cleanSlug)}${suffix}`
+}
+
 export function getAuthCallbackUrl(nextPath: string = '/dashboard'): string {
   return `${getAppBaseUrl()}/api/auth/callback?next=${encodeURIComponent(nextPath)}`
 }

@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { Download, Copy, Check, QrCode, Palette } from 'lucide-react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { updateBusinessAction } from '@/app/actions/business'
 import { QRPrintDesigner } from './QRPrintDesigner'
-import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import {
+  resolvePublicStoreUrl,
+  type StorePublicUrlMeta,
+} from '@/lib/site-urls'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,8 +27,6 @@ async function downloadQR(url: string, filename: string) {
   a.click()
 }
 
-// ─── Simple QR Preview Card (Item QRs tab) ────────────────────────────────────
-
 function SimpleQRCard({ url, label, sublabel, filename }: {
   url: string; label: string; sublabel?: string; filename: string
 }) {
@@ -39,8 +39,8 @@ function SimpleQRCard({ url, label, sublabel, filename }: {
     QRCode.toDataURL(url, {
       width: 400, margin: 2,
       color: { dark: '#111111', light: '#ffffff' },
-    }, (err, url) => {
-      if (!err) setDataUrl(url)
+    }, (err, generated) => {
+      if (!err) setDataUrl(generated)
     })
   }, [url])
 
@@ -67,7 +67,7 @@ function SimpleQRCard({ url, label, sublabel, filename }: {
       <div className="flex gap-2 w-full">
         <button
           onClick={copy}
-          title={copied ? "Copied!" : "Copy link"}
+          title={copied ? 'Copied!' : 'Copy link'}
           className="flex-1 flex items-center justify-center h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
         >
           {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
@@ -84,79 +84,21 @@ function SimpleQRCard({ url, label, sublabel, filename }: {
   )
 }
 
-// ─── Item QRs Tab ─────────────────────────────────────────────────────────────
-
-function ItemQRTab({ slug, categories, items }: {
-  slug: string; categories: MenuCategory[]; items: MenuItem[]
-}) {
-  const [activeItemId, setActiveItemId] = useState<string | null>(items[0]?.id ?? null)
-  const activeItem = items.find(i => i.id === activeItemId)
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const { t } = useTranslation()
-
-  if (items.length === 0) {
-    return (
-      <div className="py-16 text-center">
-        <QrCode className="size-12 text-gray-200 mx-auto mb-3" />
-        <p className="text-sm text-gray-500">{t('qr.noItems')}</p>
-        <Link href="/dashboard/menu" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-          {t('qr.noItemsLink')}
-        </Link>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col-reverse lg:flex-row gap-6 py-6 min-h-96">
-      <div className="w-full lg:w-64 shrink-0 space-y-1 overflow-y-auto max-h-[50vh] lg:max-h-[600px] pr-2">
-        {categories.map(cat => {
-          const catItems = items.filter(i => i.category_id === cat.id)
-          if (catItems.length === 0) return null
-          return (
-            <div key={cat.id}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 py-2">{cat.name}</p>
-              {catItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveItemId(item.id)}
-                  className={cn(
-                    'w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-3',
-                    activeItemId === item.id ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'
-                  )}
-                >
-                  {item.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.image_url} alt="" className="size-8 rounded-lg object-cover shrink-0" />
-                  )}
-                  <span className="flex-1 min-w-0 truncate font-medium">{item.name}</span>
-                </button>
-              ))}
-            </div>
-          )
-        })}
-      </div>
-      <div className="w-full lg:flex-1 flex items-start justify-center sticky top-0 lg:static z-10 bg-white/95 lg:bg-transparent backdrop-blur lg:backdrop-blur-none py-4 lg:py-0 rounded-2xl lg:rounded-none shadow-sm lg:shadow-none border border-gray-100 lg:border-transparent">
-        {activeItem ? (
-          <SimpleQRCard
-            url={`${origin}/${slug}#item-${activeItem.id}`}
-            label={activeItem.name}
-            sublabel={t('qr.deepLink')}
-            filename={`${activeItem.name.replace(/\s+/g, '-').toLowerCase()}-qr.png`}
-          />
-        ) : (
-          <p className="text-sm text-gray-400 mt-8">{t('qr.selectItem')}</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Table QRs Tab ────────────────────────────────────────────────────────────
 
-function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string; paymentSettings: any; slug: string }) {
+function TableQRTab({
+  businessId,
+  paymentSettings,
+  slug,
+  storePub,
+}: {
+  businessId: string
+  paymentSettings: Record<string, unknown>
+  slug: string
+  storePub?: StorePublicUrlMeta | null
+}) {
   const [tableCount, setTableCount] = useState(10)
-  const [kdsEnabled, setKdsEnabled] = useState(paymentSettings?.kds_enabled ?? true)
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const [kdsEnabled, setKdsEnabled] = useState(Boolean(paymentSettings?.kds_enabled ?? true))
   const { t } = useTranslation()
 
   const handleToggle = async (checked: boolean) => {
@@ -178,8 +120,8 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
           <div className="pr-8">
             <h3 className="font-bold text-gray-900 mb-1">{t('qr.kdsTitle')}</h3>
             <p className="text-sm text-gray-500">
-              {t('qr.kdsDesc')} 
-              <br/>
+              {t('qr.kdsDesc')}
+              <br />
               <strong>Note:</strong> {t('qr.kdsNote')}
             </p>
           </div>
@@ -193,10 +135,10 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
           <h3 className="font-bold text-gray-900 mb-1">{t('qr.batchTitle')}</h3>
           <p className="text-sm text-gray-500 mb-4">{t('qr.batchDesc')}</p>
           <div className="flex items-center gap-3">
-            <input 
-              type="number" 
-              min="1" max="100" 
-              value={tableCount} 
+            <input
+              type="number"
+              min="1" max="100"
+              value={tableCount}
               onChange={e => setTableCount(parseInt(e.target.value) || 1)}
               className="w-24 h-10 px-3 rounded-lg border border-gray-200 font-bold"
             />
@@ -212,7 +154,7 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
             return (
               <SimpleQRCard
                 key={num}
-                url={`${origin}/${slug}/order?table=${num}`}
+                url={resolvePublicStoreUrl(slug, storePub, `/order?table=${num}`)}
                 label={`${t('qr.tableLabel')} ${num}`}
                 sublabel={t('qr.autoAssigns')}
                 filename={`table-${num}-qr.png`}
@@ -227,53 +169,69 @@ function TableQRTab({ businessId, paymentSettings, slug }: { businessId: string;
 
 // ─── Main QRManager ───────────────────────────────────────────────────────────
 
-type Tab = 'design' | 'items' | 'tables'
+type Tab = 'design' | 'tables'
 
-export function QRManager({ businessId, paymentSettings, slug, categories, items, businessName, businessLogoUrl }: {
+export function QRManager({
+  businessId,
+  paymentSettings,
+  slug,
+  businessName,
+  businessLogoUrl,
+  storePub,
+}: {
   businessId: string
-  paymentSettings: any
+  paymentSettings: Record<string, unknown>
   slug: string
-  categories: MenuCategory[]
-  items: MenuItem[]
   businessName?: string
   businessLogoUrl?: string | null
+  /** Prefer verified custom domain for encoded QR URLs */
+  storePub?: StorePublicUrlMeta | null
 }) {
   const [tab, setTab] = useState<Tab>('design')
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'
-  const pageUrl = `${origin}/${slug}`
+  const pageUrl = resolvePublicStoreUrl(slug, storePub)
   const { t } = useTranslation()
 
   const tabs = [
     { id: 'design' as Tab, label: t('qr.tabBusiness'), icon: <Palette className="size-3.5" /> },
-    { id: 'tables' as Tab, label: t('qr.tabTables'),  icon: <Check className="size-3.5" /> },
-    { id: 'items'  as Tab, label: t('qr.tabItems'),   icon: <QrCode  className="size-3.5" /> },
+    { id: 'tables' as Tab, label: t('qr.tabTables'), icon: <Check className="size-3.5" /> },
   ]
 
   return (
     <div className="space-y-6">
       <div className="w-full overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
         <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-max">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {t.icon}{t.label}
-          </button>
-        ))}
+          {tabs.map(tabItem => (
+            <button
+              key={tabItem.id}
+              onClick={() => setTab(tabItem.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                tab === tabItem.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+              )}
+            >
+              {tabItem.icon}{tabItem.label}
+            </button>
+          ))}
+        </div>
       </div>
-      </div>
+
+      {storePub?.custom_domain_verified && storePub.custom_domain && (
+        <p className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2">
+          QR codes point to your custom domain:{' '}
+          <span className="font-mono text-foreground">{storePub.custom_domain}</span>
+        </p>
+      )}
 
       {tab === 'design' && (
         <QRPrintDesigner businessId={businessId} qrUrl={pageUrl} businessName={businessName} businessLogoUrl={businessLogoUrl || undefined} />
       )}
-      {tab === 'items' && (
-        <ItemQRTab slug={slug} categories={categories} items={items} />
-      )}
       {tab === 'tables' && (
-        <TableQRTab businessId={businessId} paymentSettings={paymentSettings} slug={slug} />
+        <TableQRTab
+          businessId={businessId}
+          paymentSettings={paymentSettings}
+          slug={slug}
+          storePub={storePub}
+        />
       )}
     </div>
   )

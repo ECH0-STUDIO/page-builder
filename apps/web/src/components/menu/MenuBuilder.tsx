@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, MoreHorizontal,
-  X, Loader2, ImageIcon, ChevronDown, ChevronUp, QrCode, Check, Copy,
+  X, Loader2, ImageIcon, ChevronDown, ChevronUp, Check, Copy,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -47,18 +47,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useBusiness } from '@/context/BusinessContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// QR download (client-side, no API cost)
-async function downloadItemQR(item: MenuItem, businessSlug: string) {
-  const QRCode = (await import('qrcode')).default
-  const url = `${window.location.origin}/${businessSlug}#item-${item.id}`
-  const canvas = document.createElement('canvas')
-  await QRCode.toCanvas(canvas, url, { width: 400, margin: 2 })
-  const link = document.createElement('a')
-  link.download = `${item.name.replace(/\s+/g, '-').toLowerCase()}-qr.png`
-  link.href = canvas.toDataURL('image/png')
-  link.click()
-}
 
 const ITEM_TAG_SUGGESTIONS = [
   'Bestseller', 'Spicy', 'Vegetarian', 'Vegan', 'Gluten-free',
@@ -1001,9 +989,6 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                                   {item.available
                                     ? <><EyeOff className="size-3.5 mr-2" /> {t('menuBuilder.markUnavailable')}</>
                                     : <><Eye className="size-3.5 mr-2" /> {t('menuBuilder.markAvailable')}</>}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => downloadItemQR(item, '').catch(() => {})}>
-                                  <QrCode className="size-3.5 mr-2" /> {t('menuBuilder.downloadQR')}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteItem(item.id)}>

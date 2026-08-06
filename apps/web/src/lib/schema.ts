@@ -54,10 +54,8 @@ const DAY_MAP: Record<string, string> = {
 export function buildRestaurantSchema(
   business: Business,
   pub: PublishingInfo,
-  baseUrl: string
+  pageUrl: string
 ): object {
-  const pageUrl = `${baseUrl}/${business.slug}`
-
   // Build social sameAs array from non-empty social links
   const sameAs = Object.values(business.social_links ?? {}).filter(Boolean)
 
@@ -113,10 +111,8 @@ export function buildMenuSchema(
   pub: PublishingInfo,
   categories: MenuCategory[],
   items: MenuItem[],
-  baseUrl: string
+  pageUrl: string
 ): object {
-  const pageUrl = `${baseUrl}/${business.slug}`
-
   const menuSections = categories
     .map(cat => {
       const catItems = items.filter(i => i.category_id === cat.id)
@@ -149,12 +145,12 @@ export function buildMenuSchema(
 
 // ─── WebSiteSchema ────────────────────────────────────────────────────────────
 
-export function buildWebSiteSchema(business: Business, pub: PublishingInfo, baseUrl: string): object {
+export function buildWebSiteSchema(business: Business, pub: PublishingInfo, pageUrl: string): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: pub.seo_title || business.name,
-    url: `${baseUrl}/${business.slug}`,
+    url: pageUrl,
   }
 }
 

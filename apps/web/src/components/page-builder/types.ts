@@ -456,6 +456,9 @@ export interface PublishingSettings {
   /** Carousel frame on mobile — `same` uses desktop ratio */
   order_carousel_aspect_mobile?: CarouselAspectMobile | null
   custom_domain: string | null
+  /** True after DNS verify succeeds — public URLs/QR should use the custom domain */
+  custom_domain_verified?: boolean
+  custom_domain_billed_until?: string | null
   seo_title: string | null
   seo_description: string | null
   og_image_url: string | null
