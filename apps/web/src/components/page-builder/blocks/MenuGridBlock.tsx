@@ -107,29 +107,33 @@ export function MenuGridSettings({
   return (
     <div className="space-y-5">
 
-      {/* Heading */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
-        <Input
-          value={plainText(config.heading)}
-          onChange={e => set('heading', e.target.value)}
-          placeholder={t('menuGridBlock.headingPlaceholder')}
-          className="h-8 text-sm"
-        />
-        <p className="text-[11px] text-muted-foreground">{t('menuGridBlock.headingHelp')}</p>
-      </div>
+      {/* Heading — landing Menu Grid only (order page has no section title) */}
+      {!layoutOnly && (
+        <>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
+            <Input
+              value={plainText(config.heading)}
+              onChange={e => set('heading', e.target.value)}
+              placeholder={t('menuGridBlock.headingPlaceholder')}
+              className="h-8 text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">{t('menuGridBlock.headingHelp')}</p>
+          </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
-        <Textarea
-          value={plainText(config.description ?? '')}
-          onChange={e => set('description', e.target.value)}
-          placeholder={t('menuGridBlock.descPlaceholder')}
-          className="text-sm min-h-[60px]"
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
+            <Textarea
+              value={plainText(config.description ?? '')}
+              onChange={e => set('description', e.target.value)}
+              placeholder={t('menuGridBlock.descPlaceholder')}
+              className="text-sm min-h-[60px]"
+            />
+          </div>
 
-      <Separator />
+          <Separator />
+        </>
+      )}
 
       {/* Layout */}
       <div className="space-y-2">

@@ -94,10 +94,13 @@ export function resolveOrderMenuConfig(opts: {
 
   // Order page always shows all visible menu categories/items.
   // Hide dishes/categories from the Menu dashboard tab, not here.
+  // Section title/description are landing-only — order page uses carousel + category tabs.
   return {
     ...base,
     selection_mode: 'category',
     category_ids: [],
     item_ids: [],
+    heading: '',
+    description: '',
   }
 }

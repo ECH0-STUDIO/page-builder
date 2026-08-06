@@ -82,6 +82,8 @@ export function OrderPagePreview({
     ...menuConfig,
     layout: 'list',
     show_category_tabs: false,
+    heading: '',
+    description: '',
   }
   const forceAspect = aspectMobile === 'same' ? aspectDesktop : aspectMobile
 
