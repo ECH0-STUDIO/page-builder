@@ -1251,6 +1251,7 @@
     "businessIdMissing": "Không thể đặt hàng: thiếu ID doanh nghiệp",
     "enterTableNumber": "Vui lòng nhập số bàn",
     "placeOrderFailed": "Đặt hàng thất bại:",
+    "closedForOrders": "Hiện quán đang đóng cửa. Vui lòng đặt món trong giờ mở cửa.",
     "soldOut": "Hết hàng",
     "required": "Bắt buộc",
     "optional": "Tùy chọn",
@@ -1287,7 +1288,11 @@
     "quickActions": "Yêu cầu nhanh",
     "viewOrder": "Xem đơn",
     "itemsCount": "{{count}} món",
-    "callStaffMenu": "Gọi nhân viên"
+    "callStaffMenu": "Gọi nhân viên",
+    "closedBanner": "Hiện không nhận đơn",
+    "closedBannerHint": "Bạn vẫn xem được thực đơn, nhưng chưa thể đặt món lúc này.",
+    "closedBannerHours": "Giờ mở cửa hôm nay: {{hours}}. Quay lại trong giờ mở cửa để đặt món.",
+    "closedShort": "Đóng cửa"
   },
   "orderPageAdmin": {
     "title": "Trang đặt món",

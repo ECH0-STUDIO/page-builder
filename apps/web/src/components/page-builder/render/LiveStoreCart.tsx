@@ -17,6 +17,8 @@ interface LiveStoreCartProps {
   fabOffsetClass?: string
   brandColor?: string
   hideFab?: boolean
+  /** When false, placing orders is blocked (outside opening hours) */
+  orderingOpen?: boolean
 }
 
 function LiveStoreCartInner(props: LiveStoreCartProps) {

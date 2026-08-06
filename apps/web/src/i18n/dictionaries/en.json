@@ -1251,6 +1251,7 @@
     "businessIdMissing": "Unable to place order: Business ID missing",
     "enterTableNumber": "Please enter your table number",
     "placeOrderFailed": "Failed to place order:",
+    "closedForOrders": "We're closed right now. Ordering will reopen during business hours.",
     "soldOut": "Sold Out",
     "required": "Required",
     "optional": "Optional",
@@ -1287,7 +1288,11 @@
     "quickActions": "Quick actions",
     "viewOrder": "View order",
     "itemsCount": "{{count}} items",
-    "callStaffMenu": "Call staff"
+    "callStaffMenu": "Call staff",
+    "closedBanner": "Ordering is closed",
+    "closedBannerHint": "You can browse the menu, but orders aren't accepted right now.",
+    "closedBannerHours": "Today's hours: {{hours}}. Come back during open hours to order.",
+    "closedShort": "Closed"
   },
   "orderPageAdmin": {
     "title": "Order Page",

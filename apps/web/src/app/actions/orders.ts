@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import type { CartItem } from '@/components/page-builder/render/CartContext'
 import { recordOrderEvent } from '@/lib/order-events'
 import { notifyBusinessPush } from '@/lib/push-notify'
+import { isBusinessOpenNow, normalizeOpeningHours } from '@/lib/opening-hours'
 
 export async function createOrderAction(
   businessId: string,
@@ -13,6 +14,25 @@ export async function createOrderAction(
   notes: string = ''
 ) {
   const db = createAdminClient()
+
+  const { data: business, error: businessError } = await db
+    .from('businesses')
+    .select('opening_hours')
+    .eq('id', businessId)
+    .maybeSingle()
+
+  if (businessError) {
+    return { success: false, error: businessError.message }
+  }
+
+  const hours = normalizeOpeningHours(business?.opening_hours)
+  if (!isBusinessOpenNow(hours)) {
+    return {
+      success: false,
+      error: 'CLOSED',
+      code: 'CLOSED' as const,
+    }
+  }
 
   // 1. Create the order
   const { data: order, error: orderError } = await db
@@ -38,7 +58,7 @@ export async function createOrderAction(
     item_id: item.itemId,
     item_name: item.itemName,
     quantity: item.quantity,
-    unit_price: item.totalPrice, // Note: cart item totalPrice is actually unit price * modifiers, but wait: in CartContext totalPrice is the single unit price!
+    unit_price: item.totalPrice, // cart totalPrice is per-unit (with modifiers)
     options: item.variants.length > 0 ? item.variants : null,
   }))
 

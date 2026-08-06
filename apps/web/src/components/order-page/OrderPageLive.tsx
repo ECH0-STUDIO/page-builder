@@ -16,6 +16,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { PromoSlide } from '@/components/order-page/OrderPromoCarousel'
 import type { CarouselAspect, CarouselAspectMobile } from '@/components/order-page/promo-slides'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 interface OrderPageLiveProps {
   businessId: string
@@ -32,6 +33,10 @@ interface OrderPageLiveProps {
   slug: string
   paymentSettings: PaymentSettings
   locale: string
+  /** False outside opening hours — browse only, no checkout */
+  orderingOpen?: boolean
+  /** Optional "08:00 – 22:00" for closed banner */
+  todayHoursLabel?: string | null
 }
 
 export function OrderPageLive({
@@ -49,7 +54,10 @@ export function OrderPageLive({
   slug,
   paymentSettings,
   locale,
+  orderingOpen = true,
+  todayHoursLabel = null,
 }: OrderPageLiveProps) {
+  const { t } = useTranslation()
   const visibleCats = useMemo(
     () => categories.filter(c => c.visible),
     [categories],
@@ -86,6 +94,17 @@ export function OrderPageLive({
         aspectMobile={aspectMobile}
         forceAspect={aspectMobile === 'same' ? aspectDesktop : aspectMobile}
       />
+
+      {!orderingOpen && (
+        <div className="mx-3 mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-950">
+          <p className="font-semibold">{t('orderPage.closedBanner')}</p>
+          <p className="mt-0.5 text-amber-900/80 text-xs leading-relaxed">
+            {todayHoursLabel
+              ? t('orderPage.closedBannerHours').replace('{{hours}}', todayHoursLabel)
+              : t('orderPage.closedBannerHint')}
+          </p>
+        </div>
+      )}
 
       {visibleCats.length > 0 && (
         <div className="sticky top-0 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
@@ -129,10 +148,15 @@ export function OrderPageLive({
           activeCategoryId={activeCategoryId}
           onActiveCategoryChange={setActiveCategoryId}
           previewLayout="mobile"
+          browseOnly={!orderingOpen}
         />
       </main>
 
-      <OrderBottomBar businessId={businessId} brandColor={brandColor} />
+      <OrderBottomBar
+        businessId={businessId}
+        brandColor={brandColor}
+        orderingOpen={orderingOpen}
+      />
 
       <OrderScrollTop brandColor={brandColor} />
 
@@ -142,6 +166,7 @@ export function OrderPageLive({
         locale={locale}
         brandColor={brandColor}
         hideFab
+        orderingOpen={orderingOpen}
       />
     </>
   )
