@@ -7,7 +7,7 @@ import { getPageDataAction, getPublishingAction } from '@/app/actions/page-build
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
-import { getPublicStoreUrl } from '@/lib/site-urls'
+import { resolvePublicStoreUrl } from '@/lib/site-urls'
 import { defaultThemeSettings } from '@/components/page-builder/types'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
 
@@ -67,8 +67,12 @@ export default async function PagesPage({
 
   if (mode === 'order') {
     const resolvedSlug = slug ?? business.slug
-    const orderUrl = `${getPublicStoreUrl(resolvedSlug)}/order`
-    const orderPath = `/${resolvedSlug}/order`
+    const storePub = {
+      custom_domain: publishing?.custom_domain ?? null,
+      custom_domain_verified: publishing?.custom_domain_verified ?? false,
+    }
+    const orderUrl = resolvePublicStoreUrl(resolvedSlug, storePub, '/order')
+    const orderPath = orderUrl
     const orderPublished =
       publishing?.order_published == null
         ? Boolean(publishing?.published)

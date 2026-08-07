@@ -137,6 +137,8 @@ interface PuckEditorChromeProps {
   hasUnpublishedChanges: boolean
   publishing: boolean
   slug: string
+  /** Prefer custom domain when verified */
+  storeUrl?: string
   previewMode: boolean
   viewMode: 'desktop' | 'mobile'
   onTogglePreview: () => void
@@ -295,6 +297,7 @@ export function PuckHeaderActions({
   hasUnpublishedChanges,
   publishing,
   slug,
+  storeUrl,
   previewMode,
   viewMode,
   onTogglePreview,
@@ -303,6 +306,7 @@ export function PuckHeaderActions({
 }: PuckEditorChromeProps) {
   const { t } = useTranslation()
   const showChanges = published && hasUnpublishedChanges
+  const liveUrl = storeUrl || getPublicStoreUrl(slug)
 
   return (
     <>
@@ -348,7 +352,7 @@ export function PuckHeaderActions({
 
       {published && (
         <a
-          href={getPublicStoreUrl(slug)}
+          href={liveUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center size-8 text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md hover:bg-accent"

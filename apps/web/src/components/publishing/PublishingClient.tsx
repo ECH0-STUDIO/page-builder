@@ -21,6 +21,7 @@ import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { resolvePublicStoreUrl } from '@/lib/site-urls'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,7 +224,12 @@ export function PublishingClient({
     }
   }
 
-  const publicUrl = `${baseUrl.replace(/\/$/, '')}/${slug}`
+  const storePub = {
+    custom_domain: (customDomain || publishing?.custom_domain || null) as string | null,
+    custom_domain_verified: domainVerified,
+  }
+  const publicUrl = resolvePublicStoreUrl(slug, storePub)
+  const orderUrl = resolvePublicStoreUrl(slug, storePub, '/order')
 
   // ── Period toggle ─────────────────────────────────────────────────────────
 
@@ -280,7 +286,6 @@ export function PublishingClient({
     })
   }
 
-  const orderUrl = `${publicUrl}/order`
   const anyLive = isPublished || isOrderPublished
 
   // ── Copy URL ──────────────────────────────────────────────────────────────
@@ -457,7 +462,7 @@ export function PublishingClient({
                   : <Copy className="size-4" />}
               </button>
               <a
-                href={`/${slug}/order`}
+                href={orderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"

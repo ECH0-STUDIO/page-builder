@@ -18,6 +18,8 @@ export type SaveStatus = 'idle' | 'saving' | 'saved'
 interface PublishBarProps {
   businessName: string
   slug: string
+  /** Prefer custom domain when verified */
+  storeUrl?: string
   published: boolean
   hasUnpublishedChanges: boolean
   saveStatus: SaveStatus
@@ -29,6 +31,7 @@ interface PublishBarProps {
 export function PublishBar({
   businessName,
   slug,
+  storeUrl,
   published,
   hasUnpublishedChanges,
   saveStatus,
@@ -38,6 +41,7 @@ export function PublishBar({
 }: PublishBarProps) {
   const router = useRouter()
   const { t } = useTranslation()
+  const liveUrl = storeUrl || getPublicStoreUrl(slug)
 
   const showChanges = published && hasUnpublishedChanges
 
@@ -89,7 +93,7 @@ export function PublishBar({
       {/* View live */}
       {published && (
         <a
-          href={getPublicStoreUrl(slug)}
+          href={liveUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mr-1 sm:mr-2 p-1.5 sm:p-0 rounded-md sm:rounded-none hover:bg-accent sm:hover:bg-transparent"

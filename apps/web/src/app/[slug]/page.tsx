@@ -23,7 +23,7 @@ import { AnalyticsScripts } from '@/components/AnalyticsScripts'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
-import { getMarketingBaseUrl, isSplitDomainDeployment, getAppBaseUrl } from '@/lib/site-urls'
+import { resolvePublicStoreUrl } from '@/lib/site-urls'
 import { buildStoreMetadata } from '@/lib/store-metadata'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
@@ -183,8 +183,14 @@ export default async function SlugPage({
     }
   }
 
-  // Resolved base URL for QR Code blocks and schema.org
-  const baseUrl = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
+  // Resolved public store URL for QR Code blocks and schema.org (custom domain when verified)
+  const storePub = {
+    custom_domain: pubSettings?.custom_domain ?? null,
+    custom_domain_verified: Boolean(
+      (pubSettings as { custom_domain_verified?: boolean | null } | null)?.custom_domain_verified,
+    ),
+  }
+  const storeUrl = resolvePublicStoreUrl(slug, storePub)
 
   // ─── Schema.org JSON-LD ─────────────────────────────────────────────────────
   const pubInfo = {
@@ -193,11 +199,11 @@ export default async function SlugPage({
     og_image_url: pubSettings?.og_image_url ?? null,
   }
   const schemas: object[] = [
-    buildRestaurantSchema(business, pubInfo, baseUrl),
-    buildWebSiteSchema(business, pubInfo, baseUrl),
+    buildRestaurantSchema(business, pubInfo, storeUrl),
+    buildWebSiteSchema(business, pubInfo, storeUrl),
   ]
   if (hasMenuGrid && menuCategories.length > 0) {
-    schemas.push(buildMenuSchema(business, pubInfo, menuCategories, menuItems, baseUrl))
+    schemas.push(buildMenuSchema(business, pubInfo, menuCategories, menuItems, storeUrl))
   }
   const schemaJson = serializeSchemas(schemas)
 
@@ -303,7 +309,7 @@ export default async function SlugPage({
                     const qrConfig = block.config as QRCodeConfig
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? qrConfig.custom_url
-                      : `${baseUrl}/${slug}`
+                      : storeUrl
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}
                   </SectionShellContent>

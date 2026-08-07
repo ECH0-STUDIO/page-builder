@@ -30,6 +30,8 @@ export interface PuckRenderContext {
   brandColor?: string
   defaultTextColor?: string
   qrDownloadLabel?: string
+  /** Public storefront URL (custom domain when verified) for QR preview */
+  storeUrl?: string
   previewInteractive?: boolean
   previewLayout?: import('../render/preview-layout').PreviewLayout
 }
@@ -163,8 +165,10 @@ export function renderQrCodeBlock(
   ctx: PuckRenderContext & { paymentSettings?: PaymentSettings | null },
 ) {
   const block = propsToPageBlock('qr_code', props, ctx.business.id)
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const targetUrl = ctx.business.slug ? `${origin}/${ctx.business.slug}` : ''
+  const targetUrl = ctx.storeUrl
+    || (ctx.business.slug
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${ctx.business.slug}`
+      : '')
 
   return (
     <PuckBlockShell type="qr_code" props={props} ctx={ctx}>
