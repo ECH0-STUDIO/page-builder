@@ -403,7 +403,11 @@ function ItemDialog({
     setName(initial?.name ?? '')
     setDescription(initial?.description ?? '')
     setPrice(initial?.price?.toString() ?? '')
-    setTags(initial?.tags ?? [])
+    const rawTags = initial?.tags ?? []
+    setTags(rawTags.filter(tag => {
+      const lower = tag.trim().toLowerCase()
+      return !['vegetarian', 'vegan', 'spicy', 'chay', 'cay', 'thuần chay'].includes(lower)
+    }))
     setIsVegetarian(Boolean(initial?.is_vegetarian))
     setSpicyLevel(initial?.spicy_level ?? 0)
     setImageUrl(initial?.image_url ?? '')
