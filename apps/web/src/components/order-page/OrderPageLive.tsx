@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { Search } from 'lucide-react'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
 import { OrderBottomBar } from '@/components/order-page/OrderBottomBar'
 import { OrderScrollTop } from '@/components/order-page/OrderScrollTop'
@@ -65,6 +66,28 @@ export function OrderPageLive({
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
     () => visibleCats[0]?.id ?? null,
   )
+  const [searchQuery, setSearchQuery] = useState('')
+  const [vegetarianOnly, setVegetarianOnly] = useState(false)
+  const [spicyOnly, setSpicyOnly] = useState(false)
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return items.filter(item => {
+      if (vegetarianOnly && !item.is_vegetarian) return false
+      if (spicyOnly && !(item.spicy_level > 0)) return false
+      if (!q) return true
+      const name = (item.name || '').toLowerCase()
+      const desc = (item.description || '').toLowerCase()
+      return name.includes(q) || desc.includes(q)
+    })
+  }, [items, searchQuery, vegetarianOnly, spicyOnly])
+
+  const filterActive = Boolean(searchQuery.trim() || vegetarianOnly || spicyOnly)
+  const catsForTabs = useMemo(() => {
+    if (!filterActive) return visibleCats
+    const ids = new Set(filteredItems.map(i => i.category_id))
+    return visibleCats.filter(c => ids.has(c.id))
+  }, [visibleCats, filteredItems, filterActive])
 
   // Order page is always a mobile list — ignore landing-style grid layouts.
   // No section title/description (carousel + category tabs cover that).
@@ -106,11 +129,50 @@ export function OrderPageLive({
         </div>
       )}
 
-      {visibleCats.length > 0 && (
-        <div className="sticky top-0 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
+      <div className="sticky top-0 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
+        <div className="px-3 pt-2.5 pb-2 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={t('orderPage.searchMenu')}
+              className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-gray-400"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setVegetarianOnly(v => !v)}
+              className={cn(
+                'h-8 px-3 rounded-full text-xs font-semibold border transition-colors',
+                vegetarianOnly
+                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                  : 'border-gray-200 bg-white text-gray-600',
+              )}
+            >
+              {t('orderPage.filterVegetarian')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpicyOnly(v => !v)}
+              className={cn(
+                'h-8 px-3 rounded-full text-xs font-semibold border transition-colors',
+                spicyOnly
+                  ? 'border-orange-500 bg-orange-50 text-orange-800'
+                  : 'border-gray-200 bg-white text-gray-600',
+              )}
+            >
+              {t('orderPage.filterSpicy')}
+            </button>
+          </div>
+        </div>
+
+        {catsForTabs.length > 0 && (
           <div className="flex gap-0 overflow-x-auto no-scrollbar px-3">
-            {visibleCats.map(cat => {
-              const active = (activeCategoryId ?? visibleCats[0]?.id) === cat.id
+            {catsForTabs.map(cat => {
+              const active = (activeCategoryId ?? catsForTabs[0]?.id) === cat.id
               return (
                 <button
                   key={cat.id}
@@ -130,26 +192,30 @@ export function OrderPageLive({
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <main id="order-menu" className="flex-1 px-3 py-3 pb-28 scroll-mt-14">
-        <MenuGridRender
-          config={orderMenuConfig}
-          data={{
-            categories,
-            items,
-            variantGroups,
-            variantOptions,
-            businessSlug: slug,
-          }}
-          brandColor={brandColor}
-          hideCategoryTabs
-          activeCategoryId={activeCategoryId}
-          onActiveCategoryChange={setActiveCategoryId}
-          previewLayout="mobile"
-          browseOnly={!orderingOpen}
-        />
+        {filteredItems.length === 0 ? (
+          <p className="py-12 text-center text-sm text-gray-500">{t('orderPage.noMenuMatches')}</p>
+        ) : (
+          <MenuGridRender
+            config={orderMenuConfig}
+            data={{
+              categories,
+              items: filteredItems,
+              variantGroups,
+              variantOptions,
+              businessSlug: slug,
+            }}
+            brandColor={brandColor}
+            hideCategoryTabs
+            activeCategoryId={activeCategoryId}
+            onActiveCategoryChange={setActiveCategoryId}
+            previewLayout="mobile"
+            browseOnly={!orderingOpen}
+          />
+        )}
       </main>
 
       <OrderBottomBar

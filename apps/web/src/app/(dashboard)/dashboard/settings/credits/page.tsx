@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth-server'
 import { redirect } from 'next/navigation'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { CreditDashboard } from '@/components/dashboard/CreditDashboard'
 import { getServerTranslation } from '@/i18n/getDictionary'
 
@@ -15,9 +16,7 @@ export default async function CreditsPage() {
     redirect('/onboarding/new-business')
   }
 
-  if (role === 'staff') {
-    redirect('/dashboard')
-  }
+  assertDashboardAccess('/dashboard/settings/credits', role, 'settings')
 
   return (
     <div className="space-y-6">

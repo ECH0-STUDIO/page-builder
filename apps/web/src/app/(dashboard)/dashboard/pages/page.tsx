@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { PuckEditorShell } from '@/components/page-builder/puck/PuckEditorShell'
 import { OrderPageEditor } from '@/components/order-page/OrderPageEditor'
 import { getPageDataAction, getPublishingAction } from '@/app/actions/page-builder'
@@ -32,8 +33,9 @@ export default async function PagesPage({
   const db = supabase
   const mode = resolveMode((await searchParams).page)
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard/pages', role, 'nav')
 
   const [
     { blocks, publishing: landingPublishing, theme },

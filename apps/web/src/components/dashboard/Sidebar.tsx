@@ -30,6 +30,7 @@ import { useBusiness } from '@/context/BusinessContext'
 import { getCreditBalanceAction } from '@/app/actions/credits'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { canAccessNavHref, canAccessSettingsHref } from '@/lib/dashboard-access'
 
 const NAV_ITEMS = [
   {
@@ -115,12 +116,13 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
   const router = useRouter()
   const { t } = useTranslation()
   const { currentBusiness } = useBusiness()
-  const isStaff = currentBusiness?.role === 'staff'
+  const role = currentBusiness?.role
+  const canSeeCredits = canAccessSettingsHref('/dashboard/settings/credits', role)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [credits, setCredits] = useState<number | null>(null)
 
   useEffect(() => {
-    if (currentBusiness?.id && !isStaff) {
+    if (currentBusiness?.id && canSeeCredits) {
       getCreditBalanceAction(currentBusiness.id).then(res => {
         if (res.success && res.data !== undefined) {
           setCredits(res.data)
@@ -129,8 +131,10 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
           setCredits(0)
         }
       })
+    } else {
+      setCredits(null)
     }
-  }, [currentBusiness?.id, isStaff])
+  }, [currentBusiness?.id, canSeeCredits])
 
 
 
@@ -158,7 +162,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEMS.filter(item => canAccessNavHref(item.href, currentBusiness?.role)).map(item => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           return (
             <Link
@@ -181,7 +185,7 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
       </nav>
 
       <div className="px-3 py-3 border-t border-sidebar-border mt-auto shrink-0 space-y-2">
-        {!isStaff && credits !== null && (
+        {canSeeCredits && credits !== null && (
           <div className="flex items-center justify-between rounded-lg bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <Coins className="size-4 shrink-0" />

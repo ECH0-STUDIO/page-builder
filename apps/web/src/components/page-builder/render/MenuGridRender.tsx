@@ -25,8 +25,37 @@ import {
   isForcedMobileLayout,
   menuGridColClass,
 } from './preview-layout'
+import { clampSpicyLevel, spicyChiliText } from '@/lib/menu-dietary'
 
 const DEFAULT_BRAND = defaultThemeSettings.primary_color
+
+function DietaryBadges({
+  item,
+  className,
+}: {
+  item: MenuItem
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const spicy = clampSpicyLevel(item.spicy_level)
+  const showVeg = Boolean(item.is_vegetarian)
+  const showSpicy = spicy > 0
+  if (!showVeg && !showSpicy) return null
+  return (
+    <div className={cn('flex flex-wrap gap-1.5', className)}>
+      {showVeg && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">
+          {t('menuBuilder.vegetarianBadge')}
+        </span>
+      )}
+      {showSpicy && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-700 font-semibold">
+          {spicyChiliText(spicy)}
+        </span>
+      )}
+    </div>
+  )
+}
 
 const CARD_RADIUS: Record<BorderRadius, string> = {
   none: '0px',
@@ -167,6 +196,7 @@ function ItemModal({
               {config.show_description && item.description && (
                 <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{item.description}</p>
               )}
+              <DietaryBadges item={item} className="mt-2" />
               {/* Tags */}
               {(item.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -381,6 +411,7 @@ function ItemCardGrid({
         {config.show_description && item.description && (
           <p className="text-xs mt-0.5 line-clamp-2 leading-relaxed" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
+        <DietaryBadges item={item} className="mt-1.5" />
         <div className="flex flex-col mt-2">
           {hasVariants && optionCount > 0 && (
             <span className="text-[10px] font-semibold tracking-wider text-amber-600 mb-1.5 uppercase">
@@ -468,6 +499,7 @@ function ItemRowList({
         {config.show_description && item.description && (
           <p className="text-xs mt-0.5 line-clamp-2 md:line-clamp-1" style={{ color: textColor, opacity: 0.6 }}>{item.description}</p>
         )}
+        <DietaryBadges item={item} className="mt-1" />
         {hasVariants && optionCount > 0 && (
           <p className="text-[10px] mt-1 font-semibold text-amber-600 uppercase tracking-wider">
             {optionCount} {optionCount === 1 ? t('cart.option') : t('cart.options')} {t('cart.availableLabel')}

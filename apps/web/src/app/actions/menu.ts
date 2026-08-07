@@ -27,6 +27,10 @@ export type MenuItem = {
   available: boolean
   sort_order: number
   tags: string[] | null
+  /** Independent of tags — guest-facing vegetarian flag */
+  is_vegetarian: boolean
+  /** 0 none … 3 hot */
+  spicy_level: number
   created_at: string
   updated_at: string
 }
@@ -67,11 +71,23 @@ async function userOwnsCategoryBusiness(supabase: Awaited<ReturnType<typeof crea
 async function userOwnsItemBusiness(supabase: Awaited<ReturnType<typeof createClient>>, itemId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('menu_items')
-    .select('businesses!inner(owner_id)')
+    .select('business_id, businesses!inner(owner_id)')
     .eq('id', itemId)
     .single()
+  if (!data) return false
   const ownerRecord = (data as any)?.businesses
-  return Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id === userId : ownerRecord?.owner_id === userId
+  const ownerId = Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id : ownerRecord?.owner_id
+  if (ownerId === userId) return true
+
+  const businessId = (data as { business_id?: string }).business_id
+  if (!businessId) return false
+  const { data: member } = await supabase
+    .from('business_members')
+    .select('role')
+    .eq('business_id', businessId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return member?.role === 'owner' || member?.role === 'manager'
 }
 
 async function userOwnsVariantGroupBusiness(supabase: Awaited<ReturnType<typeof createClient>>, groupId: string, userId: string): Promise<boolean> {
@@ -191,6 +207,8 @@ export async function addItemAction(
     price: number
     image_url?: string
     tags?: string[]
+    is_vegetarian?: boolean
+    spicy_level?: number
   }
 ): Promise<ActionResult<MenuItem>> {
   const supabase = await createClient()
@@ -208,6 +226,7 @@ export async function addItemAction(
     .limit(1)
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
+  const spicy = Math.min(3, Math.max(0, Math.floor(item.spicy_level ?? 0)))
 
   const { data, error } = await db
     .from('menu_items')
@@ -219,6 +238,8 @@ export async function addItemAction(
       price: item.price,
       image_url: item.image_url || null,
       tags: item.tags ?? [],
+      is_vegetarian: Boolean(item.is_vegetarian),
+      spicy_level: spicy,
       sort_order: nextOrder,
       available: true,
     })
@@ -239,6 +260,8 @@ export async function updateItemAction(
     image_url: string | null
     available: boolean
     tags: string[]
+    is_vegetarian: boolean
+    spicy_level: number
     sort_order: number
     category_id: string
   }>
@@ -251,12 +274,15 @@ export async function updateItemAction(
     return { success: false, error: 'Forbidden' }
   }
 
-  const payload = { ...update }
+  const payload = { ...update } as Record<string, unknown>
+  if (typeof update.spicy_level === 'number') {
+    payload.spicy_level = Math.min(3, Math.max(0, Math.floor(update.spicy_level)))
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_items')
-    .update(payload)
+    .update(payload as any)
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }

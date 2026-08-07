@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { getPaymentSettingsAction } from '@/app/actions/payments'
 import type { Metadata } from 'next'
 import { VietQRSettings } from '@/components/payments/VietQRSettings'
@@ -19,8 +20,9 @@ export default async function PaymentsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard/payments', role, 'nav')
   const paymentSettings = await getPaymentSettingsAction(business.id)
 
   return (

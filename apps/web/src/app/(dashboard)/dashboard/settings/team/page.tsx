@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TeamList } from './TeamList'
@@ -16,11 +17,13 @@ export default async function TeamPage() {
   const { t } = await getServerTranslation()
 
   // Get current business
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
 
   if (!business) {
     return <div>{t('settings.team.noBusiness')}</div>
   }
+
+  assertDashboardAccess('/dashboard/settings/team', role, 'settings')
 
   // Fetch team members for this business
   const adminClient = createAdminClient()

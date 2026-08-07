@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { redirect } from 'next/navigation'
 import { ArrowRight, Store, Palette, UtensilsCrossed, Globe, QrCode, CreditCard, Eye, BarChart3, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,8 +16,9 @@ export default async function DashboardPage() {
 
   const { t } = await getServerTranslation()
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard', role, 'nav')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase

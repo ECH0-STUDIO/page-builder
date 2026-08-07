@@ -49,7 +49,7 @@ import { useBusiness } from '@/context/BusinessContext'
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const ITEM_TAG_SUGGESTIONS = [
-  'Bestseller', 'Spicy', 'Vegetarian', 'Vegan', 'Gluten-free',
+  'Bestseller', 'Vegan', 'Gluten-free',
   'New', 'Chef special', 'Seasonal', 'Halal',
 ]
 
@@ -371,7 +371,13 @@ function ItemDialog({
   onClose: () => void
   /** Called when the user explicitly clicks "Save changes" */
   onSave: (item: {
-    name: string; description: string; price: number; image_url?: string; tags: string[]
+    name: string
+    description: string
+    price: number
+    image_url?: string
+    tags: string[]
+    is_vegetarian: boolean
+    spicy_level: number
   }) => Promise<void>
   categoryId: string
   businessId: string
@@ -382,6 +388,8 @@ function ItemDialog({
   const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
+  const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
+  const [spicyLevel, setSpicyLevel] = useState(initial?.spicy_level ?? 0)
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '')
   const [imageLoading, setImageLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -389,6 +397,18 @@ function ItemDialog({
   const fileRef = useRef<HTMLInputElement>(null)
 
   const isEditing = !!initial
+
+  useEffect(() => {
+    if (!open) return
+    setName(initial?.name ?? '')
+    setDescription(initial?.description ?? '')
+    setPrice(initial?.price?.toString() ?? '')
+    setTags(initial?.tags ?? [])
+    setIsVegetarian(Boolean(initial?.is_vegetarian))
+    setSpicyLevel(initial?.spicy_level ?? 0)
+    setImageUrl(initial?.image_url ?? '')
+    setActiveTab('details')
+  }, [open, initial])
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -400,7 +420,6 @@ function ItemDialog({
         'menu-images',
         `${businessId}/${itemId}.jpg`,
         file,
-        // Start at 0.85 quality, step down automatically until ≤300 KB
         { maxWidth: 900, maxHeight: 900, quality: 0.85, targetSizeKB: 300 },
         ({ originalKB, compressedKB }) => {
           if (originalKB > compressedKB + 30)
@@ -421,20 +440,26 @@ function ItemDialog({
     const parsedPrice = parseFloat(price)
     if (isNaN(parsedPrice) || parsedPrice < 0) { toast.error('Enter a valid price'); return }
     setSaving(true)
-    await onSave({ name, description, price: parsedPrice, image_url: imageUrl || undefined, tags })
+    await onSave({
+      name,
+      description,
+      price: parsedPrice,
+      image_url: imageUrl || undefined,
+      tags,
+      is_vegetarian: isVegetarian,
+      spicy_level: spicyLevel,
+    })
     setSaving(false)
     onClose()
   }
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      {/* p-0 so we can control padding per zone and pin the footer */}
       <DialogContent className="sm:max-w-lg p-0 flex flex-col w-[95vw] md:w-full" style={{ maxHeight: 'min(90vh, 700px)' }}>
         <DialogHeader className="px-4 md:px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>{isEditing ? t('menuBuilder.editItem') : t('menuBuilder.addItem')}</DialogTitle>
         </DialogHeader>
 
-        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto min-h-0 px-4 md:px-6">
         <Tabs
           value={activeTab}
@@ -449,10 +474,8 @@ function ItemDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* ── Details tab ── */}
           <TabsContent value="details" className="mt-4">
             <form id="item-detail-form" onSubmit={handleSubmit} className="space-y-4">
-              {/* Image */}
               <div className="flex gap-4 items-start">
                 <ImageUploader businessId={businessId} onImageSelect={setImageUrl}>
                   {(openGallery) => (
@@ -501,6 +524,43 @@ function ItemDialog({
                 <Input id="item-price" type="number" min={0} step={1000} value={price} onChange={e => setPrice(e.target.value)} placeholder={t('menuBuilder.pricePlaceholder')} required />
               </div>
 
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium">{t('menuBuilder.vegetarian')}</p>
+                  <p className="text-xs text-muted-foreground">{t('menuBuilder.vegetarianHint')}</p>
+                </div>
+                <Switch checked={isVegetarian} onCheckedChange={setIsVegetarian} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('menuBuilder.spicyLevel')}</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { value: 0, label: t('menuBuilder.spicyNone') },
+                    { value: 1, label: t('menuBuilder.spicyMild') },
+                    { value: 2, label: t('menuBuilder.spicyMedium') },
+                    { value: 3, label: t('menuBuilder.spicyHot') },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSpicyLevel(opt.value)}
+                      className={cn(
+                        'rounded-lg border px-1.5 py-2 text-center text-xs font-medium transition-colors',
+                        spicyLevel === opt.value
+                          ? 'border-foreground bg-foreground text-background'
+                          : 'border-border bg-background text-muted-foreground hover:border-foreground/40',
+                      )}
+                    >
+                      <span className="block text-sm leading-none mb-1">
+                        {opt.value === 0 ? '—' : '🌶️'.repeat(opt.value)}
+                      </span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label>{t('menuBuilder.tags')}</Label>
                 <TagInput
@@ -515,7 +575,6 @@ function ItemDialog({
             </form>
           </TabsContent>
 
-          {/* ── Options & Variants tab ── */}
           <TabsContent value="variants" className="mt-4">
             {isEditing
               ? <VariantsPanel itemId={initial.id} />
@@ -523,9 +582,8 @@ function ItemDialog({
             }
           </TabsContent>
         </Tabs>
-        </div>{/* end scrollable body */}
+        </div>
 
-        {/* ── Pinned footer ── */}
         <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background rounded-b-xl sm:rounded-b-2xl">
           {activeTab === 'details' ? (
             <DialogFooter className="gap-2 sm:gap-0">
@@ -655,7 +713,13 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
 
   // ── Item handlers ──
   async function handleSaveItem(itemData: {
-    name: string; description: string; price: number; image_url?: string; tags: string[]
+    name: string
+    description: string
+    price: number
+    image_url?: string
+    tags: string[]
+    is_vegetarian: boolean
+    spicy_level: number
   }) {
     if (itemDialog.editing) {
       const result = await updateItemAction(itemDialog.editing.id, {
@@ -664,11 +728,22 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         price: itemData.price,
         image_url: itemData.image_url || null,
         tags: itemData.tags,
+        is_vegetarian: itemData.is_vegetarian,
+        spicy_level: itemData.spicy_level,
       })
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => prev.map(i =>
         i.id === itemDialog.editing!.id
-          ? { ...i, name: itemData.name, description: itemData.description || null, price: itemData.price, image_url: itemData.image_url || null, tags: itemData.tags }
+          ? {
+              ...i,
+              name: itemData.name,
+              description: itemData.description || null,
+              price: itemData.price,
+              image_url: itemData.image_url || null,
+              tags: itemData.tags,
+              is_vegetarian: itemData.is_vegetarian,
+              spicy_level: itemData.spicy_level,
+            }
           : i
       ))
       toast.success(t('menuBuilder.itemSaved'))
@@ -697,6 +772,8 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       price: item.price,
       image_url: item.image_url ?? undefined,
       tags: item.tags || [],
+      is_vegetarian: Boolean(item.is_vegetarian),
+      spicy_level: item.spicy_level ?? 0,
     })
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => [...prev, result.data])
@@ -1004,16 +1081,19 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
 
                           <div className="flex items-center justify-between mt-2 gap-2">
                             <span className="text-sm font-bold">{formatCurrency(item.price)}</span>
-                            {(item.tags || []).length > 0 && (
-                              <div className="flex flex-wrap gap-1 justify-end">
-                                {(item.tags || []).slice(0, 2).map(tag => (
-                                  <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
-                                ))}
-                                {(item.tags || []).length > 2 && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{(item.tags || []).length - 2}</Badge>
-                                )}
-                              </div>
-                            )}
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {item.is_vegetarian && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('menuBuilder.vegetarianBadge')}</Badge>
+                              )}
+                              {(item.spicy_level ?? 0) > 0 && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {'🌶️'.repeat(Math.min(3, item.spicy_level))}
+                                </Badge>
+                              )}
+                              {(item.tags || []).slice(0, 2).map(tag => (
+                                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import { billCustomDomainIfDueAction, billPageViewsIfDueAction, refundPendingCustomDomainCharges } from '@/app/actions/credits'
 import type { Metadata } from 'next'
@@ -17,8 +18,9 @@ export default async function PublishingPage() {
 
   const { t } = await getServerTranslation()
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard/publishing', role, 'nav')
 
   // Opportunistic billing / refund while owner is on Publishing (no cron needed).
   // Must not throw — failures here previously crashed the whole page.

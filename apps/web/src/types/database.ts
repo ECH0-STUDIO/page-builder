@@ -299,6 +299,8 @@ export interface Database {
           available: boolean
           sort_order: number
           tags: string[] | null
+          is_vegetarian: boolean
+          spicy_level: number
           visible_locales: string[] | null
           created_at: string
           updated_at: string
@@ -316,6 +318,8 @@ export interface Database {
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          is_vegetarian?: boolean
+          spicy_level?: number
           visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
@@ -333,6 +337,8 @@ export interface Database {
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          is_vegetarian?: boolean
+          spicy_level?: number
           visible_locales?: string[] | null
           created_at?: string
           updated_at?: string

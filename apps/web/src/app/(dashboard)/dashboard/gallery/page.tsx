@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth-server'
 import { redirect } from 'next/navigation'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { GalleryClient } from '@/components/gallery/GalleryClient'
 
 export const metadata = {
@@ -13,10 +14,8 @@ export default async function GalleryPage() {
 
   const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/dashboard')
+  assertDashboardAccess('/dashboard/gallery', role, 'nav')
 
-  if (role === 'staff') {
-    redirect('/dashboard')
-  }
 
   return (
     <GalleryClient businessId={business.id} />

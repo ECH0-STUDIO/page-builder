@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { QRManager } from '@/components/qr/QRManager'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -18,8 +19,9 @@ export default async function QRPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard/qr', role, 'nav')
   if (!business.slug) {
     return (
       <div className="p-8">

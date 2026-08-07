@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
+import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { PrintMenuShell } from '@/components/print/PrintMenuShell'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -20,8 +21,9 @@ export default async function PrintMenuPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { business } = await getActiveBusiness(supabase, user.id)
+  const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
+  assertDashboardAccess('/dashboard/print-menu', role, 'nav')
   const [{ data: categoriesRaw }, { data: itemsRaw }] = await Promise.all([
     db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order'),
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order'),

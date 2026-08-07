@@ -5,7 +5,11 @@ export function normalizeMenuCategory(row: Record<string, unknown>): MenuCategor
 }
 
 export function normalizeMenuItem(row: Record<string, unknown>): MenuItem {
-  return row as MenuItem
+  return {
+    ...(row as MenuItem),
+    is_vegetarian: Boolean(row.is_vegetarian),
+    spicy_level: typeof row.spicy_level === 'number' ? row.spicy_level : Number(row.spicy_level) || 0,
+  }
 }
 
 export function normalizeMenuCategories(rows: Record<string, unknown>[]): MenuCategory[] {

@@ -7,11 +7,15 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useBusiness } from '@/context/BusinessContext'
+import { canAccessSettingsHref } from '@/lib/dashboard-access'
 
 export function SettingsNav() {
   const pathname = usePathname()
   const { t } = useTranslation()
   const router = useRouter()
+  const { currentBusiness } = useBusiness()
+  const role = currentBusiness?.role
 
   const items = [
     {
@@ -34,7 +38,7 @@ export function SettingsNav() {
       href: '/dashboard/settings/credits',
       icon: CreditCard,
     },
-  ]
+  ].filter(item => canAccessSettingsHref(item.href, role))
 
   async function handleSignOut() {
     const supabase = createClient()
