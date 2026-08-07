@@ -5,7 +5,7 @@
  * Categories live in a horizontal strip under the carousel (not here).
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Bell, Receipt, Loader2, X, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { useCart } from '@/components/page-builder/render/CartContext'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
+import { readRememberedTable, writeRememberedTable } from '@/lib/guest-order-storage'
 
 interface OrderBottomBarProps {
   businessId: string
@@ -47,6 +48,15 @@ export function OrderBottomBar({
   const overlayPos = contained ? 'absolute' : 'fixed'
   const barPos = contained ? 'absolute' : 'fixed'
 
+  useEffect(() => {
+    if (tableFromUrl) {
+      writeRememberedTable(businessId, tableFromUrl)
+      return
+    }
+    const remembered = readRememberedTable(businessId)
+    if (remembered) setManualTable(remembered)
+  }, [businessId, tableFromUrl])
+
   function startCooldown(type: ServiceRequestType) {
     setCooldown(prev => ({ ...prev, [type]: true }))
     window.setTimeout(() => {
@@ -61,11 +71,12 @@ export function OrderBottomBar({
       return
     }
 
+    writeRememberedTable(businessId, tableNumber)
+
     if (previewMode) {
       startCooldown(type)
       setPromptType(null)
       setActionsOpen(false)
-      setManualTable('')
       toast.info(t('cart.previewDisabled'))
       return
     }
@@ -81,7 +92,7 @@ export function OrderBottomBar({
       startCooldown(type)
       setPromptType(null)
       setActionsOpen(false)
-      setManualTable('')
+      setManualTable(tableNumber)
       toast.success(
         type === 'call_staff'
           ? t('orderPage.callStaffSent')
@@ -101,6 +112,8 @@ export function OrderBottomBar({
       submit(type, tableFromUrl)
       return
     }
+    const remembered = (manualTable || readRememberedTable(businessId)).trim()
+    if (remembered) setManualTable(remembered)
     setPromptType(type)
   }
 

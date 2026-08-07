@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * CartDrawer — floating cart button + bottom-sheet order summary + checkout flow
+ * CartDrawer — floating cart button + side drawer with Current / Placed tabs
  */
 
 import { useState, useEffect, useTransition } from 'react'
@@ -16,6 +16,13 @@ import { buildVietQRUrl, VIET_BANKS } from '@/lib/vietqr-utils'
 import { toast } from 'sonner'
 import { useTranslationWithFallback } from '@/i18n/I18nProvider'
 import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import {
+  loadPastOrders,
+  savePastOrders,
+  readRememberedTable,
+  writeRememberedTable,
+  type GuestPastOrder,
+} from '@/lib/guest-order-storage'
 
 // ─── Cart Item Row ─────────────────────────────────────────────────────────────
 
@@ -78,7 +85,7 @@ interface CartDrawerProps {
   orderingOpen?: boolean
 }
 
-type DrawerStep = 'cart' | 'payment'
+type DrawerTab = 'current' | 'placed'
 
 export function CartDrawer({
   businessId,
@@ -97,13 +104,15 @@ export function CartDrawer({
   const actionColor = brandColor || '#E85D26'
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const tableFromUrl = searchParams.get('table') ?? ''
+  const tableFromUrl = (searchParams.get('table') ?? '').trim()
 
   const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<DrawerStep>('cart')
+  const [tab, setTab] = useState<DrawerTab>('current')
+  const [justPlaced, setJustPlaced] = useState(false)
   const [tableNumber, setTableNumber] = useState(tableFromUrl)
+  const [tableHydrated, setTableHydrated] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [pastOrders, setPastOrders] = useState<any[]>([])
+  const [pastOrders, setPastOrders] = useState<GuestPastOrder[]>([])
 
   const effectiveTable = (tableFromUrl || tableNumber).trim()
   const position = contained ? 'absolute' : 'fixed'
@@ -114,56 +123,70 @@ export function CartDrawer({
   )
   const cartAllowed = Boolean(contained || previewMode || isOrderRoute)
 
+  // Prefill table from ?table= or remembered localStorage value
   useEffect(() => {
     if (previewMode && !tableFromUrl) {
       setTableNumber('1')
+      setTableHydrated(true)
+      return
     }
-  }, [previewMode, tableFromUrl])
+    if (tableFromUrl) {
+      setTableNumber(tableFromUrl)
+      if (businessId) writeRememberedTable(businessId, tableFromUrl)
+      setTableHydrated(true)
+      return
+    }
+    if (businessId) {
+      const remembered = readRememberedTable(businessId)
+      if (remembered) setTableNumber(remembered)
+    }
+    setTableHydrated(true)
+  }, [previewMode, tableFromUrl, businessId])
+
+  // Load placed orders whenever business + table is known
+  useEffect(() => {
+    if (!businessId || !effectiveTable) {
+      setPastOrders([])
+      return
+    }
+    setPastOrders(loadPastOrders(businessId, effectiveTable))
+  }, [businessId, effectiveTable])
 
   useEffect(() => {
-    const open = () => {
-      setStep('cart')
+    const openDrawer = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: DrawerTab }>).detail
+      setTab(detail?.tab === 'placed' ? 'placed' : 'current')
+      setJustPlaced(false)
       setOpen(true)
     }
-    window.addEventListener('eatery-open-cart', open)
-    return () => window.removeEventListener('eatery-open-cart', open)
+    window.addEventListener('eatery-open-cart', openDrawer)
+    return () => window.removeEventListener('eatery-open-cart', openDrawer)
   }, [])
 
+  // Persist manual table as the diner types (so call-staff / refresh keep it)
   useEffect(() => {
-    if (typeof window !== 'undefined' && businessId) {
-      try {
-        const stored = localStorage.getItem(`eatery_orders_${businessId}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          const recentOrders = parsed.filter((o: any) => Date.now() - o.timestamp < 12 * 60 * 60 * 1000)
-          setPastOrders(recentOrders)
-          if (recentOrders.length !== parsed.length) {
-            localStorage.setItem(`eatery_orders_${businessId}`, JSON.stringify(recentOrders))
-          }
-        } else {
-          // Legacy migration
-          const legacy = localStorage.getItem(`eatery_last_order_${businessId}`)
-          if (legacy) {
-            const parsed = JSON.parse(legacy)
-            if (Date.now() - parsed.timestamp < 12 * 60 * 60 * 1000) {
-              setPastOrders([parsed])
-              localStorage.setItem(`eatery_orders_${businessId}`, JSON.stringify([parsed]))
-            }
-            localStorage.removeItem(`eatery_last_order_${businessId}`)
-          }
-        }
-      } catch (e) {}
+    if (!tableHydrated || !businessId || tableFromUrl || previewMode) return
+    const trimmed = tableNumber.trim()
+    if (!trimmed) return
+    const timer = window.setTimeout(() => writeRememberedTable(businessId, trimmed), 400)
+    return () => window.clearTimeout(timer)
+  }, [tableNumber, businessId, tableFromUrl, previewMode, tableHydrated])
+
+  // Auto-close only when Current is empty and there is nothing placed for this table
+  useEffect(() => {
+    if (!cartAllowed || !open) return
+    if (tab === 'current' && totalItems === 0 && !justPlaced && pastOrders.length === 0) {
+      setOpen(false)
     }
-  }, [businessId])
+  }, [cartAllowed, open, tab, totalItems, justPlaced, pastOrders.length])
 
-  // Close drawer when cart empties IF we are still on cart step
-  if (cartAllowed && totalItems === 0 && open && step === 'cart') {
-    setOpen(false)
-  }
-
-  // Hide entirely if empty cart and closed — or if not on an order surface
+  // Hide entirely if empty cart, closed, and no placed history for this table
   if (!cartAllowed) return null
-  if (totalItems === 0 && !open && step === 'cart' && pastOrders.length === 0) return null
+  if (totalItems === 0 && !open && pastOrders.length === 0) return null
+
+  function handleTableChange(value: string) {
+    setTableNumber(value)
+  }
 
   async function handlePlaceOrder() {
     if (previewMode) {
@@ -178,24 +201,30 @@ export function CartDrawer({
       toast.error(t('cart.businessIdMissing'))
       return
     }
-    if (!tableNumber.trim() && !tableFromUrl) {
+    if (!effectiveTable) {
       toast.error(t('cart.enterTableNumber'))
       return
     }
 
     const tableForOrder = effectiveTable
+    writeRememberedTable(businessId, tableForOrder)
 
     startTransition(async () => {
       const res = await createOrderAction(businessId, tableForOrder, items, totalPrice)
       if (res.success) {
-        const orderData = { id: res.orderId, items, total: totalPrice, timestamp: Date.now() }
+        const orderData: GuestPastOrder = {
+          id: res.orderId ?? `local-${Date.now()}`,
+          items,
+          total: totalPrice,
+          timestamp: Date.now(),
+          table: tableForOrder,
+        }
         const updatedOrders = [orderData, ...pastOrders]
         setPastOrders(updatedOrders)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`eatery_orders_${businessId}`, JSON.stringify(updatedOrders))
-        }
+        savePastOrders(businessId, tableForOrder, updatedOrders)
         clearCart()
-        setStep('payment')
+        setJustPlaced(true)
+        setTab('placed')
       } else {
         const closed = res.error === 'CLOSED' || ('code' in res && res.code === 'CLOSED')
         toast.error(closed ? t('cart.closedForOrders') : `${t('cart.placeOrderFailed')} ${res.error}`)
@@ -205,19 +234,21 @@ export function CartDrawer({
 
   function handleClose() {
     setOpen(false)
-    if (step === 'payment') {
-      setTimeout(() => setStep('cart'), 300) // reset step after animation
-    }
+    setTimeout(() => {
+      setJustPlaced(false)
+      setTab('current')
+    }, 300)
   }
 
   const hasVietQR = paymentSettings?.vietqr && paymentSettings.vietqr.bank_code
+  const showReceiptFab = !hideFab && !open && totalItems === 0 && pastOrders.length > 0
 
   const ui = (
     <>
       {/* ── Floating cart button ── */}
-      {!hideFab && !open && step === 'cart' && totalItems > 0 && (
+      {!hideFab && !open && totalItems > 0 && (
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => { setTab('current'); setOpen(true) }}
           className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-black/30 hover:opacity-90 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
           style={{ backgroundColor: actionColor }}
           aria-label={t('cart.viewOrder')}
@@ -236,9 +267,9 @@ export function CartDrawer({
       )}
 
       {/* ── Floating Receipt button ── */}
-      {!hideFab && !open && totalItems === 0 && pastOrders.length > 0 && (
+      {showReceiptFab && (
         <button
-          onClick={() => { setStep('payment'); setOpen(true); }}
+          onClick={() => { setTab('placed'); setOpen(true) }}
           className={`${position} ${fabOffsetClass} right-4 z-[100] flex items-center gap-2.5 bg-white border border-gray-200 text-gray-900 px-5 py-3.5 rounded-full shadow-2xl shadow-black/10 hover:bg-gray-50 active:scale-95 transition-all ${contained ? 'pointer-events-auto' : ''}`}
         >
           <div className="relative">
@@ -268,9 +299,13 @@ export function CartDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
-            {step === 'cart' ? <UtensilsCrossed className="size-4 text-gray-400" /> : <CheckCircle2 className="size-5 text-green-500" />}
+            {justPlaced ? (
+              <CheckCircle2 className="size-5 text-green-500" />
+            ) : (
+              <UtensilsCrossed className="size-4 text-gray-400" />
+            )}
             <h2 className="font-bold text-gray-900 text-base">
-              {step === 'cart' ? t('cart.yourOrder') : t('cart.orderSent')}
+              {justPlaced ? t('cart.orderSent') : t('cart.yourOrder')}
             </h2>
           </div>
           <button
@@ -281,13 +316,66 @@ export function CartDrawer({
           </button>
         </div>
 
-        {/* ── STEP: CART ── */}
-        {step === 'cart' && (
+        {/* Tabs: Current | Placed */}
+        <div className="px-5 pt-3 shrink-0 border-b border-gray-100">
+          <div className="flex gap-6" role="tablist" aria-label={t('cart.yourOrder')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'current'}
+              onClick={() => { setTab('current'); setJustPlaced(false) }}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+                tab === 'current'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {t('cart.tabCurrent')}
+              {totalItems > 0 && (
+                <span className="ml-1.5 text-xs font-bold text-gray-500">({totalItems})</span>
+              )}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'placed'}
+              onClick={() => setTab('placed')}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+                tab === 'placed'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {t('cart.tabPlaced')}
+              {pastOrders.length > 0 && (
+                <span className="ml-1.5 text-xs font-bold text-gray-500">({pastOrders.length})</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* ── TAB: CURRENT ── */}
+        {tab === 'current' && (
           <>
             <div className="flex-1 overflow-y-auto px-5">
-              {items.map(item => (
-                <CartItemRow key={item.cartId} item={item} locale={activeLocale} />
-              ))}
+              {items.length === 0 ? (
+                <div className="py-16 text-center space-y-2">
+                  <p className="text-sm font-medium text-gray-500">{t('cart.empty')}</p>
+                  {pastOrders.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTab('placed')}
+                      className="text-sm font-semibold text-gray-800 underline underline-offset-2"
+                    >
+                      {t('cart.viewPlacedOrder')}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                items.map(item => (
+                  <CartItemRow key={item.cartId} item={item} locale={activeLocale} />
+                ))
+              )}
             </div>
 
             <div className="px-5 pb-8 pt-4 space-y-4 shrink-0 border-t border-gray-100 bg-white">
@@ -301,10 +389,11 @@ export function CartDrawer({
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">{t('cart.tableNumber')}</label>
-                    <input 
-                      type="text" 
-                      value={tableNumber} 
-                      onChange={e => setTableNumber(e.target.value)}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={tableNumber}
+                      onChange={e => handleTableChange(e.target.value)}
                       placeholder={t('cart.tablePlaceholder')}
                       className="h-10 px-3 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 text-sm font-medium"
                     />
@@ -345,22 +434,47 @@ export function CartDrawer({
           </>
         )}
 
-        {/* ── STEP: PAYMENT ── */}
-        {step === 'payment' && (
-          <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8 bg-gray-50/50">
-            {pastOrders.length > 0 && (
+        {/* ── TAB: PLACED ── */}
+        {tab === 'placed' && (
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 bg-gray-50/50">
+            {!effectiveTable ? (
+              <div className="bg-white rounded-2xl p-5 border border-gray-100 text-center space-y-3">
+                <p className="text-sm text-gray-600 font-medium">{t('cart.enterTableToSeePlaced')}</p>
+                {!tableFromUrl && (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={tableNumber}
+                    onChange={e => handleTableChange(e.target.value)}
+                    placeholder={t('cart.tablePlaceholder')}
+                    className="w-full h-10 px-3 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400 text-sm font-medium"
+                  />
+                )}
+              </div>
+            ) : pastOrders.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-gray-100 text-center">
+                <p className="text-sm text-gray-500 font-medium">{t('cart.noPlacedOrders')}</p>
+              </div>
+            ) : (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-end mb-4">
-                  <h4 className="font-bold text-gray-900 text-sm">{t('cart.orderHistory')}</h4>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{pastOrders.length} {pastOrders.length > 1 ? t('cart.orders') : t('cart.order')}</span>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">{t('cart.orderHistory')}</h4>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {t('cart.tableNumber')} {effectiveTable}
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    {pastOrders.length} {pastOrders.length > 1 ? t('cart.orders') : t('cart.order')}
+                  </span>
                 </div>
-                
+
                 <div className="space-y-4 mb-4">
-                  {pastOrders.map((order: any, idx: number) => (
+                  {pastOrders.map((order, idx) => (
                     <div key={order.id} className="relative">
                       {idx > 0 && <div className="absolute top-[-8px] left-0 right-0 border-t border-gray-100 border-dashed" />}
                       <div className="space-y-2 pt-1">
-                        {order.items.map((item: any) => (
+                        {(order.items as CartItem[]).map(item => (
                           <div key={item.cartId} className="flex justify-between text-sm">
                             <div className="flex gap-2">
                               <span className="font-bold text-gray-900">{item.quantity}×</span>
@@ -368,7 +482,7 @@ export function CartDrawer({
                                 <p className="font-medium text-gray-800">{item.itemName}</p>
                                 {item.variants && item.variants.length > 0 && (
                                   <p className="text-xs text-gray-400 mt-0.5">
-                                    {item.variants.map((v: any) => v.optionLabel).join(', ')}
+                                    {item.variants.map(v => v.optionLabel).join(', ')}
                                   </p>
                                 )}
                               </div>
@@ -380,7 +494,7 @@ export function CartDrawer({
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                   <span className="font-bold text-gray-900">{t('cart.grandTotal')}</span>
                   <span className="font-bold text-xl text-gray-900">
@@ -390,7 +504,7 @@ export function CartDrawer({
               </div>
             )}
 
-            {hasVietQR ? (() => {
+            {(justPlaced || pastOrders.length > 0) && hasVietQR && (() => {
               const vietqr = paymentSettings.vietqr!
               const vietqrImageUrl = buildVietQRUrl(vietqr)
               const bankName = VIET_BANKS.find(b => b.code === vietqr.bank_code)?.name ?? vietqr.bank_code
@@ -422,8 +536,10 @@ export function CartDrawer({
                   </div>
                 </div>
               )
-            })() : (
-              <div className="text-center py-12 px-4 space-y-4">
+            })()}
+
+            {justPlaced && !hasVietQR && (
+              <div className="text-center py-8 px-4 space-y-4">
                 <div className="size-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="size-8 text-green-500" />
                 </div>
@@ -432,7 +548,7 @@ export function CartDrawer({
               </div>
             )}
 
-            <div className="text-center px-4">
+            <div className="text-center px-4 pb-4">
               <p className="text-xs text-gray-400">{t('cart.modifyCancel')}<br/>{t('cart.notifyStaff')}</p>
               <button onClick={handleClose} className="mt-6 px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-full transition-colors text-sm">
                 {t('cart.closeReturnMenu')}

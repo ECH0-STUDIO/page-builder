@@ -5,12 +5,13 @@
  * Uses ?table= when present; otherwise prompts for a table number.
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Bell, Receipt, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { createServiceRequestAction, type ServiceRequestType } from '@/app/actions/service-requests'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { readRememberedTable, writeRememberedTable } from '@/lib/guest-order-storage'
 
 interface OrderServiceActionsProps {
   businessId: string
@@ -27,6 +28,15 @@ export function OrderServiceActions({ businessId, brandColor }: OrderServiceActi
   const [promptType, setPromptType] = useState<ServiceRequestType | null>(null)
   const [manualTable, setManualTable] = useState('')
 
+  useEffect(() => {
+    if (tableFromUrl) {
+      writeRememberedTable(businessId, tableFromUrl)
+      return
+    }
+    const remembered = readRememberedTable(businessId)
+    if (remembered) setManualTable(remembered)
+  }, [businessId, tableFromUrl])
+
   function startCooldown(type: ServiceRequestType) {
     setCooldown(prev => ({ ...prev, [type]: true }))
     window.setTimeout(() => {
@@ -41,6 +51,8 @@ export function OrderServiceActions({ businessId, brandColor }: OrderServiceActi
       return
     }
 
+    writeRememberedTable(businessId, tableNumber)
+
     setPendingType(type)
     startTransition(async () => {
       const res = await createServiceRequestAction(businessId, tableNumber, type)
@@ -51,7 +63,7 @@ export function OrderServiceActions({ businessId, brandColor }: OrderServiceActi
       }
       startCooldown(type)
       setPromptType(null)
-      setManualTable('')
+      setManualTable(tableNumber)
       toast.success(
         type === 'call_staff'
           ? t('orderPage.callStaffSent')
@@ -66,6 +78,8 @@ export function OrderServiceActions({ businessId, brandColor }: OrderServiceActi
       submit(type, tableFromUrl)
       return
     }
+    const remembered = (manualTable || readRememberedTable(businessId)).trim()
+    if (remembered) setManualTable(remembered)
     setPromptType(type)
   }
 
