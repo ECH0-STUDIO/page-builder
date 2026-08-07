@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 # Delete GitHub Actions artifacts (and optionally workflow runs) older than N days.
 #
-# Requires: gh (authenticated as the repo owner), jq, python3
+# Requires: gh (authenticated as the repo OWNER — not a bot token), jq, python3
 #
-# Examples:
-#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --dry-run
-#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --days 15 --runs --artifacts
-#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --runs --no-artifacts
+# This frees GitHub Actions/Packages storage. Billing usage can take a few hours
+# to update after deletion.
 #
-# On your Mac/PC (use YOUR GitHub account, not a bot):
+# Examples (run on your Mac/PC with YOUR GitHub account):
 #   gh auth login
 #   chmod +x scripts/cleanup-github-actions-storage.sh
-#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --days 15 --runs --artifacts
+#
+#   # Preview
+#   ./scripts/cleanup-github-actions-storage.sh ECH0-STUDIO/page-builder --days 5 --runs --artifacts --dry-run
+#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --days 5 --runs --artifacts --dry-run
+#
+#   # Delete (pinit Android APKs are usually attached to workflow runs — use --runs)
+#   ./scripts/cleanup-github-actions-storage.sh ECH0-STUDIO/page-builder --days 5 --runs --artifacts
+#   ./scripts/cleanup-github-actions-storage.sh ECHO-STUDIO/pinit --days 5 --runs --artifacts
+#
+# Also delete Actions caches if present:
+#   gh cache list -R OWNER/REPO
+#   gh cache delete --all -R OWNER/REPO
 
 set -euo pipefail
 
-DAYS=15
+DAYS=5
 DRY_RUN=0
 DO_ARTIFACTS=1
 DO_RUNS=0
@@ -26,7 +35,7 @@ usage() {
 Usage: cleanup-github-actions-storage.sh OWNER/REPO [options]
 
 Options:
-  --days N        Delete items older than N days (default: 15)
+  --days N        Delete items older than N days (default: 5)
   --artifacts     Delete old artifacts (default: on)
   --no-artifacts  Skip artifact deletion
   --runs          Also delete old workflow runs (recommended — frees logs + APKs)
