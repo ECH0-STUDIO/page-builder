@@ -49,7 +49,7 @@ import { useBusiness } from '@/context/BusinessContext'
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const ITEM_TAG_SUGGESTIONS = [
-  'Bestseller', 'Vegan', 'Gluten-free',
+  'Bestseller', 'Gluten-free',
   'New', 'Chef special', 'Seasonal', 'Halal',
 ]
 
@@ -1075,25 +1075,35 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                             </DropdownMenu>)}
                           </div>
 
+                          {(item.is_vegetarian || (item.spicy_level ?? 0) > 0) && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {item.is_vegetarian && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-0">
+                                  {t('menuBuilder.vegetarianBadge')}
+                                </Badge>
+                              )}
+                              {(item.spicy_level ?? 0) > 0 && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-50 text-orange-700 border-0">
+                                  {'🌶️'.repeat(Math.min(3, item.spicy_level))}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
                           {item.description && (
                             <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
                           )}
 
-                          <div className="flex items-center justify-between mt-2 gap-2">
-                            <span className="text-sm font-bold">{formatCurrency(item.price)}</span>
-                            <div className="flex flex-wrap gap-1 justify-end">
-                              {item.is_vegetarian && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('menuBuilder.vegetarianBadge')}</Badge>
-                              )}
-                              {(item.spicy_level ?? 0) > 0 && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  {'🌶️'.repeat(Math.min(3, item.spicy_level))}
-                                </Badge>
-                              )}
-                              {(item.tags || []).slice(0, 2).map(tag => (
+                          {(item.tags || []).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {(item.tags || []).slice(0, 4).map(tag => (
                                 <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
                               ))}
                             </div>
+                          )}
+
+                          <div className="flex items-center justify-between mt-2 gap-2">
+                            <span className="text-sm font-bold">{formatCurrency(item.price)}</span>
                           </div>
                         </div>
                       </div>

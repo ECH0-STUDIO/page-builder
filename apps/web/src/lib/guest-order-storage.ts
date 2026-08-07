@@ -112,6 +112,9 @@ export function savePastOrders(
   if (typeof window === 'undefined' || !businessId || !table.trim()) return
   try {
     localStorage.setItem(ORDERS_KEY(businessId, table), JSON.stringify(filterRecent(orders)))
+    window.dispatchEvent(new CustomEvent('eatery-orders-updated', {
+      detail: { businessId, table: table.trim() },
+    }))
   } catch {
     /* ignore */
   }

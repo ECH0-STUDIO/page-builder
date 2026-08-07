@@ -69,20 +69,48 @@ export function OrderPageLive({
   const [searchQuery, setSearchQuery] = useState('')
   const [vegetarianOnly, setVegetarianOnly] = useState(false)
   const [spicyOnly, setSpicyOnly] = useState(false)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  const availableTags = useMemo(() => {
+    const set = new Set<string>()
+    for (const item of items) {
+      for (const tag of item.tags || []) {
+        const trimmed = tag.trim()
+        if (!trimmed) continue
+        // Dietary is independent — skip migrated leftovers
+        const lower = trimmed.toLowerCase()
+        if (lower === 'vegetarian' || lower === 'spicy' || lower === 'vegan' || lower === 'chay' || lower === 'cay' || lower === 'thuần chay') continue
+        set.add(trimmed)
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [items])
+
+  function toggleTag(tag: string) {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag],
+    )
+  }
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     return items.filter(item => {
       if (vegetarianOnly && !item.is_vegetarian) return false
       if (spicyOnly && !(item.spicy_level > 0)) return false
+      if (selectedTags.length > 0) {
+        const itemTags = item.tags || []
+        if (!selectedTags.every(tag => itemTags.includes(tag))) return false
+      }
       if (!q) return true
       const name = (item.name || '').toLowerCase()
       const desc = (item.description || '').toLowerCase()
       return name.includes(q) || desc.includes(q)
     })
-  }, [items, searchQuery, vegetarianOnly, spicyOnly])
+  }, [items, searchQuery, vegetarianOnly, spicyOnly, selectedTags])
 
-  const filterActive = Boolean(searchQuery.trim() || vegetarianOnly || spicyOnly)
+  const filterActive = Boolean(
+    searchQuery.trim() || vegetarianOnly || spicyOnly || selectedTags.length > 0,
+  )
   const catsForTabs = useMemo(() => {
     if (!filterActive) return visibleCats
     const ids = new Set(filteredItems.map(i => i.category_id))
@@ -141,12 +169,12 @@ export function OrderPageLive({
               className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-gray-400"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
             <button
               type="button"
               onClick={() => setVegetarianOnly(v => !v)}
               className={cn(
-                'h-8 px-3 rounded-full text-xs font-semibold border transition-colors',
+                'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-colors',
                 vegetarianOnly
                   ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
                   : 'border-gray-200 bg-white text-gray-600',
@@ -158,7 +186,7 @@ export function OrderPageLive({
               type="button"
               onClick={() => setSpicyOnly(v => !v)}
               className={cn(
-                'h-8 px-3 rounded-full text-xs font-semibold border transition-colors',
+                'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-colors',
                 spicyOnly
                   ? 'border-orange-500 bg-orange-50 text-orange-800'
                   : 'border-gray-200 bg-white text-gray-600',
@@ -166,6 +194,24 @@ export function OrderPageLive({
             >
               {t('orderPage.filterSpicy')}
             </button>
+            {availableTags.map(tag => {
+              const active = selectedTags.includes(tag)
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-colors',
+                    active
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 bg-white text-gray-600',
+                  )}
+                >
+                  {tag}
+                </button>
+              )
+            })}
           </div>
         </div>
 

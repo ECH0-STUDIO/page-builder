@@ -14,7 +14,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { useCart } from '@/components/page-builder/render/CartContext'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
-import { readRememberedTable, writeRememberedTable } from '@/lib/guest-order-storage'
+import { readRememberedTable, writeRememberedTable, loadPastOrders } from '@/lib/guest-order-storage'
 
 interface OrderBottomBarProps {
   businessId: string
@@ -44,6 +44,7 @@ export function OrderBottomBar({
   const [actionsOpen, setActionsOpen] = useState(false)
   const [promptType, setPromptType] = useState<ServiceRequestType | null>(null)
   const [manualTable, setManualTable] = useState('')
+  const [hasPlacedOrders, setHasPlacedOrders] = useState(false)
 
   const overlayPos = contained ? 'absolute' : 'fixed'
   const barPos = contained ? 'absolute' : 'fixed'
@@ -51,11 +52,37 @@ export function OrderBottomBar({
   useEffect(() => {
     if (tableFromUrl) {
       writeRememberedTable(businessId, tableFromUrl)
+      setManualTable(tableFromUrl)
+      setHasPlacedOrders(loadPastOrders(businessId, tableFromUrl).length > 0)
       return
     }
     const remembered = readRememberedTable(businessId)
-    if (remembered) setManualTable(remembered)
+    if (remembered) {
+      setManualTable(remembered)
+      setHasPlacedOrders(loadPastOrders(businessId, remembered).length > 0)
+    } else {
+      setHasPlacedOrders(false)
+    }
   }, [businessId, tableFromUrl])
+
+  // Refresh placed-order hint when cart clears (after placing) or table changes
+  useEffect(() => {
+    const table = (tableFromUrl || manualTable || readRememberedTable(businessId)).trim()
+    if (!table) {
+      setHasPlacedOrders(false)
+      return
+    }
+    setHasPlacedOrders(loadPastOrders(businessId, table).length > 0)
+  }, [businessId, tableFromUrl, manualTable, totalItems])
+
+  useEffect(() => {
+    function onStorage() {
+      const table = (tableFromUrl || manualTable || readRememberedTable(businessId)).trim()
+      if (table) setHasPlacedOrders(loadPastOrders(businessId, table).length > 0)
+    }
+    window.addEventListener('eatery-orders-updated', onStorage)
+    return () => window.removeEventListener('eatery-orders-updated', onStorage)
+  }, [businessId, tableFromUrl, manualTable])
 
   function startCooldown(type: ServiceRequestType) {
     setCooldown(prev => ({ ...prev, [type]: true }))
@@ -118,8 +145,25 @@ export function OrderBottomBar({
   }
 
   function openCart() {
-    window.dispatchEvent(new Event('eatery-open-cart'))
+    const tab = totalItems === 0 && hasPlacedOrders ? 'placed' : 'current'
+    window.dispatchEvent(new CustomEvent('eatery-open-cart', { detail: { tab } }))
   }
+
+  const cartSubtitle = !orderingOpen
+    ? t('orderPage.closedBannerHint')
+    : totalItems > 0
+      ? `${t('orderPage.itemsCount').replace('{{count}}', String(totalItems))} · ${formatCurrency(totalPrice)}`
+      : hasPlacedOrders
+        ? t('cart.viewPlacedOrder')
+        : t('cart.empty')
+
+  const cartTitle = !orderingOpen
+    ? t('orderPage.closedShort')
+    : totalItems > 0
+      ? t('orderPage.viewOrder')
+      : hasPlacedOrders
+        ? t('cart.myOrder')
+        : t('cart.viewOrder')
 
   return (
     <>
@@ -146,24 +190,14 @@ export function OrderBottomBar({
           >
             <ShoppingBag className="size-4 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold truncate">
-                {!orderingOpen
-                  ? t('orderPage.closedShort')
-                  : totalItems > 0
-                    ? t('orderPage.viewOrder')
-                    : t('cart.viewOrder')}
-              </span>
+              <span className="block text-sm font-semibold truncate">{cartTitle}</span>
               <span className={cn(
                 'block text-[11px] truncate',
                 !orderingOpen
                   ? 'text-amber-900/70'
                   : totalItems > 0 ? 'text-white/75' : 'text-gray-500',
               )}>
-                {!orderingOpen
-                  ? t('orderPage.closedBannerHint')
-                  : totalItems > 0
-                    ? `${t('orderPage.itemsCount').replace('{{count}}', String(totalItems))} · ${formatCurrency(totalPrice)}`
-                    : t('cart.empty')}
+                {cartSubtitle}
               </span>
             </span>
           </button>

@@ -155,13 +155,20 @@ export function CartDrawer({
   useEffect(() => {
     const openDrawer = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: DrawerTab }>).detail
-      setTab(detail?.tab === 'placed' ? 'placed' : 'current')
+      // Prefer Placed when cart is empty but this table has history
+      let nextTab: DrawerTab = 'current'
+      if (detail?.tab === 'placed' || detail?.tab === 'current') {
+        nextTab = detail.tab
+      } else if (totalItems === 0) {
+        nextTab = 'placed'
+      }
+      setTab(nextTab)
       setJustPlaced(false)
       setOpen(true)
     }
     window.addEventListener('eatery-open-cart', openDrawer)
     return () => window.removeEventListener('eatery-open-cart', openDrawer)
-  }, [])
+  }, [totalItems])
 
   // Persist manual table as the diner types (so call-staff / refresh keep it)
   useEffect(() => {
@@ -180,9 +187,10 @@ export function CartDrawer({
     }
   }, [cartAllowed, open, tab, totalItems, justPlaced, pastOrders.length])
 
-  // Hide entirely if empty cart, closed, and no placed history for this table
+  // Always stay mounted on the order page (hideFab) so bottom-bar can reopen the drawer.
+  // Elsewhere, hide when empty with no placed history.
   if (!cartAllowed) return null
-  if (totalItems === 0 && !open && pastOrders.length === 0) return null
+  if (!hideFab && totalItems === 0 && !open && pastOrders.length === 0) return null
 
   function handleTableChange(value: string) {
     setTableNumber(value)
