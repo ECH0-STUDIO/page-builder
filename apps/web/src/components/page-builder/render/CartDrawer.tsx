@@ -74,6 +74,8 @@ interface CartDrawerProps {
   brandColor?: string
   /** Hide floating FAB — cart is opened from the order bottom bar instead */
   hideFab?: boolean
+  /** When false, outside opening hours — block place order */
+  orderingOpen?: boolean
 }
 
 type DrawerStep = 'cart' | 'payment'
@@ -87,6 +89,7 @@ export function CartDrawer({
   fabOffsetClass = 'bottom-6',
   brandColor = '#E85D26',
   hideFab = false,
+  orderingOpen = true,
 }: CartDrawerProps) {
   const { items, totalItems, totalPrice, clearCart } = useCart()
   const activeLocale = toSupportedLocale(locale)
@@ -167,6 +170,10 @@ export function CartDrawer({
       toast.info(t('cart.previewDisabled'))
       return
     }
+    if (!orderingOpen) {
+      toast.error(t('cart.closedForOrders'))
+      return
+    }
     if (!businessId) {
       toast.error(t('cart.businessIdMissing'))
       return
@@ -190,7 +197,8 @@ export function CartDrawer({
         clearCart()
         setStep('payment')
       } else {
-        toast.error(`${t('cart.placeOrderFailed')} ${res.error}`)
+        const closed = res.error === 'CLOSED' || ('code' in res && res.code === 'CLOSED')
+        toast.error(closed ? t('cart.closedForOrders') : `${t('cart.placeOrderFailed')} ${res.error}`)
       }
     })
   }
@@ -314,6 +322,10 @@ export function CartDrawer({
               {paymentSettings?.kds_enabled === false ? (
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center mt-2">
                   <p className="text-sm text-orange-800 font-medium">{t('cart.callWaiter')}</p>
+                </div>
+              ) : !orderingOpen ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center mt-2">
+                  <p className="text-sm text-amber-900 font-medium">{t('cart.closedForOrders')}</p>
                 </div>
               ) : !effectiveTable ? (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center mt-2">

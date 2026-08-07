@@ -22,6 +22,8 @@ interface OrderBottomBarProps {
   contained?: boolean
   /** Builder preview — cart open works; staff requests are simulated only */
   previewMode?: boolean
+  /** When false, cart checkout is unavailable (outside opening hours) */
+  orderingOpen?: boolean
 }
 
 export function OrderBottomBar({
@@ -29,6 +31,7 @@ export function OrderBottomBar({
   brandColor,
   contained = false,
   previewMode = false,
+  orderingOpen = true,
 }: OrderBottomBarProps) {
   const searchParams = useSearchParams()
   const tableFromUrl = (searchParams.get('table') ?? '').trim()
@@ -120,21 +123,34 @@ export function OrderBottomBar({
             onClick={openCart}
             className={cn(
               'flex-1 inline-flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors',
-              totalItems > 0
-                ? 'text-white'
-                : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
+              !orderingOpen
+                ? 'border border-amber-200 bg-amber-50 text-amber-950'
+                : totalItems > 0
+                  ? 'text-white'
+                  : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
             )}
-            style={totalItems > 0 ? { backgroundColor: brandColor } : undefined}
+            style={orderingOpen && totalItems > 0 ? { backgroundColor: brandColor } : undefined}
           >
             <ShoppingBag className="size-4 shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold truncate">
-                {totalItems > 0 ? t('orderPage.viewOrder') : t('cart.viewOrder')}
+                {!orderingOpen
+                  ? t('orderPage.closedShort')
+                  : totalItems > 0
+                    ? t('orderPage.viewOrder')
+                    : t('cart.viewOrder')}
               </span>
-              <span className={cn('block text-[11px] truncate', totalItems > 0 ? 'text-white/75' : 'text-gray-500')}>
-                {totalItems > 0
-                  ? `${t('orderPage.itemsCount').replace('{{count}}', String(totalItems))} · ${formatCurrency(totalPrice)}`
-                  : t('cart.empty')}
+              <span className={cn(
+                'block text-[11px] truncate',
+                !orderingOpen
+                  ? 'text-amber-900/70'
+                  : totalItems > 0 ? 'text-white/75' : 'text-gray-500',
+              )}>
+                {!orderingOpen
+                  ? t('orderPage.closedBannerHint')
+                  : totalItems > 0
+                    ? `${t('orderPage.itemsCount').replace('{{count}}', String(totalItems))} · ${formatCurrency(totalPrice)}`
+                    : t('cart.empty')}
               </span>
             </span>
           </button>

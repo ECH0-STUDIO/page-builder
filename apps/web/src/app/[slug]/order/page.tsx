@@ -26,6 +26,12 @@ import {
   normalizeOrderMenuConfig,
   resolveOrderMenuConfig,
 } from '@/components/order-page/order-menu-config'
+import {
+  formatHoursRange,
+  getTodayHours,
+  isBusinessOpenNow,
+  normalizeOpeningHours,
+} from '@/lib/opening-hours'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -194,6 +200,10 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     (pubSettings as { order_background_image_url?: string | null } | null)?.order_background_image_url
     || null
 
+  const openingHours = normalizeOpeningHours(business.opening_hours)
+  const orderingOpen = isBusinessOpenNow(openingHours)
+  const todayHoursLabel = formatHoursRange(getTodayHours(openingHours))
+
   return (
     <CartProvider>
       <div
@@ -257,6 +267,8 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             slug={slug}
             paymentSettings={paymentSettings}
             locale={visitorLocale}
+            orderingOpen={orderingOpen}
+            todayHoursLabel={todayHoursLabel}
           />
         </div>
       </div>
