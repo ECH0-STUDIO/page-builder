@@ -7,6 +7,11 @@ import {
   exportOrderHistoryCsvAction,
 } from '@/app/actions/order-dashboard'
 import { getOrderRetentionCutoff } from '@/lib/order-retention'
+import {
+  formatOrderLogAction,
+  formatOrderLogDetail,
+  orderLogSearchText,
+} from '@/lib/order-log-format'
 import { formatCurrency } from '@/lib/currency'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { toast } from 'sonner'
@@ -34,10 +39,13 @@ type HistoryLog = {
   id: string
   created_at: string
   action: string
+  entity_type?: string | null
   actor_name: string | null
   actor_role: string | null
   reason: string | null
   order_id: string | null
+  before?: unknown
+  after?: unknown
 }
 
 function toDateInputValue(d: Date): string {
@@ -172,9 +180,9 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
       if ((log.actor_name || '').toLowerCase().includes(q)) return true
       if ((log.reason || '').toLowerCase().includes(q)) return true
       if ((log.action || '').toLowerCase().includes(q)) return true
-      return false
+      return orderLogSearchText(log, t).includes(q)
     })
-  }, [logs, q, qId])
+  }, [logs, q, qId, t])
 
   const groupedOrders = useMemo(() => {
     const map = new Map<string, HistoryOrder[]>()
@@ -343,7 +351,10 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredLogs.map((log) => (
+            {filteredLogs.map((log) => {
+              const actionLabel = formatOrderLogAction(log.action, t)
+              const detail = formatOrderLogDetail(log, t)
+              return (
               <div
                 key={log.id}
                 className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
@@ -353,7 +364,7 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
                     {new Date(log.created_at).toLocaleString()}
                   </span>
                   <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-gray-900 text-white">
-                    {log.action}
+                    {actionLabel}
                   </span>
                   {log.order_id && (
                     <span className="text-xs text-gray-400 font-mono">
@@ -361,6 +372,9 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
                     </span>
                   )}
                 </div>
+                {detail && (
+                  <p className="text-sm font-medium text-gray-900 mb-1.5">{detail}</p>
+                )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
                   <span>
                     <span className="text-gray-400 text-xs font-semibold uppercase mr-1">
@@ -379,7 +393,7 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
