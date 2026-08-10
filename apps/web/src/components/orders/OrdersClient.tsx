@@ -17,7 +17,7 @@ import {
   getNextPurgedMonthLabel,
   shouldShowRetentionReminder,
 } from '@/lib/order-retention'
-import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing, Search } from 'lucide-react'
+import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing, BellOff, Search } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -94,9 +94,19 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   const [boardMode, setBoardMode] = useState<'today' | 'history'>('today')
   const [dayFilter, setDayFilter] = useState<LiveDayFilter>('today')
   const [liveSearch, setLiveSearch] = useState('')
-  const [pushStatus, setPushStatus] = useState<'unknown' | 'unsupported' | 'denied' | 'off' | 'on' | 'enabling'>('unknown')
+  const [pushStatus, setPushStatus] = useState<'unknown' | 'unsupported' | 'denied' | 'off' | 'on' | 'enabling' | 'disabling'>('unknown')
 
-  useEffect(() => {
+  const refreshLiveBoard = useCallback(() => {
+    void queryClient.refetchQueries({ queryKey: ['orders', businessId], type: 'active' })
+    void queryClient.refetchQueries({ queryKey: ['serviceRequests', businessId], type: 'active' })
+  }, [businessId, queryClient])
+
+  const refreshLiveBoardSoon = useCallback(() => {
+    refreshLiveBoard()
+    window.setTimeout(refreshLiveBoard, 900)
+  }, [refreshLiveBoard])
+
+  const syncPushStatus = useCallback(async () => {
     if (typeof window === 'undefined') return
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       setPushStatus('unsupported')
@@ -106,16 +116,18 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       setPushStatus('denied')
       return
     }
-    void (async () => {
-      try {
-        const registration = await navigator.serviceWorker.getRegistration('/sw-push.js')
-        const sub = await registration?.pushManager.getSubscription()
-        setPushStatus(sub && Notification.permission === 'granted' ? 'on' : 'off')
-      } catch {
-        setPushStatus('off')
-      }
-    })()
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const sub = await registration.pushManager.getSubscription()
+      setPushStatus(sub && Notification.permission === 'granted' ? 'on' : 'off')
+    } catch {
+      setPushStatus('off')
+    }
   }, [])
+
+  useEffect(() => {
+    void syncPushStatus()
+  }, [syncPushStatus])
 
   function formatTimeAgo(dateString: string) {
     const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
@@ -147,52 +159,76 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   useEffect(() => {
     if (boardMode !== 'today') return
 
+    const channelName = `live-orders-${businessId}`
     const channel = supabase
-      .channel('orders-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
-            try {
-              const audio = new Audio('/bell.mp3')
-              audio.play().catch(() => {})
-            } catch {
-              /* ignore */
-            }
-            fetchOrders()
-          } else if (payload.eventType === 'UPDATE') {
-            setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o))
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
+        () => {
+          toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
+          try {
+            const audio = new Audio('/bell.mp3')
+            audio.play().catch(() => {})
+          } catch {
+            /* ignore */
           }
-        }
+          refreshLiveBoardSoon()
+        },
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_requests', filter: `business_id=eq.${businessId}` },
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            toast.success(t('orders.newServiceRequest'), { duration: 5000, icon: '🛎️' })
-            try {
-              const audio = new Audio('/bell.mp3')
-              audio.play().catch(() => {})
-            } catch {
-              /* ignore */
-            }
-            fetchServiceRequests()
-          } else if (payload.eventType === 'UPDATE') {
-            setServiceRequests(prev =>
-              prev.map(r => r.id === payload.new.id ? { ...r, ...(payload.new as ServiceRequest) } : r),
-            )
-          }
-        }
+          setOrders(prev =>
+            prev.map(o => (o.id === payload.new.id ? { ...o, ...(payload.new as Order) } : o)),
+          )
+        },
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `business_id=eq.${businessId}` },
+        () => {
+          toast.success(t('orders.newServiceRequest'), { duration: 5000, icon: '🛎️' })
+          try {
+            const audio = new Audio('/bell.mp3')
+            audio.play().catch(() => {})
+          } catch {
+            /* ignore */
+          }
+          refreshLiveBoard()
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `business_id=eq.${businessId}` },
+        (payload) => {
+          setServiceRequests(prev =>
+            prev.map(r => (r.id === payload.new.id ? { ...r, ...(payload.new as ServiceRequest) } : r)),
+          )
+        },
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') return
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('[live-orders realtime]', status, err)
+          refreshLiveBoard()
+        }
+      })
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshLiveBoard()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    const safetyPoll = window.setInterval(refreshLiveBoard, 15_000)
 
     return () => {
-      supabase.removeChannel(channel)
+      window.clearInterval(safetyPoll)
+      document.removeEventListener('visibilitychange', onVisible)
+      void supabase.removeChannel(channel)
     }
-  }, [boardMode, businessId, fetchOrders, fetchServiceRequests, setOrders, setServiceRequests, supabase, t])
+  }, [boardMode, businessId, refreshLiveBoard, refreshLiveBoardSoon, setOrders, setServiceRequests, supabase, t])
 
   const openRequests = serviceRequests.filter(r => r.status === 'open')
 
@@ -273,6 +309,80 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     fetchOrders()
   }
 
+  async function savePushSubscription(subscription: PushSubscription) {
+    const subscribeRes = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
+    })
+    const subscribeData = (await subscribeRes.json().catch(() => ({}))) as { error?: string }
+    if (!subscribeRes.ok) {
+      throw new Error(subscribeData.error || 'subscribe failed')
+    }
+  }
+
+  async function sendTestPush(): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+    const testRes = await fetch('/api/push/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessId }),
+    })
+    const testData = (await testRes.json().catch(() => ({}))) as { error?: string }
+    if (!testRes.ok) {
+      return {
+        ok: false,
+        status: testRes.status,
+        error: testData.error || 'test push failed',
+      }
+    }
+    return { ok: true }
+  }
+
+  async function disableNotifications() {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      setPushStatus('unsupported')
+      return
+    }
+
+    setPushStatus('disabling')
+
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+
+      if (subscription) {
+        const endpoint = subscription.endpoint
+        const unsubscribeRes = await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, endpoint }),
+        })
+        const unsubscribeData = (await unsubscribeRes.json().catch(() => ({}))) as { error?: string }
+        if (!unsubscribeRes.ok) {
+          throw new Error(unsubscribeData.error || 'unsubscribe failed')
+        }
+        await subscription.unsubscribe()
+      }
+
+      setPushStatus('off')
+      toast.success(t('orders.notificationsDisabled'))
+    } catch (err) {
+      console.error('[disableNotifications]', err)
+      void syncPushStatus()
+      toast.error(
+        err instanceof Error ? err.message : t('orders.notificationsDisableFailed'),
+      )
+    }
+  }
+
+  async function toggleNotifications() {
+    if (pushStatus === 'on') {
+      await disableNotifications()
+      return
+    }
+    await enableNotifications()
+  }
+
   async function enableNotifications() {
     if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
       toast.error(t('orders.notificationsUnsupported'))
@@ -313,27 +423,24 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         })
       }
 
-      const subscribeRes = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
-      })
-      const subscribeData = (await subscribeRes.json().catch(() => ({}))) as { error?: string }
-      if (!subscribeRes.ok) {
-        throw new Error(subscribeData.error || 'subscribe failed')
+      await savePushSubscription(subscription)
+
+      let testResult = await sendTestPush()
+      if (!testResult.ok && testResult.status === 502) {
+        await subscription.unsubscribe()
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        })
+        await savePushSubscription(subscription)
+        testResult = await sendTestPush()
       }
 
-      const testRes = await fetch('/api/push/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessId }),
-      })
-      const testData = (await testRes.json().catch(() => ({}))) as { error?: string }
-      if (!testRes.ok) {
-        if (testRes.status === 503) {
+      if (!testResult.ok) {
+        if (testResult.status === 503) {
           toast.error(t('orders.notificationsNotConfigured'))
         } else {
-          throw new Error(testData.error || 'test push failed')
+          throw new Error(testResult.error)
         }
         setPushStatus('off')
         return
@@ -346,7 +453,9 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     } catch (err) {
       console.error('[enableNotifications]', err)
       setPushStatus(Notification.permission === 'granted' ? 'off' : 'denied')
-      toast.error(t('orders.notificationsSetupFailed'))
+      toast.error(
+        err instanceof Error ? err.message : t('orders.notificationsSetupFailed'),
+      )
     }
   }
 
@@ -555,25 +664,37 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
             </div>
             <button
               type="button"
-              disabled={pushStatus === 'enabling' || pushStatus === 'on' || pushStatus === 'unsupported' || pushStatus === 'denied'}
-              onClick={() => void enableNotifications()}
+              disabled={
+                pushStatus === 'enabling'
+                || pushStatus === 'disabling'
+                || pushStatus === 'unsupported'
+                || pushStatus === 'denied'
+              }
+              onClick={() => void toggleNotifications()}
+              title={pushStatus === 'on' ? t('orders.notificationsTurnOffHint') : undefined}
               className={cn(
                 'hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold shadow-sm disabled:opacity-60',
                 pushStatus === 'on'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                   : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
               )}
             >
               {pushStatus === 'on' ? (
-                <CheckCircle2 className="size-4" />
+                <BellOff className="size-4" />
+              ) : pushStatus === 'enabling' || pushStatus === 'disabling' ? (
+                <RefreshCcw className="size-4 animate-spin" />
               ) : (
                 <BellRing className="size-4" />
               )}
               {pushStatus === 'on'
-                ? t('orders.notificationsEnabled')
-                : pushStatus === 'denied'
-                  ? t('orders.notificationsDenied')
-                  : t('orders.enableNotifications')}
+                ? t('orders.disableNotifications')
+                : pushStatus === 'disabling'
+                  ? t('orders.disablingNotifications')
+                  : pushStatus === 'enabling'
+                    ? t('orders.enablingNotifications')
+                    : pushStatus === 'denied'
+                      ? t('orders.notificationsDenied')
+                      : t('orders.enableNotifications')}
             </button>
           </div>
         )}
@@ -584,8 +705,13 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         {boardMode === 'today' && (
           <button
             type="button"
-            disabled={pushStatus === 'enabling' || pushStatus === 'on' || pushStatus === 'unsupported' || pushStatus === 'denied'}
-            onClick={() => void enableNotifications()}
+            disabled={
+              pushStatus === 'enabling'
+              || pushStatus === 'disabling'
+              || pushStatus === 'unsupported'
+              || pushStatus === 'denied'
+            }
+            onClick={() => void toggleNotifications()}
             className={cn(
               'md:hidden order-5 w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-xl border text-sm font-semibold disabled:opacity-60',
               pushStatus === 'on'
@@ -594,15 +720,21 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
             )}
           >
             {pushStatus === 'on' ? (
-              <CheckCircle2 className="size-4" />
+              <BellOff className="size-4" />
+            ) : pushStatus === 'enabling' || pushStatus === 'disabling' ? (
+              <RefreshCcw className="size-4 animate-spin" />
             ) : (
               <BellRing className="size-4" />
             )}
             {pushStatus === 'on'
-              ? t('orders.notificationsEnabled')
-              : pushStatus === 'denied'
-                ? t('orders.notificationsDenied')
-                : t('orders.enableNotifications')}
+              ? t('orders.disableNotifications')
+              : pushStatus === 'disabling'
+                ? t('orders.disablingNotifications')
+                : pushStatus === 'enabling'
+                  ? t('orders.enablingNotifications')
+                  : pushStatus === 'denied'
+                    ? t('orders.notificationsDenied')
+                    : t('orders.enableNotifications')}
           </button>
         )}
       </div>
