@@ -1131,6 +1131,7 @@
     "retentionReminder": "Only {{days}} days left this month. {{month}} will be permanently deleted when next month starts. Export or review History now.",
     "enableNotifications": "Enable notifications",
     "notificationsEnabled": "Notifications enabled",
+    "notificationsTestHint": "A test alert was sent — check your system notification center.",
     "notificationsDenied": "Notifications blocked by the browser",
     "notificationsUnsupported": "Notifications are not supported on this device",
     "notificationsNotConfigured": "Push notifications are not configured on this deployment. They work on production after VAPID keys are set.",

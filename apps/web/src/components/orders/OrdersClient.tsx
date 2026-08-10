@@ -19,6 +19,7 @@ import {
 } from '@/lib/order-retention'
 import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing, Search } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
 
@@ -93,6 +94,28 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   const [boardMode, setBoardMode] = useState<'today' | 'history'>('today')
   const [dayFilter, setDayFilter] = useState<LiveDayFilter>('today')
   const [liveSearch, setLiveSearch] = useState('')
+  const [pushStatus, setPushStatus] = useState<'unknown' | 'unsupported' | 'denied' | 'off' | 'on' | 'enabling'>('unknown')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      setPushStatus('unsupported')
+      return
+    }
+    if (Notification.permission === 'denied') {
+      setPushStatus('denied')
+      return
+    }
+    void (async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration('/sw-push.js')
+        const sub = await registration?.pushManager.getSubscription()
+        setPushStatus(sub && Notification.permission === 'granted' ? 'on' : 'off')
+      } catch {
+        setPushStatus('off')
+      }
+    })()
+  }, [])
 
   function formatTimeAgo(dateString: string) {
     const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
@@ -253,39 +276,76 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   async function enableNotifications() {
     if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
       toast.error(t('orders.notificationsUnsupported'))
+      setPushStatus('unsupported')
       return
     }
+
+    if (Notification.permission === 'denied') {
+      toast.error(t('orders.notificationsDenied'))
+      setPushStatus('denied')
+      return
+    }
+
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) {
+      toast.error(t('orders.notificationsNotConfigured'))
+      return
+    }
+
+    setPushStatus('enabling')
 
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         toast.error(t('orders.notificationsDenied'))
+        setPushStatus('denied')
         return
       }
 
-      const registration = await navigator.serviceWorker.register('/sw-push.js')
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      await navigator.serviceWorker.register('/sw-push.js')
+      const registration = await navigator.serviceWorker.ready
 
-      if (!vapidKey) {
-        toast.error(t('orders.notificationsNotConfigured'))
-        return
+      let subscription = await registration.pushManager.getSubscription()
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        })
       }
 
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      })
-      const res = await fetch('/api/push/subscribe', {
+      const subscribeRes = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, subscription: subscription.toJSON() }),
       })
-      if (!res.ok) {
-        throw new Error('subscribe failed')
+      const subscribeData = (await subscribeRes.json().catch(() => ({}))) as { error?: string }
+      if (!subscribeRes.ok) {
+        throw new Error(subscribeData.error || 'subscribe failed')
       }
 
-      toast.success(t('orders.notificationsEnabled'))
-    } catch {
+      const testRes = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId }),
+      })
+      const testData = (await testRes.json().catch(() => ({}))) as { error?: string }
+      if (!testRes.ok) {
+        if (testRes.status === 503) {
+          toast.error(t('orders.notificationsNotConfigured'))
+        } else {
+          throw new Error(testData.error || 'test push failed')
+        }
+        setPushStatus('off')
+        return
+      }
+
+      setPushStatus('on')
+      toast.success(t('orders.notificationsEnabled'), {
+        description: t('orders.notificationsTestHint'),
+      })
+    } catch (err) {
+      console.error('[enableNotifications]', err)
+      setPushStatus(Notification.permission === 'granted' ? 'off' : 'denied')
       toast.error(t('orders.notificationsSetupFailed'))
     }
   }
@@ -495,11 +555,25 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
             </div>
             <button
               type="button"
+              disabled={pushStatus === 'enabling' || pushStatus === 'on' || pushStatus === 'unsupported' || pushStatus === 'denied'}
               onClick={() => void enableNotifications()}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm"
+              className={cn(
+                'hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold shadow-sm disabled:opacity-60',
+                pushStatus === 'on'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
+              )}
             >
-              <BellRing className="size-4" />
-              {t('orders.enableNotifications')}
+              {pushStatus === 'on' ? (
+                <CheckCircle2 className="size-4" />
+              ) : (
+                <BellRing className="size-4" />
+              )}
+              {pushStatus === 'on'
+                ? t('orders.notificationsEnabled')
+                : pushStatus === 'denied'
+                  ? t('orders.notificationsDenied')
+                  : t('orders.enableNotifications')}
             </button>
           </div>
         )}
@@ -510,11 +584,25 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         {boardMode === 'today' && (
           <button
             type="button"
+            disabled={pushStatus === 'enabling' || pushStatus === 'on' || pushStatus === 'unsupported' || pushStatus === 'denied'}
             onClick={() => void enableNotifications()}
-            className="md:hidden order-5 w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700"
+            className={cn(
+              'md:hidden order-5 w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-xl border text-sm font-semibold disabled:opacity-60',
+              pushStatus === 'on'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-gray-200 bg-white text-gray-700',
+            )}
           >
-            <BellRing className="size-4" />
-            {t('orders.enableNotifications')}
+            {pushStatus === 'on' ? (
+              <CheckCircle2 className="size-4" />
+            ) : (
+              <BellRing className="size-4" />
+            )}
+            {pushStatus === 'on'
+              ? t('orders.notificationsEnabled')
+              : pushStatus === 'denied'
+                ? t('orders.notificationsDenied')
+                : t('orders.enableNotifications')}
           </button>
         )}
       </div>
