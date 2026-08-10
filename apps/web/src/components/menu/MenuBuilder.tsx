@@ -378,6 +378,7 @@ function ItemDialog({
     tags: string[]
     is_vegetarian: boolean
     spicy_level: number
+    is_featured: boolean
   }) => Promise<void>
   categoryId: string
   businessId: string
@@ -390,6 +391,7 @@ function ItemDialog({
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
   const [spicyLevel, setSpicyLevel] = useState(initial?.spicy_level ?? 0)
+  const [isFeatured, setIsFeatured] = useState(Boolean(initial?.is_featured))
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '')
   const [imageLoading, setImageLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -410,6 +412,7 @@ function ItemDialog({
     }))
     setIsVegetarian(Boolean(initial?.is_vegetarian))
     setSpicyLevel(initial?.spicy_level ?? 0)
+    setIsFeatured(Boolean(initial?.is_featured))
     setImageUrl(initial?.image_url ?? '')
     setActiveTab('details')
   }, [open, initial])
@@ -452,6 +455,7 @@ function ItemDialog({
       tags,
       is_vegetarian: isVegetarian,
       spicy_level: spicyLevel,
+      is_featured: isFeatured,
     })
     setSaving(false)
     onClose()
@@ -534,6 +538,14 @@ function ItemDialog({
                   <p className="text-xs text-muted-foreground">{t('menuBuilder.vegetarianHint')}</p>
                 </div>
                 <Switch checked={isVegetarian} onCheckedChange={setIsVegetarian} />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium">{t('menuBuilder.featured')}</p>
+                  <p className="text-xs text-muted-foreground">{t('menuBuilder.featuredHint')}</p>
+                </div>
+                <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
               </div>
 
               <div className="space-y-2">
@@ -724,6 +736,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
     tags: string[]
     is_vegetarian: boolean
     spicy_level: number
+    is_featured: boolean
   }) {
     if (itemDialog.editing) {
       const result = await updateItemAction(itemDialog.editing.id, {
@@ -734,6 +747,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         tags: itemData.tags,
         is_vegetarian: itemData.is_vegetarian,
         spicy_level: itemData.spicy_level,
+        is_featured: itemData.is_featured,
       })
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => prev.map(i =>
@@ -747,6 +761,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
               tags: itemData.tags,
               is_vegetarian: itemData.is_vegetarian,
               spicy_level: itemData.spicy_level,
+              is_featured: itemData.is_featured,
             }
           : i
       ))
@@ -778,6 +793,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       tags: item.tags || [],
       is_vegetarian: Boolean(item.is_vegetarian),
       spicy_level: item.spicy_level ?? 0,
+      is_featured: Boolean(item.is_featured),
     })
     if (!result.success) { toast.error(result.error); return }
     setItems(prev => [...prev, result.data])
@@ -1079,8 +1095,13 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                             </DropdownMenu>)}
                           </div>
 
-                          {(item.is_vegetarian || (item.spicy_level ?? 0) > 0) && (
+                          {(item.is_featured || item.is_vegetarian || (item.spicy_level ?? 0) > 0) && (
                             <div className="flex flex-wrap gap-1 mb-2">
+                              {item.is_featured && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-800 border-0">
+                                  {t('menuBuilder.featuredBadge')}
+                                </Badge>
+                              )}
                               {item.is_vegetarian && (
                                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-0">
                                   {t('menuBuilder.vegetarianBadge')}

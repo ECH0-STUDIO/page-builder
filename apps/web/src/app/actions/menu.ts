@@ -31,6 +31,8 @@ export type MenuItem = {
   is_vegetarian: boolean
   /** 0 none … 3 hot */
   spicy_level: number
+  /** Pin to Featured strip on the order page (also stays in category) */
+  is_featured: boolean
   created_at: string
   updated_at: string
 }
@@ -209,6 +211,7 @@ export async function addItemAction(
     tags?: string[]
     is_vegetarian?: boolean
     spicy_level?: number
+    is_featured?: boolean
   }
 ): Promise<ActionResult<MenuItem>> {
   const supabase = await createClient()
@@ -240,6 +243,7 @@ export async function addItemAction(
       tags: item.tags ?? [],
       is_vegetarian: Boolean(item.is_vegetarian),
       spicy_level: spicy,
+      is_featured: Boolean(item.is_featured),
       sort_order: nextOrder,
       available: true,
     })
@@ -262,6 +266,7 @@ export async function updateItemAction(
     tags: string[]
     is_vegetarian: boolean
     spicy_level: number
+    is_featured: boolean
     sort_order: number
     category_id: string
   }>

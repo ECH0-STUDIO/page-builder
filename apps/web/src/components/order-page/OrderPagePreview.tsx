@@ -7,17 +7,20 @@
 
 import { Suspense, useMemo, useState } from 'react'
 import Image from 'next/image'
+import { Star } from 'lucide-react'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
 import type { PromoSlide } from '@/components/order-page/OrderPromoCarousel'
 import type { CarouselAspect, CarouselAspectMobile } from '@/components/order-page/promo-slides'
 import { OrderBottomBar } from '@/components/order-page/OrderBottomBar'
-import { MenuGridRender } from '@/components/page-builder/render/MenuGridRender'
+import { MenuGridRender, MenuItemModal } from '@/components/page-builder/render/MenuGridRender'
 import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import type { MenuGridConfig } from '@/components/page-builder/types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n/I18nProvider'
+import { formatCurrency } from '@/lib/currency'
 
 interface OrderPagePreviewProps {
   businessId: string
@@ -65,6 +68,7 @@ export function OrderPagePreview({
   locale,
   previewMode = false,
 }: OrderPagePreviewProps) {
+  const { t } = useTranslation()
   const fontsToLoad = [...new Set([headingFont, bodyFont].filter(f => f && f !== 'Inter'))]
   const googleFontUrl = fontsToLoad.length > 0
     ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
@@ -76,6 +80,11 @@ export function OrderPagePreview({
   )
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
     () => visibleCats[0]?.id ?? null,
+  )
+  const [featuredModalItem, setFeaturedModalItem] = useState<MenuItem | null>(null)
+  const featuredItems = useMemo(
+    () => items.filter(i => i.is_featured),
+    [items],
   )
 
   const orderMenuConfig: MenuGridConfig = {
@@ -186,6 +195,42 @@ export function OrderPagePreview({
               )}
 
               <div className="px-3 py-3 pb-28">
+                {featuredItems.length > 0 && (
+                  <section className="mb-3" aria-label={t('orderPage.featured')}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Star className="size-3 text-neutral-900 fill-neutral-900" aria-hidden />
+                      <h2 className="text-xs font-semibold text-neutral-900">
+                        {t('orderPage.featured')}
+                      </h2>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                      {featuredItems.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => previewMode && setFeaturedModalItem(item)}
+                          className="shrink-0 w-[7.5rem] text-left rounded-2xl border border-neutral-200 bg-white overflow-hidden"
+                        >
+                          <div className="aspect-[4/3] bg-neutral-100 relative">
+                            {item.image_url ? (
+                              <Image src={item.image_url} alt="" fill className="object-cover" sizes="120px" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-neutral-300 text-xl font-light">
+                                {item.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <p className="text-xs font-medium text-neutral-900 line-clamp-2 leading-snug">{item.name}</p>
+                            <p className="text-xs font-semibold text-neutral-800 mt-0.5 tabular-nums">
+                              {formatCurrency(item.price)}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
                 <MenuGridRender
                   config={orderMenuConfig}
                   data={{
@@ -203,6 +248,18 @@ export function OrderPagePreview({
                   browseOnly={!previewMode}
                 />
               </div>
+
+              {featuredModalItem && previewMode && (
+                <MenuItemModal
+                  item={featuredModalItem}
+                  groups={variantGroups}
+                  options={variantOptions}
+                  config={orderMenuConfig}
+                  brandColor={brandColor}
+                  onClose={() => setFeaturedModalItem(null)}
+                  browseOnly={false}
+                />
+              )}
             </div>
 
             <Suspense

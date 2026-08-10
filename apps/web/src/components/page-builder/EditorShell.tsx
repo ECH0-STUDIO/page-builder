@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Plus, Trash2, Copy, MoreHorizontal,
   Sparkles, AlignLeft, MapPin, Grid3x3, QrCode, Monitor, Smartphone, Palette, Menu,
-  PanelBottom, Settings, Layers, X, Minus,
+  PanelBottom, Settings, Layers, X, Minus, LayoutTemplate,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +32,7 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
 
 import { PublishBar } from './PublishBar'
+import { StartPageDialog } from './StartPageDialog'
 import { TemplatePicker } from './TemplatePicker'
 import { BLOCK_REGISTRY, getBlockMeta, getDefaultConfig } from './registry'
 import { PAGE_TEMPLATES } from './templates'
@@ -509,7 +510,11 @@ export function EditorShell({
   )
   const [publishing, setPublishing] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const [showTemplatePicker, setShowTemplatePicker] = useState(initialBlocks.length === 0)
+  /** Empty page on enter → choose blank vs template before editing. */
+  const [showStartDialog, setShowStartDialog] = useState(initialBlocks.length === 0)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  /** True when template picker was opened from the first-run start dialog. */
+  const [templatePickerFromStart, setTemplatePickerFromStart] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
   const [desktopZoom, setDesktopZoom] = useState(1)
@@ -950,15 +955,43 @@ export function EditorShell({
     }))
     setBlocks(newBlocks)
     setSelectedId(newBlocks[0]?.id ?? null)
+    if (template.theme) {
+      handleThemeChange(template.theme)
+    }
     setShowTemplatePicker(false)
+    setTemplatePickerFromStart(false)
+    setShowStartDialog(false)
+  }
+
+  function openTemplatePicker(fromStart = false) {
+    setTemplatePickerFromStart(fromStart)
+    setShowStartDialog(false)
+    setShowTemplatePicker(true)
+    setMobileBlocksOpen(false)
+  }
+
+  function closeTemplatePicker() {
+    setShowTemplatePicker(false)
+    // Still empty after backing out of templates from first-run → return to start choice
+    if (templatePickerFromStart && blocks.length === 0) {
+      setShowStartDialog(true)
+    }
+    setTemplatePickerFromStart(false)
+  }
+
+  function handleStartBlank() {
+    setShowStartDialog(false)
+    setShowTemplatePicker(false)
+    setTemplatePickerFromStart(false)
   }
 
   function handleSelectTemplate(templateId: string) {
+    // Always confirm when there is existing layout to replace
     if (blocks.length > 0) {
       setPendingTemplate(templateId)
-    } else {
-      applyTemplate(templateId)
+      return
     }
+    applyTemplate(templateId)
   }
 
   // ── Publish ───────────────────────────────────────────────────────────────
@@ -984,17 +1017,11 @@ export function EditorShell({
 
   const renderLeftSidebarContent = ({ showGlobalSettings = true }: { showGlobalSettings?: boolean } = {}) => (
     <>
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border shrink-0">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('pageBuilder.sections')}</span>
-        <button
-          onClick={() => { setShowTemplatePicker(true); setMobileBlocksOpen(false); }}
-          className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          {t('pageBuilder.templates')}
-        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
         {/* Header / Navbar */}
         <div className="p-1.5 border-b border-border/50">
           <button
@@ -1060,23 +1087,31 @@ export function EditorShell({
         </div>
       </div>
 
-      {showGlobalSettings && (
-      <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0">
+      <div className="p-1.5 bg-background border-t border-border mt-auto shrink-0 space-y-0.5">
         <button
           type="button"
-          onClick={() => { openThemePanel(); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
-          className={cn(
-            'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
-            activeRightPanel === 'theme' && !selectedId
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-          )}
+          onClick={() => openTemplatePicker(false)}
+          className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <Settings className="size-4" />
-          Global Settings
+          <LayoutTemplate className="size-4" />
+          {t('pageBuilder.templates')}
         </button>
+        {showGlobalSettings && (
+          <button
+            type="button"
+            onClick={() => { openThemePanel(); setMobileBlocksOpen(false); openMobileSettingsIfNeed(); }}
+            className={cn(
+              'w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm font-medium transition-colors text-left',
+              activeRightPanel === 'theme' && !selectedId
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            <Settings className="size-4" />
+            {t('pageBuilder.globalSettings')}
+          </button>
+        )}
       </div>
-      )}
     </>
   )
 
@@ -1176,18 +1211,25 @@ export function EditorShell({
         />
       )}
 
+      {/* First-run: blank vs template */}
+      {showStartDialog && !showTemplatePicker && (
+        <StartPageDialog
+          onStartBlank={handleStartBlank}
+          onUseTemplate={() => openTemplatePicker(true)}
+        />
+      )}
+
       {/* Template picker overlay */}
       {showTemplatePicker && (
         <TemplatePicker
           onSelect={handleSelectTemplate}
-          onClose={() => {
-            if (blocks.length > 0) setShowTemplatePicker(false)
-          }}
-          canClose={blocks.length > 0}
+          onClose={closeTemplatePicker}
+          canClose
+          hideBlank={templatePickerFromStart}
         />
       )}
 
-      {/* Confirmation Modal */}
+      {/* Confirm replace when applying a template over existing sections */}
       <Dialog open={!!pendingTemplate} onOpenChange={o => !o && setPendingTemplate(null)}>
         <DialogContent>
           <DialogHeader>
@@ -1339,7 +1381,9 @@ export function EditorShell({
                     </div>
                     {!isStaff && (
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setShowTemplatePicker(true)}>✦ {t('pageBuilder.templates')}</Button>
+                        <Button variant="outline" size="sm" onClick={() => openTemplatePicker(false)}>
+                          <LayoutTemplate className="size-4 mr-1.5" /> {t('pageBuilder.templates')}
+                        </Button>
                         <Button size="sm" onClick={() => setAddModalOpen(true)}><Plus className="size-4 mr-1.5" /> {t('pageBuilder.addBlock')}</Button>
                       </div>
                     )}
