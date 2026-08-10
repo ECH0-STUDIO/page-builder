@@ -20,6 +20,9 @@ export function useServiceRequests(businessId: string) {
       if (error) throw new Error(error.message)
       return (data ?? []) as ServiceRequest[]
     },
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
 }

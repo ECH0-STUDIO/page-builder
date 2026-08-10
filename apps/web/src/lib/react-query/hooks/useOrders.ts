@@ -25,6 +25,9 @@ export function useOrders(businessId: string) {
       if (error) throw new Error(error.message)
       return data as Order[]
     },
-    refetchInterval: 30000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
 }
