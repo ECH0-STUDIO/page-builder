@@ -87,6 +87,16 @@ interface CartDrawerProps {
 
 type DrawerTab = 'current' | 'placed'
 
+function formatOrderTime(timestamp: number, locale: SupportedLocale): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
+}
+
 export function CartDrawer({
   businessId,
   paymentSettings,
@@ -464,51 +474,62 @@ export function CartDrawer({
                 <p className="text-sm text-gray-500 font-medium">{t('cart.noPlacedOrders')}</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <div className="flex justify-between items-end mb-4">
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-sm">{t('cart.orderHistory')}</h4>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {t('cart.tableNumber')} {effectiveTable}
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    {pastOrders.length} {pastOrders.length > 1 ? t('cart.orders') : t('cart.order')}
-                  </span>
-                </div>
-
-                <div className="space-y-4 mb-4">
-                  {pastOrders.map((order, idx) => (
-                    <div key={order.id} className="relative">
-                      {idx > 0 && <div className="absolute top-[-8px] left-0 right-0 border-t border-gray-100 border-dashed" />}
-                      <div className="space-y-2 pt-1">
-                        {(order.items as CartItem[]).map(item => (
-                          <div key={item.cartId} className="flex justify-between text-sm">
-                            <div className="flex gap-2">
-                              <span className="font-bold text-gray-900">{item.quantity}×</span>
-                              <div>
-                                <p className="font-medium text-gray-800">{item.itemName}</p>
-                                {item.variants && item.variants.length > 0 && (
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    {item.variants.map(v => v.optionLabel).join(', ')}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <span className="font-medium text-gray-900">{formatCurrency(item.totalPrice * item.quantity)}</span>
-                          </div>
-                        ))}
+              <div className="space-y-4">
+                {pastOrders.map(order => (
+                  <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex justify-between items-start gap-3 mb-4">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500">
+                          {t('cart.orderPlacedAt').replace(
+                            '{{time}}',
+                            formatOrderTime(order.timestamp, activeLocale),
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {t('cart.tableNumber')} {effectiveTable}
+                        </p>
                       </div>
+                      <span className="text-[10px] text-gray-300 font-mono shrink-0">
+                        #{order.id.slice(0, 8)}
+                      </span>
                     </div>
-                  ))}
-                </div>
 
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <span className="font-bold text-gray-900">{t('cart.grandTotal')}</span>
-                  <span className="font-bold text-xl text-gray-900">
-                    {formatCurrency(pastOrders.reduce((acc, o) => acc + o.total, 0))}
-                  </span>
-                </div>
+                    <div className="space-y-2">
+                      {(order.items as CartItem[]).map(item => (
+                        <div key={`${order.id}-${item.cartId}`} className="flex justify-between text-sm">
+                          <div className="flex gap-2 min-w-0">
+                            <span className="font-bold text-gray-900">{item.quantity}×</span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-800">{item.itemName}</p>
+                              {item.variants && item.variants.length > 0 && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {item.variants.map(v => v.optionLabel).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span className="font-medium text-gray-900 shrink-0 ml-3">
+                            {formatCurrency(item.totalPrice * item.quantity)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-100">
+                      <span className="text-sm font-semibold text-gray-700">{t('cart.orderTotal')}</span>
+                      <span className="font-bold text-gray-900">{formatCurrency(order.total)}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {pastOrders.length > 1 && (
+                  <div className="flex justify-between items-center px-1 pt-1">
+                    <span className="text-sm font-semibold text-gray-500">{t('cart.grandTotal')}</span>
+                    <span className="font-bold text-lg text-gray-900">
+                      {formatCurrency(pastOrders.reduce((acc, o) => acc + o.total, 0))}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
