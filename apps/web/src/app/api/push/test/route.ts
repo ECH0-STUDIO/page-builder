@@ -44,11 +44,11 @@ export async function POST(request: Request) {
   }
 
   if (result.sent === 0) {
-    return NextResponse.json(
-      { error: 'Subscription saved but no push could be delivered. Try enabling again.' },
-      { status: 502 },
-    )
+    const detail = result.lastError
+      ? `Push rejected: ${result.lastError}. Check that VAPID public and private keys are a matching pair.`
+      : 'Subscription saved but no push could be delivered. Try turning notifications off and on again.'
+    return NextResponse.json({ error: detail }, { status: 502 })
   }
 
-  return NextResponse.json({ success: true, sent: result.sent })
+  return NextResponse.json({ success: true, sent: result.sent, failed: result.failed })
 }

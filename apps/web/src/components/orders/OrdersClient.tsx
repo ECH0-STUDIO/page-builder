@@ -22,6 +22,17 @@ import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
+import {
+  alertNewOrder,
+  alertServiceRequest,
+  playOrderAlertSound,
+  primeOrderAlertSound,
+  showLocalOrderAlert,
+} from '@/lib/order-alert'
+import {
+  getPushRegistration,
+  subscribeToPush,
+} from '@/lib/push-client'
 
 export type OrderStatus = 'pending' | 'completed' | 'paid' | 'cancelled'
 export type PaymentStatus = 'unpaid' | 'paid'
@@ -50,17 +61,6 @@ export type Order = {
 interface OrdersClientProps {
   businessId: string
   role: string
-}
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
 }
 
 function clientLocale(): 'en' | 'vi' {
@@ -117,7 +117,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       return
     }
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await getPushRegistration()
       const sub = await registration.pushManager.getSubscription()
       setPushStatus(sub && Notification.permission === 'granted' ? 'on' : 'off')
     } catch {
@@ -167,12 +167,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
         () => {
           toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
-          try {
-            const audio = new Audio('/bell.mp3')
-            audio.play().catch(() => {})
-          } catch {
-            /* ignore */
-          }
+          alertNewOrder(t('orders.newOrderReceived'))
           refreshLiveBoardSoon()
         },
       )
@@ -190,12 +185,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `business_id=eq.${businessId}` },
         () => {
           toast.success(t('orders.newServiceRequest'), { duration: 5000, icon: '🛎️' })
-          try {
-            const audio = new Audio('/bell.mp3')
-            audio.play().catch(() => {})
-          } catch {
-            /* ignore */
-          }
+          alertServiceRequest(t('orders.newServiceRequest'))
           refreshLiveBoard()
         },
       )
@@ -347,7 +337,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     setPushStatus('disabling')
 
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await getPushRegistration()
       const subscription = await registration.pushManager.getSubscription()
 
       if (subscription) {
@@ -403,6 +393,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     }
 
     setPushStatus('enabling')
+    primeOrderAlertSound()
 
     try {
       const permission = await Notification.requestPermission()
@@ -412,27 +403,14 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         return
       }
 
-      await navigator.serviceWorker.register('/sw-push.js')
-      const registration = await navigator.serviceWorker.ready
-
-      let subscription = await registration.pushManager.getSubscription()
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        })
-      }
+      const subscription = await subscribeToPush(vapidKey.trim())
 
       await savePushSubscription(subscription)
 
       let testResult = await sendTestPush()
       if (!testResult.ok && testResult.status === 502) {
-        await subscription.unsubscribe()
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        })
-        await savePushSubscription(subscription)
+        const fresh = await subscribeToPush(vapidKey.trim())
+        await savePushSubscription(fresh)
         testResult = await sendTestPush()
       }
 
@@ -447,6 +425,11 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       }
 
       setPushStatus('on')
+      playOrderAlertSound()
+      showLocalOrderAlert(
+        'Live Orders',
+        'Notifications are working. You will be alerted for new orders and table requests.',
+      )
       toast.success(t('orders.notificationsEnabled'), {
         description: t('orders.notificationsTestHint'),
       })
