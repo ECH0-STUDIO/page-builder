@@ -1131,6 +1131,7 @@
     "retentionReminder": "Chỉ còn {{days}} ngày trong tháng này. {{month}} sẽ bị xóa vĩnh viễn khi tháng mới bắt đầu. Hãy xuất hoặc xem Lịch sử ngay.",
     "enableNotifications": "Bật thông báo",
     "notificationsEnabled": "Đã bật thông báo",
+    "notificationsTestHint": "Đã gửi thông báo thử — kiểm tra trung tâm thông báo của hệ thống.",
     "notificationsDenied": "Trình duyệt đã chặn thông báo",
     "notificationsUnsupported": "Thiết bị này không hỗ trợ thông báo",
     "notificationsNotConfigured": "Thông báo đẩy chưa được cấu hình trên bản preview này. Trên production sẽ hoạt động sau khi đã thêm VAPID.",

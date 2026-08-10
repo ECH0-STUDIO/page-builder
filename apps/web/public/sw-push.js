@@ -26,6 +26,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || 'Live Orders', {
       body: payload.body || '',
+      icon: '/vercel.svg',
+      badge: '/vercel.svg',
+      tag: 'eatery-live-orders',
+      renotify: true,
       data: { url: payload.url || '/dashboard/orders' },
     }),
   )

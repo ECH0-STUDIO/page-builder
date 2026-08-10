@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/business-server'
 
 type PushSubscriptionPayload = {
   endpoint?: string
@@ -36,6 +37,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid subscription payload' }, { status: 400 })
   }
 
+  const { business, role } = await getActiveBusiness(supabase, user.id)
+  if (!business || business.id !== businessId || !role) {
+    return NextResponse.json({ error: 'No access to this business' }, { status: 403 })
+  }
+
   // Table may not yet be in generated Database types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).from('push_subscriptions').upsert(
@@ -50,6 +56,7 @@ export async function POST(request: Request) {
   )
 
   if (error) {
+    console.error('[push/subscribe]', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
