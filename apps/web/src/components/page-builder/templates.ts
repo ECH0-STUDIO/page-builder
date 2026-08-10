@@ -1,7 +1,7 @@
 /**
  * Page template presets.
  * Each is a starting arrangement of blocks (and optional theme) applied when the
- * user picks a template from the TemplatePicker. Blocks remain fully editable.
+ * user picks a template from the Templates panel. Blocks remain fully editable.
  */
 
 import {
@@ -32,9 +32,11 @@ export interface PageTemplate {
   theme?: TemplateThemePreset
 }
 
+export const DEFAULT_PAGE_TEMPLATE_ID = 'eatery_default'
+
 export const PAGE_TEMPLATES: PageTemplate[] = [
   {
-    id: 'eatery_default',
+    id: DEFAULT_PAGE_TEMPLATE_ID,
     label: 'pageBuilder.templatesData.eatery_default.label',
     description: 'pageBuilder.templatesData.eatery_default.description',
     theme: {
@@ -57,13 +59,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           text_only_bg: 'solid',
           text_only_color: '#111111',
           text_only_color_end: '#111111',
-          text_color: 'dark',
+          text_color: '#FFFFFF',
           cta: {
             label: 'Gọi món',
             action: 'url',
             value: '/order',
             style: 'filled',
-            color: '#111111',
+            color: '#FFFFFF',
             open_in_new_tab: false,
           },
         },
@@ -117,43 +119,5 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         },
       },
     ],
-  },
-  {
-    id: 'full_experience',
-    label: 'pageBuilder.templatesData.full_experience.label',
-    description: 'pageBuilder.templatesData.full_experience.description',
-    blocks: [
-      { type: 'hero', config: { layout: 'overlay', height: 'fullscreen', heading: 'Experience the Extraordinary', body: 'Authentic flavours, crafted with passion.', overlay_opacity: 50 } },
-      { type: 'text_image', config: { layout: 'img_right', heading: 'Our Story', body: 'Share the history of your restaurant here. Search engines love rich, keyword-relevant text about your local business, your ingredients, and your chef. This helps you rank higher in local searches.' } },
-      { type: 'menu_grid', config: { layout: 'list', heading: 'Signature Dishes', description: 'Hand-picked favourites curated by our head chef.', selection_mode: 'category' } },
-      { type: 'menu_grid', config: { layout: '3col', heading: 'Explore Our Menu', show_category_tabs: true } },
-      { type: 'contact', config: { show_map: true, show_hours: true, map_height: 'large' } },
-    ],
-  },
-  {
-    id: 'visual_menu',
-    label: 'pageBuilder.templatesData.visual_menu.label',
-    description: 'pageBuilder.templatesData.visual_menu.description',
-    blocks: [
-      { type: 'hero', config: { layout: 'overlay', height: 'custom', heading: 'Our Menu', body: 'Order directly from our kitchen to your table.', overlay_opacity: 40 } },
-      { type: 'menu_grid', config: { layout: '3col', show_category_tabs: true, show_description: true } },
-      { type: 'contact', config: { show_map: false, show_hours: true } },
-    ],
-  },
-  {
-    id: 'link_in_bio',
-    label: 'pageBuilder.templatesData.link_in_bio.label',
-    description: 'pageBuilder.templatesData.link_in_bio.description',
-    blocks: [
-      { type: 'hero', config: { layout: 'overlay', height: 'custom', heading: 'Quick Links', body: 'Find us online or order for pickup.', overlay_opacity: 40 } },
-      { type: 'text_image', config: { layout: 'text_only', background: 'transparent', heading: 'Order Now', body: 'Tap below to see our full menu.' } },
-      { type: 'contact', config: { show_map: false, show_hours: false, show_phone: false, show_email: false, socials_shown: ['instagram', 'tiktok', 'facebook'] } },
-    ],
-  },
-  {
-    id: 'blank',
-    label: 'pageBuilder.templatesData.blank.label',
-    description: 'pageBuilder.templatesData.blank.description',
-    blocks: [],
   },
 ]

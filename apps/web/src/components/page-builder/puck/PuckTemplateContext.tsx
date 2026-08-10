@@ -3,7 +3,8 @@
 import { createContext, useContext } from 'react'
 
 export type PuckTemplateActions = {
-  openTemplatePicker: () => void
+  selectTemplate: (templateId: string) => void
+  applyingTemplate: boolean
 }
 
 export const PuckTemplateContext = createContext<PuckTemplateActions | null>(null)

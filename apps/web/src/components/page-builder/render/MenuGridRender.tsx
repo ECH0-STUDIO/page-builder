@@ -66,6 +66,26 @@ const CARD_RADIUS: Record<BorderRadius, string> = {
   full: '9999px',
 }
 
+/** Inset media corners so dish photos nest cleanly inside the card radius. */
+function innerMediaRadius(outerRadius: string): string {
+  if (outerRadius === '9999px') return '9999px'
+  const px = parseInt(outerRadius, 10)
+  if (Number.isNaN(px) || px <= 0) return '0px'
+  return `${Math.max(0, px - 6)}px`
+}
+
+function topImageRadiusStyle(outerRadius: string): React.CSSProperties {
+  const inner = innerMediaRadius(outerRadius)
+  return {
+    borderTopLeftRadius: inner,
+    borderTopRightRadius: inner,
+  }
+}
+
+function thumbImageRadiusStyle(outerRadius: string): React.CSSProperties {
+  return { borderRadius: innerMediaRadius(outerRadius) }
+}
+
 /** Merge saved config with defaults so older blocks pick up new card style fields. */
 export function resolveMenuGridConfig(config: MenuGridConfig | null | undefined): MenuGridConfig {
   return { ...defaultMenuGridConfig, ...(config ?? {}) }
@@ -385,7 +405,10 @@ function ItemCardGrid({
       id={`item-${item.id}`}
     >
       {config.show_image && (
-        <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+        <div
+          className="relative aspect-[4/3] bg-gray-100 overflow-hidden"
+          style={topImageRadiusStyle(card.borderRadius)}
+        >
           {item.image_url
             ? <Image src={item.image_url} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 50vw, 33vw" />
             : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-200">🍽️</div>
@@ -483,7 +506,10 @@ function ItemRowList({
       id={`item-${item.id}`}
     >
       {config.show_image && (
-        <div className="size-16 rounded-lg bg-gray-100 overflow-hidden shrink-0 relative">
+        <div
+          className="size-16 bg-gray-100 overflow-hidden shrink-0 relative"
+          style={thumbImageRadiusStyle(card.borderRadius)}
+        >
           {item.image_url
             ? <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="64px" />
             : <div className="w-full h-full flex items-center justify-center text-xl text-gray-200">🍽️</div>
