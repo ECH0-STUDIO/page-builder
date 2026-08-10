@@ -1153,6 +1153,18 @@
     "noServiceRequests": "No open table requests.",
     "callStaffRequest": "Call staff",
     "requestCheckRequest": "Request check",
+    "logActions": {
+      "created": "Order placed",
+      "completed": "Order completed",
+      "paid": "Order paid",
+      "cancelled": "Order removed",
+      "restored": "Order restored",
+      "edited": "Order edited",
+      "item_updated": "Item updated",
+      "item_removed": "Item removed",
+      "request_accepted": "Request accepted",
+      "request_dismissed": "Request dismissed"
+    },
     "acknowledge": "Acknowledge",
     "dismiss": "Dismiss",
     "newServiceRequest": "New table request!",

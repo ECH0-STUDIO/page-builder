@@ -122,7 +122,7 @@ export async function updateServiceRequestStatusAction(
     actorName: profile?.full_name || user.email || 'Team member',
     actorRole: role,
     before: { status: existing.status, type: existing.type, table_number: existing.table_number },
-    after: { status },
+    after: { status, type: existing.type, table_number: existing.table_number },
   })
 
   return { success: true, data: undefined }

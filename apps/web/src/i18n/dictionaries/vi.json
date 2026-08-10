@@ -1153,6 +1153,18 @@
     "noServiceRequests": "Không có yêu cầu đang mở.",
     "callStaffRequest": "Gọi nhân viên",
     "requestCheckRequest": "Yêu cầu tính tiền",
+    "logActions": {
+      "created": "Đặt món",
+      "completed": "Hoàn thành đơn",
+      "paid": "Đã thanh toán",
+      "cancelled": "Đã xóa đơn",
+      "restored": "Khôi phục đơn",
+      "edited": "Chỉnh sửa đơn",
+      "item_updated": "Cập nhật món",
+      "item_removed": "Xóa món",
+      "request_accepted": "Đã nhận yêu cầu",
+      "request_dismissed": "Đã bỏ qua yêu cầu"
+    },
     "acknowledge": "Đã nhận",
     "dismiss": "Bỏ qua",
     "newServiceRequest": "Có yêu cầu mới từ bàn!",
