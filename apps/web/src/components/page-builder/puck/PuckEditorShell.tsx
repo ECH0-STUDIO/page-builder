@@ -46,6 +46,17 @@ import type { SaveStatus } from '../PublishBar'
 
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
+import { TemplatePicker } from '../TemplatePicker'
+import { StartPageDialog } from '../StartPageDialog'
+import { PuckTemplateContext } from './PuckTemplateContext'
+import { buildBlocksFromTemplate, getTemplateThemePreset } from '@/lib/apply-page-template'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 interface PuckEditorShellProps {
   business: Business
@@ -103,6 +114,12 @@ export function PuckEditorShell({
   const canvasPreviewLayout = viewMode === 'mobile' ? 'mobile' as const : 'desktop' as const
   const [leftSideBarVisible, setLeftSideBarVisible] = useState(true)
   const [rightSideBarVisible, setRightSideBarVisible] = useState(true)
+  const [showStartDialog, setShowStartDialog] = useState(
+    () => normalizedInitial.length === 0,
+  )
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [templatePickerFromStart, setTemplatePickerFromStart] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
@@ -435,6 +452,61 @@ export function PuckEditorShell({
     [business.id],
   )
 
+  const applyTemplate = useCallback(
+    (templateId: string) => {
+      const newBlocks = buildBlocksFromTemplate(business.id, templateId)
+      if (!newBlocks) return
+
+      const themePreset = getTemplateThemePreset(templateId)
+      if (themePreset) handleThemeChange(themePreset)
+
+      const newData = ensureChromeBlocks(
+        pageBlocksToPuckData(newBlocks, {
+          navbarConfig: theme?.navbar_config ?? defaultNavbarConfig,
+          footerConfig: theme?.footer_config ?? defaultFooterConfig,
+        }),
+        {
+          navbarConfig: theme?.navbar_config ?? defaultNavbarConfig,
+          footerConfig: theme?.footer_config ?? defaultFooterConfig,
+        },
+      )
+
+      setPuckData(newData)
+      blocksRef.current = newBlocks
+      setShowTemplatePicker(false)
+      setTemplatePickerFromStart(false)
+      setShowStartDialog(false)
+      setPendingTemplate(null)
+      isFirstRender.current = false
+      triggerAutoSave(newData)
+      setHasUnpublishedChanges(true)
+    },
+    [business.id, theme?.navbar_config, theme?.footer_config, handleThemeChange, triggerAutoSave],
+  )
+
+  const openTemplatePicker = useCallback((fromStart = false) => {
+    setTemplatePickerFromStart(fromStart)
+    setShowStartDialog(false)
+    setShowTemplatePicker(true)
+  }, [])
+
+  const handleSelectTemplate = useCallback(
+    (templateId: string) => {
+      const contentBlocks = puckDataToPageBlocks(puckData, business.id)
+      if (contentBlocks.length > 0) {
+        setPendingTemplate(templateId)
+        return
+      }
+      applyTemplate(templateId)
+    },
+    [applyTemplate, business.id, puckData],
+  )
+
+  const templateActions = useMemo(
+    () => ({ openTemplatePicker: () => openTemplatePicker(false) }),
+    [openTemplatePicker],
+  )
+
   const settingsContextValue = useMemo(
     () => ({
       theme,
@@ -447,7 +519,51 @@ export function PuckEditorShell({
 
   return (
     <div className="eatery-puck-shell eatery-puck">
+      {showStartDialog && !showTemplatePicker && (
+        <StartPageDialog
+          onStartBlank={() => setShowStartDialog(false)}
+          onUseTemplate={() => openTemplatePicker(true)}
+        />
+      )}
+
+      {showTemplatePicker && (
+        <TemplatePicker
+          onSelect={handleSelectTemplate}
+          onClose={() => {
+            setShowTemplatePicker(false)
+            setTemplatePickerFromStart(false)
+          }}
+          canClose
+          hideBlank={templatePickerFromStart}
+        />
+      )}
+
+      <Dialog open={!!pendingTemplate} onOpenChange={o => !o && setPendingTemplate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('pageBuilder.applyTemplate')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mt-2">
+            {t('pageBuilder.applyTemplateConfirm')}
+          </p>
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setPendingTemplate(null)}>
+              {t('pageBuilder.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingTemplate) applyTemplate(pendingTemplate)
+              }}
+            >
+              {t('pageBuilder.replaceLayout')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="eatery-puck-editor">
+        <PuckTemplateContext.Provider value={templateActions}>
         <PuckSettingsContext.Provider value={settingsContextValue}>
           <PreviewLayoutProvider value={canvasPreviewLayout}>
             <ThemeTokensProvider value={themeTokens}>
@@ -464,6 +580,7 @@ export function PuckEditorShell({
             </ThemeTokensProvider>
           </PreviewLayoutProvider>
         </PuckSettingsContext.Provider>
+        </PuckTemplateContext.Provider>
       </div>
     </div>
   )

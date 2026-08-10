@@ -3,9 +3,11 @@
 import { createContext, useContext } from 'react'
 import type { Plugin } from '@puckeditor/core'
 import { Puck } from '@puckeditor/core'
-import { Hammer, Layers, Settings } from 'lucide-react'
+import { Hammer, Layers, LayoutTemplate, Settings } from 'lucide-react'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { PuckOutlineReorder } from './PuckOutlineReorder'
 import { GlobalSettingsPanel } from '../blocks/GlobalSettingsPanel'
+import { usePuckTemplateActions } from './PuckTemplateContext'
 import type { PublishingSettings, ThemeSettings } from '../types'
 
 /** Match Puck's built-in BlocksPlugin / OutlinePlugin panel padding. */
@@ -21,6 +23,29 @@ export interface PuckSettingsPanelState {
 }
 
 export const PuckSettingsContext = createContext<PuckSettingsPanelState | null>(null)
+
+function TemplatesPluginPanel() {
+  const templateActions = usePuckTemplateActions()
+  const { t } = useTranslation()
+
+  return (
+    <PuckPluginPanel>
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {t('pageBuilder.templatePickerHint')}
+        </p>
+        <button
+          type="button"
+          onClick={() => templateActions?.openTemplatePicker()}
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-semibold hover:bg-accent transition-colors"
+        >
+          <LayoutTemplate className="size-4" />
+          {t('pageBuilder.templates')}
+        </button>
+      </div>
+    </PuckPluginPanel>
+  )
+}
 
 function GlobalSettingsPluginPanel() {
   const settings = useContext(PuckSettingsContext)
@@ -65,6 +90,12 @@ export function createPuckPlugins(t: (key: string) => string): Plugin[] {
           <PuckOutlineReorder />
         </PuckPluginPanel>
       ),
+    },
+    {
+      name: 'templates',
+      label: t('pageBuilder.templates'),
+      icon: <LayoutTemplate size={16} />,
+      render: () => <TemplatesPluginPanel />,
     },
     {
       name: 'settings',
