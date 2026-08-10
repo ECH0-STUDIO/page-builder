@@ -10,7 +10,7 @@ import { getOrderRetentionCutoff } from '@/lib/order-retention'
 import { formatCurrency } from '@/lib/currency'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { toast } from 'sonner'
-import { Download, RefreshCcw } from 'lucide-react'
+import { Download, RefreshCcw, Search } from 'lucide-react'
 
 type HistoryOrderItem = {
   id: string
@@ -119,6 +119,7 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
   const [exporting, setExporting] = useState(false)
   const [orders, setOrders] = useState<HistoryOrder[]>([])
   const [logs, setLogs] = useState<HistoryLog[]>([])
+  const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -150,16 +151,41 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
     void load()
   }, [load])
 
+  const q = search.trim().toLowerCase()
+  const qId = q.replace(/^#/, '')
+
+  const filteredOrders = useMemo(() => {
+    if (!q) return orders
+    return orders.filter(order => {
+      if (order.id.toLowerCase().includes(qId)) return true
+      if ((order.table_number || '').toLowerCase().includes(q)) return true
+      return (order.order_items || []).some(item =>
+        (item.item_name || '').toLowerCase().includes(q),
+      )
+    })
+  }, [orders, q, qId])
+
+  const filteredLogs = useMemo(() => {
+    if (!q) return logs
+    return logs.filter(log => {
+      if ((log.order_id || '').toLowerCase().includes(qId)) return true
+      if ((log.actor_name || '').toLowerCase().includes(q)) return true
+      if ((log.reason || '').toLowerCase().includes(q)) return true
+      if ((log.action || '').toLowerCase().includes(q)) return true
+      return false
+    })
+  }, [logs, q, qId])
+
   const groupedOrders = useMemo(() => {
     const map = new Map<string, HistoryOrder[]>()
-    for (const order of orders) {
+    for (const order of filteredOrders) {
       const key = localDateKey(order.created_at)
       const list = map.get(key) ?? []
       list.push(order)
       map.set(key, list)
     }
     return Array.from(map.entries())
-  }, [orders])
+  }, [filteredOrders])
 
   async function handleExport() {
     setExporting(true)
@@ -179,7 +205,7 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
     }
   }
 
-  const empty = tab === 'orders' ? orders.length === 0 : logs.length === 0
+  const empty = tab === 'orders' ? filteredOrders.length === 0 : filteredLogs.length === 0
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
@@ -246,6 +272,21 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
         </div>
       </div>
 
+      <div className="relative shrink-0">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+        <input
+          type="search"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={
+            tab === 'logs'
+              ? t('orders.searchLogs')
+              : t('orders.searchOrders')
+          }
+          className="w-full h-11 pl-9 pr-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-gray-400 shadow-sm"
+        />
+      </div>
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="py-16 flex items-center justify-center text-gray-400">
@@ -284,6 +325,9 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
                             <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
                               {order.status}
                             </span>
+                            <span className="text-[10px] text-gray-300 font-mono">
+                              #{order.id.slice(0, 8)}
+                            </span>
                             <span className="text-sm font-bold text-gray-900 ml-auto">
                               {formatCurrency(order.total_amount)}
                             </span>
@@ -299,7 +343,7 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {logs.map((log) => (
+            {filteredLogs.map((log) => (
               <div
                 key={log.id}
                 className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"

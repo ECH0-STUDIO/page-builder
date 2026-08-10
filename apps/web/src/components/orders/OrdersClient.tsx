@@ -17,7 +17,7 @@ import {
   getNextPurgedMonthLabel,
   shouldShowRetentionReminder,
 } from '@/lib/order-retention'
-import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing } from 'lucide-react'
+import { Bell, CheckCircle2, Clock, Receipt, XCircle, Table2, RefreshCcw, DollarSign, BellRing, Search } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -68,11 +68,31 @@ function clientLocale(): 'en' | 'vi' {
   return match?.[1] === 'en' ? 'en' : 'vi'
 }
 
+type LiveDayFilter = 'today' | 'yesterday' | 'dayBefore'
+
+function startOfLocalDay(offsetDays: number): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + offsetDays)
+  return d
+}
+
+function isSameLocalDay(dateString: string, day: Date): boolean {
+  const d = new Date(dateString)
+  return (
+    d.getFullYear() === day.getFullYear()
+    && d.getMonth() === day.getMonth()
+    && d.getDate() === day.getDate()
+  )
+}
+
 export function OrdersClient({ businessId, role }: OrdersClientProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const canViewHistory = role === 'owner' || role === 'manager'
   const [boardMode, setBoardMode] = useState<'today' | 'history'>('today')
+  const [dayFilter, setDayFilter] = useState<LiveDayFilter>('today')
+  const [liveSearch, setLiveSearch] = useState('')
 
   function formatTimeAgo(dateString: string) {
     const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000)
@@ -271,9 +291,39 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   }
 
   const activeOrders = orders.filter(o => ['pending', 'completed', 'paid'].includes(o.status))
-  const pending = activeOrders.filter(o => o.status === 'pending')
-  const completed = activeOrders.filter(o => o.status === 'completed')
-  const paid = activeOrders.filter(o => o.status === 'paid')
+
+  const dayAnchor =
+    dayFilter === 'today'
+      ? startOfLocalDay(0)
+      : dayFilter === 'yesterday'
+        ? startOfLocalDay(-1)
+        : startOfLocalDay(-2)
+
+  const dayOrders = activeOrders.filter(o => isSameLocalDay(o.created_at, dayAnchor))
+
+  const searchQ = liveSearch.trim().toLowerCase()
+  const searchedOrders = !searchQ
+    ? dayOrders
+    : dayOrders.filter(o => {
+        if (o.id.toLowerCase().includes(searchQ)) return true
+        if (o.id.toLowerCase().startsWith(searchQ.replace(/^#/, ''))) return true
+        if ((o.table_number || '').toLowerCase().includes(searchQ)) return true
+        if ((o.customer_name || '').toLowerCase().includes(searchQ)) return true
+        return (o.order_items || []).some(item =>
+          (item.item_name || '').toLowerCase().includes(searchQ),
+        )
+      })
+
+  const pending = searchedOrders.filter(o => o.status === 'pending')
+  const completed = searchedOrders.filter(o => o.status === 'completed')
+  const paid = searchedOrders.filter(o => o.status === 'paid')
+
+  const dayOrdersLabel =
+    dayFilter === 'today'
+      ? t('orders.todayOrders')
+      : dayFilter === 'yesterday'
+        ? t('orders.yesterdayOrders')
+        : t('orders.dayBeforeOrders')
 
   const showRetention =
     canViewHistory && shouldShowRetentionReminder()
@@ -316,6 +366,9 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
                     <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
                       <Clock className="size-3" />
                       {formatTimeAgo(order.created_at)}
+                    </span>
+                    <span className="text-[10px] text-gray-300 font-mono">
+                      #{order.id.slice(0, 8)}
                     </span>
                   </div>
                 </div>
@@ -398,6 +451,27 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     </div>
   )
 
+  const DaySwitch = ({ className = '' }: { className?: string }) => (
+    <div className={`flex bg-gray-100 p-1 rounded-lg ${className}`}>
+      {([
+        { id: 'today' as const, label: t('orders.today') },
+        { id: 'yesterday' as const, label: t('orders.yesterday') },
+        { id: 'dayBefore' as const, label: t('orders.dayBefore') },
+      ]).map(opt => (
+        <button
+          key={opt.id}
+          type="button"
+          onClick={() => setDayFilter(opt.id)}
+          className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-sm font-semibold rounded-md transition-colors ${
+            dayFilter === opt.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+
   return (
     <div className="p-4 md:p-6 h-[calc(100vh-4rem)] flex flex-col">
       <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-6">
@@ -412,12 +486,12 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         {boardMode === 'today' && (
           <div className="flex gap-3 md:gap-4 order-3 md:order-2 w-full md:w-auto items-stretch">
             <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
-              <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.todayOrders')}</p>
-              <p className="text-lg md:text-xl font-bold text-gray-900">{activeOrders.length}</p>
+              <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{dayOrdersLabel}</p>
+              <p className="text-lg md:text-xl font-bold text-gray-900">{dayOrders.length}</p>
             </div>
             <div className="flex-1 md:flex-none bg-white border border-gray-200 px-3 md:px-4 py-2 md:py-2 rounded-xl text-center shadow-sm">
               <p className="text-[10px] md:text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{t('orders.expectedRev')}</p>
-              <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(activeOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
+              <p className="text-lg md:text-xl font-bold text-green-600">{formatCurrency(dayOrders.reduce((acc, o) => acc + o.total_amount, 0))}</p>
             </div>
             <button
               type="button"
@@ -455,6 +529,20 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         <OrdersHistoryPanel businessId={businessId} />
       ) : (
         <>
+          <div className="mb-4 shrink-0 flex flex-col sm:flex-row gap-2 sm:items-center">
+            <DaySwitch className="w-full sm:w-auto" />
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+              <input
+                type="search"
+                value={liveSearch}
+                onChange={e => setLiveSearch(e.target.value)}
+                placeholder={t('orders.searchOrders')}
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-gray-400"
+              />
+            </div>
+          </div>
+
           <div className="mb-4 shrink-0 rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Bell className="size-4 text-amber-700" />
