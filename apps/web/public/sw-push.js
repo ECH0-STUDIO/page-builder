@@ -28,8 +28,11 @@ self.addEventListener('push', (event) => {
       body: payload.body || '',
       icon: '/vercel.svg',
       badge: '/vercel.svg',
-      tag: 'eatery-live-orders',
+      tag: 'eatery-live-' + Date.now(),
       renotify: true,
+      requireInteraction: true,
+      silent: false,
+      vibrate: [200, 100, 200],
       data: { url: payload.url || '/dashboard/orders' },
     }),
   )

@@ -10,11 +10,17 @@ export type PushSendResult = {
   configured: boolean
   sent: number
   failed: number
+  lastError?: string
+}
+
+function normalizeVapidKey(key: string): string {
+  return key.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '')
 }
 
 export function isPushConfigured(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
+    normalizeVapidKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '')
+    && normalizeVapidKey(process.env.VAPID_PRIVATE_KEY || ''),
   )
 }
 
@@ -22,9 +28,9 @@ async function sendPushRows(
   rows: Array<{ id: string; endpoint: string; p256dh: string; auth: string }>,
   payload: PushPayload,
 ): Promise<PushSendResult> {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  const privateKey = process.env.VAPID_PRIVATE_KEY
-  const subject = process.env.VAPID_SUBJECT || 'mailto:support@eateryvn.com'
+  const publicKey = normalizeVapidKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '')
+  const privateKey = normalizeVapidKey(process.env.VAPID_PRIVATE_KEY || '')
+  const subject = process.env.VAPID_SUBJECT?.trim() || 'mailto:support@eateryvn.com'
 
   if (!publicKey || !privateKey) {
     return { configured: false, sent: 0, failed: 0 }
@@ -46,6 +52,7 @@ async function sendPushRows(
   const db = createAdminClient()
   let sent = 0
   let failed = 0
+  let lastError: string | undefined
 
   await Promise.allSettled(
     rows.map(async (row) => {
@@ -64,6 +71,12 @@ async function sendPushRows(
           err && typeof err === 'object' && 'statusCode' in err
             ? Number((err as { statusCode: number }).statusCode)
             : 0
+        const message =
+          err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: string }).message)
+            : 'Push delivery failed'
+        lastError = statusCode ? `${statusCode}: ${message}` : message
+        console.error('[push-notify]', lastError, row.endpoint.slice(0, 48))
         if (statusCode === 404 || statusCode === 410) {
           await db.from('push_subscriptions').delete().eq('id', row.id)
         }
@@ -71,7 +84,7 @@ async function sendPushRows(
     }),
   )
 
-  return { configured: true, sent, failed }
+  return { configured: true, sent, failed, lastError }
 }
 
 /**
