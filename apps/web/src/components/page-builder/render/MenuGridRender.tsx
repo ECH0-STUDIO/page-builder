@@ -93,7 +93,8 @@ export interface MenuGridData {
 
 // ─── Item Modal (with cart integration) ──────────────────────────────────────
 
-function ItemModal({
+/** Shared item detail / add-to-order sheet (order page Featured + menu grid). */
+export function MenuItemModal({
   item, groups, options, config, brandColor, onClose, browseOnly = false,
 }: {
   item: MenuItem
@@ -155,7 +156,7 @@ function ItemModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
       onClick={onClose}
     >
       {/* Backdrop */}
@@ -163,7 +164,7 @@ function ItemModal({
 
       {/* Sheet */}
       <div
-        className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+        className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
         onClick={e => e.stopPropagation()}
       >
         {/* Close button */}
@@ -423,7 +424,7 @@ function ItemCardGrid({
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
             {item.available ? (
-              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
+              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150 text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
                 <Plus className="size-4 pointer-events-none" />
               </button>
             ) : !browseOnly ? (
@@ -470,7 +471,7 @@ function ItemRowList({
     <div
       onClick={onClick}
       className={cn(
-        'flex gap-4 py-3 px-3 border cursor-pointer transition-colors',
+        'flex gap-4 py-3 px-3 border cursor-pointer transition-all duration-200 hover:-translate-y-px',
         isMobile ? 'items-start' : 'items-center',
       )}
       style={{
@@ -524,7 +525,7 @@ function ItemRowList({
           </p>
         )}
         {item.available ? (
-          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-105 transition-transform text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
+          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150 text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
             <Plus className="size-4 pointer-events-none" />
           </button>
         ) : !browseOnly && !config.show_unavailable_badge ? (
@@ -813,7 +814,7 @@ function MenuGridInner({
 
       {/* Item detail + add to order modal */}
       {modalItem && (
-        <ItemModal
+        <MenuItemModal
           item={modalItem}
           groups={variantGroups}
           options={variantOptions}

@@ -301,6 +301,7 @@ export interface Database {
           tags: string[] | null
           is_vegetarian: boolean
           spicy_level: number
+          is_featured: boolean
           visible_locales: string[] | null
           created_at: string
           updated_at: string
@@ -320,6 +321,7 @@ export interface Database {
           tags?: string[] | null
           is_vegetarian?: boolean
           spicy_level?: number
+          is_featured?: boolean
           visible_locales?: string[] | null
           created_at?: string
           updated_at?: string
@@ -339,6 +341,7 @@ export interface Database {
           tags?: string[] | null
           is_vegetarian?: boolean
           spicy_level?: number
+          is_featured?: boolean
           visible_locales?: string[] | null
           created_at?: string
           updated_at?: string

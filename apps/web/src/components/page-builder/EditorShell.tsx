@@ -950,6 +950,9 @@ export function EditorShell({
     }))
     setBlocks(newBlocks)
     setSelectedId(newBlocks[0]?.id ?? null)
+    if (template.theme) {
+      handleThemeChange(template.theme)
+    }
     setShowTemplatePicker(false)
   }
 
