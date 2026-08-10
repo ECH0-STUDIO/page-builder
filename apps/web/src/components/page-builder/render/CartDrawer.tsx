@@ -521,15 +521,6 @@ export function CartDrawer({
                     </div>
                   </div>
                 ))}
-
-                {pastOrders.length > 1 && (
-                  <div className="flex justify-between items-center px-1 pt-1">
-                    <span className="text-sm font-semibold text-gray-500">{t('cart.grandTotal')}</span>
-                    <span className="font-bold text-lg text-gray-900">
-                      {formatCurrency(pastOrders.reduce((acc, o) => acc + o.total, 0))}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
 

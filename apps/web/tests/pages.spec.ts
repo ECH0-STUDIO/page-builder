@@ -24,7 +24,6 @@ test.describe('Page Builder', () => {
 
   test('Builder loads', async ({ page }) => {
     await page.goto('/dashboard/pages');
-    // Check for "Add section", which is the text in the EditorShell sidebar
-    await expect(page.locator('text=Add section')).toBeVisible();
+    await expect(page.locator('text=Khối').or(page.locator('text=Blocks'))).toBeVisible();
   });
 });
