@@ -3,7 +3,7 @@
  * Each is a starting arrangement of blocks (and optional theme) applied when the
  * user picks a template from the Templates panel. Blocks remain fully editable.
  *
- * Placeholder images live in /public/templates/ — see public/templates/README.md
+ * Placeholder images live in /public/marketing/template/ — see public/marketing/template/README.md
  */
 
 import {
@@ -45,8 +45,8 @@ export interface PageTemplate {
   theme?: TemplateThemePreset
 }
 
-/** Public folder paths — copy images to apps/web/public/templates/ */
-const img = (filename: string) => `/templates/${filename}`
+/** Public folder paths — served at /marketing/template/<filename> */
+const img = (filename: string) => `/marketing/template/${filename}`
 
 export const DEFAULT_PAGE_TEMPLATE_ID = 'eatery_default'
 
