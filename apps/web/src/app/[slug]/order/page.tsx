@@ -10,6 +10,7 @@ import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/t
 import { ViewTracker } from '@/components/ViewTracker'
 import { AnalyticsScripts } from '@/components/AnalyticsScripts'
 import { buildStoreMetadata } from '@/lib/store-metadata'
+import { orderChromeTokens } from '@/lib/color-contrast'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
@@ -164,10 +165,9 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       ? (publishedMenuBlock.config as MenuGridConfig)
       : null,
   })
-  // Order page chrome (category tabs / headings) follows live theme text colour.
+  // Order page menu styling — card text stays dark on white cards.
   const menuConfig: MenuGridConfig = {
     ...menuConfigBase,
-    text_color: themeRaw?.text_color || menuConfigBase.text_color || '#111111',
   }
 
   const promoSlides = resolvePromoSlides({
@@ -199,6 +199,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   const orderBgImage =
     (pubSettings as { order_background_image_url?: string | null } | null)?.order_background_image_url
     || null
+  const orderChrome = orderChromeTokens(orderBgColor, themeTokens.brandColor)
 
   const openingHours = normalizeOpeningHours(business.opening_hours)
   const orderingOpen = isBusinessOpenNow(openingHours)
@@ -221,7 +222,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       >
         <div
           lang={visitorLocale}
-          className="min-h-screen w-full max-w-[430px] mx-auto relative shadow-2xl flex flex-col"
+          className="min-h-screen w-full max-w-[430px] md:max-w-5xl mx-auto relative shadow-2xl flex flex-col"
           style={{
             fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
             ...buildThemeStyle(themeForTokens),
@@ -249,6 +250,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
               businessName={business.name}
               logoUrl={business.logo_url}
               brandColor={themeTokens.brandColor}
+              chrome={orderChrome}
             />
           </Suspense>
 
@@ -256,6 +258,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             businessId={business.id}
             businessName={business.name}
             brandColor={themeTokens.brandColor}
+            bgColor={orderBgColor}
             promoSlides={promoSlides}
             aspectDesktop={carouselDesktop}
             aspectMobile={carouselMobile}

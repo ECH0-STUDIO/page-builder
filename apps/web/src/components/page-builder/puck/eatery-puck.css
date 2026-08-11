@@ -111,7 +111,12 @@
   border-top: 2px solid var(--puck-color-interactive);
 }
 
-/* Hero overlay: media/scrim must stay behind copy + CTAs (Puck overlays use z-index:1). */
+/* Canvas sections reorder from Outline panel only — hide leftover drag affordances */
+.eatery-puck [data-puck-entry] [class*='DraggableComponent-actions'],
+.eatery-puck [data-puck-entry] [class*='DragHandle'] {
+  display: none !important;
+}
+
 .eatery-puck [data-hero-overlay] {
   isolation: isolate;
 }

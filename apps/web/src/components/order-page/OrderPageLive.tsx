@@ -4,7 +4,7 @@
  * Live order page — mobile-first: carousel → horizontal categories → list menu → bottom bar.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import { Search, Star } from 'lucide-react'
 import { OrderPromoCarousel } from '@/components/order-page/OrderPromoCarousel'
@@ -20,11 +20,13 @@ import type { CarouselAspect, CarouselAspectMobile } from '@/components/order-pa
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { formatCurrency } from '@/lib/currency'
+import { orderChromeTokens, type OrderChromeTokens } from '@/lib/color-contrast'
 
 interface OrderPageLiveProps {
   businessId: string
   businessName: string
   brandColor: string
+  bgColor?: string
   promoSlides: PromoSlide[]
   aspectDesktop: CarouselAspect
   aspectMobile: CarouselAspectMobile
@@ -46,6 +48,7 @@ export function OrderPageLive({
   businessId,
   businessName,
   brandColor,
+  bgColor = '#ffffff',
   promoSlides,
   aspectDesktop,
   aspectMobile,
@@ -61,6 +64,10 @@ export function OrderPageLive({
   todayHoursLabel = null,
 }: OrderPageLiveProps) {
   const { t } = useTranslation()
+  const chrome = useMemo(
+    () => orderChromeTokens(bgColor, brandColor),
+    [bgColor, brandColor],
+  )
   const visibleCats = useMemo(
     () => categories.filter(c => c.visible),
     [categories],
@@ -127,11 +134,10 @@ export function OrderPageLive({
   )
   const showFeatured = featuredItems.length > 0 && !searchQuery.trim()
 
-  // Order page is always a mobile list — ignore landing-style grid layouts.
-  // No section title/description (carousel + category tabs cover that).
+  // Desktop: 3-column vertical cards; mobile: single column (responsive grid).
   const orderMenuConfig: MenuGridConfig = {
     ...menuConfig,
-    layout: 'list',
+    layout: '3col',
     show_category_tabs: false,
     tabs_layout: 'horizontal',
     heading: '',
@@ -167,59 +173,61 @@ export function OrderPageLive({
         </div>
       )}
 
-      <div className="sticky top-0 z-30 border-b border-black/6 bg-white/95 backdrop-blur-md">
+      <div
+        className="sticky top-0 z-30 border-b backdrop-blur-md"
+        style={{
+          backgroundColor: chrome.surfaceGlass,
+          borderColor: chrome.border,
+        }}
+      >
         <div className="px-3 pt-2.5 pb-2 space-y-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none"
+              style={{ color: chrome.subtleText }}
+            />
             <input
               type="search"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={t('orderPage.searchMenu')}
-              className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-gray-400"
+              className="w-full h-10 pl-9 pr-3 rounded-xl border text-sm focus:outline-none"
+              style={{
+                backgroundColor: chrome.inputBg,
+                borderColor: chrome.inputBorder,
+                color: chrome.inputText,
+              }}
             />
           </div>
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
-            <button
-              type="button"
+            <FilterChip
+              active={vegetarianOnly}
               onClick={() => setVegetarianOnly(v => !v)}
-              className={cn(
-                'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-all duration-200',
-                vegetarianOnly
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                  : 'border-gray-200 bg-white text-gray-600',
-              )}
+              chrome={chrome}
+              activeClassName="border-emerald-600 bg-emerald-50 text-emerald-800"
             >
               {t('orderPage.filterVegetarian')}
-            </button>
-            <button
-              type="button"
+            </FilterChip>
+            <FilterChip
+              active={spicyOnly}
               onClick={() => setSpicyOnly(v => !v)}
-              className={cn(
-                'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-all duration-200',
-                spicyOnly
-                  ? 'border-orange-500 bg-orange-50 text-orange-800'
-                  : 'border-gray-200 bg-white text-gray-600',
-              )}
+              chrome={chrome}
+              activeClassName="border-orange-500 bg-orange-50 text-orange-800"
             >
               {t('orderPage.filterSpicy')}
-            </button>
+            </FilterChip>
             {availableTags.map(tag => {
               const active = selectedTags.includes(tag)
               return (
-                <button
+                <FilterChip
                   key={tag}
-                  type="button"
+                  active={active}
                   onClick={() => toggleTag(tag)}
-                  className={cn(
-                    'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-all duration-200',
-                    active
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-200 bg-white text-gray-600',
-                  )}
+                  chrome={chrome}
+                  activeClassName="border-gray-900 bg-gray-900 text-white"
                 >
                   {tag}
-                </button>
+                </FilterChip>
               )
             })}
           </div>
@@ -236,10 +244,10 @@ export function OrderPageLive({
                   onClick={() => selectCategory(cat.id)}
                   className={cn(
                     'shrink-0 rounded-none bg-transparent px-3.5 py-2.5 text-sm transition-all duration-200 border-b-2 -mb-px',
-                    active ? 'font-semibold' : 'font-medium text-gray-500 hover:text-gray-800',
+                    active ? 'font-semibold' : 'font-medium',
                   )}
                   style={{
-                    color: active ? brandColor : undefined,
+                    color: active ? brandColor : chrome.mutedText,
                     borderColor: active ? brandColor : 'transparent',
                   }}
                 >
@@ -251,7 +259,7 @@ export function OrderPageLive({
         )}
       </div>
 
-      <main id="order-menu" className="flex-1 px-3 py-3 pb-28 scroll-mt-14">
+      <main id="order-menu" className="flex-1 px-3 py-3 pb-28 scroll-mt-14 md:px-6">
         {showFeatured && (
           <section
             className="mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500"
@@ -323,7 +331,6 @@ export function OrderPageLive({
               hideCategoryTabs
               activeCategoryId={activeCategoryId}
               onActiveCategoryChange={setActiveCategoryId}
-              previewLayout="mobile"
               browseOnly={!orderingOpen}
             />
           </div>
@@ -346,6 +353,7 @@ export function OrderPageLive({
         businessId={businessId}
         brandColor={brandColor}
         orderingOpen={orderingOpen}
+        chrome={chrome}
       />
 
       <OrderScrollTop brandColor={brandColor} />
@@ -359,5 +367,41 @@ export function OrderPageLive({
         orderingOpen={orderingOpen}
       />
     </>
+  )
+}
+
+function FilterChip({
+  active,
+  onClick,
+  chrome,
+  activeClassName,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  chrome: OrderChromeTokens
+  activeClassName: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'h-8 shrink-0 px-3 rounded-full text-xs font-semibold border transition-all duration-200',
+        active && activeClassName,
+      )}
+      style={
+        active
+          ? undefined
+          : {
+              backgroundColor: chrome.chipBg,
+              borderColor: chrome.chipBorder,
+              color: chrome.chipText,
+            }
+      }
+    >
+      {children}
+    </button>
   )
 }

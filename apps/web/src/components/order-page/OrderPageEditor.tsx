@@ -203,7 +203,6 @@ export function OrderPageEditor({
   // Appearance text colour drives category chrome; card text stays dark on white cards.
   const previewMenuConfig: MenuGridConfig = {
     ...baseMenuConfig,
-    text_color: draft.themeTextColor || '#111111',
   }
 
   const previewSlides = useMemo(
@@ -689,12 +688,11 @@ export function OrderPageEditor({
                     headingFont: draft.headingFont || 'Inter',
                     bodyFont: draft.bodyFont || 'Inter',
                   }}
-                  textColorHint={t('orderPageAdmin.textColorHint')}
+                  hideTextColor
                   onChange={patch =>
                     updateDraft(d => ({
                       ...d,
                       ...(patch.brandColor != null ? { brandColor: patch.brandColor } : {}),
-                      ...(patch.textColor != null ? { themeTextColor: patch.textColor } : {}),
                       ...(patch.headingFont != null ? { headingFont: patch.headingFont } : {}),
                       ...(patch.bodyFont != null ? { bodyFont: patch.bodyFont } : {}),
                     }))

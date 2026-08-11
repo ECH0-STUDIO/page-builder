@@ -76,6 +76,11 @@ const CHROME_PERMISSIONS = {
   insert: false,
 }
 
+/** Canvas drag is disabled — reorder sections from the Outline panel only. */
+const SECTION_PERMISSIONS = {
+  drag: false,
+} as const
+
 function legacyConfigField(
   t: (key: string) => string,
   render: (props: {
@@ -197,6 +202,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       },
       hero: {
         label: t('pageBuilder.blocks.hero.label'),
+        permissions: SECTION_PERMISSIONS,
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -233,6 +239,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       },
       text_image: {
         label: t('pageBuilder.blocks.text_image.label'),
+        permissions: SECTION_PERMISSIONS,
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -263,6 +270,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       },
       contact: {
         label: t('pageBuilder.blocks.contact.label'),
+        permissions: SECTION_PERMISSIONS,
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -291,6 +299,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       },
       menu_grid: {
         label: t('pageBuilder.blocks.menu_grid.label'),
+        permissions: SECTION_PERMISSIONS,
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
@@ -320,6 +329,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
       },
       qr_code: {
         label: t('pageBuilder.blocks.qr_code.label'),
+        permissions: SECTION_PERMISSIONS,
         defaultProps: {
           id: '',
           spacingSize: defaultSpacingSize(),
