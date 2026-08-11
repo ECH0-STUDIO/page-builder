@@ -147,7 +147,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
       background_color: '#FFFFFF',
       text_color: '#111111',
       font_family: 'Inter',
-      heading_font_family: 'Bebas Neue',
+      heading_font_family: 'Montserrat',
     },
     blocks: [
       {

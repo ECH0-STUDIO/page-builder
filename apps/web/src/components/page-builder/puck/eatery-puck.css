@@ -14,6 +14,29 @@
   font-family: var(--puck-font-family);
 }
 
+/* Builder chrome (sidebars, settings, plugins) must never inherit the business brand heading font */
+.eatery-puck [class*='PuckLayout-leftSideBar'],
+.eatery-puck [class*='PuckLayout-rightSideBar'],
+.eatery-puck .puck-plugin-panel,
+.eatery-puck-header {
+  font-family: var(--puck-font-family) !important;
+}
+
+.eatery-puck [class*='PuckLayout-leftSideBar'] h1,
+.eatery-puck [class*='PuckLayout-leftSideBar'] h2,
+.eatery-puck [class*='PuckLayout-leftSideBar'] h3,
+.eatery-puck [class*='PuckLayout-leftSideBar'] h4,
+.eatery-puck [class*='PuckLayout-rightSideBar'] h1,
+.eatery-puck [class*='PuckLayout-rightSideBar'] h2,
+.eatery-puck [class*='PuckLayout-rightSideBar'] h3,
+.eatery-puck [class*='PuckLayout-rightSideBar'] h4,
+.eatery-puck .puck-plugin-panel h1,
+.eatery-puck .puck-plugin-panel h2,
+.eatery-puck .puck-plugin-panel h3,
+.eatery-puck .puck-plugin-panel h4 {
+  font-family: var(--puck-font-family) !important;
+}
+
 .eatery-puck-shell {
   display: flex;
   flex-direction: column;

@@ -649,7 +649,7 @@ export function OrderPageEditor({
           />
         </div>
 
-        <aside className="shrink-0 w-full lg:w-[380px] xl:w-[420px] border-t lg:border-t-0 lg:border-l border-border bg-background flex flex-col max-h-[45vh] lg:max-h-none">
+        <aside className="shrink-0 w-full lg:w-[380px] xl:w-[420px] border-t lg:border-t-0 lg:border-l border-border bg-background flex flex-col max-h-[45vh] lg:max-h-none font-sans">
           <div className="flex border-b border-border shrink-0">
             {tabs.map(item => (
               <button

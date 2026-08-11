@@ -5,7 +5,8 @@
  * Theme is shared; each mode keeps its own canvas and page-specific settings.
  */
 
-import { useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,11 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
   const router = useRouter()
   const { t } = useTranslation()
   const [isPending, startTransition] = useTransition()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   function switchTo(next: BuilderPageMode) {
     if (next === mode || isPending) return
@@ -28,6 +34,24 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
       router.push(builderPagesHref(next))
     })
   }
+
+  const overlay =
+    isPending && mounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/70 backdrop-blur-[2px]"
+            role="status"
+            aria-live="polite"
+            aria-label={t('pageBuilder.switchingPage')}
+          >
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-3 shadow-lg text-sm font-medium text-foreground">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
+              {t('pageBuilder.switchingPage')}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null
 
   return (
     <>
@@ -67,20 +91,7 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
           {t('pageBuilder.modeOrder')}
         </button>
       </div>
-
-      {isPending && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-[2px]"
-          role="status"
-          aria-live="polite"
-          aria-label={t('pageBuilder.switchingPage')}
-        >
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-3 shadow-lg text-sm font-medium text-foreground">
-            <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
-            {t('pageBuilder.switchingPage')}
-          </div>
-        </div>
-      )}
+      {overlay}
     </>
   )
 }

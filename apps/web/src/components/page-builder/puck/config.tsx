@@ -124,6 +124,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
                     : undefined
                 }
                 data-preview-layout={isMobile ? 'mobile' : 'desktop'}
+                data-eatery-canvas=""
                 style={{
                   ...buildThemeStyle(theme),
                   fontFamily: `'${bodyFont}', sans-serif`,
@@ -132,7 +133,7 @@ export function createStablePuckConfig(refs: MutableRefObject<PuckEditorRefs>): 
               >
                 <style
                   dangerouslySetInnerHTML={{
-                    __html: `h1,h2,h3,h4,h5,h6{font-family:'${headingFont}',sans-serif!important;}`,
+                    __html: `[data-eatery-canvas] h1,[data-eatery-canvas] h2,[data-eatery-canvas] h3,[data-eatery-canvas] h4,[data-eatery-canvas] h5,[data-eatery-canvas] h6{font-family:'${headingFont}',sans-serif!important;}`,
                   }}
                 />
                 {children}

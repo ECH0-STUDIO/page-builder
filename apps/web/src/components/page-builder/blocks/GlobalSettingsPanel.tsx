@@ -177,10 +177,10 @@ export function GlobalSettingsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* ── SEO ── */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-sm">{t('pageBuilder.globalSeo')}</h3>
+        <h3 className="font-semibold text-sm font-sans">{t('pageBuilder.globalSeo')}</h3>
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.pageTitle')}</Label>
