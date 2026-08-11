@@ -435,6 +435,22 @@
         "label": "Eatery Mặc Định",
         "description": "Mẫu đen trắng gọn — hero, giới thiệu, thực đơn và bản đồ. Vẫn chỉnh sửa bình thường sau khi áp dụng."
       },
+      "street_food": {
+        "label": "Ẩm Thực Đường Phố",
+        "description": "Năng lượng chợ đêm — hero nướng than, câu chuyện gia đình, thực đơn dạng danh sách. Ví dụ: Bún Chả Hà Nội 36."
+      },
+      "garden_cafe": {
+        "label": "Garden Café",
+        "description": "Không gian xanh nhẹ nhàng — hero chia đôi, lưới ảnh món, QR gọi món tại bàn. Ví dụ: Lá Café."
+      },
+      "heritage_kitchen": {
+        "label": "Bếp Truyền Thống",
+        "description": "Ấm áp hoài niệm — hero cơm niêu, thực đơn danh sách, liên hệ nổi bật giờ mở cửa. Ví dụ: Cơm Niêu Sài Gòn."
+      },
+      "fast_casual": {
+        "label": "Fast Casual",
+        "description": "Nhanh gọn tươi sáng — hero gradient, thực đơn 2 cột, QR gọi món. Ví dụ: Roll & Bowl."
+      },
       "full_experience": {
         "label": "Trải nghiệm Toàn diện",
         "description": "Tốt nhất cho SEO. Một trang web hoàn chỉnh với câu chuyện của bạn, các món ăn đặc trưng, thực đơn đầy đủ và chi tiết liên hệ."

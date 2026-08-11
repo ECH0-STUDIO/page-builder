@@ -20,6 +20,7 @@ export function buildBlocksFromTemplate(
     type: tb.type,
     sort_order: i,
     visible: true,
+    block_anchor_id: tb.block_anchor_id ?? null,
     config: {
       ...(getDefaultConfig(tb.type) as unknown as Record<string, unknown>),
       ...(tb.config ?? {}),
