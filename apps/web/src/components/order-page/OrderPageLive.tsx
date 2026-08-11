@@ -174,9 +174,9 @@ export function OrderPageLive({
       )}
 
       <div
-        className="sticky top-0 z-30 border-b backdrop-blur-md"
+        className="sticky top-0 z-30 border-b"
         style={{
-          backgroundColor: chrome.surfaceGlass,
+          backgroundColor: chrome.background,
           borderColor: chrome.border,
         }}
       >
@@ -247,8 +247,8 @@ export function OrderPageLive({
                     active ? 'font-semibold' : 'font-medium',
                   )}
                   style={{
-                    color: active ? brandColor : chrome.mutedText,
-                    borderColor: active ? brandColor : 'transparent',
+                    color: active ? chrome.text : chrome.mutedText,
+                    borderColor: active ? chrome.text : 'transparent',
                   }}
                 >
                   {cat.name}

@@ -20,6 +20,7 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 import { useCart, type CartVariantSelection } from './CartContext'
 import { getTypography } from './typography'
 import { cn } from '@/lib/utils'
+import { brandButtonStyle } from '@/lib/color-contrast'
 import {
   type PreviewLayout,
   isForcedMobileLayout,
@@ -329,8 +330,8 @@ export function MenuItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-4 rounded-2xl font-bold text-base text-white transition-all hover:opacity-90"
-              style={{ backgroundColor: actionColor }}
+              className="w-full py-4 rounded-2xl font-bold text-base transition-all hover:opacity-90"
+              style={brandButtonStyle(actionColor)}
             >
               {t('cart.closeDetails')}
             </button>
@@ -341,9 +342,9 @@ export function MenuItemModal({
               className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                 added
                   ? 'bg-green-500 text-white'
-                  : 'text-white hover:opacity-90 shadow-lg'
+                  : 'hover:opacity-90 shadow-lg'
               }`}
-              style={added ? undefined : { backgroundColor: actionColor }}
+              style={added ? undefined : brandButtonStyle(actionColor)}
             >
               {added ? (
                 <><Check className="size-5" strokeWidth={3} />{t('cart.addedToOrder')}</>
@@ -447,7 +448,7 @@ function ItemCardGrid({
               <p className="text-sm font-bold" style={{ color: textColor }}>{formatCurrency(item.price)}</p>
             ) : <div />}
             {item.available ? (
-              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150 text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
+              <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150" style={brandButtonStyle(brandColor || DEFAULT_BRAND)} aria-label={t('cart.addToOrder')}>
                 <Plus className="size-4 pointer-events-none" />
               </button>
             ) : !browseOnly ? (
@@ -551,7 +552,7 @@ function ItemRowList({
           </p>
         )}
         {item.available ? (
-          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150 text-white" style={{ backgroundColor: brandColor || DEFAULT_BRAND }} aria-label={t('cart.addToOrder')}>
+          <button type="button" onClick={handleAddClick} className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 hover:scale-110 active:scale-90 transition-transform duration-150" style={brandButtonStyle(brandColor || DEFAULT_BRAND)} aria-label={t('cart.addToOrder')}>
             <Plus className="size-4 pointer-events-none" />
           </button>
         ) : !browseOnly && !config.show_unavailable_badge ? (

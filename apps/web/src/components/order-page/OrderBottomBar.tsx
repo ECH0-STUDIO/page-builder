@@ -208,7 +208,7 @@ export function OrderBottomBar({
         style={
           chrome
             ? {
-                backgroundColor: chrome.surfaceGlass,
+                backgroundColor: chrome.background,
                 borderColor: chrome.border,
               }
             : undefined
@@ -288,10 +288,9 @@ export function OrderBottomBar({
           >
             <Bell
               className={cn(
-                'size-4 transition-transform origin-top',
+                'size-4 shrink-0 transition-transform origin-top',
                 bellPulse || cooldown.call_staff ? 'animate-[bell-ring_0.7s_ease-in-out]' : '',
               )}
-              style={{ color: brandColor }}
             />
             <span className="hidden min-[360px]:inline">{t('orderPage.callStaff')}</span>
           </button>

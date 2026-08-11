@@ -151,7 +151,7 @@ export function ContactRender({ config, business }: ContactRenderProps) {
                             width: '40px',
                             height: '40px',
                             flexShrink: 0,
-                            color: s.color,
+                            color: textColor,
                           }}
                         >
                           <Icon size={28} aria-hidden />

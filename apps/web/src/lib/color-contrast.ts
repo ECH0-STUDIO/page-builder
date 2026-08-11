@@ -27,6 +27,15 @@ export function contrastTextOnBackground(background: string): '#111111' | '#FFFF
   return relativeLuminance(rgb.r, rgb.g, rgb.b) > 0.4 ? '#111111' : '#FFFFFF'
 }
 
+/** Background + contrasting text/icon color for brand-colored buttons. */
+export function brandButtonStyle(background: string) {
+  const bg = background.trim() || '#111111'
+  return {
+    backgroundColor: bg,
+    color: contrastTextOnBackground(bg),
+  } as const
+}
+
 /** Tokens for order page chrome (header, filter bar, bottom bar) on a custom background. */
 export function orderChromeTokens(background: string, brandColor: string) {
   const text = contrastTextOnBackground(background)

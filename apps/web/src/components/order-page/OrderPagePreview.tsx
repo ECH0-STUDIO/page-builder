@@ -184,7 +184,13 @@ export function OrderPagePreview({
               />
 
               {visibleCats.length > 0 && (
-                <div className="sticky top-0 z-20 border-b border-black/6 bg-white/95 backdrop-blur-md">
+                <div
+                  className="sticky top-0 z-20 border-b"
+                  style={{
+                    backgroundColor: chrome.background,
+                    borderColor: chrome.border,
+                  }}
+                >
                   <div className="flex gap-0 overflow-x-auto no-scrollbar px-3">
                     {visibleCats.map(cat => {
                       const active = (activeCategoryId ?? visibleCats[0]?.id) === cat.id
@@ -195,11 +201,11 @@ export function OrderPagePreview({
                           onClick={() => selectCategory(cat.id)}
                           className={cn(
                             'shrink-0 rounded-none bg-transparent px-3 py-2 text-xs transition-colors border-b-2 -mb-px',
-                            active ? 'font-semibold' : 'font-medium text-gray-500',
+                            active ? 'font-semibold' : 'font-medium',
                           )}
                           style={{
-                            color: active ? brandColor : undefined,
-                            borderColor: active ? brandColor : 'transparent',
+                            color: active ? chrome.text : chrome.mutedText,
+                            borderColor: active ? chrome.text : 'transparent',
                           }}
                         >
                           {cat.name}
