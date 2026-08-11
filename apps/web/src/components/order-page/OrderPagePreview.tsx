@@ -21,6 +21,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { formatCurrency } from '@/lib/currency'
+import { orderChromeTokens } from '@/lib/color-contrast'
 
 interface OrderPagePreviewProps {
   businessId: string
@@ -69,6 +70,10 @@ export function OrderPagePreview({
   previewMode = false,
 }: OrderPagePreviewProps) {
   const { t } = useTranslation()
+  const chrome = useMemo(
+    () => orderChromeTokens(bgColor || '#ffffff', brandColor),
+    [bgColor, brandColor],
+  )
   const fontsToLoad = [...new Set([headingFont, bodyFont].filter(f => f && f !== 'Inter'))]
   const googleFontUrl = fontsToLoad.length > 0
     ? `https://fonts.googleapis.com/css2?${fontsToLoad.map(f => `family=${f.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&')}&display=swap`
@@ -135,7 +140,13 @@ export function OrderPagePreview({
             className="order-preview-canvas flex-1 flex flex-col shadow-sm relative min-h-[640px]"
             style={{ backgroundColor: bgColor || '#ffffff' }}
           >
-            <div className="flex h-12 items-center justify-center gap-2 border-b border-black/6 px-3 bg-white shrink-0 z-10">
+            <div
+              className="flex h-12 items-center justify-center gap-2 border-b px-3 shrink-0 z-10"
+              style={{
+                backgroundColor: chrome.background,
+                borderColor: chrome.border,
+              }}
+            >
               {logoUrl ? (
                 <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-gray-100">
                   <Image src={logoUrl} alt="" fill className="object-cover" sizes="28px" />
@@ -148,7 +159,12 @@ export function OrderPagePreview({
                   {businessName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="truncate text-xs font-semibold text-gray-900">{businessName}</span>
+              <span
+                className="truncate text-xs font-semibold"
+                style={{ color: chrome.text }}
+              >
+                {businessName}
+              </span>
             </div>
 
             <div
@@ -276,6 +292,7 @@ export function OrderPagePreview({
                   brandColor={brandColor}
                   contained
                   previewMode
+                  chrome={chrome}
                 />
               </div>
             </Suspense>

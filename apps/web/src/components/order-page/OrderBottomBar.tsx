@@ -15,6 +15,7 @@ import { useCart } from '@/components/page-builder/render/CartContext'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { readRememberedTable, writeRememberedTable, loadPastOrders } from '@/lib/guest-order-storage'
+import type { OrderChromeTokens } from '@/lib/color-contrast'
 
 interface OrderBottomBarProps {
   businessId: string
@@ -25,6 +26,7 @@ interface OrderBottomBarProps {
   previewMode?: boolean
   /** When false, cart checkout is unavailable (outside opening hours) */
   orderingOpen?: boolean
+  chrome?: OrderChromeTokens
 }
 
 export function OrderBottomBar({
@@ -33,6 +35,7 @@ export function OrderBottomBar({
   contained = false,
   previewMode = false,
   orderingOpen = true,
+  chrome,
 }: OrderBottomBarProps) {
   const searchParams = useSearchParams()
   const tableFromUrl = (searchParams.get('table') ?? '').trim()
@@ -197,12 +200,21 @@ export function OrderBottomBar({
     <>
       <div
         className={cn(
-          'bottom-0 inset-x-0 z-40 border-t border-black/6 bg-white/95 backdrop-blur-md',
+          'bottom-0 inset-x-0 z-40 border-t backdrop-blur-md',
           barPos,
           !contained && 'pb-[env(safe-area-inset-bottom)]',
+          !chrome && 'border-black/6 bg-white/95',
         )}
+        style={
+          chrome
+            ? {
+                backgroundColor: chrome.surfaceGlass,
+                borderColor: chrome.border,
+              }
+            : undefined
+        }
       >
-        <div className="mx-auto flex max-w-[430px] gap-2 px-3 py-2.5">
+        <div className="mx-auto flex w-full max-w-[430px] md:max-w-5xl gap-2 px-3 py-2.5">
           <button
             type="button"
             onClick={openCart}
@@ -211,20 +223,45 @@ export function OrderBottomBar({
               !orderingOpen
                 ? 'border border-amber-200 bg-amber-50 text-amber-950'
                 : totalItems > 0
-                  ? 'text-white'
-                  : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
+                  ? ''
+                  : !chrome && 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
             )}
-            style={orderingOpen && totalItems > 0 ? { backgroundColor: brandColor } : undefined}
+            style={
+              !orderingOpen
+                ? undefined
+                : totalItems > 0
+                  ? {
+                      backgroundColor: brandColor,
+                      color: chrome?.brandText ?? '#FFFFFF',
+                    }
+                  : chrome
+                    ? {
+                        backgroundColor: chrome.secondaryBtnBg,
+                        borderColor: chrome.secondaryBtnBorder,
+                        color: chrome.secondaryBtnText,
+                        borderWidth: 1,
+                        borderStyle: 'solid',
+                      }
+                    : undefined
+            }
           >
             <ShoppingBag className="size-4 shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold truncate">{cartTitle}</span>
-              <span className={cn(
-                'block text-[11px] truncate',
-                !orderingOpen
-                  ? 'text-amber-900/70'
-                  : totalItems > 0 ? 'text-white/75' : 'text-gray-500',
-              )}>
+              <span
+                className={cn(
+                  'block text-[11px] truncate',
+                  !orderingOpen && 'text-amber-900/70',
+                  orderingOpen && totalItems === 0 && !chrome && 'text-gray-500',
+                )}
+                style={
+                  orderingOpen && totalItems > 0
+                    ? { color: chrome ? `${chrome.brandText}bf` : 'rgba(255,255,255,0.75)' }
+                    : orderingOpen && totalItems === 0 && chrome
+                      ? { color: chrome.mutedText }
+                      : undefined
+                }
+              >
                 {cartSubtitle}
               </span>
             </span>
@@ -233,7 +270,21 @@ export function OrderBottomBar({
           <button
             type="button"
             onClick={openActions}
-            className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-all duration-200 active:scale-[0.96]"
+            className={cn(
+              'shrink-0 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.96]',
+              !chrome && 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
+            )}
+            style={
+              chrome
+                ? {
+                    backgroundColor: chrome.secondaryBtnBg,
+                    borderColor: chrome.secondaryBtnBorder,
+                    color: chrome.secondaryBtnText,
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                  }
+                : undefined
+            }
           >
             <Bell
               className={cn(

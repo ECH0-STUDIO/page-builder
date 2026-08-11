@@ -79,7 +79,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           background: 'solid',
           background_color: '#F5F5F5',
           padding: 'spacious',
-          border_radius: 'xl',
+          border_radius: 'md',
           content_align: 'center',
           cta: null,
         },
@@ -100,7 +100,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           card_background_color: '#FFFFFF',
           card_text_color: '#111111',
           card_border_color: '#E5E5E5',
-          card_border_radius: 'xl',
+          card_border_radius: 'md',
         },
       },
       {

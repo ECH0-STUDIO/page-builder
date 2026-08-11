@@ -7,21 +7,35 @@
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { cn } from '@/lib/utils'
+import type { OrderChromeTokens } from '@/lib/color-contrast'
 
 interface OrderPageHeaderProps {
   slug: string
   businessName: string
   logoUrl?: string | null
   brandColor: string
+  chrome?: OrderChromeTokens
 }
 
-export function OrderPageHeader({ businessName, logoUrl, brandColor }: OrderPageHeaderProps) {
+export function OrderPageHeader({ businessName, logoUrl, brandColor, chrome }: OrderPageHeaderProps) {
   const searchParams = useSearchParams()
   const table = (searchParams.get('table') ?? '').trim()
   const { t } = useTranslation()
 
   return (
-    <header className="border-b border-black/6 bg-white">
+    <header
+      className={cn('border-b', !chrome && 'border-black/6 bg-white')}
+      style={
+        chrome
+          ? {
+              backgroundColor: chrome.background,
+              borderColor: chrome.border,
+              color: chrome.text,
+            }
+          : undefined
+      }
+    >
       <div className="relative mx-auto flex h-14 max-w-[1440px] items-center justify-center gap-2.5 px-4 sm:px-6">
         {logoUrl ? (
           <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-gray-100">
@@ -35,14 +49,20 @@ export function OrderPageHeader({ businessName, logoUrl, brandColor }: OrderPage
             {businessName.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="truncate text-sm font-semibold text-gray-900 tracking-tight max-w-[60%]">
+        <span
+          className={cn(
+            'truncate text-sm font-semibold tracking-tight max-w-[60%]',
+            !chrome && 'text-gray-900',
+          )}
+          style={chrome ? { color: chrome.text } : undefined}
+        >
           {businessName}
         </span>
 
         {table ? (
           <span
             className="absolute right-4 sm:right-6 inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold text-white"
-            style={{ backgroundColor: brandColor }}
+            style={{ backgroundColor: brandColor, color: chrome?.brandText ?? '#FFFFFF' }}
           >
             {t('orderPage.table')} {table}
           </span>

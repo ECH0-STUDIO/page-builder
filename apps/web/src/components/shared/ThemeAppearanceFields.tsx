@@ -32,6 +32,8 @@ interface ThemeAppearanceFieldsProps {
   onChange: (patch: Partial<ThemeAppearanceValues>) => void
   textColorHint?: string
   showBackgroundColor?: boolean
+  /** Hide text colour — e.g. order page where it has no effect */
+  hideTextColor?: boolean
 }
 
 export function ThemeAppearanceFields({
@@ -39,6 +41,7 @@ export function ThemeAppearanceFields({
   onChange,
   textColorHint,
   showBackgroundColor = false,
+  hideTextColor = false,
 }: ThemeAppearanceFieldsProps) {
   const { t } = useTranslation()
 
@@ -58,7 +61,7 @@ export function ThemeAppearanceFields({
             fallback="#FFFFFF"
             onChange={v => onChange({ backgroundColor: v })}
           />
-        ) : (
+        ) : !hideTextColor ? (
           <ColorSwatchField
             label={t('pageBuilder.textColor')}
             value={values.textColor}
@@ -66,8 +69,8 @@ export function ThemeAppearanceFields({
             onChange={v => onChange({ textColor: v })}
             hint={textColorHint}
           />
-        )}
-        {showBackgroundColor && (
+        ) : null}
+        {showBackgroundColor && !hideTextColor && (
           <ColorSwatchField
             label={t('pageBuilder.textColor')}
             value={values.textColor}
