@@ -23,7 +23,7 @@ import { AnalyticsScripts } from '@/components/AnalyticsScripts'
 import {
   buildRestaurantSchema, buildMenuSchema, buildWebSiteSchema, serializeSchemas,
 } from '@/lib/schema'
-import { resolvePublicStoreUrl } from '@/lib/site-urls'
+import { resolvePublicStoreUrl, resolveQrCustomUrl } from '@/lib/site-urls'
 import { buildStoreMetadata } from '@/lib/store-metadata'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
@@ -308,7 +308,7 @@ export default async function SlugPage({
                   {block.type === 'qr_code' && (() => {
                     const qrConfig = block.config as QRCodeConfig
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
-                      ? qrConfig.custom_url
+                      ? resolveQrCustomUrl(slug, storePub, storeUrl, qrConfig.custom_url)
                       : storeUrl
                     return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
                   })()}

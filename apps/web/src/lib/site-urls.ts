@@ -112,6 +112,20 @@ export function resolvePublicStoreUrl(
   return `${getPublicStoreUrl(cleanSlug)}${suffix}`
 }
 
+/** Turn a template path like `/order` into a scannable absolute URL for QR codes. */
+export function resolveQrCustomUrl(
+  slug: string,
+  pub: StorePublicUrlMeta | null | undefined,
+  storeBaseUrl: string,
+  customUrl: string,
+): string {
+  const trimmed = customUrl.trim()
+  if (!trimmed) return storeBaseUrl
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return resolvePublicStoreUrl(slug, pub, path)
+}
+
 export function getAuthCallbackUrl(nextPath: string = '/dashboard'): string {
   return `${getAppBaseUrl()}/api/auth/callback?next=${encodeURIComponent(nextPath)}`
 }
