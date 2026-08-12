@@ -3,13 +3,9 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 function authorizeCron(req: Request): NextResponse | null {
   const secret = process.env.CRON_SECRET
-  const isProduction = process.env.NODE_ENV === 'production'
-
+  // Fail closed: if CRON_SECRET isn't set, never allow the purge endpoint.
   if (!secret) {
-    if (isProduction) {
-      return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 401 })
-    }
-    return null
+    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 401 })
   }
 
   const auth = req.headers.get('authorization') || ''
