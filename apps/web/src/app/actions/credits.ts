@@ -68,8 +68,15 @@ export async function getCreditTransactionsAction(businessId: string) {
   }
 }
 
-export async function verifyDiscountCodeAction(code: string, packagePrice: number) {
+export async function verifyDiscountCodeAction(businessId: string, code: string, packagePrice: number) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
     const adminClient = createAdminClient()
     const { data: discount, error } = await (adminClient as any)
       .from('discount_codes')
@@ -395,7 +402,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
     let appliedDiscountAmount = 0
 
     if (discountCode) {
-      const verifyRes = await verifyDiscountCodeAction(discountCode, listPrice)
+      const verifyRes = await verifyDiscountCodeAction(businessId, discountCode, listPrice)
       if (!verifyRes.success) {
         return { success: false, error: verifyRes.error }
       }

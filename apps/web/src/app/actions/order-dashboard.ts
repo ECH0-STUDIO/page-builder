@@ -342,10 +342,7 @@ export async function exportOrderHistoryCsvAction(
   }
 }
 
-/** Cron / manual: hard-delete outside retention window. */
+/** Cron / manual purge — not invokable from the browser (use /api/cron/purge-orders). */
 export async function purgeExpiredOrdersAction(): Promise<ActionResult<{ deleted: number }>> {
-  const db = createAdminClient()
-  const { data, error } = await db.rpc('purge_orders_outside_retention')
-  if (error) return { success: false, error: error.message }
-  return { success: true, data: { deleted: Number(data) || 0 } }
+  return { success: false, error: 'Forbidden' }
 }

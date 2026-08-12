@@ -47,7 +47,7 @@ export function PurchaseCreditsModal({
     if (!discountCode.trim()) return
 
     setVerifying(true)
-    const res = await verifyDiscountCodeAction(discountCode.trim(), priceVnd)
+    const res = await verifyDiscountCodeAction(businessId, discountCode.trim(), priceVnd)
     setVerifying(false)
 
     if (res.success) {

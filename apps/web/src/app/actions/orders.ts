@@ -5,6 +5,7 @@ import type { CartItem } from '@/components/page-builder/render/CartContext'
 import { recordOrderEvent } from '@/lib/order-events'
 import { notifyBusinessPush } from '@/lib/push-notify'
 import { isBusinessOpenNow, normalizeOpeningHours } from '@/lib/opening-hours'
+import { validateAndComputeOrderTotal } from '@/lib/validate-order-total'
 
 export async function createOrderAction(
   businessId: string,
@@ -14,6 +15,15 @@ export async function createOrderAction(
   notes: string = ''
 ) {
   const db = createAdminClient()
+
+  const validated = await validateAndComputeOrderTotal(db, businessId, items)
+  if (!validated.ok) {
+    return { success: false, error: validated.error }
+  }
+
+  if (validated.total !== Math.round(totalAmount)) {
+    return { success: false, error: 'Order total mismatch' }
+  }
 
   const { data: business, error: businessError } = await db
     .from('businesses')
@@ -34,13 +44,15 @@ export async function createOrderAction(
     }
   }
 
+  const orderTotal = validated.total
+
   // 1. Create the order
   const { data: order, error: orderError } = await db
     .from('orders')
     .insert({
       business_id: businessId,
       table_number: tableNumber || null,
-      total_amount: totalAmount,
+      total_amount: orderTotal,
       notes: notes || null,
       status: 'pending',
       payment_status: 'unpaid'
@@ -52,14 +64,14 @@ export async function createOrderAction(
     return { success: false, error: orderError.message }
   }
 
-  // 2. Create the order items
-  const orderItemsData = items.map(item => ({
+  // 2. Create the order items (server-validated prices)
+  const orderItemsData = validated.lines.map(line => ({
     order_id: order.id,
-    item_id: item.itemId,
-    item_name: item.itemName,
-    quantity: item.quantity,
-    unit_price: item.totalPrice, // cart totalPrice is per-unit (with modifiers)
-    options: item.variants.length > 0 ? item.variants : null,
+    item_id: line.itemId,
+    item_name: line.itemName,
+    quantity: line.quantity,
+    unit_price: line.unitPrice,
+    options: line.variants.length > 0 ? line.variants : null,
   }))
 
   const { error: itemsError } = await db
@@ -80,7 +92,7 @@ export async function createOrderAction(
     actorRole: 'customer',
     after: {
       table_number: tableNumber || null,
-      total_amount: totalAmount,
+      total_amount: orderTotal,
       item_count: items.length,
     },
   })

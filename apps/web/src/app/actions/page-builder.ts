@@ -15,6 +15,7 @@ import {
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
 import { billCustomDomainIfDueAction } from '@/app/actions/credits'
 import { refundUnconfiguredCustomDomainCreditsInternal } from '@/lib/credits-internal'
+import { assertOwnerOrManager } from '@/lib/business-auth'
 import {
   addDomainToProject,
   getProjectDomain,
@@ -669,11 +670,18 @@ export async function getPageViewsAction(
   periodTotal: number
   daily: DayViewStat[]  // last `period` days, oldest → newest, gaps filled with 0
 }> {
+  const empty = { total: 0, periodTotal: 0, daily: [] as DayViewStat[] }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return empty
+
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return empty
+
   // Safety-net reconcile for page-view credit charges (primary path is /api/view)
   const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
   await billPageViewsIfDueAction(businessId)
 
-  const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
