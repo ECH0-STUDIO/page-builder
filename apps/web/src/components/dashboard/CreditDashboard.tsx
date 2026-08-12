@@ -41,7 +41,7 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
       getCreditTransactionsAction(businessId)
     ])
 
-    if (balRes.success) setBalance(balRes.data)
+    if (balRes.success) setBalance(balRes.data ?? 0)
     if (txRes.success && txRes.data) setTransactions(txRes.data as Transaction[])
     setLoading(false)
   }

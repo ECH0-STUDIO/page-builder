@@ -55,7 +55,7 @@ export function GalleryClient({ businessId }: { businessId: string }) {
     setDeletingPath(imageToDelete.path)
     setDeleteConfirmOpen(false)
 
-    const res = await deleteGalleryImageAction(imageToDelete.bucket, imageToDelete.path)
+    const res = await deleteGalleryImageAction(businessId, imageToDelete.bucket, imageToDelete.path)
     if (res.success) {
       toast.success(t('gallery.deleteImage') + ' OK')
       setImages(prev => prev.filter(img => img.path !== imageToDelete.path))

@@ -28,7 +28,7 @@ export const SETTINGS_NAV_ACCESS: Record<string, BusinessRole[]> = {
   '/dashboard/settings/security': ALL,
   '/dashboard/settings/team': OWNER_MANAGER,
   '/dashboard/settings/localization': ALL, // personal dashboard language/currency
-  '/dashboard/settings/credits': OWNER,
+  '/dashboard/settings/credits': OWNER_MANAGER,
 }
 
 export function normalizeBusinessRole(role: string | null | undefined): BusinessRole {

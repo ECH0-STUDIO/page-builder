@@ -48,7 +48,7 @@ export function ImageGalleryModal({ businessId, open, onOpenChange, onSelect }: 
 
     setDeletingPath(img.path)
     try {
-      const res = await deleteGalleryImageAction(img.bucket, img.path)
+      const res = await deleteGalleryImageAction(businessId, img.bucket, img.path)
       if (res.success) {
         toast.success('Image deleted')
         setImages(prev => prev.filter(i => i.path !== img.path))

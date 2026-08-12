@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { assertOwnerOrManager, storagePathBelongsToBusiness } from '@/lib/business-auth'
 
 export interface GalleryImage {
   name: string;
@@ -23,6 +24,9 @@ export async function getGalleryImagesAction(businessId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
+
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
 
     // Fetch all active URLs from DB
     let activeUrlsString = ''
@@ -132,11 +136,23 @@ export async function getGalleryImagesAction(businessId: string) {
   }
 }
 
-export async function deleteGalleryImageAction(bucket: string, path: string) {
+export async function deleteGalleryImageAction(businessId: string, bucket: string, path: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
+
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
+    if (!storagePathBelongsToBusiness(path, businessId)) {
+      return { success: false, error: 'Invalid image path' }
+    }
+
+    const allowedBuckets = ['page-images', 'favicons', 'logos', 'menu-images']
+    if (!allowedBuckets.includes(bucket)) {
+      return { success: false, error: 'Invalid bucket' }
+    }
 
     // Delete the file
     const { error } = await supabase.storage.from(bucket).remove([path])

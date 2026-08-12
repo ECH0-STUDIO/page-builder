@@ -13,7 +13,8 @@ import {
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
-import { billCustomDomainIfDueAction, refundUnconfiguredCustomDomainCredits } from '@/app/actions/credits'
+import { billCustomDomainIfDueAction } from '@/app/actions/credits'
+import { refundUnconfiguredCustomDomainCreditsInternal } from '@/lib/credits-internal'
 import {
   addDomainToProject,
   getProjectDomain,
@@ -749,7 +750,7 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
             .eq('business_id', businessId)
           verified = false
         }
-        const refund = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+        const refund = await refundUnconfiguredCustomDomainCreditsInternal(businessId, domain)
         if (refund.refunded) {
           refundedCredits = refund.amount
         }
@@ -793,11 +794,11 @@ export async function connectCustomDomainAction(
     .single()
 
   if (existing?.custom_domain && existing.custom_domain !== normalized) {
-    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   } else if (existing?.custom_domain === normalized) {
     // Re-saving same domain must not wipe an unpaid charge without refunding.
-    await refundUnconfiguredCustomDomainCredits(businessId, normalized)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, normalized)
   }
 
   const vercel = await addDomainToProject(normalized)
@@ -837,7 +838,7 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
     .single()
 
   if (existing?.custom_domain) {
-    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   }
 
