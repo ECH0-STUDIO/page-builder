@@ -28,13 +28,19 @@ export async function getGalleryImagesAction(businessId: string) {
     const access = await assertOwnerOrManager(supabase, user.id, businessId)
     if (!access.ok) return { success: false, error: access.error }
 
-    // Fetch all active URLs from DB
+    // Fetch all active URLs from DB (landing + order page + published snapshots)
     let activeUrlsString = ''
 
     const [biz, pub, theme, cats, items, blocks, sub] = await Promise.all([
       supabase.from('businesses').select('logo_url').eq('id', businessId).single(),
-      supabase.from('publishing_settings').select('favicon_url, apple_touch_icon_url').eq('business_id', businessId).single(),
-      supabase.from('theme_settings').select('hero_image_url').eq('business_id', businessId).single(),
+      supabase
+        .from('publishing_settings')
+        .select(
+          'favicon_url, apple_touch_icon_url, og_image_url, order_background_image_url, order_promo_slides, published_blocks, published_theme',
+        )
+        .eq('business_id', businessId)
+        .single(),
+      supabase.from('theme_settings').select('hero_image_url, navbar_config, footer_config').eq('business_id', businessId).single(),
       supabase.from('menu_categories').select('image_url').eq('business_id', businessId),
       supabase.from('menu_items').select('image_url').eq('business_id', businessId),
       supabase.from('page_blocks').select('config').eq('business_id', businessId),
@@ -59,11 +65,28 @@ export async function getGalleryImagesAction(businessId: string) {
     }
 
     if (biz.data) activeUrlsString += (biz.data.logo_url || '') + ' '
-    if (pub.data) activeUrlsString += (pub.data.favicon_url || '') + ' ' + (pub.data.apple_touch_icon_url || '') + ' '
-    if (theme.data) activeUrlsString += (theme.data.hero_image_url || '') + ' '
+    if (pub.data) {
+      const p = pub.data as Record<string, unknown>
+      activeUrlsString += (p.favicon_url || '') + ' '
+      activeUrlsString += (p.apple_touch_icon_url || '') + ' '
+      activeUrlsString += (p.og_image_url || '') + ' '
+      activeUrlsString += (p.order_background_image_url || '') + ' '
+      activeUrlsString += JSON.stringify(p.order_promo_slides || {}) + ' '
+      activeUrlsString += JSON.stringify(p.published_blocks || {}) + ' '
+      activeUrlsString += JSON.stringify(p.published_theme || {}) + ' '
+    }
+    if (theme.data) {
+      const th = theme.data as Record<string, unknown>
+      activeUrlsString += (th.hero_image_url || '') + ' '
+      activeUrlsString += JSON.stringify(th.navbar_config || {}) + ' '
+      activeUrlsString += JSON.stringify(th.footer_config || {}) + ' '
+    }
     cats.data?.forEach(c => activeUrlsString += (c.image_url || '') + ' ')
     items.data?.forEach(i => activeUrlsString += (i.image_url || '') + ' ')
     blocks.data?.forEach(b => activeUrlsString += JSON.stringify(b.config || {}) + ' ')
+
+    // Also match cache-busted URLs (?t=…) by checking the path segment alone.
+    const decodedUrlsString = decodeURIComponent(activeUrlsString)
 
     // List images from relevant buckets
     const buckets = ['page-images', 'favicons', 'logos', 'menu-images']
@@ -83,21 +106,24 @@ export async function getGalleryImagesAction(businessId: string) {
       if (data) {
         // Filter out placeholders like .emptyFolderPlaceholder
         const validFiles = data.filter(f => f.name !== '.emptyFolderPlaceholder')
-        
-        const decodedUrlsString = decodeURIComponent(activeUrlsString)
 
         const images = validFiles.map(file => {
           const path = `${businessId}/${file.name}`
           const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(path)
+          const publicUrl = publicData.publicUrl
           
           return {
             name: file.name,
-            url: publicData.publicUrl,
+            url: publicUrl,
             created_at: file.created_at,
             bucket,
             path,
             size: file.metadata?.size || 0,
-            inUse: activeUrlsString.includes(publicData.publicUrl) || decodedUrlsString.includes(path) || activeUrlsString.includes(path)
+            inUse:
+              activeUrlsString.includes(publicUrl)
+              || decodedUrlsString.includes(path)
+              || activeUrlsString.includes(path)
+              || decodedUrlsString.includes(file.name),
           }
         })
         
