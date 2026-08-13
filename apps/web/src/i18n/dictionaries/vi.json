@@ -1247,7 +1247,25 @@
     "downloadFallback": "Trình duyệt chặn tải xuống — đã mở ảnh trong tab mới",
     "mediaHeading": "Media",
     "imagesCount": "ảnh",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "selectAll": "Chọn tất cả",
+    "deselectAll": "Bỏ chọn tất cả",
+    "clearSelection": "Bỏ chọn",
+    "selectedCount": "Đã chọn {{count}}",
+    "selectImage": "Chọn ảnh",
+    "moreActions": "Thêm thao tác",
+    "compressWebp": "Nén sang WebP",
+    "compressSuccess": "Đã nén sang WebP",
+    "compressSuccessSize": "Đã nén sang WebP",
+    "compressFailed": "Không nén được ảnh",
+    "compressBulkSuccess": "Đã nén {{count}} ảnh sang WebP",
+    "compressNoneEligible": "Các ảnh đã chọn không thể nén (GIF/WebP)",
+    "compressSkipped": "Đã bỏ qua {{count}} tệp GIF/WebP",
+    "skipInUseDelete": "Đã bỏ qua {{count}} ảnh đang dùng",
+    "deleteSuccess": "Đã xóa {{count}} ảnh",
+    "deleteFailed": "Không xóa được ảnh",
+    "confirmDeleteMany": "Xóa {{count}} ảnh? Ảnh đang dùng sẽ bị bỏ qua. Ảnh trên trang live có thể lỗi nếu còn liên kết.",
+    "dropHintDetail": "Tải ảnh để dùng sau trong trình dựng trang, thực đơn hoặc trang đặt món. Ảnh được chuyển sang WebP (GIF giữ nguyên)."
   },
   "auth": {
     "login": {

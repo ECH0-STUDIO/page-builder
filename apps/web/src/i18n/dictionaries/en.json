@@ -1247,7 +1247,25 @@
     "downloadFallback": "Download blocked by browser — opened image in a new tab",
     "mediaHeading": "Media",
     "imagesCount": "images",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "clearSelection": "Clear",
+    "selectedCount": "{{count}} selected",
+    "selectImage": "Select image",
+    "moreActions": "More actions",
+    "compressWebp": "Compress to WebP",
+    "compressSuccess": "Compressed to WebP",
+    "compressSuccessSize": "Compressed to WebP",
+    "compressFailed": "Could not compress image",
+    "compressBulkSuccess": "Compressed {{count}} image(s) to WebP",
+    "compressNoneEligible": "Selected images cannot be compressed (GIF/WebP)",
+    "compressSkipped": "Skipped {{count}} GIF/WebP file(s)",
+    "skipInUseDelete": "Skipped {{count}} in-use image(s)",
+    "deleteSuccess": "Deleted {{count}} image(s)",
+    "deleteFailed": "Could not delete image(s)",
+    "confirmDeleteMany": "Delete {{count}} images? In-use images are skipped. Used images on your live site may break if references remain.",
+    "dropHintDetail": "Upload photos to use later in the page builder, menu, or order page. Images are converted to WebP (GIFs kept as GIF)."
   },
   "auth": {
     "login": {
