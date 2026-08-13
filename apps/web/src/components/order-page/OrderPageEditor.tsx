@@ -19,7 +19,9 @@ import {
   Globe,
   ImagePlus,
   Loader2,
+  Monitor,
   Redo2,
+  Smartphone,
   Trash2,
   Undo2,
   UtensilsCrossed,
@@ -33,7 +35,7 @@ import {
   OrderMenuConfigEditor,
   defaultOrderMenuConfig,
 } from '@/components/order-page/OrderMenuConfigEditor'
-import { OrderPagePreview } from '@/components/order-page/OrderPagePreview'
+import { OrderPagePreview, type PreviewDevice } from '@/components/order-page/OrderPagePreview'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import {
   CAROUSEL_ASPECTS,
@@ -185,6 +187,7 @@ export function OrderPageEditor({
   const [published, setPublished] = useState(initialPublished)
   const [publishingBusy, setPublishingBusy] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
+  const [device, setDevice] = useState<PreviewDevice>('desktop')
   const [draft, setDraft] = useState<OrderDraft>(() => draftFromSources(publishing, initialTheme))
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
@@ -454,7 +457,34 @@ export function OrderPageEditor({
           </button>
         </header>
         <div className="flex-1 min-h-0 overflow-auto bg-[#eceff3] p-4 md:p-8">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center rounded-lg border border-border bg-background p-0.5">
+              <button
+                type="button"
+                onClick={() => setDevice('desktop')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  device === 'desktop' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
+                )}
+                title={t('orderPageAdmin.previewDesktop')}
+              >
+                <Monitor className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDevice('mobile')}
+                className={cn(
+                  'p-1.5 rounded-md transition-colors',
+                  device === 'mobile' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
+                )}
+                title={t('orderPageAdmin.previewMobile')}
+              >
+                <Smartphone className="size-4" />
+              </button>
+            </div>
+          </div>
           <OrderPagePreview
+            device={device}
             businessId={businessId}
             businessName={businessName}
             logoUrl={logoUrl}
@@ -538,6 +568,31 @@ export function OrderPageEditor({
                 <span className="hidden sm:inline">{t('pageBuilder.saved')}</span>
               </span>
             )}
+          </div>
+
+          <div className="flex items-center rounded-lg border border-border p-0.5 mr-1">
+            <button
+              type="button"
+              onClick={() => setDevice('desktop')}
+              className={cn(
+                'p-1.5 rounded-md transition-colors',
+                device === 'desktop' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
+              )}
+              title={t('orderPageAdmin.previewDesktop')}
+            >
+              <Monitor className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDevice('mobile')}
+              className={cn(
+                'p-1.5 rounded-md transition-colors',
+                device === 'mobile' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60',
+              )}
+              title={t('orderPageAdmin.previewMobile')}
+            >
+              <Smartphone className="size-4" />
+            </button>
           </div>
 
           <button
@@ -624,9 +679,14 @@ export function OrderPageEditor({
         <div className="flex-1 min-h-0 overflow-auto bg-[#eceff3] p-4 md:p-8">
           <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted-foreground">
             <Eye className="size-3.5" />
-            <span>{t('orderPageAdmin.previewMobile')}</span>
+            <span>
+              {device === 'desktop'
+                ? t('orderPageAdmin.previewDesktop')
+                : t('orderPageAdmin.previewMobile')}
+            </span>
           </div>
           <OrderPagePreview
+            device={device}
             businessId={businessId}
             businessName={businessName}
             logoUrl={logoUrl}
