@@ -297,9 +297,15 @@ export function OrderBottomBar({
         </div>
       </div>
 
-      {/* Quick actions sheet */}
+      {/* Quick actions: bottom sheet on mobile, centered modal on md+ */}
       {actionsOpen && (
-        <div className={cn('inset-0 z-50 flex items-end justify-center animate-in fade-in duration-200', overlayPos)}>
+        <div
+          className={cn(
+            'inset-0 z-50 flex justify-center p-0 md:p-4 animate-in fade-in duration-200',
+            'items-end md:items-center',
+            overlayPos,
+          )}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/40 animate-in fade-in duration-200"
@@ -309,7 +315,15 @@ export function OrderBottomBar({
               setActionsOpen(false)
             }}
           />
-          <div className="relative w-full max-w-[430px] rounded-t-2xl bg-white shadow-xl overflow-hidden pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom-4 duration-300">
+          <div
+            className={cn(
+              'relative w-full bg-white shadow-xl overflow-hidden',
+              'max-w-[430px] md:max-w-sm',
+              'rounded-t-2xl md:rounded-2xl',
+              'pb-[env(safe-area-inset-bottom)] md:pb-0',
+              'animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300',
+            )}
+          >
             {sentFlash ? (
               <div className="px-5 py-10 flex flex-col items-center justify-center gap-3 text-center animate-in zoom-in-95 fade-in duration-300">
                 <div
