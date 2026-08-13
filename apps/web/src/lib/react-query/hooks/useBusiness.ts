@@ -14,8 +14,10 @@ export function useBusinesses(initialData?: Awaited<ReturnType<typeof getUserBus
         return initialData ?? []
       }
     },
+    // Prefer server-provided list when present; BusinessProvider also reseeds on mount.
     initialData,
-    staleTime: initialData ? 60_000 : 0,
+    // Short stale window so role switches after login refetch quickly if cache survived.
+    staleTime: 5_000,
     retry: 1,
   })
 }

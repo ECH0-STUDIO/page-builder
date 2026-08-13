@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthCallbackUrl } from '@/lib/site-urls'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,6 @@ function GoogleIcon() {
 }
 
 function LoginContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useTranslation()
   const nextUrl = searchParams.get('next') || '/dashboard'
@@ -52,8 +51,9 @@ function LoginContent() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push(nextUrl)
-      router.refresh()
+      // Hard navigation so dashboard remounts with the new user's businesses/role
+      // (avoids stale React Query cache from a previous session).
+      window.location.assign(nextUrl)
     }
   }
 

@@ -212,17 +212,18 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
         style={
           orderBgImage
             ? {
-                backgroundImage: `linear-gradient(rgba(243,244,246,0.85), rgba(243,244,246,0.85)), url(${orderBgImage})`,
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${orderBgImage})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',
+                backgroundColor: orderBgColor,
               }
-            : { backgroundColor: '#f3f4f6' }
+            : { backgroundColor: orderBgColor }
         }
       >
         <div
           lang={visitorLocale}
-          className="min-h-screen w-full max-w-[430px] md:max-w-5xl mx-auto relative shadow-2xl flex flex-col"
+          className="min-h-screen w-full max-w-[430px] md:max-w-[1440px] mx-auto relative flex flex-col"
           style={{
             fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
             ...buildThemeStyle(themeForTokens),
