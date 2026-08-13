@@ -13,7 +13,9 @@ import {
   type OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
 import { normalizeOrderMenuConfig } from '@/components/order-page/order-menu-config'
-import { billCustomDomainIfDueAction, refundUnconfiguredCustomDomainCredits } from '@/app/actions/credits'
+import { billCustomDomainIfDueAction } from '@/app/actions/credits'
+import { refundUnconfiguredCustomDomainCreditsInternal } from '@/lib/credits-internal'
+import { assertOwnerOrManager } from '@/lib/business-auth'
 import {
   addDomainToProject,
   getProjectDomain,
@@ -668,11 +670,18 @@ export async function getPageViewsAction(
   periodTotal: number
   daily: DayViewStat[]  // last `period` days, oldest → newest, gaps filled with 0
 }> {
+  const empty = { total: 0, periodTotal: 0, daily: [] as DayViewStat[] }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return empty
+
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return empty
+
   // Safety-net reconcile for page-view credit charges (primary path is /api/view)
   const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
   await billPageViewsIfDueAction(businessId)
 
-  const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
@@ -749,7 +758,7 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
             .eq('business_id', businessId)
           verified = false
         }
-        const refund = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+        const refund = await refundUnconfiguredCustomDomainCreditsInternal(businessId, domain)
         if (refund.refunded) {
           refundedCredits = refund.amount
         }
@@ -793,11 +802,11 @@ export async function connectCustomDomainAction(
     .single()
 
   if (existing?.custom_domain && existing.custom_domain !== normalized) {
-    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   } else if (existing?.custom_domain === normalized) {
     // Re-saving same domain must not wipe an unpaid charge without refunding.
-    await refundUnconfiguredCustomDomainCredits(businessId, normalized)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, normalized)
   }
 
   const vercel = await addDomainToProject(normalized)
@@ -837,7 +846,7 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
     .single()
 
   if (existing?.custom_domain) {
-    await refundUnconfiguredCustomDomainCredits(businessId, existing.custom_domain)
+    await refundUnconfiguredCustomDomainCreditsInternal(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   }
 

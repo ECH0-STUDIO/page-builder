@@ -2,6 +2,8 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { assertOwnerOrManager } from '@/lib/business-auth'
+import { deductCreditsInternal, grantCreditsInternal, refundUnconfiguredCustomDomainCreditsInternal } from '@/lib/credits-internal'
 import {
   CREDIT_PACKS,
   CUSTOM_DOMAIN_CREDITS_PER_MONTH,
@@ -17,13 +19,14 @@ export async function getCreditBalanceAction(businessId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    // Fast path — do not await billing on every sidebar / credits read
-    const adminClient = createAdminClient()
-    const { data, error } = await (adminClient as any)
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
+    const { data, error } = await supabase
       .from('credit_balances')
       .select('balance')
       .eq('business_id', businessId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -33,7 +36,8 @@ export async function getCreditBalanceAction(businessId: string) {
       throw error
     }
 
-    return { success: true, data: data.balance }
+    const balance = (data as { balance?: number } | null)?.balance
+    return { success: true, data: balance ?? 0 }
   } catch (error: any) {
     console.error('getCreditBalanceAction error:', error)
     return { success: false, error: error.message }
@@ -46,7 +50,10 @@ export async function getCreditTransactionsAction(businessId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    const { data, error } = await (supabase as any)
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
+    const { data, error } = await supabase
       .from('credit_transactions')
       .select('*')
       .eq('business_id', businessId)
@@ -61,8 +68,15 @@ export async function getCreditTransactionsAction(businessId: string) {
   }
 }
 
-export async function verifyDiscountCodeAction(code: string, packagePrice: number) {
+export async function verifyDiscountCodeAction(businessId: string, code: string, packagePrice: number) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
     const adminClient = createAdminClient()
     const { data: discount, error } = await (adminClient as any)
       .from('discount_codes')
@@ -105,163 +119,22 @@ export async function verifyDiscountCodeAction(code: string, packagePrice: numbe
   }
 }
 
-/** Deduct credits from a business balance. Returns false if insufficient balance. */
-export async function deductCreditsAction(
-  businessId: string,
-  amount: number,
-  description: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0) return { success: true }
-
-  try {
-    const adminClient = createAdminClient()
-
-    const { data: currentBalance } = await (adminClient as any)
-      .from('credit_balances')
-      .select('balance')
-      .eq('business_id', businessId)
-      .single()
-
-    const balance = (currentBalance?.balance as number | undefined) ?? 0
-    if (balance < amount) {
-      return { success: false, error: 'Không đủ Credits. Vui lòng nạp thêm.' }
-    }
-
-    await (adminClient as any)
-      .from('credit_balances')
-      .update({ balance: balance - amount })
-      .eq('business_id', businessId)
-
-    await (adminClient as any).from('credit_transactions').insert({
-      business_id: businessId,
-      amount: -amount,
-      description,
-    })
-
-    try {
-      revalidatePath('/dashboard/settings/credits')
-    } catch {
-      // Safe to ignore when called during RSC render (e.g. Publishing page billing).
-    }
-    return { success: true }
-  } catch (error) {
-    console.error('deductCreditsAction error:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to deduct credits' }
-  }
+/** @deprecated Not callable from clients — use internal billing paths only. */
+export async function deductCreditsAction(): Promise<{ success: false; error: string }> {
+  return { success: false, error: 'Forbidden' }
 }
 
-/** Credit a business balance (refunds / adjustments). */
-export async function grantCreditsAction(
-  businessId: string,
-  amount: number,
-  description: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0) return { success: true }
-
-  try {
-    const adminClient = createAdminClient()
-
-    const { data: currentBalance } = await (adminClient as any)
-      .from('credit_balances')
-      .select('balance')
-      .eq('business_id', businessId)
-      .maybeSingle()
-
-    const balance = (currentBalance?.balance as number | undefined) ?? 0
-
-    if (currentBalance) {
-      await (adminClient as any)
-        .from('credit_balances')
-        .update({ balance: balance + amount })
-        .eq('business_id', businessId)
-    } else {
-      await (adminClient as any)
-        .from('credit_balances')
-        .insert({ business_id: businessId, balance: amount })
-    }
-
-    await (adminClient as any).from('credit_transactions').insert({
-      business_id: businessId,
-      amount,
-      description,
-    })
-
-    try {
-      revalidatePath('/dashboard/settings/credits')
-    } catch {
-      // Safe to ignore when called during RSC render (e.g. Publishing page refund).
-    }
-    return { success: true }
-  } catch (error) {
-    console.error('grantCreditsAction error:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to grant credits' }
-  }
+/** @deprecated Not callable from clients — use internal billing paths only. */
+export async function grantCreditsAction(): Promise<{ success: false; error: string }> {
+  return { success: false, error: 'Forbidden' }
 }
 
 /**
  * Refund custom-domain charges when DNS was never actually ready.
- * Uses credit_transactions (not only billed_until) so reconnect/disconnect
- * that cleared billing state still gets refunded.
+ * @deprecated Not callable from clients — use refundUnconfiguredCustomDomainCreditsInternal.
  */
-export async function refundUnconfiguredCustomDomainCredits(
-  businessId: string,
-  domain: string,
-): Promise<{ refunded: boolean; amount: number }> {
-  const adminClient = createAdminClient()
-  const normalized = domain.toLowerCase().trim()
-  if (!normalized) return { refunded: false, amount: 0 }
-
-  const { data: txs, error } = await (adminClient as any)
-    .from('credit_transactions')
-    .select('amount, description, created_at')
-    .eq('business_id', businessId)
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  if (error) {
-    console.error('refundUnconfiguredCustomDomainCredits query error:', error)
-    return { refunded: false, amount: 0 }
-  }
-
-  const chargeNeedle = `Tên miền tùy chỉnh (${normalized})`
-  let net = 0
-  for (const tx of txs ?? []) {
-    const desc = String(tx.description ?? '')
-    const amount = Number(tx.amount) || 0
-    if (amount < 0 && desc.includes(chargeNeedle)) {
-      net += amount
-      continue
-    }
-    if (
-      amount > 0 &&
-      desc.includes(normalized) &&
-      (desc.includes('Hoàn Credits tên miền') || desc.includes('Hoàn Credits'))
-    ) {
-      net += amount
-    }
-  }
-
-  // net < 0 means charges exceed refunds
-  if (net >= 0) return { refunded: false, amount: 0 }
-
-  const amount = Math.min(-net, CUSTOM_DOMAIN_CREDITS_PER_MONTH)
-  const grant = await grantCreditsAction(
-    businessId,
-    amount,
-    `Hoàn Credits tên miền chưa cấu hình DNS (${normalized})`,
-  )
-  if (!grant.success) {
-    console.error('refundUnconfiguredCustomDomainCredits grant failed:', grant.error)
-    return { refunded: false, amount: 0 }
-  }
-
-  await (adminClient as any)
-    .from('publishing_settings')
-    .update({ custom_domain_billed_until: null })
-    .eq('business_id', businessId)
-    .eq('custom_domain', normalized)
-
-  return { refunded: true, amount }
+export async function refundUnconfiguredCustomDomainCredits(): Promise<{ refunded: false; amount: 0 }> {
+  return { refunded: false, amount: 0 }
 }
 
 /**
@@ -271,6 +144,12 @@ export async function refundUnconfiguredCustomDomainCredits(
 export async function refundPendingCustomDomainCharges(
   businessId: string,
 ): Promise<{ refunded: boolean; amount: number; domains: string[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { refunded: false, amount: 0, domains: [] }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { refunded: false, amount: 0, domains: [] }
+
   const adminClient = createAdminClient()
   const { data: txs, error } = await (adminClient as any)
     .from('credit_transactions')
@@ -315,7 +194,7 @@ export async function refundPendingCustomDomainCharges(
       }
     }
 
-    const result = await refundUnconfiguredCustomDomainCredits(businessId, domain)
+    const result = await refundUnconfiguredCustomDomainCreditsInternal(businessId, domain)
     if (result.refunded) {
       total += result.amount
       refundedDomains.push(domain)
@@ -332,6 +211,12 @@ export async function refundPendingCustomDomainCharges(
  * Re-checks Vercel DNS before charging so ownership-only "verified" domains are not billed.
  */
 export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean; suspended?: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
+
   const adminClient = createAdminClient()
 
   const { data: pub } = await (adminClient as any)
@@ -356,7 +241,7 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
             .update({ custom_domain_verified: false, custom_domain_billed_until: null })
             .eq('business_id', businessId)
         }
-        await refundUnconfiguredCustomDomainCredits(businessId, pub.custom_domain)
+        await refundUnconfiguredCustomDomainCreditsInternal(businessId, pub.custom_domain)
         return { success: true, billed: false, suspended: true }
       }
     } catch (error) {
@@ -375,7 +260,7 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
     return { success: true, billed: false }
   }
 
-  const deduct = await deductCreditsAction(
+  const deduct = await deductCreditsInternal(
     businessId,
     CUSTOM_DOMAIN_CREDITS_PER_MONTH,
     `Tên miền tùy chỉnh (${pub.custom_domain}) — ${CUSTOM_DOMAIN_CREDITS_PER_MONTH} Credits/tháng`
@@ -409,6 +294,12 @@ export async function billPageViewsIfDueAction(
   businessId: string
 ): Promise<{ success: boolean; error?: string; billed?: boolean; creditsCharged?: number }> {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
+
     const adminClient = createAdminClient()
     const { data, error } = await (adminClient as any).rpc('bill_page_views_due', {
       p_business_id: businessId,
@@ -438,6 +329,12 @@ export async function billStorageIfDueAction(
   businessId: string,
   usedBytes: number
 ): Promise<{ success: boolean; error?: string; billed?: boolean; creditsCharged?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
+
   const adminClient = createAdminClient()
 
   const { data: sub } = await (adminClient as any)
@@ -456,7 +353,7 @@ export async function billStorageIfDueAction(
   const usedMb = Math.max(usedBytes / (1024 * 1024), 20)
   const creditsNeeded = Math.max(1, Math.ceil(usedMb / 20) * STORAGE_CREDITS_PER_20MB)
 
-  const deduct = await deductCreditsAction(
+  const deduct = await deductCreditsInternal(
     businessId,
     creditsNeeded,
     `Lưu trữ ảnh — ${Math.round(usedMb)} MB (${creditsNeeded} Credits)`
@@ -485,20 +382,8 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    // Make sure they have permission to buy credits
-    const { data: business } = await supabase
-      .from('businesses')
-      .select('owner_id')
-      .eq('id', businessId)
-      .single()
-
-    if (!business) {
-      return { success: false, error: 'Business not found' }
-    }
-
-    if (business.owner_id !== user.id) {
-      return { success: false, error: 'Only owners can purchase credits' }
-    }
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
 
     // Server-side pack whitelist — never trust client price/amount
     const pack = findCreditPack(amount)
@@ -517,7 +402,7 @@ export async function purchaseCreditsAction(businessId: string, amount: number, 
     let appliedDiscountAmount = 0
 
     if (discountCode) {
-      const verifyRes = await verifyDiscountCodeAction(discountCode, listPrice)
+      const verifyRes = await verifyDiscountCodeAction(businessId, discountCode, listPrice)
       if (!verifyRes.success) {
         return { success: false, error: verifyRes.error }
       }
