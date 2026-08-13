@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Live canvas preview for the Order Page builder — always mobile-width, list menu.
+ * Live canvas preview for the Order Page builder.
+ * Supports desktop + mobile device frames (toggle in OrderPageEditor).
  * Uses the real OrderBottomBar (and cart in preview mode) so chrome matches live.
  */
 
@@ -23,7 +24,11 @@ import { useTranslation } from '@/i18n/I18nProvider'
 import { formatCurrency } from '@/lib/currency'
 import { orderChromeTokens } from '@/lib/color-contrast'
 
+export type PreviewDevice = 'desktop' | 'mobile'
+
 interface OrderPagePreviewProps {
+  /** Builder canvas device frame — defaults to mobile for backwards compatibility */
+  device?: PreviewDevice
   businessId: string
   businessName: string
   logoUrl?: string | null
@@ -48,6 +53,7 @@ interface OrderPagePreviewProps {
 }
 
 export function OrderPagePreview({
+  device = 'mobile',
   businessId,
   businessName,
   logoUrl,
@@ -70,6 +76,7 @@ export function OrderPagePreview({
   previewMode = false,
 }: OrderPagePreviewProps) {
   const { t } = useTranslation()
+  const isMobile = device === 'mobile'
   const chrome = useMemo(
     () => orderChromeTokens(bgColor || '#ffffff', brandColor),
     [bgColor, brandColor],
@@ -92,14 +99,18 @@ export function OrderPagePreview({
     [items],
   )
 
+  // Match live order page: 3-col on desktop, list on mobile preview frame.
   const orderMenuConfig: MenuGridConfig = {
     ...menuConfig,
-    layout: 'list',
+    layout: isMobile ? 'list' : '3col',
     show_category_tabs: false,
+    tabs_layout: 'horizontal',
     heading: '',
     description: '',
   }
-  const forceAspect = aspectMobile === 'same' ? aspectDesktop : aspectMobile
+  const forceAspect = isMobile
+    ? (aspectMobile === 'same' ? aspectDesktop : aspectMobile)
+    : aspectDesktop
 
   function selectCategory(id: string) {
     if (!previewMode) return
@@ -109,8 +120,10 @@ export function OrderPagePreview({
   return (
     <div
       className={cn(
-        'mx-auto bg-white shadow-2xl overflow-hidden max-w-[390px] rounded-[1.75rem] ring-4 ring-black/5',
-        'relative',
+        'mx-auto bg-white shadow-2xl overflow-hidden transition-[max-width] duration-300 relative',
+        isMobile
+          ? 'max-w-[390px] rounded-[1.75rem] ring-4 ring-black/5'
+          : 'max-w-5xl rounded-xl',
       )}
     >
       {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
@@ -263,7 +276,7 @@ export function OrderPagePreview({
                     businessSlug: slug,
                   }}
                   brandColor={brandColor}
-                  previewLayout="mobile"
+                  previewLayout={isMobile ? 'mobile' : 'desktop'}
                   hideCategoryTabs
                   activeCategoryId={activeCategoryId}
                   onActiveCategoryChange={previewMode ? setActiveCategoryId : undefined}
