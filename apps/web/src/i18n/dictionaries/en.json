@@ -1233,7 +1233,21 @@
     "billingCycleEnds": "Billing Cycle Ends",
     "projectedCharge": "Projected Charge on Renewal",
     "credits": "Credits",
-    "quotaExplanation": "You purchase storage quota in advance using credits (1 credit = 20MB). If you delete images to drop your usage, your next month's renewal charge will automatically decrease!"
+    "quotaExplanation": "You purchase storage quota in advance using credits (1 credit = 20MB). If you delete images to drop your usage, your next month's renewal charge will automatically decrease!",
+    "dropHint": "Drop images here to upload",
+    "dropHintDetail": "Upload photos to use later in the page builder, menu, or order page. JPEG, PNG, WebP, or GIF.",
+    "uploadSuccess": "Uploaded {{count}} image(s)",
+    "uploadPartialFail": "{{count}} image(s) failed to upload",
+    "uploadInvalidType": "Please choose image files only",
+    "download": "Download",
+    "downloadAllZip": "Download all (ZIP)",
+    "downloadingAll": "Preparing ZIP…",
+    "downloadAllSuccess": "Downloaded {{count}} image(s) as ZIP",
+    "downloadAllFailed": "Could not create ZIP download",
+    "downloadFallback": "Download blocked by browser — opened image in a new tab",
+    "mediaHeading": "Media",
+    "imagesCount": "images",
+    "cancel": "Cancel"
   },
   "auth": {
     "login": {
