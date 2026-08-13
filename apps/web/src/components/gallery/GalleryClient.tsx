@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   Image as ImageIcon,
   Trash2,
@@ -10,6 +10,10 @@ import {
   Upload,
   Download,
   Archive,
+  MoreVertical,
+  Minimize2,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,7 +25,8 @@ import {
   type GalleryImage,
   type StorageSubscription,
 } from '@/app/actions/gallery'
-import { uploadImageToStorage } from '@/lib/image-utils'
+import { compressImageToBlob, uploadImageToStorage } from '@/lib/image-utils'
+import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
@@ -30,10 +35,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 const MEDIA_BUCKET = 'page-images'
 const ACCEPT_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
+
+function imageKey(img: GalleryImage): string {
+  return `${img.bucket}/${img.path}`
+}
+
+function fileExt(name: string): string {
+  const m = name.toLowerCase().match(/\.([a-z0-9]+)(?:\?|$)/)
+  return m?.[1] ?? ''
+}
+
+/** GIF (animation) and already-WebP: hide compress. */
+function canCompressToWebp(img: GalleryImage): boolean {
+  const ext = fileExt(img.name) || fileExt(img.path)
+  return ext !== 'gif' && ext !== 'webp'
+}
 
 function safeFileBase(name: string): string {
   return name
@@ -62,20 +89,57 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
 }
 
+async function compressGalleryImageToWebp(img: GalleryImage): Promise<void> {
+  const source = await fetchImageBlob(img.url)
+  const file = new File([source], img.name || 'image.jpg', {
+    type: source.type || 'image/jpeg',
+  })
+  const webpBlob = await compressImageToBlob(file, {
+    maxWidth: 1920,
+    maxHeight: 1920,
+    quality: 0.8,
+    targetSizeKB: 350,
+    format: 'image/webp',
+  })
+
+  const supabase = createClient()
+
+  // Keep the same storage path when in use so live URLs still resolve.
+  // Otherwise rewrite extension to .webp and remove the old object.
+  if (img.inUse) {
+    const { error } = await supabase.storage
+      .from(img.bucket)
+      .upload(img.path, webpBlob, { contentType: 'image/webp', upsert: true })
+    if (error) throw new Error(error.message)
+    return
+  }
+
+  const newPath = img.path.replace(/\.[^./]+$/, '') + '.webp'
+  const { error } = await supabase.storage
+    .from(img.bucket)
+    .upload(newPath, webpBlob, { contentType: 'image/webp', upsert: true })
+  if (error) throw new Error(error.message)
+
+  if (newPath !== img.path) {
+    await supabase.storage.from(img.bucket).remove([img.path])
+  }
+}
+
 export function GalleryClient({ businessId }: { businessId: string }) {
   const { t } = useTranslation()
   const [images, setImages] = useState<GalleryImage[]>([])
   const [subscription, setSubscription] = useState<StorageSubscription | null>(null)
   const [loading, setLoading] = useState(true)
-  const [deletingPath, setDeletingPath] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
-  const [downloadingPath, setDownloadingPath] = useState<string | null>(null)
   const [zipping, setZipping] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState<'download' | 'delete' | 'compress' | null>(null)
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [imageToDelete, setImageToDelete] = useState<{ bucket: string; path: string } | null>(null)
+  const [pendingDeletes, setPendingDeletes] = useState<GalleryImage[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadImages = useCallback(async () => {
@@ -84,6 +148,12 @@ export function GalleryClient({ businessId }: { businessId: string }) {
     if (res.success && res.data) {
       setImages(res.data)
       if (res.subscription) setSubscription(res.subscription)
+      setSelected(prev => {
+        const next = new Set<string>()
+        const keys = new Set(res.data!.map(imageKey))
+        for (const k of prev) if (keys.has(k)) next.add(k)
+        return next
+      })
     } else {
       toast.error(res.error || 'Failed to load gallery')
     }
@@ -94,25 +164,71 @@ export function GalleryClient({ businessId }: { businessId: string }) {
     void loadImages()
   }, [loadImages])
 
-  function confirmDelete(bucket: string, path: string) {
-    setImageToDelete({ bucket, path })
+  const selectedImages = useMemo(
+    () => images.filter(img => selected.has(imageKey(img))),
+    [images, selected],
+  )
+
+  const allSelected = images.length > 0 && selected.size === images.length
+
+  function toggleSelect(key: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelected(new Set())
+      return
+    }
+    setSelected(new Set(images.map(imageKey)))
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+  }
+
+  function openDeleteConfirm(targets: GalleryImage[]) {
+    const deletable = targets.filter(img => !img.inUse)
+    if (deletable.length === 0) {
+      toast.error(t('gallery.cannotDeleteInUse'))
+      return
+    }
+    if (deletable.length < targets.length) {
+      toast.message(t('gallery.skipInUseDelete').replace('{{count}}', String(targets.length - deletable.length)))
+    }
+    setPendingDeletes(deletable)
     setDeleteConfirmOpen(true)
   }
 
-  async function handleDelete() {
-    if (!imageToDelete) return
-    setDeletingPath(imageToDelete.path)
+  async function handleConfirmDelete() {
+    const targets = pendingDeletes
     setDeleteConfirmOpen(false)
-
-    const res = await deleteGalleryImageAction(businessId, imageToDelete.bucket, imageToDelete.path)
-    if (res.success) {
-      toast.success(t('gallery.deleteImage') + ' OK')
-      setImages(prev => prev.filter(img => img.path !== imageToDelete.path))
-    } else {
-      toast.error(res.error)
+    setPendingDeletes([])
+    setBulkBusy('delete')
+    let ok = 0
+    for (const img of targets) {
+      const res = await deleteGalleryImageAction(businessId, img.bucket, img.path)
+      if (res.success) {
+        ok += 1
+        setSelected(prev => {
+          const next = new Set(prev)
+          next.delete(imageKey(img))
+          return next
+        })
+      }
     }
-    setDeletingPath(null)
-    setImageToDelete(null)
+    setBulkBusy(null)
+    if (ok > 0) {
+      toast.success(t('gallery.deleteSuccess').replace('{{count}}', String(ok)))
+      await loadImages()
+    } else {
+      toast.error(t('gallery.deleteFailed'))
+    }
   }
 
   async function uploadFiles(files: FileList | File[]) {
@@ -129,15 +245,27 @@ export function GalleryClient({ businessId }: { businessId: string }) {
 
     for (let i = 0; i < list.length; i++) {
       const file = list[i]
-      const path = `${businessId}/${Date.now()}-${safeFileBase(file.name)}.jpg`
+      // Preserve GIFs as-is path/ext; everything else stores as WebP.
+      const isGif = file.type === 'image/gif' || fileExt(file.name) === 'gif'
+      const path = isGif
+        ? `${businessId}/${Date.now()}-${safeFileBase(file.name)}.gif`
+        : `${businessId}/${Date.now()}-${safeFileBase(file.name)}.webp`
       try {
-        await uploadImageToStorage(MEDIA_BUCKET, path, file, {
-          maxWidth: 1920,
-          maxHeight: 1920,
-          quality: 0.85,
-          targetSizeKB: 500,
-          format: 'image/jpeg',
-        })
+        if (isGif) {
+          const supabase = createClient()
+          const { error } = await supabase.storage
+            .from(MEDIA_BUCKET)
+            .upload(path, file, { contentType: 'image/gif', upsert: true })
+          if (error) throw new Error(error.message)
+        } else {
+          await uploadImageToStorage(MEDIA_BUCKET, path, file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.82,
+            targetSizeKB: 400,
+            format: 'image/webp',
+          })
+        }
         ok += 1
       } catch (err) {
         failed += 1
@@ -151,9 +279,7 @@ export function GalleryClient({ businessId }: { businessId: string }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (ok > 0) {
-      toast.success(
-        t('gallery.uploadSuccess').replace('{{count}}', String(ok)),
-      )
+      toast.success(t('gallery.uploadSuccess').replace('{{count}}', String(ok)))
       await loadImages()
     }
     if (failed > 0) {
@@ -162,31 +288,34 @@ export function GalleryClient({ businessId }: { businessId: string }) {
   }
 
   async function handleDownloadOne(img: GalleryImage) {
-    setDownloadingPath(img.path)
+    const key = imageKey(img)
+    setBusyKey(key)
     try {
       const blob = await fetchImageBlob(img.url)
-      const ext = img.name.includes('.') ? img.name.split('.').pop() : 'jpg'
-      const filename = img.name.includes('.') ? img.name : `${img.name}.${ext || 'jpg'}`
+      const filename = img.name.includes('.') ? img.name : `${img.name}.jpg`
       triggerBlobDownload(blob, filename)
     } catch (err) {
       console.error(err)
-      // Fallback: open in new tab if CORS blocks blob download
       window.open(img.url, '_blank', 'noopener,noreferrer')
       toast.error(t('gallery.downloadFallback'))
     } finally {
-      setDownloadingPath(null)
+      setBusyKey(null)
     }
   }
 
-  async function handleDownloadAllZip() {
-    if (images.length === 0) return
-    setZipping(true)
+  async function handleDownloadMany(targets: GalleryImage[]) {
+    if (targets.length === 0) return
+    if (targets.length === 1) {
+      await handleDownloadOne(targets[0])
+      return
+    }
+    setBulkBusy('download')
     try {
       const JSZip = (await import('jszip')).default
       const zip = new JSZip()
       const usedNames = new Set<string>()
 
-      for (const img of images) {
+      for (const img of targets) {
         try {
           const blob = await fetchImageBlob(img.url)
           let name = img.name || `image-${usedNames.size + 1}.jpg`
@@ -212,14 +341,67 @@ export function GalleryClient({ businessId }: { businessId: string }) {
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const stamp = new Date().toISOString().slice(0, 10)
       triggerBlobDownload(zipBlob, `eatery-media-${stamp}.zip`)
-      toast.success(
-        t('gallery.downloadAllSuccess').replace('{{count}}', String(usedNames.size)),
-      )
+      toast.success(t('gallery.downloadAllSuccess').replace('{{count}}', String(usedNames.size)))
     } catch (err) {
       console.error(err)
       toast.error(t('gallery.downloadAllFailed'))
     } finally {
-      setZipping(false)
+      setBulkBusy(null)
+    }
+  }
+
+  async function handleCompressOne(img: GalleryImage) {
+    if (!canCompressToWebp(img)) return
+    const key = imageKey(img)
+    setBusyKey(key)
+    try {
+      const before = img.size || 0
+      await compressGalleryImageToWebp(img)
+      toast.success(
+        before > 0
+          ? t('gallery.compressSuccessSize')
+          : t('gallery.compressSuccess'),
+      )
+      await loadImages()
+    } catch (err) {
+      console.error(err)
+      toast.error(t('gallery.compressFailed'))
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  async function handleCompressMany(targets: GalleryImage[]) {
+    const compressible = targets.filter(canCompressToWebp)
+    if (compressible.length === 0) {
+      toast.error(t('gallery.compressNoneEligible'))
+      return
+    }
+    if (compressible.length < targets.length) {
+      toast.message(
+        t('gallery.compressSkipped').replace(
+          '{{count}}',
+          String(targets.length - compressible.length),
+        ),
+      )
+    }
+
+    setBulkBusy('compress')
+    let ok = 0
+    for (const img of compressible) {
+      try {
+        await compressGalleryImageToWebp(img)
+        ok += 1
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    setBulkBusy(null)
+    if (ok > 0) {
+      toast.success(t('gallery.compressBulkSuccess').replace('{{count}}', String(ok)))
+      await loadImages()
+    } else {
+      toast.error(t('gallery.compressFailed'))
     }
   }
 
@@ -232,6 +414,10 @@ export function GalleryClient({ businessId }: { businessId: string }) {
     ? new Date(subscription.next_billing_date).toLocaleDateString()
     : '---'
 
+  const selectionCount = selectedImages.length
+  const selectionHasCompressible = selectedImages.some(canCompressToWebp)
+  const selectionHasDeletable = selectedImages.some(img => !img.inUse)
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -241,16 +427,16 @@ export function GalleryClient({ businessId }: { businessId: string }) {
         </div>
         <Button
           variant="outline"
-          onClick={() => void handleDownloadAllZip()}
-          disabled={zipping || loading || images.length === 0}
+          onClick={() => void handleDownloadMany(images)}
+          disabled={Boolean(bulkBusy) || loading || images.length === 0}
           className="shrink-0"
         >
-          {zipping ? (
+          {bulkBusy === 'download' && selectionCount === 0 ? (
             <Loader2 className="size-4 mr-2 animate-spin" />
           ) : (
             <Archive className="size-4 mr-2" />
           )}
-          {zipping ? t('gallery.downloadingAll') : t('gallery.downloadAllZip')}
+          {t('gallery.downloadAllZip')}
         </Button>
       </div>
 
@@ -396,7 +582,7 @@ export function GalleryClient({ businessId }: { businessId: string }) {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2">
               <ImageIcon className="size-5" /> {t('gallery.mediaHeading')}
@@ -405,6 +591,72 @@ export function GalleryClient({ businessId }: { businessId: string }) {
               {images.length} {t('gallery.imagesCount')}
             </span>
           </div>
+
+          {!loading && images.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={toggleSelectAll}>
+                {allSelected ? (
+                  <CheckSquare className="size-3.5 mr-1.5" />
+                ) : (
+                  <Square className="size-3.5 mr-1.5" />
+                )}
+                {allSelected ? t('gallery.deselectAll') : t('gallery.selectAll')}
+              </Button>
+
+              {selectionCount > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {t('gallery.selectedCount').replace('{{count}}', String(selectionCount))}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={Boolean(bulkBusy)}
+                    onClick={() => void handleDownloadMany(selectedImages)}
+                  >
+                    {bulkBusy === 'download' ? (
+                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="size-3.5 mr-1.5" />
+                    )}
+                    {t('gallery.download')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={Boolean(bulkBusy) || !selectionHasCompressible}
+                    onClick={() => void handleCompressMany(selectedImages)}
+                  >
+                    {bulkBusy === 'compress' ? (
+                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Minimize2 className="size-3.5 mr-1.5" />
+                    )}
+                    {t('gallery.compressWebp')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={Boolean(bulkBusy) || !selectionHasDeletable}
+                    onClick={() => openDeleteConfirm(selectedImages)}
+                  >
+                    {bulkBusy === 'delete' ? (
+                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5 mr-1.5" />
+                    )}
+                    {t('gallery.deleteImage')}
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                    {t('gallery.clearSelection')}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -418,77 +670,125 @@ export function GalleryClient({ businessId }: { businessId: string }) {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {images.map(img => (
-                <div
-                  key={`${img.bucket}/${img.path}`}
-                  className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.url}
-                    alt={img.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+              {images.map(img => {
+                const key = imageKey(img)
+                const isSelected = selected.has(key)
+                const isBusy = busyKey === key
+                const showCompress = canCompressToWebp(img)
 
-                  <div className="absolute top-2 right-2">
-                    {img.inUse ? (
-                      <span className="px-2 py-1 text-[10px] font-semibold bg-blue-100 text-blue-700 rounded-full shadow-sm">
-                        {t('gallery.inUse')}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-full shadow-sm">
-                        {t('gallery.notInUse')}
-                      </span>
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      'group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border',
+                      isSelected && 'ring-2 ring-indigo-500 border-indigo-300',
                     )}
-                  </div>
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
 
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 gap-1.5">
-                    <p className="text-xs text-white truncate w-full text-center" title={img.name}>
-                      {img.name}
-                    </p>
-                    <p className="text-[10px] text-gray-300 mb-1">
-                      {img.size ? (img.size / 1024).toFixed(1) + ' KB' : ''}
-                    </p>
-                    <div className="flex flex-col gap-1.5 w-full max-w-[120px]">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="h-7 text-xs w-full"
-                        onClick={() => void handleDownloadOne(img)}
-                        disabled={downloadingPath === img.path}
-                      >
-                        {downloadingPath === img.path ? (
-                          <Loader2 className="size-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Download className="size-3 mr-1" />
-                            {t('gallery.download')}
-                          </>
+                    {/* Select checkbox — top left */}
+                    <button
+                      type="button"
+                      aria-label={t('gallery.selectImage')}
+                      onClick={e => {
+                        e.stopPropagation()
+                        toggleSelect(key)
+                      }}
+                      className={cn(
+                        'absolute top-2 left-2 z-10 size-7 rounded-md border shadow-sm flex items-center justify-center transition-opacity',
+                        isSelected
+                          ? 'bg-indigo-600 border-indigo-600 text-white opacity-100'
+                          : 'bg-white/90 border-gray-200 text-gray-700 opacity-0 group-hover:opacity-100',
+                      )}
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="size-4" />
+                      ) : (
+                        <Square className="size-4" />
+                      )}
+                    </button>
+
+                    {/* Status + more — top right */}
+                    <div className="absolute top-2 right-2 z-10 flex items-start gap-1">
+                      <span
+                        className={cn(
+                          'px-2 py-1 text-[10px] font-semibold rounded-full shadow-sm',
+                          img.inUse
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-600',
+                          'opacity-100 group-hover:opacity-0 transition-opacity',
                         )}
-                      </Button>
-                      {!img.inUse && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="h-7 text-xs w-full"
-                          onClick={() => confirmDelete(img.bucket, img.path)}
-                          disabled={deletingPath === img.path}
-                        >
-                          {deletingPath === img.path ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
+                      >
+                        {img.inUse ? t('gallery.inUse') : t('gallery.notInUse')}
+                      </span>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={t('gallery.moreActions')}
+                            className="size-7 rounded-md bg-white/95 border border-gray-200 text-gray-700 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <MoreVertical className="size-3.5" />
+                            )}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            disabled={Boolean(busyKey || bulkBusy)}
+                            onClick={() => void handleDownloadOne(img)}
+                          >
+                            <Download className="size-4" />
+                            {t('gallery.download')}
+                          </DropdownMenuItem>
+                          {showCompress && (
+                            <DropdownMenuItem
+                              disabled={Boolean(busyKey || bulkBusy)}
+                              onClick={() => void handleCompressOne(img)}
+                            >
+                              <Minimize2 className="size-4" />
+                              {t('gallery.compressWebp')}
+                            </DropdownMenuItem>
+                          )}
+                          {!img.inUse && (
                             <>
-                              <Trash2 className="size-3 mr-1" />
-                              {t('gallery.deleteImage')}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={Boolean(busyKey || bulkBusy)}
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => openDeleteConfirm([img])}
+                              >
+                                <Trash2 className="size-4" />
+                                {t('gallery.deleteImage')}
+                              </DropdownMenuItem>
                             </>
                           )}
-                        </Button>
-                      )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Bottom meta on hover */}
+                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <p className="text-[11px] text-white truncate" title={img.name}>
+                        {img.name}
+                      </p>
+                      <p className="text-[10px] text-white/70">
+                        {img.size ? `${(img.size / 1024).toFixed(1)} KB` : ''}
+                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -498,13 +798,17 @@ export function GalleryClient({ businessId }: { businessId: string }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-red-600">{t('gallery.deleteImage')}</DialogTitle>
-            <DialogDescription>{t('gallery.confirmDelete')}</DialogDescription>
+            <DialogDescription>
+              {pendingDeletes.length > 1
+                ? t('gallery.confirmDeleteMany').replace('{{count}}', String(pendingDeletes.length))
+                : t('gallery.confirmDelete')}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               {t('gallery.cancel')}
             </Button>
-            <Button variant="destructive" onClick={() => void handleDelete()}>
+            <Button variant="destructive" onClick={() => void handleConfirmDelete()}>
               <Trash2 className="size-4 mr-2" />
               {t('gallery.deleteImage')}
             </Button>
