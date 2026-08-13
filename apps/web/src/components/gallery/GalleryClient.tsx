@@ -104,25 +104,12 @@ async function compressGalleryImageToWebp(img: GalleryImage): Promise<void> {
 
   const supabase = createClient()
 
-  // Keep the same storage path when in use so live URLs still resolve.
-  // Otherwise rewrite extension to .webp and remove the old object.
-  if (img.inUse) {
-    const { error } = await supabase.storage
-      .from(img.bucket)
-      .upload(img.path, webpBlob, { contentType: 'image/webp', upsert: true })
-    if (error) throw new Error(error.message)
-    return
-  }
-
-  const newPath = img.path.replace(/\.[^./]+$/, '') + '.webp'
+  // Always overwrite the same storage path. Renaming to .webp would orphan
+  // page-builder / order-page URLs that still point at the old object.
   const { error } = await supabase.storage
     .from(img.bucket)
-    .upload(newPath, webpBlob, { contentType: 'image/webp', upsert: true })
+    .upload(img.path, webpBlob, { contentType: 'image/webp', upsert: true })
   if (error) throw new Error(error.message)
-
-  if (newPath !== img.path) {
-    await supabase.storage.from(img.bucket).remove([img.path])
-  }
 }
 
 export function GalleryClient({ businessId }: { businessId: string }) {
