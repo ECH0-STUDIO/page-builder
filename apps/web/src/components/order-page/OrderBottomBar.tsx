@@ -214,7 +214,7 @@ export function OrderBottomBar({
             : undefined
         }
       >
-        <div className="mx-auto flex w-full max-w-[430px] md:max-w-[1440px] gap-2 px-3 py-2.5 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[430px] md:max-w-5xl gap-2 px-3 py-2.5">
           <button
             type="button"
             onClick={openCart}
