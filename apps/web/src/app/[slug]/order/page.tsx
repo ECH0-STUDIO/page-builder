@@ -223,7 +223,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       >
         <div
           lang={visitorLocale}
-          className="min-h-screen w-full max-w-[430px] md:max-w-5xl mx-auto relative flex flex-col"
+          className="min-h-screen w-full max-w-[430px] md:max-w-[1440px] mx-auto relative flex flex-col"
           style={{
             fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
             ...buildThemeStyle(themeForTokens),
