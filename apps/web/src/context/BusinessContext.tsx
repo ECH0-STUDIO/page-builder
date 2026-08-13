@@ -37,8 +37,22 @@ export function BusinessProvider({
   const { data: businesses, isLoading, refetch } = useBusinesses(initialBusinesses)
   const [currentId, setCurrentId] = useState<string | null>(initialActiveBusinessId)
 
-  // Fallback to empty array if businesses is undefined (e.g., during refetch)
-  const currentBusiness = (businesses ?? initialBusinesses).find((b: Business) => b.id === currentId) ?? null
+  const businessesSignature = initialBusinesses
+    .map((b) => `${b.id}:${b.role ?? ''}`)
+    .join('|')
+
+  // Seed React Query with server-resolved businesses on every dashboard mount.
+  // Without this, a previous user's cached ['businesses'] (same key, 60s staleTime)
+  // can keep showing the wrong role after logout → login as a different account.
+  useEffect(() => {
+    queryClient.setQueryData(['businesses'], initialBusinesses)
+    setCurrentId(initialActiveBusinessId)
+  }, [queryClient, initialActiveBusinessId, businessesSignature, initialBusinesses])
+
+  const list = businesses ?? initialBusinesses
+  const currentBusiness = list.find((b: Business) => b.id === currentId)
+    ?? list.find((b: Business) => b.id === initialActiveBusinessId)
+    ?? null
 
   const switchBusiness = useCallback((id: string) => {
     setCurrentId(id)
@@ -62,7 +76,7 @@ export function BusinessProvider({
 
   return (
     <BusinessContext.Provider
-      value={{ businesses: businesses ?? initialBusinesses, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
+      value={{ businesses: list, currentBusiness, switchBusiness, refreshBusinesses, isLoading }}
     >
       {children}
     </BusinessContext.Provider>

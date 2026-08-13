@@ -6,14 +6,12 @@ import { Shield, Globe, Users, CreditCard, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { useBusiness } from '@/context/BusinessContext'
 import { canAccessSettingsHref } from '@/lib/dashboard-access'
 
 export function SettingsNav() {
   const pathname = usePathname()
   const { t } = useTranslation()
-  const router = useRouter()
   const { currentBusiness } = useBusiness()
   const role = currentBusiness?.role
 
@@ -43,7 +41,14 @@ export function SettingsNav() {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      localStorage.removeItem('eatery_current_business_id')
+    } catch {
+      // ignore
+    }
+    document.cookie = 'eatery_current_business_id=; path=/; max-age=0'
+    // Full navigation clears React Query cache so the next login cannot show the previous role's nav.
+    window.location.assign('/login')
   }
 
   return (
