@@ -76,6 +76,16 @@ VERCEL_TEAM_ID=...         # only if project is under a team
 
 The app registers each domain with Vercel automatically when the user saves it.
 
+## Auth emails & signup verification (production)
+
+Signup verification is handled by **Supabase Auth**, not Resend. If verification links go to a dead URL (e.g. `page-builder-cja.pages.dev`) or emails look unstyled:
+
+1. **Supabase URL config** — set Site URL to `https://www.eateryvn.com` and add redirect URLs (see `supabase/email-templates/README.md`).
+2. **Branded templates** — paste HTML from `supabase/email-templates/` into Supabase → Authentication → Email Templates.
+3. **Vercel env** — `NEXT_PUBLIC_APP_URL=https://www.eateryvn.com`, then redeploy.
+
+After merging the auth URL code changes, the app also forwards legacy `/?code=` links to `/api/auth/callback`.
+
 ## Scripts
 
 | Command | Description |
