@@ -2,7 +2,7 @@ import type { SupportedLocale } from '@/i18n/locale'
 import { appPath } from '@/lib/site-urls'
 import { LOCALE_LABELS, marketingPathForLocale } from '@/lib/marketing-locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
-import { rewriteMarketingChromeShared } from '@/lib/marketing-nav'
+import { MARKETING_CTA_PATH, rewriteMarketingCtaLinks, rewriteMarketingChromeShared } from '@/lib/marketing-nav'
 
 const LOCALE_SWITCHER_CSS = `<style id="marketing-locale-styles">
 .marketing-locale-switcher{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem;background:rgba(0,0,0,.06);border-radius:999px;font-size:.8125rem;line-height:1}
@@ -85,10 +85,12 @@ export function injectMarketingChrome(
   // App auth links — locale travels via shared NEXT_LOCALE cookie on .eateryvn.com
   const loginUrl = appPath('/login')
   const signupUrl = appPath('/signup')
+  const ctaUrl = appPath(MARKETING_CTA_PATH)
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/login[^"]*"/gi, `href="${loginUrl}"`)
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/signup[^"]*"/gi, `href="${signupUrl}"`)
+  out = rewriteMarketingCtaLinks(out, ctaUrl)
 
-  // Canonical nav + footer contact — do not leave Webflow per-page copies in charge.
+  // Canonical nav, footer, and contact — do not leave Webflow per-page copies in charge.
   out = rewriteMarketingChromeShared(out, pathname, locale)
 
   return out

@@ -15,6 +15,21 @@ export const MARKETING_NAV_ITEMS = [
 ] as const
 
 export const MARKETING_CONTACT_EMAIL = 'hello@ech0.work'
+export const MARKETING_CONTACT_ADDRESS = {
+  vi: 'Đà Nẵng, Việt Nam',
+  en: 'Da Nang, Vietnam',
+} as const
+export const MARKETING_MAP_URL = 'https://maps.app.goo.gl/UqHpW4ENjPrm4eAb7'
+export const MARKETING_FOOTER_TAGLINE = {
+  vi: 'Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.',
+  en: 'Tools and solutions for small and medium stores.',
+} as const
+export const MARKETING_SOCIAL_LINKS = [
+  { href: 'https://fb.com', match: /https?:\/\/(?:www\.)?(?:facebook|fb)\.com\/?/i },
+  { href: 'https://instagram.com', match: /https?:\/\/(?:www\.)?instagram\.com\/?/i },
+] as const
+/** App path the "Get started" buttons open. Same destination on every page. */
+export const MARKETING_CTA_PATH = '/'
 
 const FALLBACK_NAV_CLASS = 'nav_links w-nav-link'
 
@@ -82,11 +97,54 @@ export function rewriteMarketingNavbarLogoState(html: string, pathname: string):
   )
 }
 
-export function rewriteMarketingFooterContact(html: string): string {
+export function rewriteMarketingCtaLinks(html: string, ctaHref: string): string {
+  return html.replace(
+    /href="https?:\/\/app\.eateryvn\.com\/?"/gi,
+    `href="${escapeHtml(ctaHref)}"`,
+  )
+}
+
+export function rewriteMarketingFooterContact(
+  html: string,
+  locale: SupportedLocale = 'vi',
+): string {
   const email = MARKETING_CONTACT_EMAIL
-  return html
+  const address = MARKETING_CONTACT_ADDRESS[locale]
+  const tagline = MARKETING_FOOTER_TAGLINE[locale]
+  let out = html
     .replace(/mailto:Nextbit@company\.com/gi, `mailto:${email}`)
     .replace(/Nextbit@company\.com/gi, email)
+
+  out = out.replace(
+    /<a href="mailto:[^"]*" class="footer_link w-inline-block">\s*<div>[^<]*<\/div>\s*<\/a>/i,
+    `<a href="mailto:${escapeHtml(email)}" class="footer_link w-inline-block">\n                      <div>${escapeHtml(email)}</div>\n                    </a>`,
+  )
+
+  out = out.replace(
+    /<a href="https:\/\/maps\.app\.goo\.gl\/[^"]*" class="footer_link w-inline-block">\s*<div>[^<]*<\/div>\s*<\/a>/i,
+    `<a href="${escapeHtml(MARKETING_MAP_URL)}" class="footer_link w-inline-block">\n                      <div>${escapeHtml(address)}</div>\n                    </a>`,
+  )
+
+  out = out.replace(
+    /(<div class="footer_header">[\s\S]*?<div class="text-color-on-primary">)[\s\S]*?(<\/div>)/i,
+    `$1${escapeHtml(tagline)}$2`,
+  )
+
+  for (const social of MARKETING_SOCIAL_LINKS) {
+    out = out.replace(
+      new RegExp(`href="${social.match.source}[^"]*"`, 'gi'),
+      `href="${social.href}"`,
+    )
+  }
+
+  if (!/\sid="contact"/i.test(out)) {
+    out = out.replace(
+      /<div class="footer_contact">/i,
+      '<div id="contact" class="footer_contact">',
+    )
+  }
+
+  return out
 }
 
 export function rewriteMarketingChromeShared(
@@ -96,6 +154,6 @@ export function rewriteMarketingChromeShared(
 ): string {
   let out = rewriteMarketingNavbarList(html, pathname, locale)
   out = rewriteMarketingNavbarLogoState(out, pathname)
-  out = rewriteMarketingFooterContact(out)
+  out = rewriteMarketingFooterContact(out, locale)
   return out
 }

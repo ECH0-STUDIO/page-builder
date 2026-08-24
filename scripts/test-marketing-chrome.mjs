@@ -79,6 +79,15 @@ function sourceContainsCanonicalNav() {
   if (!chrome.includes('rewriteMarketingChromeShared')) {
     throw new Error('injectMarketingChrome is not using rewriteMarketingChromeShared')
   }
+  if (!chrome.includes('rewriteMarketingCtaLinks')) {
+    throw new Error('injectMarketingChrome is not rewriting Get started links')
+  }
+  if (!src.includes("MARKETING_CTA_PATH = '/'")) {
+    throw new Error('marketing-nav.ts missing MARKETING_CTA_PATH')
+  }
+  if (!src.includes("MARKETING_CONTACT_EMAIL = 'hello@ech0.work'")) {
+    throw new Error('marketing-nav.ts missing contact email')
+  }
   if (chrome.includes('Soft-add Explore')) {
     throw new Error('legacy Explore soft-add is still in marketing-chrome.ts')
   }
@@ -145,5 +154,64 @@ check(
   'blog article marks Blog as current',
   articleNav.filter((l) => l.current).map((l) => l.href).join() === '/blog',
 )
+
+function rewriteCtaLinks(html, ctaHref) {
+  return html.replace(/href="https?:\/\/app\.eateryvn\.com\/?"/gi, `href="${ctaHref}"`)
+}
+
+function rewriteFooter(html, locale = 'vi') {
+  const email = 'hello@ech0.work'
+  const address = locale === 'en' ? 'Da Nang, Vietnam' : 'Đà Nẵng, Việt Nam'
+  const tagline =
+    locale === 'en'
+      ? 'Tools and solutions for small and medium stores.'
+      : 'Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.'
+  const mapUrl = 'https://maps.app.goo.gl/UqHpW4ENjPrm4eAb7'
+  let out = html
+    .replace(/mailto:Nextbit@company\.com/gi, `mailto:${email}`)
+    .replace(/Nextbit@company\.com/gi, email)
+  out = out.replace(
+    /<a href="mailto:[^"]*" class="footer_link w-inline-block">\s*<div>[^<]*<\/div>\s*<\/a>/i,
+    `<a href="mailto:${email}" class="footer_link w-inline-block"><div>${email}</div></a>`,
+  )
+  out = out.replace(
+    /<a href="https:\/\/maps\.app\.goo\.gl\/[^"]*" class="footer_link w-inline-block">\s*<div>[^<]*<\/div>\s*<\/a>/i,
+    `<a href="${mapUrl}" class="footer_link w-inline-block"><div>${address}</div></a>`,
+  )
+  out = out.replace(
+    /(<div class="footer_header">[\s\S]*?<div class="text-color-on-primary">)[\s\S]*?(<\/div>)/i,
+    `$1${tagline}$2`,
+  )
+  out = out.replace(/href="https?:\/\/(?:www\.)?(?:facebook|fb)\.com\/?[^"]*"/gi, 'href="https://fb.com"')
+  out = out.replace(/href="https?:\/\/(?:www\.)?instagram\.com\/?[^"]*"/gi, 'href="https://instagram.com"')
+  if (!/\sid="contact"/i.test(out)) {
+    out = out.replace(/<div class="footer_contact">/i, '<div id="contact" class="footer_contact">')
+  }
+  return out
+}
+
+const ctaSample = rewriteCtaLinks(
+  '<a href="https://app.eateryvn.com/">Bắt đầu ngay</a><a href="https://app.eateryvn.com/login">Login</a>',
+  'https://app.example.test/',
+)
+check(
+  'Get started root URL is rewritten, login URL is left for the auth rewrite',
+  ctaSample.includes('href="https://app.example.test/"') && ctaSample.includes('https://app.eateryvn.com/login'),
+)
+
+const homeFooter = rewriteFooter(indexHtml, 'vi')
+const pricingFooter = rewriteFooter(pricingHtml, 'vi')
+check('homepage footer uses canonical email', homeFooter.includes('mailto:hello@ech0.work') && !homeFooter.includes('Nextbit@company.com'))
+check('pricing footer uses the same email as homepage', pricingFooter.includes('mailto:hello@ech0.work') && !pricingFooter.includes('Nextbit@company.com'))
+check('homepage footer has #contact', /id="contact"/.test(homeFooter))
+check('pricing footer has #contact', /id="contact"/.test(pricingFooter))
+check(
+  'homepage and pricing share the same footer tagline',
+  homeFooter.includes('Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.') &&
+    pricingFooter.includes('Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.'),
+)
+
+const enFooter = rewriteFooter(pricingHtml, 'en')
+check('english footer uses english address', enFooter.includes('Da Nang, Vietnam'))
 
 process.exit(failed ? 1 : 0)

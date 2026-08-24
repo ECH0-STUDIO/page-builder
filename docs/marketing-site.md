@@ -14,7 +14,7 @@ Both hosts point to the **same Vercel project**. Routing is handled in `apps/web
 There are **no React marketing pages**. Every marketing URL is served by a `route.ts` handler that returns your Webflow export HTML with:
 
 - Blog posts injected from Google Sheets (by locale)
-- **Shared navbar links** (Explore, Pricing, Features, Blog) rewritten onto every page
+- **Shared navbar, footer contact, and Get started URL** rewritten onto every page
 - VI | EN language switcher in the navbar
 - English copy via `marketing-i18n.ts` when `?lang=en`
 - Vietnamese page *content* = export HTML as-is (clean URLs)
@@ -24,9 +24,9 @@ Webflow exports a **copy of the navbar into every HTML file**. Those copies drif
 | Concern | Source of truth |
 |---------|-----------------|
 | Page layout, visual navbar variant (`base` vs `secondary`), illustrations | Webflow export |
-| Nav *links*, current-page state, contact email, locale switcher, favicons | `apps/web/src/lib/marketing-nav.ts` + `marketing-chrome.ts` |
+| Nav links, Get started URL, footer email/address/social, `#contact`, locale switcher, favicons | `apps/web/src/lib/marketing-nav.ts` + `marketing-chrome.ts` |
 
-To add, remove, or rename a marketing nav item, edit `MARKETING_NAV_ITEMS` in `marketing-nav.ts`. Serve-time rewrite preserves each page’s Webflow classes (homepage vs inner-page variant) and marks the active route, including `/blog/[slug]` → Blog and `/explore` → Explore.
+To change a nav item, the Get started destination, or footer contact details, edit `marketing-nav.ts`. `/contact` goes to `/#contact` on the homepage footer.
 
 | Path | Role |
 |------|------|
