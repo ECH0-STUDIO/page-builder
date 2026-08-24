@@ -24,6 +24,7 @@ function pathnameFromRequest(request: Request): string {
 type FinalizeOptions = {
   localePaths?: Partial<Record<SupportedLocale, string>>
   seo?: MarketingSeoOverrides
+  pageSlug?: string
 }
 
 export function finalizeMarketingHtml(
@@ -33,7 +34,7 @@ export function finalizeMarketingHtml(
   options?: FinalizeOptions,
 ): string {
   const pathname = pathnameFromRequest(request)
-  const pageSlug = resolveMarketingPageSlug(pathname)
+  const pageSlug = options?.pageSlug ?? resolveMarketingPageSlug(pathname)
   const canonicalPath = options?.seo?.canonicalPath ?? marketingCanonicalPath(pathname, locale)
   const withSeo = applyMarketingSeo(html, pageSlug, locale, {
     canonicalPath,
@@ -43,6 +44,22 @@ export function finalizeMarketingHtml(
   const withLinks = rewriteMarketingInternalLinks(translated, locale)
   // Inject switcher last so rewrite step cannot strip ?lang=en from EN links.
   return injectMarketingChrome(withLinks, locale, pathname, options?.localePaths)
+}
+
+export function marketingNotFoundHtmlResponse(request: Request): Response {
+  const locale = getMarketingLocaleFromRequest(request)
+  const html = loadMarketingHtmlDocument('404')
+  if (!html) {
+    return new Response('Not found', { status: 404, headers: HTML_HEADERS })
+  }
+  const rendered = finalizeMarketingHtml(html, request, locale, {
+    pageSlug: '404',
+    seo: {
+      canonicalPath: '/',
+      robots: 'noindex, follow',
+    },
+  })
+  return new Response(rendered, { status: 404, headers: HTML_HEADERS })
 }
 
 export function marketingHtmlResponse(slug: string, request: Request): Response {

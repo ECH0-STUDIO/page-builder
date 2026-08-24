@@ -127,7 +127,7 @@ function filterBusinesses(
 }
 
 const EXPLORE_SECTION_RE =
-  /<section id="features"[\s\S]*?<\/section>\s*(?=<section class="footer")/i
+  /<section id="(?:explore-shell|features)"[^>]*>[\s\S]*?<\/section>\s*(?=<section class="footer")/i
 
 const EXPLORE_STYLES = `<style id="explore-page-styles">
 .explore-filters {
@@ -455,7 +455,7 @@ export function renderExplorePageHtml(
       ? `<div class="explore-empty text-align-center text-color-secondary">${escapeHtml(labels.noResults)}</div>`
       : `<div class="explore-grid">${visible.map((b) => buildBusinessCard(b, labels)).join('')}</div>`
 
-  const section = `<section id="explore" class="section_features">
+  const section = `<section id="explore" class="section_features" data-eatery-explore-shell>
   <div class="padding-section-medium"></div>
   <div class="padding-global">
     <div class="container-large">

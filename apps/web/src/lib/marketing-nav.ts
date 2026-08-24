@@ -3,9 +3,8 @@ import { escapeHtml } from '@/lib/marketing-blog-html'
 import { marketingPathForLocale } from '@/lib/marketing-locale'
 
 /**
- * Canonical marketing chrome. Webflow HTML is a visual template only —
- * nav links, current-page state, and contact email are rewritten at serve time
- * so every page stays in sync.
+ * Shared marketing chrome (nav, footer, CTA).
+ * Applied on every marketing HTML response so pages stay in sync.
  */
 export const MARKETING_NAV_ITEMS = [
   { href: '/explore', labels: { vi: 'Khám phá', en: 'Explore' } },
@@ -24,10 +23,22 @@ export const MARKETING_FOOTER_TAGLINE = {
   vi: 'Tổng hợp công cụ và giải pháp cho các cửa hàng vừa và nhỏ.',
   en: 'Tools and solutions for small and medium stores.',
 } as const
+export const MARKETING_FOOTER_OFFICE_LABEL = {
+  vi: 'Văn phòng',
+  en: 'Our Office',
+} as const
+export const MARKETING_FOOTER_FOLLOW_LABEL = {
+  vi: 'Theo dõi',
+  en: 'Follow',
+} as const
 export const MARKETING_SOCIAL_LINKS = [
   { href: 'https://fb.com', match: /https?:\/\/(?:www\.)?(?:facebook|fb)\.com\/?/i },
   { href: 'https://instagram.com', match: /https?:\/\/(?:www\.)?instagram\.com\/?/i },
 ] as const
+
+/** Instagram glyph (footer previously shipped a TikTok path on the Instagram link). */
+const INSTAGRAM_ICON_PATH =
+  'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z'
 /** App path the "Get started" buttons open. Same destination on every page. */
 export const MARKETING_CTA_PATH = '/'
 
@@ -130,12 +141,27 @@ export function rewriteMarketingFooterContact(
     `$1${escapeHtml(tagline)}$2`,
   )
 
+  out = out.replace(
+    /(<div class="footer_data">\s*<div class="text-lg text-color-on-primary text-weight-medium">)[^<]*(<\/div>)/i,
+    `$1${escapeHtml(MARKETING_FOOTER_OFFICE_LABEL[locale])}$2`,
+  )
+  out = out.replace(
+    /(<div class="footer_social">\s*<div class="text-lg text-color-on-primary text-weight-medium">)[^<]*(<\/div>)/i,
+    `$1${escapeHtml(MARKETING_FOOTER_FOLLOW_LABEL[locale])}$2`,
+  )
+
   for (const social of MARKETING_SOCIAL_LINKS) {
     out = out.replace(
       new RegExp(`href="${social.match.source}[^"]*"`, 'gi'),
       `href="${social.href}"`,
     )
   }
+
+  // Fix Instagram icon path (export used a TikTok glyph).
+  out = out.replace(
+    /(<a href="https:\/\/instagram\.com"[^>]*>[\s\S]*?<path d=")([^"]+)(")/i,
+    `$1${INSTAGRAM_ICON_PATH}$3`,
+  )
 
   if (!/\sid="contact"/i.test(out)) {
     out = out.replace(
@@ -147,6 +173,13 @@ export function rewriteMarketingFooterContact(
   return out
 }
 
+export function rewriteMarketingNotFoundCopy(html: string, locale: SupportedLocale): string {
+  if (locale !== 'vi') return html
+  return html
+    .replace(/>Page not <em>found<\/em></i, '>Không tìm thấy <em>trang</em>')
+    .replace(/>Go to home</gi, '>Về trang chủ<')
+}
+
 export function rewriteMarketingChromeShared(
   html: string,
   pathname: string,
@@ -155,5 +188,6 @@ export function rewriteMarketingChromeShared(
   let out = rewriteMarketingNavbarList(html, pathname, locale)
   out = rewriteMarketingNavbarLogoState(out, pathname)
   out = rewriteMarketingFooterContact(out, locale)
+  out = rewriteMarketingNotFoundCopy(out, locale)
   return out
 }

@@ -55,8 +55,9 @@ If the site still shows **Nexbet** or English hero text, the wrong export is in 
 |-----|----------|
 | `/` | `index.html` + blog carousel from sheet |
 | `/features`, `/pricing`, `/contact`, `/blog` | Matching `.html` when present; else `/#section` on homepage |
-| `/explore` | `pricing.html` (secondary navbar) with the directory section injected |
+| `/explore` | `explore.html` shell + directory body injected at serve time |
 | `/blog/[slug]` | `detail_blog.html` + sheet post body |
+| missing URLs | branded `404.html` (shared nav/footer) |
 
 ```bash
 pnpm test:marketing-chrome

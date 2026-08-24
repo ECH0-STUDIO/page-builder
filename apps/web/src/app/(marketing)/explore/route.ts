@@ -72,7 +72,9 @@ export async function GET(request: Request) {
   const citiesFromData = listExploreCities(allBusinesses)
 
   const base =
-    loadMarketingHtmlDocument('pricing') ?? loadMarketingHtmlDocument('features')
+    loadMarketingHtmlDocument('explore') ??
+    loadMarketingHtmlDocument('pricing') ??
+    loadMarketingHtmlDocument('features')
   if (!base) {
     return new Response('Not found', { status: 404 })
   }
@@ -87,6 +89,7 @@ export async function GET(request: Request) {
   )
 
   const finalized = finalizeMarketingHtml(rendered, request, locale, {
+    pageSlug: 'explore',
     seo: {
       title: labels.title,
       description: labels.metaDescription,

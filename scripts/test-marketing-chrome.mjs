@@ -214,4 +214,30 @@ check(
 const enFooter = rewriteFooter(pricingHtml, 'en')
 check('english footer uses english address', enFooter.includes('Da Nang, Vietnam'))
 
+const exploreExists = fs.existsSync(path.join(marketingDir, 'explore.html'))
+check('explore.html shell exists', exploreExists)
+if (exploreExists) {
+  const exploreHtml = fs.readFileSync(path.join(marketingDir, 'explore.html'), 'utf8')
+  check(
+    'explore.html has stable explore shell (not pricing features body)',
+    /data-eatery-explore-shell|id="explore-shell"/.test(exploreHtml) &&
+      !/Eatery says no to monthly fees/i.test(exploreHtml),
+  )
+}
+
+const seoSrc = fs.readFileSync(path.join(root, 'apps/web/src/lib/marketing-seo.ts'), 'utf8')
+check('SEO writes canonical link', seoSrc.includes("upsertHeadLink(out, 'canonical'"))
+check('SEO writes hreflang alternates', seoSrc.includes('hreflang="vi"') && seoSrc.includes('hreflang="en"'))
+check('SEO strips Nexbet leftovers', seoSrc.includes('stripTemplateBrandLeftovers'))
+
+const robotsSrc = fs.readFileSync(path.join(root, 'apps/web/src/app/robots.ts'), 'utf8')
+check('robots.txt uses marketing sitemap URL', robotsSrc.includes('getMarketingBaseUrl'))
+
+const sitemapSrc = fs.readFileSync(path.join(root, 'apps/web/src/app/sitemap.ts'), 'utf8')
+check('sitemap does not list /contact redirect', !sitemapSrc.includes('/contact'))
+check('sitemap uses public store URLs', sitemapSrc.includes('getPublicStoreUrl'))
+
+const notFoundExists = fs.existsSync(path.join(root, 'apps/web/src/app/not-found.tsx'))
+check('branded not-found page exists', notFoundExists)
+
 process.exit(failed ? 1 : 0)
