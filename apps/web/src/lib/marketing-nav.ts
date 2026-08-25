@@ -1,6 +1,7 @@
 import type { SupportedLocale } from '@/i18n/locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
 import { marketingPathForLocale } from '@/lib/marketing-locale'
+import { MARKETING_SHOW_SOCIAL_LINKS } from '@/lib/marketing-assets'
 
 /**
  * Shared marketing chrome (nav, footer, CTA).
@@ -145,23 +146,31 @@ export function rewriteMarketingFooterContact(
     /(<div class="footer_data">\s*<div class="text-lg text-color-on-primary text-weight-medium">)[^<]*(<\/div>)/i,
     `$1${escapeHtml(MARKETING_FOOTER_OFFICE_LABEL[locale])}$2`,
   )
-  out = out.replace(
-    /(<div class="footer_social">\s*<div class="text-lg text-color-on-primary text-weight-medium">)[^<]*(<\/div>)/i,
-    `$1${escapeHtml(MARKETING_FOOTER_FOLLOW_LABEL[locale])}$2`,
-  )
 
-  for (const social of MARKETING_SOCIAL_LINKS) {
+  if (!MARKETING_SHOW_SOCIAL_LINKS) {
     out = out.replace(
-      new RegExp(`href="${social.match.source}[^"]*"`, 'gi'),
-      `href="${social.href}"`,
+      /<div class="footer_social"([^>]*)>/i,
+      '<div class="footer_social"$1 hidden style="display:none">',
+    )
+  } else {
+    out = out.replace(
+      /(<div class="footer_social">\s*<div class="text-lg text-color-on-primary text-weight-medium">)[^<]*(<\/div>)/i,
+      `$1${escapeHtml(MARKETING_FOOTER_FOLLOW_LABEL[locale])}$2`,
+    )
+
+    for (const social of MARKETING_SOCIAL_LINKS) {
+      out = out.replace(
+        new RegExp(`href="${social.match.source}[^"]*"`, 'gi'),
+        `href="${social.href}"`,
+      )
+    }
+
+    // Fix Instagram icon path (export used a TikTok glyph).
+    out = out.replace(
+      /(<a href="https:\/\/instagram\.com"[^>]*>[\s\S]*?<path d=")([^"]+)(")/i,
+      `$1${INSTAGRAM_ICON_PATH}$3`,
     )
   }
-
-  // Fix Instagram icon path (export used a TikTok glyph).
-  out = out.replace(
-    /(<a href="https:\/\/instagram\.com"[^>]*>[\s\S]*?<path d=")([^"]+)(")/i,
-    `$1${INSTAGRAM_ICON_PATH}$3`,
-  )
 
   if (!/\sid="contact"/i.test(out)) {
     out = out.replace(

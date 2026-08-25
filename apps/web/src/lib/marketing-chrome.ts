@@ -3,6 +3,7 @@ import { appPath } from '@/lib/site-urls'
 import { LOCALE_LABELS, marketingPathForLocale } from '@/lib/marketing-locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
 import { MARKETING_CTA_PATH, rewriteMarketingCtaLinks, rewriteMarketingChromeShared } from '@/lib/marketing-nav'
+import { injectMarketingAnalytics, rewriteMarketingImageAlts } from '@/lib/marketing-assets'
 
 const LOCALE_SWITCHER_CSS = `<style id="marketing-locale-styles">
 .marketing-locale-switcher{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem;background:rgba(0,0,0,.06);border-radius:999px;font-size:.8125rem;line-height:1}
@@ -90,8 +91,10 @@ export function injectMarketingChrome(
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/signup[^"]*"/gi, `href="${signupUrl}"`)
   out = rewriteMarketingCtaLinks(out, ctaUrl)
 
-  // Canonical nav, footer, and contact — do not leave Webflow per-page copies in charge.
+  // Canonical nav, footer, and contact — do not leave per-page copies in charge.
   out = rewriteMarketingChromeShared(out, pathname, locale)
+  out = rewriteMarketingImageAlts(out, locale)
+  out = injectMarketingAnalytics(out)
 
   return out
 }

@@ -1,6 +1,7 @@
 import type { BlogPost } from '@/lib/blog'
 import type { SupportedLocale } from '@/i18n/locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
+import { getMarketingOgImageUrl } from '@/lib/marketing-assets'
 import { getMarketingBaseUrl } from '@/lib/site-urls'
 
 export type MarketingSeoOverrides = {
@@ -164,6 +165,22 @@ function upsertHeadLink(
   return html.replace(/<\/head>/i, `  ${tag}\n</head>`)
 }
 
+function breadcrumbSchema(
+  baseUrl: string,
+  items: { name: string; path: string }[],
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: `${baseUrl}${item.path === '/' ? '/' : item.path}`,
+    })),
+  }
+}
+
 function organizationSchema(baseUrl: string) {
   return {
     '@context': 'https://schema.org',
@@ -171,6 +188,7 @@ function organizationSchema(baseUrl: string) {
     name: 'Eatery VN',
     url: baseUrl,
     logo: `${baseUrl}/logo-icon.png`,
+    image: getMarketingOgImageUrl(baseUrl),
     email: 'hello@ech0.work',
   }
 }
@@ -184,6 +202,7 @@ function buildSchema(
   pageUrl: string,
 ): object | object[] {
   const org = organizationSchema(baseUrl)
+  const homeName = locale === 'vi' ? 'Trang chủ' : 'Home'
 
   if (seo.schema === 'home') {
     return [
@@ -195,6 +214,7 @@ function buildSchema(
         url: baseUrl,
         inLanguage: locale,
         publisher: { '@type': 'Organization', name: 'Eatery VN' },
+        image: getMarketingOgImageUrl(baseUrl),
       },
     ]
   }
@@ -210,6 +230,10 @@ function buildSchema(
         url: `${baseUrl}/blog`,
         inLanguage: locale,
       },
+      breadcrumbSchema(baseUrl, [
+        { name: homeName, path: '/' },
+        { name: locale === 'vi' ? 'Tin tức' : 'Blog', path: '/blog' },
+      ]),
     ]
   }
 
@@ -222,8 +246,9 @@ function buildSchema(
         '@type': 'BlogPosting',
         headline: post.title,
         description: post.summary,
-        image: post.thumbnail || undefined,
+        image: post.thumbnail || getMarketingOgImageUrl(baseUrl),
         datePublished: post.publishedAt,
+        dateModified: post.publishedAt,
         author: post.author
           ? { '@type': 'Person', name: post.author }
           : { '@type': 'Organization', name: 'Eatery VN' },
@@ -235,7 +260,18 @@ function buildSchema(
           logo: { '@type': 'ImageObject', url: `${baseUrl}/logo-icon.png` },
         },
       },
+      breadcrumbSchema(baseUrl, [
+        { name: homeName, path: '/' },
+        { name: locale === 'vi' ? 'Tin tức' : 'Blog', path: '/blog' },
+        { name: post.title, path: `/blog/${post.slug}` },
+      ]),
     ]
+  }
+
+  const pageName = overrides.title ?? seo.title[locale]
+  const crumbs = [{ name: homeName, path: '/' }]
+  if (slug !== 'index' && slug !== '404') {
+    crumbs.push({ name: pageName, path: slug === 'index' ? '/' : `/${slug}` })
   }
 
   return [
@@ -243,11 +279,13 @@ function buildSchema(
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: overrides.title ?? seo.title[locale],
+      name: pageName,
       description: overrides.description ?? seo.description[locale],
       url: pageUrl,
       inLanguage: locale,
+      isPartOf: { '@type': 'WebSite', name: 'Eatery VN', url: baseUrl },
     },
+    ...(slug !== '404' ? [breadcrumbSchema(baseUrl, crumbs)] : []),
   ]
 }
 
@@ -279,7 +317,10 @@ export function applyMarketingSeo(
       ? overrides.blogPost.summary
       : seo.description[locale])
 
-  const image = overrides.image ?? overrides.blogPost?.thumbnail ?? `${baseUrl}/logo-icon.png`
+  const image =
+    overrides.image ??
+    overrides.blogPost?.thumbnail ??
+    getMarketingOgImageUrl(baseUrl)
 
   const pathOnly = marketingSeoPath(
     overrides.canonicalPath ?? (slug === 'index' || slug === '404' ? '/' : `/${slug}`),

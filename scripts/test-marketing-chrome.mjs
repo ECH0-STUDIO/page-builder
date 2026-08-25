@@ -229,6 +229,26 @@ const seoSrc = fs.readFileSync(path.join(root, 'apps/web/src/lib/marketing-seo.t
 check('SEO writes canonical link', seoSrc.includes("upsertHeadLink(out, 'canonical'"))
 check('SEO writes hreflang alternates', seoSrc.includes('hreflang="vi"') && seoSrc.includes('hreflang="en"'))
 check('SEO strips Nexbet leftovers', seoSrc.includes('stripTemplateBrandLeftovers'))
+check('SEO uses shared marketing OG image helper', seoSrc.includes('getMarketingOgImageUrl'))
+check('SEO includes BreadcrumbList', seoSrc.includes('BreadcrumbList'))
+
+const assetsSrc = fs.readFileSync(path.join(root, 'apps/web/src/lib/marketing-assets.ts'), 'utf8')
+const chromeSrc = fs.readFileSync(path.join(root, 'apps/web/src/lib/marketing-chrome.ts'), 'utf8')
+check('marketing GA4 measurement id is set', assetsSrc.includes("G-HPWH35P906"))
+check('marketing chrome injects analytics', chromeSrc.includes('injectMarketingAnalytics'))
+check('marketing chrome rewrites image alts', chromeSrc.includes('rewriteMarketingImageAlts'))
+check('footer socials are hidden by default', assetsSrc.includes('MARKETING_SHOW_SOCIAL_LINKS = false'))
+check(
+  'OG image asset path is wired',
+  assetsSrc.includes("MARKETING_OG_IMAGE_PATH = '/marketing/images/og-eateryvn.jpg'"),
+)
+check(
+  'OG image file exists under public marketing images',
+  fs.existsSync(path.join(marketingDir, 'images/og-eateryvn.jpg')),
+)
+
+const blogHtmlSrc = fs.readFileSync(path.join(root, 'apps/web/src/lib/marketing-blog-html.ts'), 'utf8')
+check('blog body headings are normalized', blogHtmlSrc.includes('normalizeBlogBodyHeadings'))
 
 const robotsSrc = fs.readFileSync(path.join(root, 'apps/web/src/app/robots.ts'), 'utf8')
 check('robots.txt uses marketing sitemap URL', robotsSrc.includes('getMarketingBaseUrl'))

@@ -22,6 +22,18 @@ function imgTag(src: string, alt: string, className = 'img'): string {
   return `<img src="${escapeHtml(src)}" loading="lazy" alt="${escapeHtml(alt)}" class="${className}">`
 }
 
+/**
+ * Article title is already an h1. Remap body headings so content starts at h2
+ * (sheet content often uses h6 for section titles).
+ */
+export function normalizeBlogBodyHeadings(body: string): string {
+  return body
+    .replace(/<\/?h1\b/gi, (tag) => tag.replace(/h1/i, 'h2'))
+    .replace(/<\/?h6\b/gi, (tag) => tag.replace(/h6/i, 'h2'))
+    .replace(/<\/?h5\b/gi, (tag) => tag.replace(/h5/i, 'h2'))
+    .replace(/<\/?h4\b/gi, (tag) => tag.replace(/h4/i, 'h3'))
+}
+
 function buildBlogCard(post: BlogPost, itemClass: string, locale: SupportedLocale): string {
   const pillLabel = post.category || post.date
   const href = marketingPathForLocale(`/blog/${post.slug}`, locale)
@@ -250,7 +262,7 @@ export function renderBlogDetailHtml(
 
   out = out.replace(
     /<div cms="content-item" class="text-rich-text w-dyn-bind-empty w-richtext"><\/div>/,
-    `<div cms="content-item" class="text-rich-text w-richtext">${post.body}</div>`,
+    `<div cms="content-item" class="text-rich-text w-richtext">${normalizeBlogBodyHeadings(post.body)}</div>`,
   )
   if (!post.body) {
     out = out.replace(
