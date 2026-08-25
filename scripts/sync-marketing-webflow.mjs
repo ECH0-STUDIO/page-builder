@@ -36,7 +36,7 @@ if (!fs.existsSync(source)) {
   process.exit(1)
 }
 
-const EXPECTED_PAGES = ['blog', 'detail_blog', 'features', 'pricing', 'contact']
+const EXPECTED_PAGES = ['blog', 'detail_blog', 'features', 'pricing', 'explore']
 const missingPages = EXPECTED_PAGES.filter(
   (slug) => !fs.existsSync(path.join(source, `${slug === 'detail_blog' ? 'detail_blog' : slug}.html`)),
 )

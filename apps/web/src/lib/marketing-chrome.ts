@@ -2,6 +2,8 @@ import type { SupportedLocale } from '@/i18n/locale'
 import { appPath } from '@/lib/site-urls'
 import { LOCALE_LABELS, marketingPathForLocale } from '@/lib/marketing-locale'
 import { escapeHtml } from '@/lib/marketing-blog-html'
+import { MARKETING_CTA_PATH, rewriteMarketingCtaLinks, rewriteMarketingChromeShared } from '@/lib/marketing-nav'
+import { injectMarketingAnalytics, rewriteMarketingImageAlts } from '@/lib/marketing-assets'
 
 const LOCALE_SWITCHER_CSS = `<style id="marketing-locale-styles">
 .marketing-locale-switcher{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem;background:rgba(0,0,0,.06);border-radius:999px;font-size:.8125rem;line-height:1}
@@ -84,17 +86,15 @@ export function injectMarketingChrome(
   // App auth links — locale travels via shared NEXT_LOCALE cookie on .eateryvn.com
   const loginUrl = appPath('/login')
   const signupUrl = appPath('/signup')
+  const ctaUrl = appPath(MARKETING_CTA_PATH)
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/login[^"]*"/gi, `href="${loginUrl}"`)
   out = out.replace(/href="https?:\/\/app\.eateryvn\.com\/signup[^"]*"/gi, `href="${signupUrl}"`)
+  out = rewriteMarketingCtaLinks(out, ctaUrl)
 
-  // Soft-add Explore link into the primary nav list (skip if already present)
-  if (!/href=["']\/explore["']/i.test(out) && out.includes('class="navbar_list"')) {
-    const exploreLabel = locale === 'en' ? 'Explore' : 'Khám phá'
-    out = out.replace(
-      /(<div class="navbar_list">)/i,
-      `$1\n                  <a href="/explore" navbar="item" class="nav_links w-nav-link">${exploreLabel}</a>`,
-    )
-  }
+  // Canonical nav, footer, and contact — do not leave per-page copies in charge.
+  out = rewriteMarketingChromeShared(out, pathname, locale)
+  out = rewriteMarketingImageAlts(out, locale)
+  out = injectMarketingAnalytics(out)
 
   return out
 }

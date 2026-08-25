@@ -1,17 +1,15 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { getAppBaseUrl, getMarketingBaseUrl } from '@/lib/site-urls'
+import { getMarketingBaseUrl, getPublicStoreUrl } from '@/lib/site-urls'
 import { getAllBlogPosts } from '@/lib/blog'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const marketingBase = getMarketingBaseUrl()
-  const appBase = getAppBaseUrl()
 
   const marketingPages: MetadataRoute.Sitemap = [
     { url: marketingBase, changeFrequency: 'weekly', priority: 1 },
     { url: `${marketingBase}/pricing`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${marketingBase}/features`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${marketingBase}/contact`, changeFrequency: 'yearly', priority: 0.6 },
     { url: `${marketingBase}/blog`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${marketingBase}/explore`, changeFrequency: 'daily', priority: 0.8 },
   ]
@@ -54,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .in('id', businessIds)
 
       restaurantPages = (businesses ?? []).map((b: { slug: string; updated_at: string }) => ({
-        url: `${appBase}/${b.slug}`,
+        url: getPublicStoreUrl(b.slug),
         lastModified: new Date(b.updated_at),
         changeFrequency: 'weekly' as const,
         priority: 0.8,

@@ -57,7 +57,7 @@ function buildBusinessCard(
   const location = [biz.address, biz.city].filter(Boolean).join(', ')
   const initials = escapeHtml(biz.name.slice(0, 2).toUpperCase())
   const logo = biz.logo_url
-    ? `<img src="${escapeHtml(biz.logo_url)}" loading="lazy" alt="" class="explore-logo-img">`
+    ? `<img src="${escapeHtml(biz.logo_url)}" loading="lazy" alt="${escapeHtml(biz.name)}" class="explore-logo-img">`
     : `<div class="explore-logo-fallback">${initials}</div>`
 
   const tagChips = (biz.tags ?? [])
@@ -127,7 +127,7 @@ function filterBusinesses(
 }
 
 const EXPLORE_SECTION_RE =
-  /<section id="features"[\s\S]*?<\/section>\s*(?=<section class="footer")/i
+  /<section id="(?:explore-shell|features)"[^>]*>[\s\S]*?<\/section>\s*(?=<section class="footer")/i
 
 const EXPLORE_STYLES = `<style id="explore-page-styles">
 .explore-filters {
@@ -328,7 +328,7 @@ function buildExploreClientScript(
     var location = [biz.address, biz.city].filter(Boolean).join(', ');
     var initials = escapeHtml(biz.name.slice(0, 2).toUpperCase());
     var logo = biz.logo_url
-      ? '<img src="' + escapeHtml(biz.logo_url) + '" loading="lazy" alt="" class="explore-logo-img">'
+      ? '<img src="' + escapeHtml(biz.logo_url) + '" loading="lazy" alt="' + escapeHtml(biz.name) + '" class="explore-logo-img">'
       : '<div class="explore-logo-fallback">' + initials + '</div>';
     var tagChips = (biz.tags || []).slice(0, 6).map(function (t) {
       var label = (labels.tagLabels && labels.tagLabels[t]) || t;
@@ -455,7 +455,7 @@ export function renderExplorePageHtml(
       ? `<div class="explore-empty text-align-center text-color-secondary">${escapeHtml(labels.noResults)}</div>`
       : `<div class="explore-grid">${visible.map((b) => buildBusinessCard(b, labels)).join('')}</div>`
 
-  const section = `<section id="explore" class="section_features">
+  const section = `<section id="explore" class="section_features" data-eatery-explore-shell>
   <div class="padding-section-medium"></div>
   <div class="padding-global">
     <div class="container-large">

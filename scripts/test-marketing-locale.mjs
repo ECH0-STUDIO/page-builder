@@ -22,7 +22,7 @@ function marketingPathForLocale(pathname, locale) {
   return `${basePath}${hash}`
 }
 
-const MARKETING_PREFIXES = ['/', '/pricing', '/features', '/contact', '/blog']
+const MARKETING_PREFIXES = ['/', '/pricing', '/features', '/contact', '/blog', '/explore']
 
 function isMarketingRoute(pathname) {
   if (pathname === '/') return true

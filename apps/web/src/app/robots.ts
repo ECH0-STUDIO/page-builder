@@ -1,23 +1,23 @@
 import type { MetadataRoute } from 'next'
+import { getAppBaseUrl, getMarketingBaseUrl } from '@/lib/site-urls'
 
 /**
- * Dynamic robots.txt
- * - Allow all crawlers to index the site
- * - Individual draft pages return 404 so bots naturally won't index them
- * - Block /dashboard/ and /api/ from crawling
+ * Dynamic robots.txt for both marketing and app hosts.
+ * Point crawlers at the marketing sitemap (includes marketing + public store URLs).
  */
 export default function robots(): MetadataRoute.Robots {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://localhost:3000'
-  const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`
+  const marketingBase = getMarketingBaseUrl()
+  const appBase = getAppBaseUrl()
 
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/', '/api/', '/onboarding/'],
+        disallow: ['/dashboard/', '/api/', '/onboarding/', '/login', '/signup', '/invite/'],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    // Same sitemap payload on both hosts; prefer marketing origin in the directive.
+    sitemap: [`${marketingBase}/sitemap.xml`, `${appBase}/sitemap.xml`],
   }
 }
