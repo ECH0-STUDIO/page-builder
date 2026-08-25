@@ -37,7 +37,10 @@ const IMAGE_ALT_BY_FILE: Record<string, Record<SupportedLocale, string>> = {
   'eatery-businesses': { vi: 'Nhiều cửa hàng trên Eatery', en: 'Multiple stores on Eatery' },
   'eatery-qr': { vi: 'Mã QR Eatery', en: 'Eatery QR code' },
   '404-image': { vi: 'Trang không tìm thấy', en: 'Page not found illustration' },
-  'og-eateryvn': { vi: 'Eatery VN', en: 'Eatery VN' },
+  'og-eateryvn': {
+    vi: 'Logo Eatery VN với ba hình lá xanh xếp chồng cạnh chữ Eatery VN trên nền gradient mint',
+    en: 'Eatery VN logo featuring three overlapping green leaf-like shapes next to the text Eatery VN on a light mint gradient background',
+  },
 }
 
 function basenameFromSrc(src: string): string {
