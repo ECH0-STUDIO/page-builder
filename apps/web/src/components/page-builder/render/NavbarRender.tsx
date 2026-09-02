@@ -15,7 +15,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { NavbarConfig, NavLink } from '../types'
 import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { resolveContentText } from '@/i18n/editor-locale-utils'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 function isInternalPath(href: string) {
@@ -30,6 +31,7 @@ interface NavbarRenderProps {
   isMobilePreview?: boolean
   locale?: string
   primaryLocale?: SupportedLocale
+  editorLocaleMode?: boolean
   languageSwitcher?: React.ReactNode
 }
 
@@ -41,6 +43,7 @@ export function NavbarRender({
   isMobilePreview,
   locale,
   primaryLocale = 'vi',
+  editorLocaleMode = false,
   languageSwitcher,
 }: NavbarRenderProps) {
   const activeLocale = toSupportedLocale(locale)
@@ -141,7 +144,7 @@ export function NavbarRender({
             >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = pickLocale(link.label, activeLocale, primaryLocale)
+              const label = resolveContentText(link.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
               const sharedProps = {
                 style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
                 onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -233,7 +236,7 @@ export function NavbarRender({
           >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = pickLocale(link.label, activeLocale, primaryLocale)
+              const label = resolveContentText(link.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
               const style: React.CSSProperties = {
                 ...linkStyle,
                 display: 'block',

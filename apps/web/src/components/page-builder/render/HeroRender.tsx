@@ -20,7 +20,8 @@ import { contentInsetStyle } from '../block-section-style'
 import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { resolveHeroHeight } from '../hero-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { resolveContentText } from '@/i18n/editor-locale-utils'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
@@ -42,7 +43,7 @@ function justifyForAlign(align: ContentAlign): React.CSSProperties['justifyConte
   return 'center'
 }
 
-function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale; editorLocaleMode?: boolean }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -52,7 +53,7 @@ function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; b
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {pickLocale(cta.label, locale, primaryLocale)}
+      {resolveContentText(cta.label, locale, primaryLocale, { editorMode: editorLocaleMode })}
     </a>
   )
 }
@@ -63,12 +64,14 @@ function CtaRow({
   locale,
   primaryLocale,
   align,
+  editorLocaleMode,
 }: {
   config: HeroConfig
   brandColor: string
   locale: SupportedLocale
   primaryLocale: SupportedLocale
   align: ContentAlign
+  editorLocaleMode?: boolean
 }) {
   if (!config.cta && !config.cta_secondary) return null
   return (
@@ -82,8 +85,8 @@ function CtaRow({
         justifyContent: justifyForAlign(align),
       }}
     >
-      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
-      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
+      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />}
+      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />}
     </div>
   )
 }
@@ -95,6 +98,7 @@ export function HeroRender({
   previewLayout,
   locale,
   primaryLocale = 'vi',
+  editorLocaleMode = false,
   brandColor = '#E85D26',
   contentInset,
 }: {
@@ -104,6 +108,7 @@ export function HeroRender({
   previewLayout?: PreviewLayout
   locale?: string
   primaryLocale?: SupportedLocale
+  editorLocaleMode?: boolean
   brandColor?: string
   /** Outer padding — applied inside render so backgrounds stay full-bleed */
   contentInset?: BlockContentInset
@@ -119,8 +124,9 @@ export function HeroRender({
   const mobileLayout = isForcedMobileLayout(layout)
   const align = resolveAlign(config)
 
-  const heading = pickLocale(config.heading, activeLocale, primaryLocale) || businessName || 'Welcome'
-  const body = pickLocale(config.body, activeLocale, primaryLocale)
+  const headingText = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const heading = headingText || (editorLocaleMode ? '' : businessName || 'Welcome')
+  const body = resolveContentText(config.body, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const typography = getTypography(mobileLayout)
   const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
@@ -159,7 +165,7 @@ export function HeroRender({
           {body}
         </p>
       )}
-      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} />
+      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} editorLocaleMode={editorLocaleMode} />
     </div>
   )
 
@@ -309,7 +315,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} />
+          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} editorLocaleMode={editorLocaleMode} />
         </div>
       </div>
     </section>

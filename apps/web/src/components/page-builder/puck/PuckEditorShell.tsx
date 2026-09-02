@@ -159,7 +159,10 @@ function PuckEditorShellInner({
     theme?.background_color,
     theme?.text_color,
   ])
-  const puckMetadata = useMemo(() => ({ themeRevision }), [themeRevision])
+  const puckMetadata = useMemo(
+    () => ({ themeRevision, localeRevision: editorLocale.contentLocale }),
+    [themeRevision, editorLocale.contentLocale],
+  )
   const navbarConfig: NavbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig: FooterConfig = theme?.footer_config ?? defaultFooterConfig
   const fontFamily = theme?.font_family ?? defaultThemeSettings.font_family
@@ -214,6 +217,7 @@ function PuckEditorShellInner({
       previewLayout: canvasPreviewLayout,
       locale: editorLocale.contentLocale,
       primaryLocale: editorLocale.primaryLocale,
+      editorLocaleMode: !previewMode,
     }),
     t,
   })
@@ -247,6 +251,7 @@ function PuckEditorShellInner({
       previewLayout: canvasPreviewLayout,
       locale: editorLocale.contentLocale,
       primaryLocale: editorLocale.primaryLocale,
+      editorLocaleMode: !previewMode,
     }),
     t,
   }
@@ -373,6 +378,7 @@ function PuckEditorShellInner({
             previewMode={previewMode}
             viewMode={viewMode}
             themeRevision={themeRevision}
+            localeRevision={editorLocale.contentLocale}
           />
           <PuckDragRecovery />
           <PuckCustomHeader
@@ -387,7 +393,7 @@ function PuckEditorShellInner({
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, viewMode, builderMode, themeRevision],
+    [chromeProps, previewMode, viewMode, builderMode, themeRevision, editorLocale.contentLocale],
   )
 
   const puckIframe = useMemo(() => ({ enabled: false as const }), [])

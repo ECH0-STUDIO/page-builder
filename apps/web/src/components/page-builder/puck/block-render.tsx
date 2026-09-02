@@ -37,6 +37,8 @@ export interface PuckRenderContext {
   previewLayout?: import('../render/preview-layout').PreviewLayout
   locale?: SupportedLocale
   primaryLocale?: SupportedLocale
+  /** When true, canvas shows only the active locale (no primary fallback). */
+  editorLocaleMode?: boolean
 }
 
 function propsToPageBlock(type: BlockType, props: PuckBlockProps, businessId: string): PageBlock {
@@ -117,6 +119,7 @@ export function renderHeroBlock(props: PuckBlockProps, ctx: PuckRenderContext) {
         previewLayout={ctx.previewLayout}
         locale={ctx.locale}
         primaryLocale={ctx.primaryLocale}
+        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -135,6 +138,7 @@ export function renderTextImageBlock(props: PuckBlockProps, ctx: PuckRenderConte
         previewLayout={ctx.previewLayout}
         locale={ctx.locale}
         primaryLocale={ctx.primaryLocale}
+        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -164,6 +168,7 @@ export function renderMenuGridBlock(props: PuckBlockProps, ctx: PuckRenderContex
         previewLayout={ctx.previewLayout}
         locale={ctx.locale}
         primaryLocale={ctx.primaryLocale}
+        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -188,6 +193,7 @@ export function renderQrCodeBlock(
         downloadLabel={ctx.qrDownloadLabel}
         locale={ctx.locale}
         primaryLocale={ctx.primaryLocale}
+        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -207,6 +213,7 @@ export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) 
       isMobilePreview={isMobilePreview}
       locale={ctx.locale}
       primaryLocale={ctx.primaryLocale}
+      editorLocaleMode={ctx.editorLocaleMode}
     />
   )
 }
@@ -223,6 +230,7 @@ export function renderSiteFooter(props: PuckBlockProps, ctx: PuckRenderContext) 
       inEditor={inEditor}
       locale={ctx.locale}
       primaryLocale={ctx.primaryLocale}
+      editorLocaleMode={ctx.editorLocaleMode}
     />
   )
 }

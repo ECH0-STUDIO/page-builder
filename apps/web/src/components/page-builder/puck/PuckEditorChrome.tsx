@@ -51,10 +51,13 @@ export function PuckPreviewSync({
   previewMode,
   viewMode = 'desktop',
   themeRevision = 0,
+  localeRevision,
 }: {
   previewMode: boolean
   viewMode?: 'desktop' | 'mobile'
   themeRevision?: number
+  /** Changes when editor VI/EN tab switches — forces canvas to re-read locale. */
+  localeRevision?: string
 }) {
   const { dispatch } = usePuck()
 
@@ -65,7 +68,7 @@ export function PuckPreviewSync({
         previewMode: previewMode ? 'interactive' : 'edit',
         leftSideBarVisible: !previewMode,
         rightSideBarVisible: !previewMode,
-        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop/theme switch
+        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop/theme/locale switch
         viewports: {
           controlsVisible: false,
           options: [],
@@ -77,7 +80,7 @@ export function PuckPreviewSync({
       },
       recordHistory: false,
     })
-  }, [previewMode, viewMode, themeRevision, dispatch])
+  }, [previewMode, viewMode, themeRevision, localeRevision, dispatch])
 
   return null
 }

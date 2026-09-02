@@ -15,14 +15,15 @@
 import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
 import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { resolveContentText } from '@/i18n/editor-locale-utils'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 
-function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale; editorLocaleMode?: boolean }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -32,7 +33,7 @@ function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; b
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {pickLocale(cta.label, locale, primaryLocale)}
+      {resolveContentText(cta.label, locale, primaryLocale, { editorMode: editorLocaleMode })}
     </a>
   )
 }
@@ -68,6 +69,7 @@ interface TextImageRenderProps {
   previewLayout?: PreviewLayout
   locale?: string
   primaryLocale?: SupportedLocale
+  editorLocaleMode?: boolean
 }
 
 export function TextImageRender({
@@ -76,12 +78,13 @@ export function TextImageRender({
   previewLayout,
   locale,
   primaryLocale = 'vi',
+  editorLocaleMode = false,
   brandColor = '#E85D26',
   defaultTextColor = '#111111',
 }: TextImageRenderProps & { brandColor?: string; defaultTextColor?: string }) {
   const activeLocale = toSupportedLocale(locale)
-  const heading = pickLocale(config.heading, activeLocale, primaryLocale)
-  const body = pickLocale(config.body, activeLocale, primaryLocale)
+  const heading = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const body = resolveContentText(config.body, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -180,7 +183,7 @@ export function TextImageRender({
       )}
       {config.cta && (
         <div style={{ display: 'flex', justifyContent: justify }}>
-          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} />
+          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />
         </div>
       )}
     </div>
