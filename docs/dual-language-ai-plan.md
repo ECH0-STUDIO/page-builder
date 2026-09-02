@@ -29,7 +29,7 @@ Non-goals for this branch epic: menu-from-photo, page auto-draft, SEO AI pack, i
 | Primary switch | Swap which language owns `/{slug}` vs secondary path; **content kept**; **no warning** |
 | Secondary | Reflection of primary; **text only**; empty → **fallback to primary** live |
 | Live primary URL | `/{slug}`, `/{slug}/order` |
-| Live secondary URL | `/{slug}/en` or `/{slug}/vi` (the non-primary) |
+| Live secondary URL | `/{locale}/{slug}` or `/{locale}/{slug}/order` (e.g. `/en/{slug}` when VI is primary) |
 | Disable dual | Hide dual UI; serve primary only; **keep secondary in DB**; secondary URLs **redirect → primary** |
 | Enable dual | Show **loading/progress** while setup runs (simple progress OK) |
 | Page builder / order editor | Primary \| Secondary toggle; secondary locks layout/colors/media/blocks |
@@ -148,7 +148,7 @@ Implementation is a **rebuild on Puck + current order/menu**, not a revive of de
 **2.4 Live**
 
 - Primary: `/{slug}`, `/{slug}/order`.
-- Secondary: `/{slug}/en` or `/{slug}/vi` + order equivalents.
+- Secondary: `/{locale}/{slug}`, `/{locale}/{slug}/order` (e.g. `/en/{slug}` when primary is VI).
 - Fallback secondary empty → primary text.
 - Dual off: secondary URL → redirect primary.
 - Guest language control linking to the other path.

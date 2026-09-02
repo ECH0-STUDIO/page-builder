@@ -14,10 +14,16 @@ export async function revalidateLiveStorePaths(
     .single()
   const slug = data?.slug
   if (!slug) return
-  revalidatePath(`/${slug}`)
-  revalidatePath(`/${slug}/order`)
-  revalidatePath(`/${slug}/en`)
-  revalidatePath(`/${slug}/vi`)
-  revalidatePath(`/${slug}/order/en`)
-  revalidatePath(`/${slug}/order/vi`)
+
+  const paths = [
+    `/${slug}`,
+    `/${slug}/order`,
+    `/en/${slug}`,
+    `/en/${slug}/order`,
+    `/vi/${slug}`,
+    `/vi/${slug}/order`,
+  ]
+  for (const path of paths) {
+    revalidatePath(path)
+  }
 }

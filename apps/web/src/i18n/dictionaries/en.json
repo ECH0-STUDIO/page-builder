@@ -681,9 +681,10 @@
       "dualDisabled": "Dual language turned off",
       "setupProgress": "Setting up languages…",
       "urlsTitle": "Live URLs",
-      "primaryUrl": "Primary: yourstore.com/{slug}",
-      "secondaryUrl": "Secondary: yourstore.com/{slug}{{path}}",
-      "secondaryEditHint": "Secondary pages mirror layout from primary — only text can differ."
+      "primaryUrl": "Primary: yourstore.com{{path}}",
+      "secondaryUrl": "Secondary: yourstore.com{{path}}",
+      "secondaryEditHint": "Secondary pages mirror layout from primary — only text can differ.",
+      "phase2Notice": "Page builder, order page, and menu editors will get language toggles in the next update. Secondary URLs go live then too."
     }
   },
   "heroBlock": {
