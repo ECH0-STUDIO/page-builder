@@ -12,7 +12,6 @@ export function LocaleEditBar({ className }: { className?: string }) {
     primaryLocale,
     secondaryLocale,
     setContentLocale,
-    secondaryLocked,
   } = useEditorLocale()
 
   if (!dualEnabled) return null
@@ -51,9 +50,6 @@ export function LocaleEditBar({ className }: { className?: string }) {
             }
           >
             {localeTabLabel(locale)}
-            {!isPrimary && secondaryLocked && active && (
-              <span className="ml-1 text-[10px] text-muted-foreground">· text</span>
-            )}
           </button>
         )
       })}
@@ -61,13 +57,13 @@ export function LocaleEditBar({ className }: { className?: string }) {
   )
 }
 
-/** Independent VI | EN tabs for menu builder (both fully editable). */
+/** Independent primary | secondary tabs for menu builder (both fully editable). */
 export function MenuLocaleTabs({ className }: { className?: string }) {
-  const { dualEnabled, contentLocale, setContentLocale } = useEditorLocale()
+  const { dualEnabled, contentLocale, primaryLocale, secondaryLocale, setContentLocale } = useEditorLocale()
 
   if (!dualEnabled) return null
 
-  const tabs: SupportedLocale[] = ['vi', 'en']
+  const tabs: SupportedLocale[] = [primaryLocale, secondaryLocale]
 
   return (
     <div
@@ -94,7 +90,7 @@ export function MenuLocaleTabs({ className }: { className?: string }) {
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {locale.toUpperCase()}
+            {localeTabLabel(locale)}
           </button>
         )
       })}

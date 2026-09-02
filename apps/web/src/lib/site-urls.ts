@@ -3,6 +3,9 @@
  * In local dev both default to localhost — no host split.
  */
 
+import type { SupportedLocale } from '@/i18n/locale'
+import { buildStorePublicPath, type StorePublicPathKind } from '@/i18n/store-locale'
+
 function normalizeUrl(raw: string): string {
   const withProtocol = raw.startsWith('http') ? raw : `https://${raw}`
   return withProtocol.replace(/\/$/, '')
@@ -110,6 +113,57 @@ export function resolvePublicStoreUrl(
   }
 
   return `${getPublicStoreUrl(cleanSlug)}${suffix}`
+}
+
+/** Strip slug from internal store path → public path suffix (custom domain omits slug). */
+function publicPathSuffixFromStorePath(path: string, slug: string): string {
+  const cleanSlug = slug.replace(/^\/+/, '')
+  const segments = path.split('/').filter(Boolean)
+  const slugIdx = segments.indexOf(cleanSlug)
+  if (slugIdx < 0) return path.startsWith('/') ? path : `/${path}`
+
+  const beforeSlug = segments.slice(0, slugIdx)
+  const afterSlug = segments.slice(slugIdx + 1)
+  const localePrefix = beforeSlug.length ? `/${beforeSlug.join('/')}` : ''
+  const rest = afterSlug.length ? `/${afterSlug.join('/')}` : ''
+  const suffix = `${localePrefix}${rest}`
+  return suffix || '/'
+}
+
+/**
+ * Locale-aware storefront URL for QR codes and share links.
+ * Primary locale uses unprefixed paths; secondary uses /{locale}/… when dual language is on.
+ */
+export function resolvePublicStoreUrlForLocale(
+  slug: string,
+  pub: StorePublicUrlMeta | null | undefined,
+  config: {
+    locale: SupportedLocale
+    primary: SupportedLocale
+    dualEnabled: boolean
+    kind?: StorePublicPathKind
+    query?: string
+  },
+): string {
+  const cleanSlug = slug.replace(/^\/+/, '')
+  const path = buildStorePublicPath(cleanSlug, {
+    locale: config.locale,
+    primary: config.primary,
+    dualEnabled: config.dualEnabled,
+    kind: config.kind ?? 'landing',
+  })
+  const query = config.query
+    ? (config.query.startsWith('?') ? config.query : `?${config.query}`)
+    : ''
+
+  const domain = pub?.custom_domain?.trim().replace(/^https?:\/\//, '').replace(/\/$/, '')
+  if (pub?.custom_domain_verified && domain) {
+    const suffix = publicPathSuffixFromStorePath(path, cleanSlug)
+    return `https://${domain}${suffix === '/' ? '' : suffix}${query}`
+  }
+
+  const base = isSplitDomainDeployment() ? getMarketingBaseUrl() : getAppBaseUrl()
+  return `${base}${path}${query}`
 }
 
 /** Turn a template path like `/order` into a scannable absolute URL for QR codes. */

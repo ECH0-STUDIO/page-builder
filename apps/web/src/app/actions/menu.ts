@@ -3,7 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Json } from '@/types/database'
-import { normalizeMenuCategory, normalizeMenuItem, normalizeVariantGroups, normalizeVariantOptions } from '@/i18n/menu-content'
+import {
+  normalizeMenuCategory,
+  normalizeMenuItem,
+  normalizeVariantGroup,
+  normalizeVariantOption,
+  normalizeVariantGroups,
+  normalizeVariantOptions,
+} from '@/i18n/menu-content'
 import { writeLocaleText, primaryPlainText } from '@/i18n/editor-locale-utils'
 import type { SupportedLocale } from '@/i18n/locale'
 import { toSupportedLocale } from '@/i18n/locale'
@@ -34,6 +41,7 @@ export type MenuItem = {
   available: boolean
   sort_order: number
   tags: string[] | null
+  tags_i18n?: Json | null
   /** Independent of tags — guest-facing vegetarian flag */
   is_vegetarian: boolean
   /** 0 none … 3 hot */
@@ -251,6 +259,7 @@ export async function addItemAction(
     price: number
     image_url?: string
     tags?: string[]
+    tags_i18n?: Json | null
     is_vegetarian?: boolean
     spicy_level?: number
     is_featured?: boolean
@@ -294,6 +303,7 @@ export async function addItemAction(
       price: item.price,
       image_url: item.image_url || null,
       tags: item.tags ?? [],
+      tags_i18n: item.tags_i18n ?? null,
       is_vegetarian: Boolean(item.is_vegetarian),
       spicy_level: spicy,
       is_featured: Boolean(item.is_featured),
@@ -319,6 +329,7 @@ export async function updateItemAction(
     image_url: string | null
     available: boolean
     tags: string[]
+    tags_i18n?: Json | null
     is_vegetarian: boolean
     spicy_level: number
     is_featured: boolean
@@ -444,7 +455,8 @@ export async function addVariantGroupAction(
   itemId: string,
   name: string,
   required: boolean,
-  allow_multiple: boolean = false
+  allow_multiple: boolean = false,
+  options?: { locale?: SupportedLocale; primary_locale?: SupportedLocale },
 ): Promise<ActionResult<VariantGroup>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -462,19 +474,38 @@ export async function addVariantGroupAction(
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
+  const trimmed = name.trim()
+  const primary = toSupportedLocale(options?.primary_locale)
+  const locale = options?.locale ? toSupportedLocale(options.locale) : primary
+  const name_i18n = writeLocaleText(null, locale, trimmed, primary)
+  const legacyName = primaryPlainText(name_i18n, primary)
+
   const { data, error } = await db
     .from('menu_item_variant_groups')
-    .insert({ item_id: itemId, name: name.trim(), required, allow_multiple, sort_order: nextOrder })
+    .insert({
+      item_id: itemId,
+      name: legacyName,
+      name_i18n,
+      required,
+      allow_multiple,
+      sort_order: nextOrder,
+    })
     .select()
     .single()
 
   if (error) return { success: false, error: error.message }
-  return { success: true, data }
+  return { success: true, data: normalizeVariantGroup(data as Record<string, unknown>) }
 }
 
 export async function updateVariantGroupAction(
   id: string,
-  update: { name?: string; required?: boolean; allow_multiple?: boolean }
+  update: {
+    name?: string
+    required?: boolean
+    allow_multiple?: boolean
+    locale?: SupportedLocale
+    primary_locale?: SupportedLocale
+  }
 ): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -484,10 +515,32 @@ export async function updateVariantGroupAction(
     return { success: false, error: 'Forbidden' }
   }
 
+  const payload = { ...update } as Record<string, unknown>
+  delete payload.locale
+  delete payload.primary_locale
+
+  if (update.name !== undefined && update.locale && update.primary_locale) {
+    const primary = toSupportedLocale(update.primary_locale)
+    const locale = toSupportedLocale(update.locale)
+    const { data: existing } = await supabase
+      .from('menu_item_variant_groups')
+      .select('name_i18n, name')
+      .eq('id', id)
+      .single()
+    const name_i18n = writeLocaleText(
+      (existing as { name_i18n?: Record<string, string> | null })?.name_i18n ?? existing?.name,
+      locale,
+      update.name.trim(),
+      primary,
+    )
+    payload.name_i18n = name_i18n
+    payload.name = primaryPlainText(name_i18n, primary)
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_item_variant_groups')
-    .update(update)
+    .update(payload as any)
     .eq('id', id)
   if (error) return { success: false, error: error.message }
   return { success: true, data: undefined }
@@ -516,7 +569,8 @@ export async function deleteVariantGroupAction(id: string): Promise<ActionResult
 export async function addVariantOptionAction(
   groupId: string,
   label: string,
-  priceDelta: number
+  priceDelta: number,
+  options?: { locale?: SupportedLocale; primary_locale?: SupportedLocale },
 ): Promise<ActionResult<VariantOption>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -534,14 +588,74 @@ export async function addVariantOptionAction(
 
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
+  const trimmed = label.trim()
+  const primary = toSupportedLocale(options?.primary_locale)
+  const locale = options?.locale ? toSupportedLocale(options.locale) : primary
+  const label_i18n = writeLocaleText(null, locale, trimmed, primary)
+  const legacyLabel = primaryPlainText(label_i18n, primary)
+
   const { data, error } = await db
     .from('menu_item_variant_options')
-    .insert({ group_id: groupId, label: label.trim(), price_delta: priceDelta, sort_order: nextOrder })
+    .insert({
+      group_id: groupId,
+      label: legacyLabel,
+      label_i18n,
+      price_delta: priceDelta,
+      sort_order: nextOrder,
+    })
     .select()
     .single()
 
   if (error) return { success: false, error: error.message }
-  return { success: true, data }
+  return { success: true, data: normalizeVariantOption(data as Record<string, unknown>) }
+}
+
+export async function updateVariantOptionAction(
+  id: string,
+  update: {
+    label?: string
+    price_delta?: number
+    locale?: SupportedLocale
+    primary_locale?: SupportedLocale
+  }
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated' }
+
+  if (!await userOwnsVariantOptionBusiness(supabase, id, user.id)) {
+    return { success: false, error: 'Forbidden' }
+  }
+
+  const payload = { ...update } as Record<string, unknown>
+  delete payload.locale
+  delete payload.primary_locale
+
+  if (update.label !== undefined && update.locale && update.primary_locale) {
+    const primary = toSupportedLocale(update.primary_locale)
+    const locale = toSupportedLocale(update.locale)
+    const { data: existing } = await supabase
+      .from('menu_item_variant_options')
+      .select('label_i18n, label')
+      .eq('id', id)
+      .single()
+    const label_i18n = writeLocaleText(
+      (existing as { label_i18n?: Record<string, string> | null })?.label_i18n ?? existing?.label,
+      locale,
+      update.label.trim(),
+      primary,
+    )
+    payload.label_i18n = label_i18n
+    payload.label = primaryPlainText(label_i18n, primary)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await supabase
+    .from('menu_item_variant_options')
+    .update(payload as any)
+    .eq('id', id)
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: undefined }
 }
 
 export async function deleteVariantOptionAction(id: string): Promise<ActionResult> {

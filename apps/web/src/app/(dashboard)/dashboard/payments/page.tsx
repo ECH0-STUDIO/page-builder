@@ -25,6 +25,15 @@ export default async function PaymentsPage() {
   assertDashboardAccess('/dashboard/payments', role, 'nav')
   const paymentSettings = await getPaymentSettingsAction(business.id)
 
+  const { data: pub } = await db
+    .from('publishing_settings')
+    .select('language, dual_language_enabled, dual_language_setup_status, enabled_locales')
+    .eq('business_id', business.id)
+    .maybeSingle()
+
+  const { parseStoreLanguageConfig } = await import('@/i18n/store-locale')
+  const storeLanguage = parseStoreLanguageConfig(pub)
+
   return (
     <div className="p-4 md:p-8 max-w-3xl space-y-12">
 
@@ -56,6 +65,7 @@ export default async function PaymentsPage() {
           paymentSettings={paymentSettings}
           businessName={business.name}
           businessLogoUrl={business.logo_url ?? null}
+          storeLanguage={storeLanguage}
         />
       </div>
 

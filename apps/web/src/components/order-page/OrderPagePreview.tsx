@@ -18,6 +18,7 @@ import { CartProvider } from '@/components/page-builder/render/CartContext'
 import { LiveStoreCart } from '@/components/page-builder/render/LiveStoreCart'
 import type { MenuGridConfig } from '@/components/page-builder/types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
+import { toSupportedLocale } from '@/i18n/locale'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -293,6 +294,8 @@ export function OrderPagePreview({
                   brandColor={brandColor}
                   onClose={() => setFeaturedModalItem(null)}
                   browseOnly={false}
+                  locale={toSupportedLocale(locale)}
+                  primaryLocale={toSupportedLocale(locale)}
                 />
               )}
             </div>

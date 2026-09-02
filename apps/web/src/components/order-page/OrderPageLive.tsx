@@ -19,6 +19,7 @@ import type { PromoSlide } from '@/components/order-page/OrderPromoCarousel'
 import type { CarouselAspect, CarouselAspectMobile } from '@/components/order-page/promo-slides'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { toSupportedLocale } from '@/i18n/locale'
 import { formatCurrency } from '@/lib/currency'
 import { orderChromeTokens, type OrderChromeTokens } from '@/lib/color-contrast'
 
@@ -350,6 +351,8 @@ export function OrderPageLive({
           brandColor={brandColor}
           onClose={() => setFeaturedModalItem(null)}
           browseOnly={!orderingOpen}
+          locale={toSupportedLocale(locale)}
+          primaryLocale={primaryLocale}
         />
       )}
 

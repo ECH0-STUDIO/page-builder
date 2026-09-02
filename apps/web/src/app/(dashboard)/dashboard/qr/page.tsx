@@ -35,14 +35,21 @@ export default async function QRPage() {
 
   const { data: publishingRaw } = await db
     .from('publishing_settings')
-    .select('custom_domain, custom_domain_verified')
+    .select('custom_domain, custom_domain_verified, language, dual_language_enabled, dual_language_setup_status, enabled_locales')
     .eq('business_id', business.id)
     .maybeSingle()
 
   const publishing = publishingRaw as {
     custom_domain?: string | null
     custom_domain_verified?: boolean | null
+    language?: string | null
+    dual_language_enabled?: boolean | null
+    dual_language_setup_status?: string | null
+    enabled_locales?: string[] | null
   } | null
+
+  const { parseStoreLanguageConfig } = await import('@/i18n/store-locale')
+  const storeLanguage = parseStoreLanguageConfig(publishing)
 
   return (
     <div className="p-4 md:p-8 max-w-6xl">
@@ -63,6 +70,7 @@ export default async function QRPage() {
           custom_domain: publishing?.custom_domain ?? null,
           custom_domain_verified: publishing?.custom_domain_verified === true,
         }}
+        storeLanguage={storeLanguage}
       />
     </div>
   )

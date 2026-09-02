@@ -32,9 +32,9 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { EditorLocaleProvider, useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { EditorLocaleProvider, useEditorLocale, localeTabLabel } from '@/components/i18n/EditorLocaleContext'
 import { MenuLocaleTabs } from '@/components/i18n/LocaleEditBar'
-import { menuCategoryName, menuCategoryNameEditor, menuItemDescription, menuItemDescriptionEditor, menuItemName, menuItemNameEditor } from '@/i18n/menu-content'
+import { menuCategoryName, menuCategoryNameEditor, menuItemDescription, menuItemDescriptionEditor, menuItemName, menuItemNameEditor, menuTagLabel, menuTagLabelEditor, variantGroupNameEditor, variantOptionLabelEditor, type TagsI18nMap } from '@/i18n/menu-content'
 import type { StoreLanguageConfig } from '@/i18n/store-locale'
 import { parseStoreLanguageConfig } from '@/i18n/store-locale'
 import { writeLocaleText, primaryPlainText } from '@/i18n/editor-locale-utils'
@@ -46,7 +46,7 @@ import {
   addItemAction, updateItemAction, deleteItemAction,
   getItemVariantsAction,
   addVariantGroupAction, updateVariantGroupAction, deleteVariantGroupAction,
-  addVariantOptionAction, deleteVariantOptionAction,
+  addVariantOptionAction, updateVariantOptionAction, deleteVariantOptionAction,
   bulkDeleteItemsAction, bulkUpdateAvailabilityAction,
 } from '@/app/actions/menu'
 import { useMenu } from '@/lib/react-query/hooks/useMenu'
@@ -62,11 +62,63 @@ const ITEM_TAG_SUGGESTIONS = [
 
 // ─── Variant Option Row ───────────────────────────────────────────────────────
 
-function VariantOptionRow({ option, onDelete }: { option: VariantOption; onDelete: () => void }) {
+function VariantOptionRow({
+  option,
+  displayLabel,
+  onDelete,
+  onRename,
+}: {
+  option: VariantOption
+  displayLabel: string
+  onDelete: () => void
+  onRename: (label: string) => Promise<void>
+}) {
   const { t } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(displayLabel)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!editing) setEditValue(displayLabel)
+  }, [displayLabel, editing])
+
+  async function commitEdit() {
+    const trimmed = editValue.trim()
+    if (!trimmed || trimmed === displayLabel) {
+      setEditing(false)
+      setEditValue(displayLabel)
+      return
+    }
+    setSaving(true)
+    await onRename(trimmed)
+    setSaving(false)
+    setEditing(false)
+  }
+
   return (
     <div className="flex items-center gap-2 px-3 py-2 group/opt">
-      <span className="flex-1 text-sm">{option.label}</span>
+      {editing ? (
+        <Input
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onBlur={() => void commitEdit()}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { e.preventDefault(); void commitEdit() }
+            if (e.key === 'Escape') { setEditing(false); setEditValue(displayLabel) }
+          }}
+          className="h-7 text-sm flex-1"
+          autoFocus
+          disabled={saving}
+        />
+      ) : (
+        <span
+          className="flex-1 text-sm cursor-text"
+          onDoubleClick={() => setEditing(true)}
+          title="Double-click to edit"
+        >
+          {displayLabel}
+        </span>
+      )}
       <span className="text-sm text-muted-foreground tabular-nums shrink-0">
         {formatPriceDelta(option.price_delta, 'VND', t('menuBuilder.included'))}
       </span>
@@ -84,21 +136,32 @@ function VariantOptionRow({ option, onDelete }: { option: VariantOption; onDelet
 // ─── Variant Group Card ───────────────────────────────────────────────────────
 
 function VariantGroupCard({
-  group, options, onDelete, onToggleRequired, onToggleAllowMultiple, onAddOption, onDeleteOption,
+  group, options, displayName, onDelete, onToggleRequired, onToggleAllowMultiple, onAddOption, onDeleteOption, onRenameGroup, onRenameOption,
 }: {
   group: VariantGroup
   options: VariantOption[]
+  displayName: string
   onDelete: () => void
   onToggleRequired: () => void
   onToggleAllowMultiple: () => void
   onAddOption: (label: string, priceDelta: number) => Promise<void>
   onDeleteOption: (id: string) => void
+  onRenameGroup: (name: string) => Promise<void>
+  onRenameOption: (id: string, label: string) => Promise<void>
 }) {
   const { t } = useTranslation()
+  const { contentLocale, primaryLocale } = useEditorLocale()
   const [newLabel, setNewLabel] = useState('')
   const [newPrice, setNewPrice] = useState('0')
   const [adding, setAdding] = useState(false)
   const [expanded, setExpanded] = useState(true)
+  const [editingName, setEditingName] = useState(false)
+  const [editName, setEditName] = useState(displayName)
+  const [savingName, setSavingName] = useState(false)
+
+  useEffect(() => {
+    if (!editingName) setEditName(displayName)
+  }, [displayName, editingName])
 
   async function handleAdd() {
     if (!newLabel.trim()) return
@@ -109,13 +172,47 @@ function VariantGroupCard({
     setAdding(false)
   }
 
+  async function commitNameEdit() {
+    const trimmed = editName.trim()
+    if (!trimmed || trimmed === displayName) {
+      setEditingName(false)
+      setEditName(displayName)
+      return
+    }
+    setSavingName(true)
+    await onRenameGroup(trimmed)
+    setSavingName(false)
+    setEditingName(false)
+  }
+
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <div className="flex items-center px-3 py-2 bg-muted/50 gap-2">
         <button type="button" onClick={() => setExpanded(v => !v)} className="text-muted-foreground">
           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
         </button>
-        <span className="font-semibold text-sm flex-1">{group.name}</span>
+        {editingName ? (
+          <Input
+            value={editName}
+            onChange={e => setEditName(e.target.value)}
+            onBlur={() => void commitNameEdit()}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); void commitNameEdit() }
+              if (e.key === 'Escape') { setEditingName(false); setEditName(displayName) }
+            }}
+            className="h-7 text-sm font-semibold flex-1"
+            autoFocus
+            disabled={savingName}
+          />
+        ) : (
+          <span
+            className="font-semibold text-sm flex-1 cursor-text"
+            onDoubleClick={() => setEditingName(true)}
+            title="Double-click to edit"
+          >
+            {displayName}
+          </span>
+        )}
         <button
           type="button"
           onClick={onDelete}
@@ -144,7 +241,13 @@ function VariantGroupCard({
           {options.length > 0 && (
             <div className="divide-y divide-border/60">
               {options.map(opt => (
-                <VariantOptionRow key={opt.id} option={opt} onDelete={() => onDeleteOption(opt.id)} />
+                <VariantOptionRow
+                  key={opt.id}
+                  option={opt}
+                  displayLabel={variantOptionLabelEditor(opt, contentLocale, primaryLocale)}
+                  onDelete={() => onDeleteOption(opt.id)}
+                  onRename={label => onRenameOption(opt.id, label)}
+                />
               ))}
             </div>
           )}
@@ -185,6 +288,7 @@ function VariantGroupCard({
 
 function VariantsPanel({ itemId }: { itemId: string }) {
   const { t } = useTranslation()
+  const { contentLocale, primaryLocale } = useEditorLocale()
   const [groups, setGroups] = useState<VariantGroup[]>([])
   const [options, setOptions] = useState<VariantOption[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -208,7 +312,10 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   async function handleAddGroup() {
     if (!newGroupName.trim()) return
     setAddingGroup(true)
-    const result = await addVariantGroupAction(itemId, newGroupName, newGroupRequired, newGroupAllowMultiple)
+    const result = await addVariantGroupAction(itemId, newGroupName, newGroupRequired, newGroupAllowMultiple, {
+      locale: contentLocale,
+      primary_locale: primaryLocale,
+    })
     if (result.success) {
       setGroups(prev => [...prev, result.data])
       setNewGroupName('')
@@ -241,9 +348,42 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   }
 
   async function handleAddOption(groupId: string, label: string, priceDelta: number) {
-    const result = await addVariantOptionAction(groupId, label, priceDelta)
+    const result = await addVariantOptionAction(groupId, label, priceDelta, {
+      locale: contentLocale,
+      primary_locale: primaryLocale,
+    })
     if (result.success) setOptions(prev => [...prev, result.data])
     else toast.error(result.error)
+  }
+
+  async function handleRenameGroup(groupId: string, name: string) {
+    const result = await updateVariantGroupAction(groupId, {
+      name,
+      locale: contentLocale,
+      primary_locale: primaryLocale,
+    })
+    if (result.success) {
+      setGroups(prev => prev.map(g => {
+        if (g.id !== groupId) return g
+        const name_i18n = writeLocaleText((g.name_i18n ?? g.name) as LocalizedString, contentLocale, name.trim(), primaryLocale)
+        return { ...g, name_i18n, name: primaryPlainText(name_i18n, primaryLocale) }
+      }))
+    } else toast.error(result.error)
+  }
+
+  async function handleRenameOption(optionId: string, label: string) {
+    const result = await updateVariantOptionAction(optionId, {
+      label,
+      locale: contentLocale,
+      primary_locale: primaryLocale,
+    })
+    if (result.success) {
+      setOptions(prev => prev.map(o => {
+        if (o.id !== optionId) return o
+        const label_i18n = writeLocaleText((o.label_i18n ?? o.label) as LocalizedString, contentLocale, label.trim(), primaryLocale)
+        return { ...o, label_i18n, label: primaryPlainText(label_i18n, primaryLocale) }
+      }))
+    } else toast.error(result.error)
   }
 
   function handleDeleteOption(id: string) {
@@ -267,12 +407,15 @@ function VariantsPanel({ itemId }: { itemId: string }) {
         <VariantGroupCard
           key={group.id}
           group={group}
+          displayName={variantGroupNameEditor(group, contentLocale, primaryLocale)}
           options={options.filter(o => o.group_id === group.id).sort((a, b) => a.sort_order - b.sort_order)}
           onDelete={() => handleDeleteGroup(group.id)}
           onToggleRequired={() => handleToggleRequired(group)}
           onToggleAllowMultiple={() => handleToggleAllowMultiple(group)}
           onAddOption={(label, price) => handleAddOption(group.id, label, price)}
           onDeleteOption={handleDeleteOption}
+          onRenameGroup={name => handleRenameGroup(group.id, name)}
+          onRenameOption={handleRenameOption}
         />
       ))}
 
@@ -391,6 +534,7 @@ function ItemDialog({
     price: number
     image_url?: string
     tags: string[]
+    tags_i18n: TagsI18nMap | null
     is_vegetarian: boolean
     spicy_level: number
     is_featured: boolean
@@ -405,6 +549,7 @@ function ItemDialog({
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
+  const [tagsI18n, setTagsI18n] = useState<TagsI18nMap>((initial?.tags_i18n as TagsI18nMap) ?? {})
   const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
   const [spicyLevel, setSpicyLevel] = useState(initial?.spicy_level ?? 0)
   const [isFeatured, setIsFeatured] = useState(Boolean(initial?.is_featured))
@@ -426,6 +571,7 @@ function ItemDialog({
       const lower = tag.trim().toLowerCase()
       return !['vegetarian', 'vegan', 'spicy', 'chay', 'cay', 'thuần chay'].includes(lower)
     }))
+    setTagsI18n((initial?.tags_i18n as TagsI18nMap) ?? {})
     setIsVegetarian(Boolean(initial?.is_vegetarian))
     setSpicyLevel(initial?.spicy_level ?? 0)
     setIsFeatured(Boolean(initial?.is_featured))
@@ -469,6 +615,7 @@ function ItemDialog({
       price: parsedPrice,
       image_url: imageUrl || undefined,
       tags,
+      tags_i18n: Object.keys(tagsI18n).length ? tagsI18n : null,
       is_vegetarian: isVegetarian,
       spicy_level: spicyLevel,
       is_featured: isFeatured,
@@ -597,11 +744,45 @@ function ItemDialog({
                 <Label>{t('menuBuilder.tags')}</Label>
                 <TagInput
                   value={tags}
-                  onChange={setTags}
+                  onChange={newTags => {
+                    const added = newTags.filter(t => !tags.includes(t))
+                    setTags(newTags)
+                    setTagsI18n(prev => {
+                      const next = { ...prev }
+                      for (const tag of added) {
+                        if (!ITEM_TAG_SUGGESTIONS.includes(tag)) {
+                          next[tag] = writeLocaleText(prev[tag] ?? tag, contentLocale, tag, primaryLocale)
+                        }
+                      }
+                      for (const key of Object.keys(next)) {
+                        if (!newTags.includes(key)) delete next[key]
+                      }
+                      return next
+                    })
+                  }}
                   suggestions={ITEM_TAG_SUGGESTIONS}
-                  formatTag={(tag) => ITEM_TAG_SUGGESTIONS.includes(tag) ? t(`menuBuilder.tagsList.${tag}`) : tag}
+                  formatTag={(tag) => {
+                    if (ITEM_TAG_SUGGESTIONS.includes(tag)) {
+                      return t(`menuBuilder.tagsList.${tag}`)
+                    }
+                    return menuTagLabelEditor(tag, tagsI18n, contentLocale, primaryLocale)
+                  }}
+                  isPresetTag={tag => ITEM_TAG_SUGGESTIONS.includes(tag)}
+                  onCustomTagLabelChange={(tag, label) => {
+                    setTagsI18n(prev => ({
+                      ...prev,
+                      [tag]: writeLocaleText(prev[tag] ?? tag, contentLocale, label, primaryLocale),
+                    }))
+                  }}
                   placeholder={t('menuBuilder.addCustomTag')}
-                  helpText={t('menuBuilder.tagHelp') || 'Press Enter or , to add a custom tag'}
+                  helpText={
+                    <>
+                      {t('menuBuilder.tagHelp') || 'Press Enter or , to add a custom tag'}
+                      {contentLocale !== primaryLocale && (
+                        <span className="block mt-1">Double-click a custom tag to set its {localeTabLabel(contentLocale)} label.</span>
+                      )}
+                    </>
+                  }
                 />
               </div>
             </form>
@@ -776,6 +957,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
     price: number
     image_url?: string
     tags: string[]
+    tags_i18n: TagsI18nMap | null
     is_vegetarian: boolean
     spicy_level: number
     is_featured: boolean
@@ -787,6 +969,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
         price: itemData.price,
         image_url: itemData.image_url || null,
         tags: itemData.tags,
+        tags_i18n: itemData.tags_i18n,
         is_vegetarian: itemData.is_vegetarian,
         spicy_level: itemData.spicy_level,
         is_featured: itemData.is_featured,
@@ -812,6 +995,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
           price: itemData.price,
           image_url: itemData.image_url || null,
           tags: itemData.tags,
+          tags_i18n: itemData.tags_i18n,
           is_vegetarian: itemData.is_vegetarian,
           spicy_level: itemData.spicy_level,
           is_featured: itemData.is_featured,
@@ -1179,7 +1363,15 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
                           {(item.tags || []).length > 0 && (
                             <div className="flex flex-wrap gap-1 mb-2">
                               {(item.tags || []).slice(0, 4).map(tag => (
-                                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {menuTagLabel(
+                                    tag,
+                                    item.tags_i18n as TagsI18nMap | null,
+                                    contentLocale,
+                                    primaryLocale,
+                                    ITEM_TAG_SUGGESTIONS.includes(tag) ? t(`menuBuilder.tagsList.${tag}`) : undefined,
+                                  )}
+                                </Badge>
                               ))}
                             </div>
                           )}

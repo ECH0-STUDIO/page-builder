@@ -299,6 +299,7 @@ export interface Database {
           available: boolean
           sort_order: number
           tags: string[] | null
+          tags_i18n: Json | null
           is_vegetarian: boolean
           spicy_level: number
           is_featured: boolean
@@ -319,6 +320,7 @@ export interface Database {
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          tags_i18n?: Json | null
           is_vegetarian?: boolean
           spicy_level?: number
           is_featured?: boolean
@@ -339,6 +341,7 @@ export interface Database {
           available?: boolean
           sort_order?: number
           tags?: string[] | null
+          tags_i18n?: Json | null
           is_vegetarian?: boolean
           spicy_level?: number
           is_featured?: boolean

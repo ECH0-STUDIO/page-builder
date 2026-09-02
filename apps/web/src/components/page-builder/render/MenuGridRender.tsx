@@ -20,8 +20,10 @@ import {
   menuCategoryName,
   menuItemDescription,
   menuItemName,
+  menuTagLabel,
   variantGroupName,
   variantOptionLabel,
+  type TagsI18nMap,
 } from '@/i18n/menu-content'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import { defaultMenuGridConfig, defaultThemeSettings, type BorderRadius, type MenuGridConfig } from '../types'
@@ -125,7 +127,7 @@ export interface MenuGridData {
 
 /** Shared item detail / add-to-order sheet (order page Featured + menu grid). */
 export function MenuItemModal({
-  item, groups, options, config, brandColor, onClose, browseOnly = false,
+  item, groups, options, config, brandColor, onClose, browseOnly = false, locale, primaryLocale,
 }: {
   item: MenuItem
   groups: VariantGroup[]
@@ -134,6 +136,8 @@ export function MenuItemModal({
   brandColor: string
   onClose: () => void
   browseOnly?: boolean
+  locale: SupportedLocale
+  primaryLocale: SupportedLocale
 }) {
   const { addItem } = useCart()
   const { t } = useTranslation()
@@ -170,9 +174,9 @@ export function MenuItemModal({
         const opt = options.find(o => o.id === optId)!
         return {
           groupId,
-          groupName: group.name,
+          groupName: variantGroupName(group, locale, primaryLocale),
           optionId: optId,
-          optionLabel: opt.label,
+          optionLabel: variantOptionLabel(opt, locale, primaryLocale),
           priceDelta: opt.price_delta,
         }
       })
@@ -232,7 +236,17 @@ export function MenuItemModal({
               {(item.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(item.tags || []).map(tag => (
-                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{tag}</span>
+                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {menuTagLabel(
+                        tag,
+                        item.tags_i18n as TagsI18nMap | null,
+                        locale,
+                        primaryLocale,
+                        ['Bestseller', 'Gluten-free', 'New', 'Chef special', 'Seasonal', 'Halal'].includes(tag)
+                          ? t(`menuBuilder.tagsList.${tag}`)
+                          : undefined,
+                      )}
+                    </span>
                   ))}
                 </div>
               )}
@@ -248,7 +262,7 @@ export function MenuItemModal({
               return (
                 <div key={group.id} className="space-y-2.5">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-gray-900">{group.name}</p>
+                    <p className="text-sm font-bold text-gray-900">{variantGroupName(group, locale, primaryLocale)}</p>
                     {group.required
                       ? (
                         <span
@@ -308,7 +322,7 @@ export function MenuItemModal({
                           }
                         >
                           {isSelected && <Check className="size-3 shrink-0" strokeWidth={3} />}
-                          <span>{opt.label}</span>
+                          <span>{variantOptionLabel(opt, locale, primaryLocale)}</span>
                           {opt.price_delta !== 0 && (
                             <span className={`text-xs ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
                               {formatPriceDelta(opt.price_delta)}
@@ -867,6 +881,8 @@ function MenuGridInner({
           brandColor={actionColor}
           onClose={() => setModalItem(null)}
           browseOnly={browseOnly}
+          locale={activeLocale}
+          primaryLocale={activePrimary}
         />
       )}
 

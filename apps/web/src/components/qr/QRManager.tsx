@@ -8,10 +8,13 @@ import { updateBusinessAction } from '@/app/actions/business'
 import { QRPrintDesigner } from './QRPrintDesigner'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { localeTabLabel } from '@/components/i18n/EditorLocaleContext'
 import {
-  resolvePublicStoreUrl,
+  resolvePublicStoreUrlForLocale,
   type StorePublicUrlMeta,
 } from '@/lib/site-urls'
+import type { StoreLanguageConfig } from '@/i18n/store-locale'
+import { parseStoreLanguageConfig } from '@/i18n/store-locale'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,14 +94,17 @@ function TableQRTab({
   paymentSettings,
   slug,
   storePub,
+  storeLanguage,
 }: {
   businessId: string
   paymentSettings: Record<string, unknown>
   slug: string
   storePub?: StorePublicUrlMeta | null
+  storeLanguage: StoreLanguageConfig
 }) {
   const [tableCount, setTableCount] = useState(10)
   const [kdsEnabled, setKdsEnabled] = useState(Boolean(paymentSettings?.kds_enabled ?? true))
+  const [qrLocale, setQrLocale] = useState(storeLanguage.primary_locale)
   const { t } = useTranslation()
 
   const handleToggle = async (checked: boolean) => {
@@ -148,20 +154,52 @@ function TableQRTab({
       </div>
 
       {kdsEnabled && (
+        <>
+          {storeLanguage.dual_language_enabled && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">{t('qr.tableLanguage') || 'QR language'}:</span>
+              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
+                {[storeLanguage.primary_locale, storeLanguage.secondary_locale].map(locale => (
+                  <button
+                    key={locale}
+                    type="button"
+                    onClick={() => setQrLocale(locale)}
+                    className={cn(
+                      'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                      qrLocale === locale ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                    )}
+                  >
+                    {localeTabLabel(locale)}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs text-gray-400">
+                {t('qr.tableLanguageHint') || 'Scanned link opens the order page in this language.'}
+              </span>
+            </div>
+          )}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {Array.from({ length: Math.min(tableCount, 100) }).map((_, i) => {
             const num = i + 1
+            const url = resolvePublicStoreUrlForLocale(slug, storePub, {
+              locale: qrLocale,
+              primary: storeLanguage.primary_locale,
+              dualEnabled: storeLanguage.dual_language_enabled,
+              kind: 'order',
+              query: `table=${num}`,
+            })
             return (
               <SimpleQRCard
-                key={num}
-                url={resolvePublicStoreUrl(slug, storePub, `/order?table=${num}`)}
+                key={`${qrLocale}-${num}`}
+                url={url}
                 label={`${t('qr.tableLabel')} ${num}`}
-                sublabel={t('qr.autoAssigns')}
-                filename={`table-${num}-qr.png`}
+                sublabel={storeLanguage.dual_language_enabled ? localeTabLabel(qrLocale) : t('qr.autoAssigns')}
+                filename={`table-${num}-${qrLocale}-qr.png`}
               />
             )
           })}
         </div>
+        </>
       )}
     </div>
   )
@@ -178,6 +216,7 @@ export function QRManager({
   businessName,
   businessLogoUrl,
   storePub,
+  storeLanguage: storeLanguageProp,
 }: {
   businessId: string
   paymentSettings: Record<string, unknown>
@@ -186,9 +225,17 @@ export function QRManager({
   businessLogoUrl?: string | null
   /** Prefer verified custom domain for encoded QR URLs */
   storePub?: StorePublicUrlMeta | null
+  storeLanguage?: StoreLanguageConfig
 }) {
+  const storeLanguage = storeLanguageProp ?? parseStoreLanguageConfig({ language: 'vi' })
   const [tab, setTab] = useState<Tab>('design')
-  const pageUrl = resolvePublicStoreUrl(slug, storePub)
+  const [qrLocale, setQrLocale] = useState(storeLanguage.primary_locale)
+  const pageUrl = resolvePublicStoreUrlForLocale(slug, storePub, {
+    locale: qrLocale,
+    primary: storeLanguage.primary_locale,
+    dualEnabled: storeLanguage.dual_language_enabled,
+    kind: 'landing',
+  })
   const { t } = useTranslation()
 
   const tabs = [
@@ -223,7 +270,36 @@ export function QRManager({
       )}
 
       {tab === 'design' && (
-        <QRPrintDesigner businessId={businessId} qrUrl={pageUrl} businessName={businessName} businessLogoUrl={businessLogoUrl || undefined} />
+        <>
+          {storeLanguage.dual_language_enabled && (
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm text-gray-600">{t('qr.pageLanguage') || 'Page language'}:</span>
+              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
+                {[storeLanguage.primary_locale, storeLanguage.secondary_locale].map(locale => (
+                  <button
+                    key={locale}
+                    type="button"
+                    onClick={() => setQrLocale(locale)}
+                    className={cn(
+                      'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                      qrLocale === locale ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                    )}
+                  >
+                    {localeTabLabel(locale)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <QRPrintDesigner
+            businessId={businessId}
+            qrUrl={pageUrl}
+            businessName={businessName}
+            businessLogoUrl={businessLogoUrl || undefined}
+            storeLanguage={storeLanguage}
+            contentLocale={qrLocale}
+          />
+        </>
       )}
       {tab === 'tables' && (
         <TableQRTab
@@ -231,6 +307,7 @@ export function QRManager({
           paymentSettings={paymentSettings}
           slug={slug}
           storePub={storePub}
+          storeLanguage={storeLanguage}
         />
       )}
     </div>

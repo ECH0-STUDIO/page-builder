@@ -16,6 +16,12 @@ import { FontPicker } from '@/components/shared/FontPicker'
 import { getGoogleFontLinkTag } from '@/lib/fonts'
 import { cn, safeToPng } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import type { StoreLanguageConfig } from '@/i18n/store-locale'
+import { parseStoreLanguageConfig } from '@/i18n/store-locale'
+import type { SupportedLocale } from '@/i18n/locale'
+import { readEditorLocaleText, writeLocaleText } from '@/i18n/editor-locale-utils'
+import type { LocalizedString } from '@/i18n/localized-content'
+import { localeTabLabel } from '@/components/i18n/EditorLocaleContext'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -75,16 +81,36 @@ interface QRPrintDesignerProps {
   qrImageSrc?: string
   businessName?: string
   businessLogoUrl?: string
+  storeLanguage?: StoreLanguageConfig
+  contentLocale?: SupportedLocale
 }
 
-export function QRPrintDesigner({ businessId, qrUrl, qrImageSrc, businessName, businessLogoUrl }: QRPrintDesignerProps) {
+export function QRPrintDesigner({
+  businessId,
+  qrUrl,
+  qrImageSrc,
+  businessName,
+  businessLogoUrl,
+  storeLanguage: storeLanguageProp,
+  contentLocale: contentLocaleProp,
+}: QRPrintDesignerProps) {
+  const storeLanguage = storeLanguageProp ?? parseStoreLanguageConfig({ language: 'vi' })
+  const primaryLocale = storeLanguage.primary_locale
+  const contentLocale = contentLocaleProp ?? primaryLocale
+
   const cardRef = useRef<HTMLDivElement>(null)
   const previewAreaRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.75)
   const [downloading, setDownloading] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const [headlineI18n, setHeadlineI18n] = useState<LocalizedString>(businessName ?? '')
+  const [subtextI18n, setSubtextI18n] = useState<LocalizedString>(DEFAULT_DESIGN.subtext)
   const [design, setDesign] = useState<QRDesign>({ ...DEFAULT_DESIGN, headline: businessName ?? '' })
   const { t } = useTranslation()
+
+  const resolvedHeadline = readEditorLocaleText(headlineI18n, contentLocale, primaryLocale)
+  const resolvedSubtext = readEditorLocaleText(subtextI18n, contentLocale, primaryLocale)
+  const previewDesign: QRDesign = { ...design, headline: resolvedHeadline, subtext: resolvedSubtext }
 
   function set<K extends keyof QRDesign>(key: K, val: QRDesign[K]) {
     setDesign(prev => ({ ...prev, [key]: val }))
@@ -233,7 +259,7 @@ export function QRPrintDesigner({ businessId, qrUrl, qrImageSrc, businessName, b
         <div className="flex-1 flex items-center justify-center w-full min-h-0">
           <div style={{ width: preset.w * scale, height: preset.h * scale, position: 'relative', flexShrink: 0 }}>
             <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${scale})` }}>
-              <QRCardPreview ref={cardRef} design={design} qrUrl={qrUrl} qrImageSrc={qrImageSrc} />
+              <QRCardPreview ref={cardRef} design={previewDesign} qrUrl={qrUrl} qrImageSrc={qrImageSrc} />
             </div>
           </div>
         </div>
@@ -370,19 +396,34 @@ export function QRPrintDesigner({ businessId, qrUrl, qrImageSrc, businessName, b
         {/* Text */}
         <div>
           <SectionHeader>{t('qr.designer.text')}</SectionHeader>
+          {storeLanguage.dual_language_enabled && (
+            <p className="text-[11px] text-gray-400 mb-2">
+              Editing {localeTabLabel(contentLocale)} — switch language above to edit the other version.
+            </p>
+          )}
           <div className="space-y-3">
             <div className="space-y-1">
               <label className="text-xs text-gray-600">{t('qr.designer.headline')}</label>
-              <input type="text" value={design.headline} onChange={e => set('headline', e.target.value)}
+              <input
+                type="text"
+                key={`headline-${contentLocale}`}
+                value={resolvedHeadline}
+                onChange={e => setHeadlineI18n(writeLocaleText(headlineI18n, contentLocale, e.target.value, primaryLocale))}
                 placeholder="e.g. The Best Café"
-                className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
+                className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400"
+              />
             </div>
             {!isCompact && (
               <div className="space-y-1">
                 <label className="text-xs text-gray-600">{t('qr.designer.subtext')}</label>
-                <input type="text" value={design.subtext} onChange={e => set('subtext', e.target.value)}
+                <input
+                  type="text"
+                  key={`subtext-${contentLocale}`}
+                  value={resolvedSubtext}
+                  onChange={e => setSubtextI18n(writeLocaleText(subtextI18n, contentLocale, e.target.value, primaryLocale))}
                   placeholder="Scan to view our menu"
-                  className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400" />
+                  className="w-full h-8 text-sm px-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-400"
+                />
               </div>
             )}
             {isCompact && (
@@ -421,7 +462,11 @@ export function QRPrintDesigner({ businessId, qrUrl, qrImageSrc, businessName, b
 
         <Divider />
 
-        <button type="button" onClick={() => setDesign({ ...DEFAULT_DESIGN, headline: businessName ?? '' })}
+        <button type="button" onClick={() => {
+          setDesign({ ...DEFAULT_DESIGN, headline: businessName ?? '' })
+          setHeadlineI18n(businessName ?? '')
+          setSubtextI18n(DEFAULT_DESIGN.subtext)
+        }}
           className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">
           <RefreshCw className="size-3.5" />{t('qr.designer.resetDefaults')}
         </button>

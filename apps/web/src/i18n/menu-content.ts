@@ -21,6 +21,7 @@ export function normalizeMenuItem(row: Record<string, unknown>): MenuItem {
     is_featured: Boolean(row.is_featured),
     name_i18n: (row.name_i18n as Record<string, string> | null) ?? null,
     description_i18n: (row.description_i18n as Record<string, string> | null) ?? null,
+    tags_i18n: (row.tags_i18n as MenuItem['tags_i18n']) ?? null,
   }
 }
 
@@ -92,12 +93,58 @@ export function variantGroupName(
   return readLocaleText(asLocalized(group.name_i18n ?? group.name), locale, primary) || group.name
 }
 
+export function variantGroupNameEditor(
+  group: VariantGroup,
+  locale: SupportedLocale,
+  primary: SupportedLocale,
+): string {
+  return variantGroupName(group, locale, primary)
+}
+
 export function variantOptionLabel(
   option: VariantOption,
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
   return readLocaleText(asLocalized(option.label_i18n ?? option.label), locale, primary) || option.label
+}
+
+export function variantOptionLabelEditor(
+  option: VariantOption,
+  locale: SupportedLocale,
+  primary: SupportedLocale,
+): string {
+  return variantOptionLabel(option, locale, primary)
+}
+
+export type TagsI18nMap = Record<string, LocalizedString>
+
+export function menuTagLabel(
+  tag: string,
+  tagsI18n: TagsI18nMap | null | undefined,
+  locale: SupportedLocale,
+  primary: SupportedLocale,
+  presetLabel?: string,
+): string {
+  if (presetLabel) return presetLabel
+  const localized = tagsI18n?.[tag]
+  if (localized) {
+    return readLocaleText(localized, locale, primary) || tag
+  }
+  return tag
+}
+
+export function menuTagLabelEditor(
+  tag: string,
+  tagsI18n: TagsI18nMap | null | undefined,
+  locale: SupportedLocale,
+  primary: SupportedLocale,
+): string {
+  const localized = tagsI18n?.[tag]
+  if (localized) {
+    return readLocaleText(localized, locale, primary) || tag
+  }
+  return tag
 }
 
 export function normalizeVariantGroup(row: Record<string, unknown>): VariantGroup {

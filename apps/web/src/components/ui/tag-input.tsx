@@ -8,13 +8,15 @@ import { Input } from '@/components/ui/input'
 interface TagInputProps {
   value: string[]
   onChange: (tags: string[]) => void
-  /** Suggested tags shown as quick-add chips */
   suggestions?: string[]
   placeholder?: string
   className?: string
   maxTags?: number
   formatTag?: (tag: string) => string
   helpText?: React.ReactNode
+  /** When set, custom (non-preset) tags can be double-clicked to edit the display label. */
+  isPresetTag?: (tag: string) => boolean
+  onCustomTagLabelChange?: (tag: string, label: string) => void
 }
 
 export function TagInput({
@@ -26,9 +28,14 @@ export function TagInput({
   maxTags,
   formatTag = (t) => t,
   helpText,
+  isPresetTag,
+  onCustomTagLabelChange,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
+  const [editingTag, setEditingTag] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const editRef = useRef<HTMLInputElement>(null)
 
   function addTag(raw: string) {
     const tag = raw.trim()
@@ -51,33 +58,78 @@ export function TagInput({
     }
   }
 
+  function startEditingTag(tag: string) {
+    if (!onCustomTagLabelChange || isPresetTag?.(tag)) return
+    setEditingTag(tag)
+    setEditValue(formatTag(tag))
+    setTimeout(() => editRef.current?.select(), 0)
+  }
+
+  function commitTagEdit() {
+    if (!editingTag || !onCustomTagLabelChange) return
+    const trimmed = editValue.trim()
+    if (trimmed) onCustomTagLabelChange(editingTag, trimmed)
+    setEditingTag(null)
+    setEditValue('')
+  }
+
+  function handleEditKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      commitTagEdit()
+    } else if (e.key === 'Escape') {
+      setEditingTag(null)
+      setEditValue('')
+    }
+  }
+
   const unusedSuggestions = suggestions.filter(s => !value.includes(s))
 
   return (
     <div className={cn('space-y-2.5', className)}>
-      {/* Selected tags */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map(tag => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium"
-            >
-              {formatTag(tag)}
-              <button
-                type="button"
-                onClick={() => removeTag(tag)}
-                className="hover:opacity-70 transition-opacity"
-                aria-label={`Remove ${tag}`}
+            editingTag === tag ? (
+              <Input
+                key={tag}
+                ref={editRef}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={commitTagEdit}
+                onKeyDown={handleEditKeyDown}
+                className="h-6 w-28 text-xs px-2 py-0"
+                autoFocus
+              />
+            ) : (
+              <span
+                key={tag}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium',
+                  onCustomTagLabelChange && !isPresetTag?.(tag) && 'cursor-text',
+                )}
+                onDoubleClick={() => startEditingTag(tag)}
+                title={
+                  onCustomTagLabelChange && !isPresetTag?.(tag)
+                    ? 'Double-click to edit label for this language'
+                    : undefined
+                }
               >
-                <X className="size-3" />
-              </button>
-            </span>
+                {formatTag(tag)}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="hover:opacity-70 transition-opacity"
+                  aria-label={`Remove ${tag}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )
           ))}
         </div>
       )}
 
-      {/* Quick-add suggestions (not yet selected) */}
       {unusedSuggestions.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {unusedSuggestions.map(tag => (
@@ -93,7 +145,6 @@ export function TagInput({
         </div>
       )}
 
-      {/* Free-type input */}
       {(!maxTags || value.length < maxTags) && (
         <div className="flex gap-2">
           <Input
@@ -122,6 +173,9 @@ export function TagInput({
         <p className="text-[11px] text-muted-foreground">
           Press <kbd className="px-1 py-0.5 rounded bg-muted text-xs">Enter</kbd> or{' '}
           <kbd className="px-1 py-0.5 rounded bg-muted text-xs">,</kbd> to add a custom tag
+          {onCustomTagLabelChange && (
+            <> · double-click a custom tag to rename it for the current language</>
+          )}
         </p>
       )}
     </div>
