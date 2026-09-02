@@ -1,7 +1,9 @@
 # Dual language + AI translation plan
 
+> **Superseded by [`docs/translation-ui-plan.md`](./translation-ui-plan.md)** — inline VI|EN editor tabs are being reverted in favor of a centralized Translation UI + monthly paid locales.
+
 Branch: `cursor/dual-language-ai-ffbe` (from `main` @ marketing merge).  
-Status: **planning locked — implementation not started**.
+Status: **superseded — do not implement inline dual editing further**.
 
 This replaces the older multi-locale CoW approach in `docs/bilingual-plan.md` for the product direction below. Keep `bilingual-plan.md` as historical reference only until this ships.
 
