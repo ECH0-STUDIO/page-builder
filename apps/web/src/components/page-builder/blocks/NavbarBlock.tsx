@@ -11,7 +11,9 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { plainText } from '@/i18n/locale'
+import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
+import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
 import type { NavbarConfig, NavLink, PageBlock } from '../types'
 import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 
@@ -19,6 +21,7 @@ import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
 
 export function NavbarPreview({ config }: { config: NavbarConfig }) {
   const { t } = useTranslation()
+  const { contentLocale, primaryLocale } = useEditorLocale()
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -27,7 +30,7 @@ export function NavbarPreview({ config }: { config: NavbarConfig }) {
         </div>
         <div className="flex gap-2">
           {config.links.slice(0, 3).map((l, i) => (
-            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{plainText(l.label) || 'Link'}</span>
+            <span key={i} className="text-[10px] text-muted-foreground truncate max-w-[60px]">{readEditorLocaleText(l.label, contentLocale, primaryLocale) || 'Link'}</span>
           ))}
           {config.links.length > 3 && <span className="text-[10px] text-muted-foreground">+{config.links.length - 3}</span>}
           {config.links.length === 0 && <span className="text-[10px] text-muted-foreground/40 italic">{t('navbarBlock.noLinks')}</span>}
@@ -163,11 +166,11 @@ export function NavbarSettings({
                     <ChevronDown className="size-3.5" />
                   </button>
                 </div>
-                <Input
-                  value={plainText(link.label)}
-                  onChange={e => updateLink(i, { label: e.target.value })}
+                <LocalizedTextField
+                  value={link.label}
+                  onChange={v => updateLink(i, { label: v })}
                   placeholder={t('navbarBlock.linkLabel')}
-                  className="h-7 text-xs flex-1"
+                  className="flex-1 [&_input]:h-7 [&_input]:text-xs"
                 />
                 <button type="button" onClick={() => removeLink(i)}
                   className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0">

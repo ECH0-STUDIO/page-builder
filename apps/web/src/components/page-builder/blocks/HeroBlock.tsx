@@ -17,7 +17,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { plainText } from '@/i18n/locale'
+import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
 import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
 import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
 import type {
@@ -29,7 +29,8 @@ import { resolveHeroHeight } from '../hero-utils'
 
 export function HeroPreview({ config }: { config: HeroConfig }) {
   const { t } = useTranslation()
-  const heading = plainText(config.heading)
+  const { contentLocale, primaryLocale } = useEditorLocale()
+  const heading = readEditorLocaleText(config.heading, contentLocale, primaryLocale)
   const layoutLabels: Record<HeroLayout, string> = {
     centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay
     split: t('heroBlock.split'),

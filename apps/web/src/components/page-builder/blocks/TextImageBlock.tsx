@@ -13,7 +13,9 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { plainText } from '@/i18n/locale'
+import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
+import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { RadiusPicker } from '@/components/shared/RadiusPicker'
@@ -27,6 +29,9 @@ import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 
 export function TextImagePreview({ config }: { config: TextImageConfig }) {
   const { t } = useTranslation()
+  const { contentLocale, primaryLocale } = useEditorLocale()
+  const heading = readEditorLocaleText(config.heading, contentLocale, primaryLocale)
+  const body = readEditorLocaleText(config.body, contentLocale, primaryLocale)
   const layoutLabels: Record<TextImageLayout, string> = {
     img_left: t('textImageBlock.imgLeft'),
     img_right: t('textImageBlock.imgRight'),
@@ -59,11 +64,11 @@ export function TextImagePreview({ config }: { config: TextImageConfig }) {
         )}
         {config.layout !== 'img_only' && (
           <div className="flex-1 space-y-0.5 min-w-0">
-            {plainText(config.heading) && <p className="text-xs font-semibold truncate">{plainText(config.heading)}</p>}
-            {plainText(config.body) && (
-              <p className="text-[10px] text-muted-foreground line-clamp-2">{plainText(config.body)}</p>
+            {heading && <p className="text-xs font-semibold truncate">{heading}</p>}
+            {body && (
+              <p className="text-[10px] text-muted-foreground line-clamp-2">{body}</p>
             )}
-            {!plainText(config.heading) && !plainText(config.body) && (
+            {!heading && !body && (
               <p className="text-[10px] text-muted-foreground/50 italic">{t('textImageBlock.textContentPlaceholder')}…</p>
             )}
           </div>
@@ -290,27 +295,24 @@ export function TextImageSettings({
               ))}
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <Input
-              id="ti-heading"
-              value={plainText(config.heading)}
-              onChange={e => set('heading', e.target.value)}
-              placeholder={t('textImageBlock.headingPlaceholder')}
-              className="h-8 text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
-            <Textarea
-              id="ti-body"
-              value={plainText(config.body)}
-              onChange={e => set('body', e.target.value)}
-              placeholder="Write your content here…&#10;Line breaks are preserved."
-              rows={5}
-              className="resize-none text-sm"
-            />
-          </div>
+          <LocalizedTextField
+            id="ti-heading"
+            label={t('textImageBlock.headingOptional')}
+            value={config.heading}
+            onChange={v => set('heading', v)}
+            placeholder={t('textImageBlock.headingPlaceholder')}
+            className="space-y-1.5"
+          />
+          <LocalizedTextField
+            id="ti-body"
+            label={t('textImageBlock.bodyText')}
+            value={config.body}
+            onChange={v => set('body', v)}
+            placeholder="Write your content here…&#10;Line breaks are preserved."
+            multiline
+            rows={5}
+            className="space-y-1.5 [&_textarea]:resize-none [&_textarea]:text-sm"
+          />
 
           {/* CTA */}
           {config.cta ? (

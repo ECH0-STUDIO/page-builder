@@ -13,7 +13,9 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { plainText } from '@/i18n/locale'
+import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
+import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
 import type { QRCodeConfig } from '../types'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
@@ -36,6 +38,8 @@ import { toast } from 'sonner'
 
 export function QRCodePreview({ config }: { config: QRCodeConfig }) {
   const { t } = useTranslation()
+  const { contentLocale, primaryLocale } = useEditorLocale()
+  const label = readEditorLocaleText(config.label, contentLocale, primaryLocale)
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3 flex flex-col items-center gap-2">
       <div className="size-12 rounded-md bg-muted/60 grid grid-cols-3 grid-rows-3 gap-0.5 p-1">
@@ -43,7 +47,7 @@ export function QRCodePreview({ config }: { config: QRCodeConfig }) {
           <div key={i} className={cn('rounded-[1px]', [0, 2, 6, 8].includes(i) ? 'bg-foreground/70' : i === 4 ? 'bg-foreground/40' : 'bg-foreground/20')} />
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground truncate max-w-full">{plainText(config.label) || t('qrCodeBlock.qrCode')}</p>
+      <p className="text-[10px] text-muted-foreground truncate max-w-full">{label || t('qrCodeBlock.qrCode')}</p>
     </div>
   )
 }
@@ -167,15 +171,12 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
       <Separator />
 
       {/* Label */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.label')}</Label>
-        <Input
-          value={plainText(config.label)}
-          onChange={e => set('label', e.target.value)}
-          placeholder={t('qrCodeBlock.scanToView')}
-          className="h-8 text-sm"
-        />
-      </div>
+      <LocalizedTextField
+        label={t('qrCodeBlock.label')}
+        value={config.label}
+        onChange={v => set('label', v)}
+        placeholder={t('qrCodeBlock.scanToView')}
+      />
 
       <Separator />
 
