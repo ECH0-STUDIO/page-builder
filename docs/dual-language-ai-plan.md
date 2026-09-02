@@ -120,31 +120,14 @@ Implementation is a **rebuild on Puck + current order/menu**, not a revive of de
 
 ### Phase 1 — Settings → Language + data foundation
 
-**1.1 Settings UI**
+**Status: in progress (branch `cursor/dual-language-ai-ffbe`)**
 
-- New **Language** settings page (product settings).
-- Fields: `dual_language_enabled` (default false), `primary_locale` (`vi` \| `en`, default `vi`).
-- Enable → progress UI → server setup job → done.
-- Disable → hide dual switches; primary-only UX; redirect secondary paths.
-
-**1.2 Schema**
-
-- Persist enable + primary on business / `publishing_settings` (prefer one clear home; migrate leftovers).
-- Ensure i18n-capable storage for:
-  - Block text fields
-  - Order promo / custom copy
-  - Menu item name/description, category name
-  - Variant group + option labels
-  - SEO title/description (and OG if per-locale)
-- Shared: layout, colors, images, prices, variant structure, block tree, hours numbers, payments.
-
-**1.3 Setup-on-enable job**
-
-- Copy primary → secondary baselines where secondary empty.
-- Flag business ready; unlock UI.
-- Simple indeterminate or % progress is enough.
-
-**Exit criteria:** Can toggle dual on/off; primary switchable; data round-trips; no public secondary URL yet required if Phase 2 bundles routing — prefer routing in same epic before AI.
+- [x] Migration `051_dual_language.sql` (`dual_language_enabled`, setup status, variant i18n)
+- [x] `Settings → Store Language` page (`/dashboard/settings/language`)
+- [x] Enable/disable dual + primary locale + setup backfill job
+- [x] Locale helpers (`store-locale.ts`, `localized-content.ts`)
+- [ ] Puck/order/menu editor toggles (Phase 2)
+- [ ] Live `/en` / `/vi` routing (Phase 2)
 
 ### Phase 2 — Editors + live routing
 

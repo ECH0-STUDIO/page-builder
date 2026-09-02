@@ -355,6 +355,7 @@ export interface Database {
           id: string
           group_id: string
           label: string
+          label_i18n: Json | null
           price_delta: number
           sort_order: number
         }
@@ -362,6 +363,7 @@ export interface Database {
           id?: string
           group_id: string
           label: string
+          label_i18n?: Json | null
           price_delta?: number
           sort_order?: number
         }
@@ -369,6 +371,7 @@ export interface Database {
           id?: string
           group_id?: string
           label?: string
+          label_i18n?: Json | null
           price_delta?: number
           sort_order?: number
         }
@@ -520,6 +523,8 @@ export interface Database {
           has_unpublished_changes: boolean | null
           enabled_locales: string[] | null
           seo_i18n: Json | null
+          dual_language_enabled: boolean
+          dual_language_setup_status: string
         }
         Insert: {
           id?: string
@@ -547,6 +552,8 @@ export interface Database {
           has_unpublished_changes?: boolean | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
+          dual_language_enabled?: boolean
+          dual_language_setup_status?: string
         }
         Update: {
           id?: string
@@ -574,6 +581,8 @@ export interface Database {
           has_unpublished_changes?: boolean | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
+          dual_language_enabled?: boolean
+          dual_language_setup_status?: string
         }
         Relationships: [
           
@@ -701,6 +710,7 @@ export interface Database {
           id: string
           item_id: string
           name: string
+          name_i18n: Json | null
           required: boolean
           sort_order: number
           allow_multiple: boolean
@@ -709,6 +719,7 @@ export interface Database {
           id?: string
           item_id: string
           name: string
+          name_i18n?: Json | null
           required?: boolean
           sort_order?: number
           allow_multiple?: boolean
@@ -717,6 +728,7 @@ export interface Database {
           id?: string
           item_id?: string
           name?: string
+          name_i18n?: Json | null
           required?: boolean
           sort_order?: number
           allow_multiple?: boolean

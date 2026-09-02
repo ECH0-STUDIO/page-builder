@@ -609,6 +609,7 @@
       "security": "Security",
       "team": "Team Management",
       "localization": "Localization",
+      "storeLanguage": "Store Language",
       "credits": "Billing & Credits"
     },
     "security": {
@@ -664,6 +665,25 @@
       "save": "Save Preferences",
       "toastUpdated": "Preferences updated",
       "toastFailed": "Failed to update preferences"
+    },
+    "storeLanguage": {
+      "title": "Store language",
+      "description": "Choose your storefront primary language and optionally enable Vietnamese + English content.",
+      "dualToggle": "Enable dual language (Vietnamese + English)",
+      "dualToggleHint": "When off, your live site uses one language only. When on, you can edit secondary text in the page builder, order page, and menu.",
+      "primaryLabel": "Primary language",
+      "primaryHint": "Used for your main URL, SEO, and default content. Switching primary only changes URLs — your content is kept.",
+      "vietnamese": "Tiếng Việt",
+      "english": "English",
+      "savePrimary": "Save primary language",
+      "primarySaved": "Primary language updated",
+      "dualEnabled": "Dual language is ready",
+      "dualDisabled": "Dual language turned off",
+      "setupProgress": "Setting up languages…",
+      "urlsTitle": "Live URLs",
+      "primaryUrl": "Primary: yourstore.com/{slug}",
+      "secondaryUrl": "Secondary: yourstore.com/{slug}{{path}}",
+      "secondaryEditHint": "Secondary pages mirror layout from primary — only text can differ."
     }
   },
   "heroBlock": {
