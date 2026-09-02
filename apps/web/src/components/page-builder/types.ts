@@ -465,6 +465,11 @@ export interface PublishingSettings {
   favicon_url: string | null
   apple_touch_icon_url: string | null
   language: string
+  /** When true, VI + EN storefront content is available */
+  dual_language_enabled?: boolean
+  dual_language_setup_status?: 'idle' | 'running' | 'ready' | 'failed'
+  enabled_locales?: string[]
+  seo_i18n?: Record<string, { title?: string; description?: string }> | null
   gsc_verification: string | null
   has_unpublished_changes: boolean | null
   google_analytics_id?: string | null
