@@ -47,7 +47,7 @@ export function NavbarRender({
   editorLocaleMode = false,
   languageSwitcher,
 }: NavbarRenderProps) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
@@ -149,7 +149,7 @@ export function NavbarRender({
             >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+              const label = resolveContentText(link.label, activeLocale, activePrimary)
               const sharedProps = {
                 style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
                 onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -241,7 +241,7 @@ export function NavbarRender({
           >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+              const label = resolveContentText(link.label, activeLocale, activePrimary)
               const style: React.CSSProperties = {
                 ...linkStyle,
                 display: 'block',

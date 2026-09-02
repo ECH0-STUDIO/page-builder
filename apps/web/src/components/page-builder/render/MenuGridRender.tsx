@@ -597,14 +597,14 @@ function MenuGridInner({
   onActiveCategoryChange?: (id: string) => void
   editorLocaleMode?: boolean
 }) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
   )
   const config = resolveMenuGridConfig(rawConfig)
-  const sectionHeading = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
-  const sectionDescription = resolveContentText(config.description, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const sectionHeading = resolveContentText(config.heading, activeLocale, activePrimary)
+  const sectionDescription = resolveContentText(config.description, activeLocale, activePrimary)
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)

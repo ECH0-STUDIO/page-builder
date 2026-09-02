@@ -1,11 +1,14 @@
 import type { SupportedLocale } from '@/i18n/locale'
 import {
+  getCustomizedFlags,
+  isLocaleCustomized,
   otherStoreLocale,
   readLocaleText,
+  type LocalizedMap,
   type LocalizedString,
 } from '@/i18n/localized-content'
 
-/** Build a locale map from stored value without copying primary into secondary. */
+/** Build string locale map from stored value (preserves _customized separately). */
 export function baseLocaleMap(
   value: LocalizedString,
   primary: SupportedLocale,
@@ -22,56 +25,42 @@ export function baseLocaleMap(
   return { [primary]: text, [secondary]: '' }
 }
 
-function readPrimaryEditorText(
-  value: LocalizedString,
-  primary: SupportedLocale,
-): string {
-  if (value == null) return ''
-  if (typeof value === 'string') return value
-  const direct = (value as Record<string, unknown>)[primary]
-  return typeof direct === 'string' ? direct : ''
-}
-
-/**
- * Read text in the editor — no cross-locale fallback.
- * Secondary tab shows empty until secondary text is entered.
- * Legacy dual-language setup copied primary into secondary; treat identical copies as untranslated.
- */
+/** Read text in the editor — falls back to primary until this locale is customized. */
 export function readEditorLocaleText(
   value: LocalizedString,
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  if (value == null) return ''
-  if (typeof value === 'string') {
-    return locale === primary ? value : ''
-  }
-  const direct = (value as Record<string, unknown>)[locale]
-  const text = typeof direct === 'string' ? direct : ''
-  if (locale !== primary && text) {
-    const primaryText = readPrimaryEditorText(value, primary)
-    if (primaryText && text === primaryText) return ''
-  }
-  return text
+  return readLocaleText(value, locale, primary)
 }
 
-/** Write one locale slice; preserves other locales in the map. */
+/**
+ * Write one locale slice. Marks the locale as customized so it no longer inherits primary.
+ * Other customized locales are never overwritten.
+ */
 export function writeLocaleText(
   value: LocalizedString,
   locale: SupportedLocale,
   text: string,
   primary: SupportedLocale,
-): Record<string, string> {
+): LocalizedString {
   const secondary = otherStoreLocale(primary)
-  const base = baseLocaleMap(value, primary, secondary)
-  const next = { ...base, [locale]: text }
-  // Drop legacy seeded duplicate when primary text changes (old setup copied vi → en).
-  if (locale === primary) {
-    const previousPrimary = base[primary] ?? ''
-    if (next[secondary] === previousPrimary) {
-      next[secondary] = ''
-    }
+  const existingRecord =
+    value != null && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null
+
+  const stringEntries = baseLocaleMap(value, primary, secondary)
+  const flags = getCustomizedFlags(existingRecord ?? stringEntries)
+
+  const next: LocalizedMap = { ...stringEntries, [locale]: text }
+  next._customized = { ...flags, [locale]: true }
+
+  // Primary edit: drop stale legacy duplicate in secondary when secondary is still untranslated.
+  if (locale === primary && !isLocaleCustomized(value, secondary, primary)) {
+    next[secondary] = ''
   }
+
   return next
 }
 
@@ -83,18 +72,11 @@ export function primaryPlainText(
   return readLocaleText(value, primary, primary)
 }
 
-/**
- * Resolve localized content for display.
- * Editor mode: strict per-locale (no fallback). Live/preview: primary fallback.
- */
+/** Resolve localized content for display (editor and live use the same fallback rules). */
 export function resolveContentText(
   value: LocalizedString,
   locale: SupportedLocale,
   primary: SupportedLocale,
-  options?: { editorMode?: boolean },
 ): string {
-  if (options?.editorMode) {
-    return readEditorLocaleText(value, locale, primary)
-  }
   return readLocaleText(value, locale, primary)
 }

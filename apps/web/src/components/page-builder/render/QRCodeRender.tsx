@@ -35,12 +35,12 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
 }
 
 export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale, primaryLocale = 'vi', editorLocaleMode = false }: QRCodeRenderProps) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
   )
-  const label = resolveContentText(config.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const label = resolveContentText(config.label, activeLocale, activePrimary)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'
