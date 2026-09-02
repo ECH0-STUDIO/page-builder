@@ -15,19 +15,16 @@ export function useRenderLocale(
 ): {
   activeLocale: SupportedLocale
   activePrimary: SupportedLocale
-  strictEditorLocale: boolean
 } {
   const editorLocale = useEditorLocale()
   if (editorLocaleMode) {
     return {
       activeLocale: editorLocale.contentLocale,
       activePrimary: editorLocale.primaryLocale,
-      strictEditorLocale: true,
     }
   }
   return {
     activeLocale: toSupportedLocale(locale),
     activePrimary: primaryLocale ?? 'vi',
-    strictEditorLocale: false,
   }
 }

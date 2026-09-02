@@ -10,7 +10,7 @@ import { readEditorLocaleText, writeLocaleText } from '@/i18n/editor-locale-util
 interface LocalizedFieldProps {
   label?: string
   value: LocalizedString
-  onChange: (value: Record<string, string>) => void
+  onChange: (value: LocalizedString) => void
   placeholder?: string
   multiline?: boolean
   rows?: number

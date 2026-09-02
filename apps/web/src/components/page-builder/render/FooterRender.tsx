@@ -22,13 +22,13 @@ export function FooterRender({
   primaryLocale?: SupportedLocale
   editorLocaleMode?: boolean
 }) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
   )
   const currentYear = new Date().getFullYear()
-  const copyright = resolveContentText(config.copyright_text, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const copyright = resolveContentText(config.copyright_text, activeLocale, activePrimary)
   const bgImage = config.background_image?.trim()
   const spacing = footerSpacingFromSize(inferFooterSpacingSize(config))
   const showLogo = Boolean(config.show_logo && logoUrl)

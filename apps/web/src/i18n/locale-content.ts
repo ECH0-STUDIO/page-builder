@@ -1,5 +1,9 @@
 /** Legacy block config values may still be locale maps in the database. */
-export type LegacyLocalized = string | Record<string, string | boolean | undefined> | null | undefined
+export type LegacyLocalized =
+  | string
+  | Record<string, string | boolean | Record<string, boolean> | undefined>
+  | null
+  | undefined
 
 /** Read a plain string from legacy string or locale-map JSON. */
 export function plainText(value: LegacyLocalized): string {

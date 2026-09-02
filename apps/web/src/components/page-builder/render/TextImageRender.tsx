@@ -24,7 +24,7 @@ import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 
-function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale; editorLocaleMode?: boolean }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -34,7 +34,7 @@ function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: {
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {resolveContentText(cta.label, locale, primaryLocale, { editorMode: editorLocaleMode })}
+      {resolveContentText(cta.label, locale, primaryLocale)}
     </a>
   )
 }
@@ -83,13 +83,13 @@ export function TextImageRender({
   brandColor = '#E85D26',
   defaultTextColor = '#111111',
 }: TextImageRenderProps & { brandColor?: string; defaultTextColor?: string }) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
   )
-  const heading = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
-  const body = resolveContentText(config.body, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const heading = resolveContentText(config.heading, activeLocale, activePrimary)
+  const body = resolveContentText(config.body, activeLocale, activePrimary)
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -188,7 +188,7 @@ export function TextImageRender({
       )}
       {config.cta && (
         <div style={{ display: 'flex', justifyContent: justify }}>
-          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} editorLocaleMode={strictEditorLocale} />
+          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} />
         </div>
       )}
     </div>

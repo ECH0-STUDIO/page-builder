@@ -44,7 +44,7 @@ function justifyForAlign(align: ContentAlign): React.CSSProperties['justifyConte
   return 'center'
 }
 
-function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale; editorLocaleMode?: boolean }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -54,7 +54,7 @@ function CtaLink({ cta, brandColor, locale, primaryLocale, editorLocaleMode }: {
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {resolveContentText(cta.label, locale, primaryLocale, { editorMode: editorLocaleMode })}
+      {resolveContentText(cta.label, locale, primaryLocale)}
     </a>
   )
 }
@@ -65,14 +65,12 @@ function CtaRow({
   locale,
   primaryLocale,
   align,
-  editorLocaleMode,
 }: {
   config: HeroConfig
   brandColor: string
   locale: SupportedLocale
   primaryLocale: SupportedLocale
   align: ContentAlign
-  editorLocaleMode?: boolean
 }) {
   if (!config.cta && !config.cta_secondary) return null
   return (
@@ -86,8 +84,8 @@ function CtaRow({
         justifyContent: justifyForAlign(align),
       }}
     >
-      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />}
-      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />}
+      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
+      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
     </div>
   )
 }
@@ -114,7 +112,7 @@ export function HeroRender({
   /** Outer padding — applied inside render so backgrounds stay full-bleed */
   contentInset?: BlockContentInset
 }) {
-  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+  const { activeLocale, activePrimary } = useRenderLocale(
     editorLocaleMode,
     locale,
     primaryLocale,
@@ -129,9 +127,9 @@ export function HeroRender({
   const mobileLayout = isForcedMobileLayout(layout)
   const align = resolveAlign(config)
 
-  const headingText = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
-  const heading = headingText || (strictEditorLocale ? '' : businessName || 'Welcome')
-  const body = resolveContentText(config.body, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const headingText = resolveContentText(config.heading, activeLocale, activePrimary)
+  const heading = headingText || (editorLocaleMode ? '' : businessName || 'Welcome')
+  const body = resolveContentText(config.body, activeLocale, activePrimary)
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const typography = getTypography(mobileLayout)
   const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
@@ -170,7 +168,7 @@ export function HeroRender({
           {body}
         </p>
       )}
-      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} editorLocaleMode={strictEditorLocale} />
+      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} />
     </div>
   )
 
@@ -320,7 +318,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} editorLocaleMode={strictEditorLocale} />
+          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} />
         </div>
       </div>
     </section>

@@ -6,7 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { SupportedLocale } from '@/i18n/locale'
 import { baseLocaleMap } from '@/i18n/editor-locale-utils'
-import { otherStoreLocale, readLocaleText } from '@/i18n/localized-content'
+import { otherStoreLocale, readLocaleText, type LocalizedMap } from '@/i18n/localized-content'
 import type { BlockType } from '@/components/page-builder/types'
 
 export type DualLanguageSetupStep =
@@ -27,8 +27,14 @@ function localizeField(
   value: unknown,
   primary: SupportedLocale,
   secondary: SupportedLocale,
-): Record<string, string> {
-  return baseLocaleMap(value as string | Record<string, string> | null, primary, secondary)
+): LocalizedMap {
+  const map = baseLocaleMap(value as string | Record<string, string> | null, primary, secondary)
+  const primaryText = map[primary] ?? ''
+  return {
+    ...map,
+    [secondary]: '',
+    _customized: primaryText ? { [primary]: true } : {},
+  }
 }
 
 function migrateCtaLabel(
