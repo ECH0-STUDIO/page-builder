@@ -36,6 +36,7 @@ import {
   PageBuilderModeSwitcher,
   type BuilderPageMode,
 } from '@/components/page-builder/PageBuilderModeSwitcher'
+import { LocaleEditBar } from '@/components/i18n/LocaleEditBar'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
@@ -284,6 +285,7 @@ export function PuckCustomHeader({
     <header className="eatery-puck-header flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-x-auto">
       <PuckHeaderBack />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
+      <LocaleEditBar />
       <PuckSidebarToggles />
       <div className="flex-1 min-w-0" />
       <div className="flex items-center gap-1 shrink-0 justify-end">{chrome}</div>

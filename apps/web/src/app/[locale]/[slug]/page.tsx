@@ -1,11 +1,21 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-import { languageConfigFromPublishing } from '@/lib/store-routing'
+import { guardPrefixedStoreRoute, runStoreLocaleGuard } from '@/lib/store-locale-guard'
+import { storePublicPathForLocale } from '@/lib/store-routing'
 import { StoreLandingPage } from '@/components/store/StoreLandingPage'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>
+}): Promise<Metadata> {
+  const { locale, slug } = await params
+  const guard = await guardPrefixedStoreRoute(locale, slug, 'landing')
+  if ('redirect' in guard) {
+    return { title: slug }
+  }
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
@@ -26,34 +36,42 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq('business_id', business.id)
     .single()
 
-  const languageConfig = languageConfigFromPublishing(pub)
+  const seoI18n = pub?.seo_i18n as Record<string, { title?: string; description?: string }> | null
+  const localeSeo = seoI18n?.[guard.pathLocale]
 
   return buildStoreMetadata({
     slug,
     businessName: business.name,
     pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
-    languageConfig,
-    activeLocale: languageConfig.primary_locale,
+    title: localeSeo?.title,
+    description: localeSeo?.description,
+    languageConfig: guard.languageConfig,
+    activeLocale: guard.pathLocale,
   })
 }
 
-export default async function SlugPage({
+export default async function LocaleSlugPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ locale: string; slug: string }>
   searchParams: Promise<{ table?: string }>
 }) {
-  const { slug } = await params
+  const { locale, slug } = await params
   const sp = await searchParams
+  const guard = await runStoreLocaleGuard(locale, slug, 'landing')
+
   const tableParam = (sp.table ?? '').trim()
   const tableRedirect = tableParam
-    ? `/${slug}/order?table=${encodeURIComponent(tableParam)}`
+    ? storePublicPathForLocale(guard.slug, guard.languageConfig, 'order') +
+      `?table=${encodeURIComponent(tableParam)}`
     : null
 
   return (
     <StoreLandingPage
-      slug={slug}
+      slug={guard.slug}
+      pathLocale={guard.pathLocale}
+      languageConfig={guard.languageConfig}
       tableRedirect={tableRedirect}
     />
   )

@@ -1,11 +1,18 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-import { languageConfigFromPublishing } from '@/lib/store-routing'
+import { guardPrefixedStoreRoute, runStoreLocaleGuard } from '@/lib/store-locale-guard'
 import { StoreOrderPage } from '@/components/store/StoreOrderPage'
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>
+}): Promise<Metadata> {
+  const { locale, slug } = await params
+  const guard = await guardPrefixedStoreRoute(locale, slug, 'order')
+  if ('redirect' in guard) return { title: slug }
+
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
@@ -26,8 +33,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq('business_id', business.id)
     .single()
 
-  const languageConfig = languageConfigFromPublishing(pub)
-
   return buildStoreMetadata({
     slug,
     businessName: business.name,
@@ -35,12 +40,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${business.name} — Order`,
     description: `Order from ${business.name}`,
     pathSuffix: '/order',
-    languageConfig,
-    activeLocale: languageConfig.primary_locale,
+    languageConfig: guard.languageConfig,
+    activeLocale: guard.pathLocale,
   })
 }
 
-export default async function OrderPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  return <StoreOrderPage slug={slug} />
+export default async function LocaleOrderPage({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>
+}) {
+  const { locale, slug } = await params
+  const guard = await runStoreLocaleGuard(locale, slug, 'order')
+
+  return (
+    <StoreOrderPage
+      slug={guard.slug}
+      pathLocale={guard.pathLocale}
+      languageConfig={guard.languageConfig}
+    />
+  )
 }

@@ -32,6 +32,11 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { EditorLocaleProvider, useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { MenuLocaleTabs } from '@/components/i18n/LocaleEditBar'
+import { menuCategoryName, menuItemDescription, menuItemName } from '@/i18n/menu-content'
+import type { StoreLanguageConfig } from '@/i18n/store-locale'
+import { parseStoreLanguageConfig } from '@/i18n/store-locale'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -321,8 +326,15 @@ function CategoryDialog({
   initial?: MenuCategory
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(initial?.name ?? '')
+  const { contentLocale, primaryLocale } = useEditorLocale()
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setName(initial ? menuCategoryName(initial, contentLocale, primaryLocale) : '')
+    }
+  }, [open, initial, contentLocale, primaryLocale])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -385,8 +397,9 @@ function ItemDialog({
   initial?: MenuItem
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState(initial?.name ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
+  const { contentLocale, primaryLocale } = useEditorLocale()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
@@ -402,8 +415,8 @@ function ItemDialog({
 
   useEffect(() => {
     if (!open) return
-    setName(initial?.name ?? '')
-    setDescription(initial?.description ?? '')
+    setName(initial ? menuItemName(initial, contentLocale, primaryLocale) : '')
+    setDescription(initial ? menuItemDescription(initial, contentLocale, primaryLocale) : '')
     setPrice(initial?.price?.toString() ?? '')
     const rawTags = initial?.tags ?? []
     setTags(rawTags.filter(tag => {
@@ -415,7 +428,7 @@ function ItemDialog({
     setIsFeatured(Boolean(initial?.is_featured))
     setImageUrl(initial?.image_url ?? '')
     setActiveTab('details')
-  }, [open, initial])
+  }, [open, initial, contentLocale, primaryLocale])
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -630,9 +643,20 @@ interface MenuBuilderProps {
   businessId: string
   initialCategories: MenuCategory[]
   initialItems: MenuItem[]
+  storeLanguage?: StoreLanguageConfig
 }
 
-export function MenuBuilder({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
+export function MenuBuilder(props: MenuBuilderProps) {
+  const storeLanguage = props.storeLanguage ?? parseStoreLanguageConfig({ language: 'vi' })
+  return (
+    <EditorLocaleProvider storeLanguage={storeLanguage} lockSecondary={false}>
+      <MenuBuilderInner {...props} />
+    </EditorLocaleProvider>
+  )
+}
+
+function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
+  const { contentLocale, primaryLocale } = useEditorLocale()
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
   const { t } = useTranslation()
@@ -697,7 +721,11 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
   // ── Category handlers ──
   async function handleSaveCategory(name: string) {
     if (catDialog.editing) {
-      const result = await updateCategoryAction(catDialog.editing.id, { name })
+      const result = await updateCategoryAction(catDialog.editing.id, {
+        name,
+        locale: contentLocale,
+        primary_locale: primaryLocale,
+      })
       if (!result.success) { toast.error(result.error); return }
       setCategories(prev => prev.map(c => c.id === catDialog.editing!.id ? { ...c, name } : c))
       toast.success(t('menuBuilder.categoryUpdated'))
@@ -748,6 +776,8 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         is_vegetarian: itemData.is_vegetarian,
         spicy_level: itemData.spicy_level,
         is_featured: itemData.is_featured,
+        locale: contentLocale,
+        primary_locale: primaryLocale,
       })
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => prev.map(i =>
@@ -945,14 +975,15 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         {/* Sticky Headers Wrapper */}
         <div className="sticky top-0 z-20 flex flex-col bg-background/95 backdrop-blur shadow-sm">
           {/* CSV import/export bar */}
-          <div className="px-6 py-3 border-b border-border bg-muted/20">
+          <div className="px-6 py-3 border-b border-border bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+            <MenuLocaleTabs />
             {!isStaff && (<MenuCsvActions businessId={businessId} categories={categories} items={items} onRefresh={handleCsvRefresh} />)}
           </div>
 
           {selectedCat && (
             <div className="border-b border-border px-6 py-4 flex items-center justify-between gap-3 bg-background">
               <div className="min-w-0 shrink">
-                <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
+                <h2 className="font-semibold text-base truncate">{menuCategoryName(selectedCat, contentLocale, primaryLocale)}</h2>
                 <p className="text-xs text-muted-foreground">
                   {visibleItems.length} {t('menuBuilder.items')}
                   {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} {t('menuBuilder.selected')}</span>}

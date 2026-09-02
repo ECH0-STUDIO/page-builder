@@ -4,24 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import { I18nProvider } from '@/i18n/I18nProvider'
 import { getDictionary } from '@/i18n/getDictionary'
 import { resolveLiveLocale } from '@/i18n/locale'
-import { languageConfigFromPublishing } from '@/lib/store-routing'
 
 /**
  * Public live store layout — light mode only, with i18n for menu/cart strings.
- * One locale at a time: visitor cookie, then store default, then vi.
+ * Prefixed routes (/en/{slug}) use the path locale; unprefixed routes use primary.
  */
-export default async function SlugLayout({
+export default async function LocaleSlugLayout({
   children,
   params,
 }: {
   children: React.ReactNode
-  params: Promise<{ slug: string }>
+  params: Promise<{ locale: string; slug: string }>
 }) {
-  const { slug } = await params
+  const { locale, slug } = await params
   const cookieStore = await cookies()
-  void cookieStore.get('NEXT_LOCALE')?.value
 
-  let storeDefaultLocale: string | null = null
+  let storePrimary: string | null = null
   let dualEnabled = false
   try {
     const supabase = await createClient()
@@ -37,19 +35,23 @@ export default async function SlugLayout({
         .select('language, dual_language_enabled, dual_language_setup_status, enabled_locales')
         .eq('business_id', business.id)
         .single()
-      storeDefaultLocale = pub?.language ?? null
+      storePrimary = pub?.language ?? null
       dualEnabled = Boolean(pub?.dual_language_enabled)
     }
   } catch {
-    // Slug may not exist yet during static generation — fall back to cookie only
+    // fall through
   }
 
-  const locale = resolveLiveLocale({
-    pathLocale: null,
-    storePrimary: storeDefaultLocale,
+  const pathLocale =
+    locale === 'en' || locale === 'vi' ? locale : null
+
+  const resolved = resolveLiveLocale({
+    pathLocale,
+    storePrimary,
     dualEnabled,
   })
-  const dictionary = await getDictionary(locale)
+
+  const dictionary = await getDictionary(resolved)
 
   return (
     <I18nProvider dictionary={dictionary}>

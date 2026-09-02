@@ -22,7 +22,7 @@ import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 
-function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -32,7 +32,7 @@ function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: stri
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {pickLocale(cta.label, locale)}
+      {pickLocale(cta.label, locale, primaryLocale)}
     </a>
   )
 }
@@ -67,6 +67,7 @@ interface TextImageRenderProps {
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
   locale?: string
+  primaryLocale?: SupportedLocale
 }
 
 export function TextImageRender({
@@ -74,12 +75,13 @@ export function TextImageRender({
   isMobilePreview,
   previewLayout,
   locale,
+  primaryLocale = 'vi',
   brandColor = '#E85D26',
   defaultTextColor = '#111111',
 }: TextImageRenderProps & { brandColor?: string; defaultTextColor?: string }) {
   const activeLocale = toSupportedLocale(locale)
-  const heading = pickLocale(config.heading, activeLocale)
-  const body = pickLocale(config.body, activeLocale)
+  const heading = pickLocale(config.heading, activeLocale, primaryLocale)
+  const body = pickLocale(config.body, activeLocale, primaryLocale)
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -178,7 +180,7 @@ export function TextImageRender({
       )}
       {config.cta && (
         <div style={{ display: 'flex', justifyContent: justify }}>
-          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} />
+          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} />
         </div>
       )}
     </div>

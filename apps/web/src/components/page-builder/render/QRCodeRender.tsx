@@ -22,6 +22,7 @@ interface QRCodeRenderProps {
   /** Optional translated label for download button */
   downloadLabel?: string
   locale?: string
+  primaryLocale?: SupportedLocale
 }
 
 const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
@@ -30,9 +31,9 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
   lg: 280,
 }
 
-export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale }: QRCodeRenderProps) {
+export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale, primaryLocale = 'vi' }: QRCodeRenderProps) {
   const activeLocale = toSupportedLocale(locale)
-  const label = pickLocale(config.label, activeLocale)
+  const label = pickLocale(config.label, activeLocale, primaryLocale)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'

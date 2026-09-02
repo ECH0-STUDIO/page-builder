@@ -42,7 +42,7 @@ function justifyForAlign(align: ContentAlign): React.CSSProperties['justifyConte
   return 'center'
 }
 
-function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale }) {
+function CtaLink({ cta, brandColor, locale, primaryLocale }: { cta: CtaButton; brandColor: string; locale: SupportedLocale; primaryLocale: SupportedLocale }) {
   const href = ctaHref(cta)
   const newTab = ctaOpensNewTab(cta)
   return (
@@ -52,7 +52,7 @@ function CtaLink({ cta, brandColor, locale }: { cta: CtaButton; brandColor: stri
       style={getCtaInlineStyle(cta, brandColor)}
       {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      {pickLocale(cta.label, locale)}
+      {pickLocale(cta.label, locale, primaryLocale)}
     </a>
   )
 }
@@ -61,11 +61,13 @@ function CtaRow({
   config,
   brandColor,
   locale,
+  primaryLocale,
   align,
 }: {
   config: HeroConfig
   brandColor: string
   locale: SupportedLocale
+  primaryLocale: SupportedLocale
   align: ContentAlign
 }) {
   if (!config.cta && !config.cta_secondary) return null
@@ -80,8 +82,8 @@ function CtaRow({
         justifyContent: justifyForAlign(align),
       }}
     >
-      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} />}
-      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} />}
+      {config.cta && <CtaLink cta={config.cta} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
+      {config.cta_secondary && <CtaLink cta={config.cta_secondary} brandColor={brandColor} locale={locale} primaryLocale={primaryLocale} />}
     </div>
   )
 }
@@ -92,6 +94,7 @@ export function HeroRender({
   isMobilePreview,
   previewLayout,
   locale,
+  primaryLocale = 'vi',
   brandColor = '#E85D26',
   contentInset,
 }: {
@@ -100,6 +103,7 @@ export function HeroRender({
   isMobilePreview?: boolean
   previewLayout?: PreviewLayout
   locale?: string
+  primaryLocale?: SupportedLocale
   brandColor?: string
   /** Outer padding — applied inside render so backgrounds stay full-bleed */
   contentInset?: BlockContentInset
@@ -115,8 +119,8 @@ export function HeroRender({
   const mobileLayout = isForcedMobileLayout(layout)
   const align = resolveAlign(config)
 
-  const heading = pickLocale(config.heading, activeLocale) || businessName || 'Welcome'
-  const body = pickLocale(config.body, activeLocale)
+  const heading = pickLocale(config.heading, activeLocale, primaryLocale) || businessName || 'Welcome'
+  const body = pickLocale(config.body, activeLocale, primaryLocale)
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const typography = getTypography(mobileLayout)
   const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
@@ -155,7 +159,7 @@ export function HeroRender({
           {body}
         </p>
       )}
-      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} align={align} />
+      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} />
     </div>
   )
 
@@ -305,7 +309,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} align={align} />
+          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} />
         </div>
       </div>
     </section>
