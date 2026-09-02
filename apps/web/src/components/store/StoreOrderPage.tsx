@@ -13,7 +13,7 @@ import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale, type SupportedLocale } from '@/i18n/locale'
 import { languageConfigFromPublishing } from '@/lib/store-routing'
 import type { StoreLanguageConfig } from '@/i18n/store-locale'
-import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import { normalizeMenuCategories, normalizeMenuItems, normalizeVariantGroups, normalizeVariantOptions } from '@/i18n/menu-content'
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
 import { OrderPageLive } from '@/components/order-page/OrderPageLive'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
@@ -125,14 +125,14 @@ export async function StoreOrderPage({
     for (let i = 0; i < itemIds.length; i += 50) {
       const chunk = itemIds.slice(i, i + 50)
       const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
-      if (vGroups) variantGroups.push(...vGroups)
+      if (vGroups) variantGroups.push(...normalizeVariantGroups(vGroups as Record<string, unknown>[]))
     }
     if (variantGroups.length > 0) {
       const groupIds = variantGroups.map((g: VariantGroup) => g.id)
       for (let i = 0; i < groupIds.length; i += 50) {
         const chunk = groupIds.slice(i, i + 50)
         const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
-        if (vOpts) variantOptions.push(...vOpts)
+        if (vOpts) variantOptions.push(...normalizeVariantOptions(vOpts as Record<string, unknown>[]))
       }
     }
   }

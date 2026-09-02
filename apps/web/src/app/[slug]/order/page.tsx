@@ -7,7 +7,8 @@ import { StoreOrderPage } from '@/components/store/StoreOrderPage'
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createClient()
-  const db = supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
 
   const { data: business } = await db
     .from('businesses')

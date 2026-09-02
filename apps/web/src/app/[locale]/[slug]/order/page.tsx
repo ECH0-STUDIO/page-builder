@@ -14,7 +14,10 @@ export async function generateMetadata({
   if ('redirect' in guard) return { title: slug }
 
   const supabase = await createClient()
-  const { data: business } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+
+  const { data: business } = await db
     .from('businesses')
     .select('id, name')
     .eq('slug', slug)
@@ -22,7 +25,7 @@ export async function generateMetadata({
 
   if (!business) return { title: 'Not Found' }
 
-  const { data: pub } = await supabase
+  const { data: pub } = await db
     .from('publishing_settings')
     .select(
       'seo_title, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language, dual_language_enabled, dual_language_setup_status, enabled_locales',

@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
+import type { Json } from '@/types/database'
+import { normalizeMenuCategory, normalizeMenuItem, normalizeVariantGroups, normalizeVariantOptions } from '@/i18n/menu-content'
 import { writeLocaleText, primaryPlainText } from '@/i18n/editor-locale-utils'
 import type { SupportedLocale } from '@/i18n/locale'
 import { toSupportedLocale } from '@/i18n/locale'
@@ -13,7 +14,7 @@ export type MenuCategory = {
   id: string
   business_id: string
   name: string
-  name_i18n?: Record<string, string> | null
+  name_i18n?: Json | null
   sort_order: number
   visible: boolean
   created_at: string
@@ -25,9 +26,9 @@ export type MenuItem = {
   business_id: string
   category_id: string
   name: string
-  name_i18n?: Record<string, string> | null
+  name_i18n?: Json | null
   description: string | null
-  description_i18n?: Record<string, string> | null
+  description_i18n?: Json | null
   price: number
   image_url: string | null
   available: boolean
@@ -47,7 +48,7 @@ export type VariantGroup = {
   id: string
   item_id: string
   name: string
-  name_i18n?: Record<string, string> | null
+  name_i18n?: Json | null
   required: boolean
   sort_order: number
   allow_multiple: boolean
@@ -57,7 +58,7 @@ export type VariantOption = {
   id: string
   group_id: string
   label: string
-  label_i18n?: Record<string, string> | null
+  label_i18n?: Json | null
   price_delta: number
   sort_order: number
 }
@@ -161,7 +162,7 @@ export async function updateCategoryAction(
   id: string,
   update: {
     name?: string
-    name_i18n?: Record<string, string> | null
+    name_i18n?: Json | null
     visible?: boolean
     sort_order?: number
     locale?: SupportedLocale
@@ -404,14 +405,18 @@ export async function getItemVariantsAction(itemId: string): Promise<{
 
   if (!groups?.length) return { groups: [], options: [] }
 
-  const groupIds = groups.map((g: VariantGroup) => g.id)
+  const normalizedGroups = normalizeVariantGroups(groups as Record<string, unknown>[])
+  const groupIds = normalizedGroups.map(g => g.id)
   const { data: options } = await db
     .from('menu_item_variant_options')
     .select('*')
     .in('group_id', groupIds)
     .order('sort_order', { ascending: true })
 
-  return { groups: groups ?? [], options: options ?? [] }
+  return {
+    groups: normalizedGroups,
+    options: normalizeVariantOptions((options ?? []) as Record<string, unknown>[]),
+  }
 }
 
 export async function addVariantGroupAction(

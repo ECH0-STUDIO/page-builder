@@ -2,6 +2,10 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 import type { SupportedLocale } from '@/i18n/locale'
 import { readLocaleText, type LocalizedString } from '@/i18n/localized-content'
 
+function asLocalized(value: unknown): LocalizedString {
+  return value as LocalizedString
+}
+
 export function normalizeMenuCategory(row: Record<string, unknown>): MenuCategory {
   return {
     ...(row as MenuCategory),
@@ -33,7 +37,7 @@ export function menuCategoryName(
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  return readLocaleText(cat.name_i18n ?? cat.name, locale, primary) || cat.name
+  return readLocaleText(asLocalized(cat.name_i18n ?? cat.name), locale, primary) || cat.name
 }
 
 export function menuItemName(
@@ -41,7 +45,7 @@ export function menuItemName(
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  return readLocaleText(item.name_i18n ?? item.name, locale, primary) || item.name
+  return readLocaleText(asLocalized(item.name_i18n ?? item.name), locale, primary) || item.name
 }
 
 export function menuItemDescription(
@@ -49,7 +53,7 @@ export function menuItemDescription(
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  const source: LocalizedString = item.description_i18n ?? item.description
+  const source = asLocalized(item.description_i18n ?? item.description)
   return readLocaleText(source, locale, primary)
 }
 
@@ -58,7 +62,7 @@ export function variantGroupName(
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  return readLocaleText(group.name_i18n ?? group.name, locale, primary) || group.name
+  return readLocaleText(asLocalized(group.name_i18n ?? group.name), locale, primary) || group.name
 }
 
 export function variantOptionLabel(
@@ -66,5 +70,27 @@ export function variantOptionLabel(
   locale: SupportedLocale,
   primary: SupportedLocale,
 ): string {
-  return readLocaleText(option.label_i18n ?? option.label, locale, primary) || option.label
+  return readLocaleText(asLocalized(option.label_i18n ?? option.label), locale, primary) || option.label
+}
+
+export function normalizeVariantGroup(row: Record<string, unknown>): VariantGroup {
+  return {
+    ...(row as VariantGroup),
+    name_i18n: (row.name_i18n as Record<string, string> | null) ?? null,
+  }
+}
+
+export function normalizeVariantOption(row: Record<string, unknown>): VariantOption {
+  return {
+    ...(row as VariantOption),
+    label_i18n: (row.label_i18n as Record<string, string> | null) ?? null,
+  }
+}
+
+export function normalizeVariantGroups(rows: Record<string, unknown>[]): VariantGroup[] {
+  return rows.map(normalizeVariantGroup)
+}
+
+export function normalizeVariantOptions(rows: Record<string, unknown>[]): VariantOption[] {
+  return rows.map(normalizeVariantOption)
 }

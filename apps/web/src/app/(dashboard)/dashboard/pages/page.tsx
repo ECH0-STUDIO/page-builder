@@ -7,7 +7,7 @@ import { OrderPageEditor } from '@/components/order-page/OrderPageEditor'
 import { getPageDataAction, getPublishingAction } from '@/app/actions/page-builder'
 import type { Metadata } from 'next'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
-import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import { normalizeMenuCategories, normalizeMenuItems, normalizeVariantGroups, normalizeVariantOptions } from '@/i18n/menu-content'
 import { resolvePublicStoreUrl } from '@/lib/site-urls'
 import { defaultThemeSettings } from '@/components/page-builder/types'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
@@ -59,11 +59,11 @@ export default async function PagesPage({
   if (items.length > 0) {
     const itemIds = items.map((i: MenuItem) => i.id)
     const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', itemIds).order('sort_order')
-    variantGroups = vGroups ?? []
+    variantGroups = normalizeVariantGroups((vGroups ?? []) as Record<string, unknown>[])
     if (variantGroups.length > 0) {
       const groupIds = variantGroups.map((g: VariantGroup) => g.id)
       const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', groupIds).order('sort_order')
-      variantOptions = vOpts ?? []
+      variantOptions = normalizeVariantOptions((vOpts ?? []) as Record<string, unknown>[])
     }
   }
 

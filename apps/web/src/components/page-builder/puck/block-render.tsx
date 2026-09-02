@@ -21,6 +21,7 @@ import { NavbarRender } from '../render/NavbarRender'
 import { FooterRender } from '../render/FooterRender'
 import type { Business } from '@/lib/business'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import type { SupportedLocale } from '@/i18n/locale'
 import { resolveThemeTokens } from '../theme-tokens'
 import { cn } from '@/lib/utils'
 
