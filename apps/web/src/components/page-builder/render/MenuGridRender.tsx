@@ -15,6 +15,7 @@ import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
 import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 import {
   menuCategoryName,
   menuItemDescription,
@@ -596,10 +597,14 @@ function MenuGridInner({
   onActiveCategoryChange?: (id: string) => void
   editorLocaleMode?: boolean
 }) {
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
   const config = resolveMenuGridConfig(rawConfig)
-  const activeLocale = toSupportedLocale(locale)
-  const sectionHeading = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
-  const sectionDescription = resolveContentText(config.description, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const sectionHeading = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const sectionDescription = resolveContentText(config.description, activeLocale, activePrimary, { editorMode: strictEditorLocale })
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)

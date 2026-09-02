@@ -21,7 +21,8 @@ import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { resolveHeroHeight } from '../hero-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
-import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import type { SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
@@ -113,7 +114,11 @@ export function HeroRender({
   /** Outer padding — applied inside render so backgrounds stay full-bleed */
   contentInset?: BlockContentInset
 }) {
-  const activeLocale = toSupportedLocale(locale)
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   const layout: PreviewLayout =
@@ -124,9 +129,9 @@ export function HeroRender({
   const mobileLayout = isForcedMobileLayout(layout)
   const align = resolveAlign(config)
 
-  const headingText = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
-  const heading = headingText || (editorLocaleMode ? '' : businessName || 'Welcome')
-  const body = resolveContentText(config.body, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const headingText = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const heading = headingText || (strictEditorLocale ? '' : businessName || 'Welcome')
+  const body = resolveContentText(config.body, activeLocale, activePrimary, { editorMode: strictEditorLocale })
   const textColor = config.text_color === 'auto' ? '#ffffff' : config.text_color
   const typography = getTypography(mobileLayout)
   const isFullscreen = resolveHeroHeight(config.height) === 'fullscreen'
@@ -165,7 +170,7 @@ export function HeroRender({
           {body}
         </p>
       )}
-      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} editorLocaleMode={editorLocaleMode} />
+      <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} editorLocaleMode={strictEditorLocale} />
     </div>
   )
 
@@ -315,7 +320,7 @@ export function HeroRender({
               {body}
             </p>
           )}
-          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} align={align} editorLocaleMode={editorLocaleMode} />
+          <CtaRow config={config} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} align={align} editorLocaleMode={strictEditorLocale} />
         </div>
       </div>
     </section>

@@ -22,9 +22,20 @@ export function baseLocaleMap(
   return { [primary]: text, [secondary]: '' }
 }
 
+function readPrimaryEditorText(
+  value: LocalizedString,
+  primary: SupportedLocale,
+): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  const direct = (value as Record<string, unknown>)[primary]
+  return typeof direct === 'string' ? direct : ''
+}
+
 /**
  * Read text in the editor — no cross-locale fallback.
  * Secondary tab shows empty until secondary text is entered.
+ * Legacy dual-language setup copied primary into secondary; treat identical copies as untranslated.
  */
 export function readEditorLocaleText(
   value: LocalizedString,
@@ -36,7 +47,12 @@ export function readEditorLocaleText(
     return locale === primary ? value : ''
   }
   const direct = (value as Record<string, unknown>)[locale]
-  return typeof direct === 'string' ? direct : ''
+  const text = typeof direct === 'string' ? direct : ''
+  if (locale !== primary && text) {
+    const primaryText = readPrimaryEditorText(value, primary)
+    if (primaryText && text === primaryText) return ''
+  }
+  return text
 }
 
 /** Write one locale slice; preserves other locales in the map. */
@@ -48,7 +64,15 @@ export function writeLocaleText(
 ): Record<string, string> {
   const secondary = otherStoreLocale(primary)
   const base = baseLocaleMap(value, primary, secondary)
-  return { ...base, [locale]: text }
+  const next = { ...base, [locale]: text }
+  // Drop legacy seeded duplicate when primary text changes (old setup copied vi → en).
+  if (locale === primary) {
+    const previousPrimary = base[primary] ?? ''
+    if (next[secondary] === previousPrimary) {
+      next[secondary] = ''
+    }
+  }
+  return next
 }
 
 /** Plain string for legacy DB columns — always the primary locale text. */
