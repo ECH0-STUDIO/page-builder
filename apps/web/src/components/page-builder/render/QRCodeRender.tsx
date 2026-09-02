@@ -11,7 +11,8 @@ import { Download } from 'lucide-react'
 import type { QRCodeConfig } from '../types'
 import { QR_BORDER_RADIUS } from '../cta-styles'
 import { buildVietQRUrl, type PaymentSettings } from '@/lib/vietqr-utils'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { resolveContentText } from '@/i18n/editor-locale-utils'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 
 interface QRCodeRenderProps {
   config: QRCodeConfig
@@ -23,6 +24,7 @@ interface QRCodeRenderProps {
   downloadLabel?: string
   locale?: string
   primaryLocale?: SupportedLocale
+  editorLocaleMode?: boolean
 }
 
 const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
@@ -31,9 +33,9 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
   lg: 280,
 }
 
-export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale, primaryLocale = 'vi' }: QRCodeRenderProps) {
+export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale, primaryLocale = 'vi', editorLocaleMode = false }: QRCodeRenderProps) {
   const activeLocale = toSupportedLocale(locale)
-  const label = pickLocale(config.label, activeLocale, primaryLocale)
+  const label = resolveContentText(config.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'

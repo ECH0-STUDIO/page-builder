@@ -13,7 +13,8 @@ import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'luc
 import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
-import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { resolveContentText } from '@/i18n/editor-locale-utils'
+import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import {
   menuCategoryName,
   menuItemDescription,
@@ -584,6 +585,7 @@ function MenuGridInner({
   onActiveCategoryChange,
   locale,
   primaryLocale = 'vi',
+  editorLocaleMode = false,
 }: MenuGridRenderProps & {
   previewLayout?: PreviewLayout
   isMobilePreview?: boolean
@@ -592,11 +594,12 @@ function MenuGridInner({
   hideCategoryTabs?: boolean
   activeCategoryId?: string | null
   onActiveCategoryChange?: (id: string) => void
+  editorLocaleMode?: boolean
 }) {
   const config = resolveMenuGridConfig(rawConfig)
   const activeLocale = toSupportedLocale(locale)
-  const sectionHeading = pickLocale(config.heading, activeLocale, primaryLocale)
-  const sectionDescription = pickLocale(config.description, activeLocale, primaryLocale)
+  const sectionHeading = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const sectionDescription = resolveContentText(config.description, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -903,7 +906,8 @@ export function MenuGridRender({
   onActiveCategoryChange,
   locale,
   primaryLocale = 'vi',
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
+  editorLocaleMode = false,
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string; editorLocaleMode?: boolean }) {
   return (
     <MenuGridInner
       config={config}
@@ -917,6 +921,7 @@ export function MenuGridRender({
       onActiveCategoryChange={onActiveCategoryChange}
       locale={locale}
       primaryLocale={primaryLocale}
+      editorLocaleMode={editorLocaleMode}
     />
   )
 }

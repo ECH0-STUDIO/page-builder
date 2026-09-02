@@ -58,3 +58,19 @@ export function primaryPlainText(
 ): string {
   return readLocaleText(value, primary, primary)
 }
+
+/**
+ * Resolve localized content for display.
+ * Editor mode: strict per-locale (no fallback). Live/preview: primary fallback.
+ */
+export function resolveContentText(
+  value: LocalizedString,
+  locale: SupportedLocale,
+  primary: SupportedLocale,
+  options?: { editorMode?: boolean },
+): string {
+  if (options?.editorMode) {
+    return readEditorLocaleText(value, locale, primary)
+  }
+  return readLocaleText(value, locale, primary)
+}
