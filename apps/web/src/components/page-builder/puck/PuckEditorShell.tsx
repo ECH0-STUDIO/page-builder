@@ -51,7 +51,9 @@ import { PuckTemplateContext } from './PuckTemplateContext'
 import { buildBlocksFromTemplate, getTemplateThemePreset } from '@/lib/apply-page-template'
 import { DEFAULT_PAGE_TEMPLATE_ID } from '../templates'
 import { Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import type { SupportedLocale } from '@/i18n/locale'
+import { parseStoreLanguageConfig } from '@/i18n/store-locale'
+import { EditorLocaleProvider, useEditorLocale } from '@/components/i18n/EditorLocaleContext'
 
 interface PuckEditorShellProps {
   business: Business
@@ -66,7 +68,16 @@ interface PuckEditorShellProps {
   builderMode?: BuilderPageMode
 }
 
-export function PuckEditorShell({
+export function PuckEditorShell(props: PuckEditorShellProps) {
+  const storeLanguage = parseStoreLanguageConfig(props.initialPublishing)
+  return (
+    <EditorLocaleProvider storeLanguage={storeLanguage}>
+      <PuckEditorShellInner {...props} />
+    </EditorLocaleProvider>
+  )
+}
+
+function PuckEditorShellInner({
   business,
   initialBlocks,
   initialPublishing,
@@ -78,6 +89,7 @@ export function PuckEditorShell({
   builderMode = 'landing',
 }: PuckEditorShellProps) {
   const { t } = useTranslation()
+  const editorLocale = useEditorLocale()
 
   const normalizedInitial = useMemo(
     () =>
@@ -185,6 +197,9 @@ export function PuckEditorShell({
       previewInteractive: previewMode,
       viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
+      contentLocale: editorLocale.contentLocale,
+      primaryLocale: editorLocale.primaryLocale,
+      secondaryLocked: editorLocale.secondaryLocked,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -196,6 +211,8 @@ export function PuckEditorShell({
       storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
+      locale: editorLocale.contentLocale,
+      primaryLocale: editorLocale.primaryLocale,
     }),
     t,
   })
@@ -213,6 +230,9 @@ export function PuckEditorShell({
       previewInteractive: previewMode,
       viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
+      contentLocale: editorLocale.contentLocale,
+      primaryLocale: editorLocale.primaryLocale,
+      secondaryLocked: editorLocale.secondaryLocked,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -224,6 +244,8 @@ export function PuckEditorShell({
       storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
+      locale: editorLocale.contentLocale,
+      primaryLocale: editorLocale.primaryLocale,
     }),
     t,
   }

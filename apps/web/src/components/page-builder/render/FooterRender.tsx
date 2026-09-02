@@ -1,6 +1,6 @@
 import { FooterConfig } from '../types'
 import { LiveStoreFooter } from './LiveStoreFooter'
-import { plainText } from '@/i18n/locale'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { footerSpacingFromSize, inferFooterSpacingSize } from '../spacing-presets'
 
 export function FooterRender({
@@ -8,14 +8,19 @@ export function FooterRender({
   businessName,
   logoUrl,
   inEditor = false,
+  locale,
+  primaryLocale = 'vi',
 }: {
   config: FooterConfig
   businessName: string
   logoUrl?: string | null
   inEditor?: boolean
+  locale?: string
+  primaryLocale?: SupportedLocale
 }) {
   const currentYear = new Date().getFullYear()
-  const copyright = plainText(config.copyright_text)
+  const activeLocale = toSupportedLocale(locale)
+  const copyright = pickLocale(config.copyright_text, activeLocale, primaryLocale)
   const bgImage = config.background_image?.trim()
   const spacing = footerSpacingFromSize(inferFooterSpacingSize(config))
   const showLogo = Boolean(config.show_logo && logoUrl)

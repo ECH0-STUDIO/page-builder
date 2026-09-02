@@ -26,10 +26,11 @@ interface NavbarRenderProps {
   config: NavbarConfig
   businessName?: string
   logoUrl?: string
-  /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
   isMobilePreview?: boolean
   locale?: string
+  primaryLocale?: SupportedLocale
+  languageSwitcher?: React.ReactNode
 }
 
 export function NavbarRender({
@@ -39,6 +40,8 @@ export function NavbarRender({
   inEditor,
   isMobilePreview,
   locale,
+  primaryLocale = 'vi',
+  languageSwitcher,
 }: NavbarRenderProps) {
   const activeLocale = toSupportedLocale(locale)
   const [open, setOpen] = useState(false)
@@ -138,7 +141,7 @@ export function NavbarRender({
             >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = pickLocale(link.label, activeLocale)
+              const label = pickLocale(link.label, activeLocale, primaryLocale)
               const sharedProps = {
                 style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
                 onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -173,6 +176,9 @@ export function NavbarRender({
                 </a>
               )
             })}
+            {languageSwitcher && (
+              <div className="shrink-0 ml-2">{languageSwitcher}</div>
+            )}
           </div>
           )}
 
@@ -227,7 +233,7 @@ export function NavbarRender({
           >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = pickLocale(link.label, activeLocale)
+              const label = pickLocale(link.label, activeLocale, primaryLocale)
               const style: React.CSSProperties = {
                 ...linkStyle,
                 display: 'block',
