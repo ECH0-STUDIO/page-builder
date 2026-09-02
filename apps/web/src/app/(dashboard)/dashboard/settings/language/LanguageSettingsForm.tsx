@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { SupportedLocale } from '@/i18n/locale'
 import type { StoreLanguageConfig } from '@/i18n/store-locale'
-import { secondaryLocalePathSegment } from '@/i18n/store-locale'
+import { exampleStorePublicPaths } from '@/i18n/store-locale'
 import {
   disableDualLanguageAction,
   enableDualLanguageAction,
@@ -32,7 +32,10 @@ export function LanguageSettingsForm({ businessId, initial }: LanguageSettingsFo
   const [setupMessage, setSetupMessage] = useState<string | null>(null)
 
   const primaryChanged = primaryDraft !== config.primary_locale
-  const secondaryPath = secondaryLocalePathSegment(primaryDraft)
+  const pathExamples = exampleStorePublicPaths(
+    config.dual_language_enabled ? config.primary_locale : primaryDraft,
+    config.dual_language_enabled,
+  )
 
   async function handlePrimarySave() {
     setBusy(true)
@@ -141,12 +144,20 @@ export function LanguageSettingsForm({ businessId, initial }: LanguageSettingsFo
         <div className="rounded-lg bg-muted/50 border p-4 text-sm space-y-2">
           <p className="font-medium">{t('settings.storeLanguage.urlsTitle')}</p>
           <ul className="list-disc pl-5 text-muted-foreground space-y-1">
-            <li>{t('settings.storeLanguage.primaryUrl')}</li>
             <li>
-              {t('settings.storeLanguage.secondaryUrl').replace('{{path}}', `/${secondaryPath}`)}
+              {t('settings.storeLanguage.primaryUrl').replace('{{path}}', pathExamples.primaryLanding)}
             </li>
+            {pathExamples.secondaryLanding && (
+              <li>
+                {t('settings.storeLanguage.secondaryUrl').replace(
+                  '{{path}}',
+                  pathExamples.secondaryLanding,
+                )}
+              </li>
+            )}
           </ul>
           <p className="text-muted-foreground pt-1">{t('settings.storeLanguage.secondaryEditHint')}</p>
+          <p className="text-muted-foreground text-xs">{t('settings.storeLanguage.phase2Notice')}</p>
         </div>
       )}
     </div>
