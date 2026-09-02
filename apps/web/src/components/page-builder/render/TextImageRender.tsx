@@ -16,7 +16,8 @@ import type { TextImageConfig, CtaButton, BorderRadius } from '../types'
 import { ctaHref, ctaOpensNewTab } from '../cta-utils'
 import { getCtaClassName, getCtaInlineStyle } from '../cta-styles'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
-import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import type { SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 import { getTypography } from './typography'
 import Image from 'next/image'
 import { type PreviewLayout, isForcedMobileLayout } from './preview-layout'
@@ -82,9 +83,13 @@ export function TextImageRender({
   brandColor = '#E85D26',
   defaultTextColor = '#111111',
 }: TextImageRenderProps & { brandColor?: string; defaultTextColor?: string }) {
-  const activeLocale = toSupportedLocale(locale)
-  const heading = resolveContentText(config.heading, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
-  const body = resolveContentText(config.body, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
+  const heading = resolveContentText(config.heading, activeLocale, activePrimary, { editorMode: strictEditorLocale })
+  const body = resolveContentText(config.body, activeLocale, activePrimary, { editorMode: strictEditorLocale })
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -183,7 +188,7 @@ export function TextImageRender({
       )}
       {config.cta && (
         <div style={{ display: 'flex', justifyContent: justify }}>
-          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={primaryLocale} editorLocaleMode={editorLocaleMode} />
+          <CtaLink cta={config.cta} brandColor={liveBrandColor} locale={activeLocale} primaryLocale={activePrimary} editorLocaleMode={strictEditorLocale} />
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { FooterConfig } from '../types'
 import { LiveStoreFooter } from './LiveStoreFooter'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
 import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 import { footerSpacingFromSize, inferFooterSpacingSize } from '../spacing-presets'
 
 export function FooterRender({
@@ -21,9 +22,13 @@ export function FooterRender({
   primaryLocale?: SupportedLocale
   editorLocaleMode?: boolean
 }) {
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
   const currentYear = new Date().getFullYear()
-  const activeLocale = toSupportedLocale(locale)
-  const copyright = resolveContentText(config.copyright_text, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const copyright = resolveContentText(config.copyright_text, activeLocale, activePrimary, { editorMode: strictEditorLocale })
   const bgImage = config.background_image?.trim()
   const spacing = footerSpacingFromSize(inferFooterSpacingSize(config))
   const showLogo = Boolean(config.show_logo && logoUrl)

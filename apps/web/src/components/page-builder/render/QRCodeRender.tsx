@@ -13,6 +13,7 @@ import { QR_BORDER_RADIUS } from '../cta-styles'
 import { buildVietQRUrl, type PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
 import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 
 interface QRCodeRenderProps {
   config: QRCodeConfig
@@ -34,8 +35,12 @@ const SIZE_MAP: Record<QRCodeConfig['size'], number> = {
 }
 
 export function QRCodeRender({ config, targetUrl, paymentSettings, downloadLabel = 'Save QR Code', locale, primaryLocale = 'vi', editorLocaleMode = false }: QRCodeRenderProps) {
-  const activeLocale = toSupportedLocale(locale)
-  const label = resolveContentText(config.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
+  const label = resolveContentText(config.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [rendered, setRendered] = useState(false)
   const bgColor = config.background_color || '#ffffff'

@@ -17,6 +17,7 @@ import type { NavbarConfig, NavLink } from '../types'
 import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
 import { resolveContentText } from '@/i18n/editor-locale-utils'
 import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
+import { useRenderLocale } from '@/components/i18n/useRenderLocale'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 function isInternalPath(href: string) {
@@ -46,7 +47,11 @@ export function NavbarRender({
   editorLocaleMode = false,
   languageSwitcher,
 }: NavbarRenderProps) {
-  const activeLocale = toSupportedLocale(locale)
+  const { activeLocale, activePrimary, strictEditorLocale } = useRenderLocale(
+    editorLocaleMode,
+    locale,
+    primaryLocale,
+  )
   const [open, setOpen] = useState(false)
   const previewLayout = usePreviewLayout()
   const forceMobile = Boolean(isMobilePreview) || previewLayout === 'mobile'
@@ -144,7 +149,7 @@ export function NavbarRender({
             >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+              const label = resolveContentText(link.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
               const sharedProps = {
                 style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
                 onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -236,7 +241,7 @@ export function NavbarRender({
           >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, primaryLocale, { editorMode: editorLocaleMode })
+              const label = resolveContentText(link.label, activeLocale, activePrimary, { editorMode: strictEditorLocale })
               const style: React.CSSProperties = {
                 ...linkStyle,
                 display: 'block',
