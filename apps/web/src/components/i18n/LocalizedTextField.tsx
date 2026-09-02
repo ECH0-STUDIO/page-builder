@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
-import { readLocaleText, type LocalizedString } from '@/i18n/localized-content'
-import { writeLocaleText } from '@/i18n/editor-locale-utils'
+import type { LocalizedString } from '@/i18n/localized-content'
+import { readEditorLocaleText, writeLocaleText } from '@/i18n/editor-locale-utils'
 
 interface LocalizedFieldProps {
   label?: string
@@ -29,13 +29,14 @@ export function LocalizedTextField({
   className,
 }: LocalizedFieldProps) {
   const { contentLocale, primaryLocale } = useEditorLocale()
-  const display = readLocaleText(value, contentLocale, primaryLocale)
+  const display = readEditorLocaleText(value, contentLocale, primaryLocale)
 
   function handleChange(text: string) {
     onChange(writeLocaleText(value, contentLocale, text, primaryLocale))
   }
 
   const fieldId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
+  const inputKey = `${fieldId ?? 'field'}-${contentLocale}`
 
   return (
     <div className={className}>
@@ -46,6 +47,7 @@ export function LocalizedTextField({
       )}
       {multiline ? (
         <Textarea
+          key={inputKey}
           id={fieldId}
           value={display}
           onChange={e => handleChange(e.target.value)}
@@ -54,6 +56,7 @@ export function LocalizedTextField({
         />
       ) : (
         <Input
+          key={inputKey}
           id={fieldId}
           value={display}
           onChange={e => handleChange(e.target.value)}

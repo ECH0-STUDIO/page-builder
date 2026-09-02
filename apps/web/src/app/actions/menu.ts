@@ -128,6 +128,7 @@ async function userOwnsVariantOptionBusiness(supabase: Awaited<ReturnType<typeof
 export async function addCategoryAction(
   businessId: string,
   name: string,
+  options?: { locale?: SupportedLocale; primary_locale?: SupportedLocale },
 ): Promise<ActionResult<MenuCategory>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -146,10 +147,19 @@ export async function addCategoryAction(
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
 
   const trimmed = name.trim()
+  const primary = toSupportedLocale(options?.primary_locale)
+  const locale = options?.locale ? toSupportedLocale(options.locale) : primary
+  const name_i18n = writeLocaleText(null, locale, trimmed, primary)
+  const legacyName = primaryPlainText(name_i18n, primary)
 
   const { data, error } = await db
     .from('menu_categories')
-    .insert({ business_id: businessId, name: trimmed, sort_order: nextOrder })
+    .insert({
+      business_id: businessId,
+      name: legacyName,
+      name_i18n,
+      sort_order: nextOrder,
+    })
     .select()
     .single()
 
@@ -244,6 +254,8 @@ export async function addItemAction(
     is_vegetarian?: boolean
     spicy_level?: number
     is_featured?: boolean
+    locale?: SupportedLocale
+    primary_locale?: SupportedLocale
   }
 ): Promise<ActionResult<MenuItem>> {
   const supabase = await createClient()
@@ -263,13 +275,22 @@ export async function addItemAction(
   const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
   const spicy = Math.min(3, Math.max(0, Math.floor(item.spicy_level ?? 0)))
 
+  const primary = toSupportedLocale(item.primary_locale)
+  const locale = item.locale ? toSupportedLocale(item.locale) : primary
+  const name_i18n = writeLocaleText(null, locale, item.name.trim(), primary)
+  const description_i18n = item.description?.trim()
+    ? writeLocaleText(null, locale, item.description.trim(), primary)
+    : null
+
   const { data, error } = await db
     .from('menu_items')
     .insert({
       business_id: businessId,
       category_id: categoryId,
-      name: item.name.trim(),
-      description: item.description?.trim() || null,
+      name: primaryPlainText(name_i18n, primary),
+      name_i18n,
+      description: description_i18n ? primaryPlainText(description_i18n, primary) || null : null,
+      description_i18n,
       price: item.price,
       image_url: item.image_url || null,
       tags: item.tags ?? [],
