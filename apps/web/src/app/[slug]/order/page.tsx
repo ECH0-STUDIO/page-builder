@@ -14,12 +14,18 @@ import { orderChromeTokens } from '@/lib/color-contrast'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
-import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import {
+  localizeMenuForLocale,
+  normalizeMenuCategories,
+  normalizeMenuItems,
+  normalizeVariantGroups,
+  normalizeVariantOptions,
+} from '@/i18n/menu-content'
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
 import { OrderPageLive } from '@/components/order-page/OrderPageLive'
 import { StoreLanguageSwitcher } from '@/components/store/StoreLanguageSwitcher'
 import { loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
-import { toStoreLocaleCode } from '@/i18n/store-locales'
+import { toStoreLocaleCode, type StoreLocaleCode } from '@/i18n/store-locales'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import {
   normalizeCarouselAspect,
@@ -68,7 +74,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   })
 }
 
-export default async function OrderPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function OrderPage({
+  params,
+  contentLocale,
+}: {
+  params: Promise<{ slug: string }>
+  /** When set (locale-prefixed routes), serve translated content for this locale. */
+  contentLocale?: StoreLocaleCode
+}) {
   const { slug } = await params
   const supabase = await createClient()
   const db = supabase
@@ -135,28 +148,49 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
     db.from('menu_categories').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
     db.from('menu_items').select('*').eq('business_id', business.id).order('sort_order', { ascending: true }),
   ])
-  const menuCategories: MenuCategory[] = normalizeMenuCategories((cats ?? []) as Record<string, unknown>[])
-  const menuItems: MenuItem[] = normalizeMenuItems((itms ?? []) as Record<string, unknown>[])
+  const menuCategoriesRaw: MenuCategory[] = normalizeMenuCategories((cats ?? []) as Record<string, unknown>[])
+  const menuItemsRaw: MenuItem[] = normalizeMenuItems((itms ?? []) as Record<string, unknown>[])
 
-  let variantGroups: VariantGroup[] = []
-  let variantOptions: VariantOption[] = []
+  let variantGroupsRaw: VariantGroup[] = []
+  let variantOptionsRaw: VariantOption[] = []
 
-  if (menuItems.length > 0) {
-    const itemIds = menuItems.map((i: MenuItem) => i.id)
+  if (menuItemsRaw.length > 0) {
+    const itemIds = menuItemsRaw.map((i: MenuItem) => i.id)
     for (let i = 0; i < itemIds.length; i += 50) {
       const chunk = itemIds.slice(i, i + 50)
       const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
-      if (vGroups) variantGroups.push(...vGroups)
+      if (vGroups) variantGroupsRaw.push(...normalizeVariantGroups(vGroups as Record<string, unknown>[]))
     }
-    if (variantGroups.length > 0) {
-      const groupIds = variantGroups.map((g: VariantGroup) => g.id)
+    if (variantGroupsRaw.length > 0) {
+      const groupIds = variantGroupsRaw.map((g: VariantGroup) => g.id)
       for (let i = 0; i < groupIds.length; i += 50) {
         const chunk = groupIds.slice(i, i + 50)
         const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
-        if (vOpts) variantOptions.push(...vOpts)
+        if (vOpts) variantOptionsRaw.push(...normalizeVariantOptions(vOpts as Record<string, unknown>[]))
       }
     }
   }
+
+  const localeAccess = await loadStoreLocaleAccess(slug)
+  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
+  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
+  const activeContentLocale = contentLocale ?? primaryLocale
+
+  const {
+    categories: menuCategories,
+    items: menuItems,
+    variantGroups,
+    variantOptions,
+  } = localizeMenuForLocale(
+    {
+      categories: menuCategoriesRaw,
+      items: menuItemsRaw,
+      variantGroups: variantGroupsRaw,
+      variantOptions: variantOptionsRaw,
+    },
+    activeContentLocale,
+    primaryLocale,
+  )
 
   // Prefer dedicated order menu config; else landing menu_grid styling with all items
   const publishedMenuBlock = (pageBlocksRaw ?? []).find(b => b.type === 'menu_grid')
@@ -178,6 +212,8 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       (pubSettings as { order_promo_slides?: unknown } | null)?.order_promo_slides,
     ),
     businessName: business.name,
+    locale: activeContentLocale,
+    primaryLocale,
   })
 
   const carouselDesktop = normalizeCarouselAspect(
@@ -193,7 +229,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   const cookieStore = await cookies()
   const visitorLocale = resolveLiveLocale(
     cookieStore.get('NEXT_LOCALE')?.value,
-    pubSettings?.language ?? null,
+    activeContentLocale,
   )
 
   const orderBgColor =
@@ -207,10 +243,6 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   const openingHours = normalizeOpeningHours(business.opening_hours)
   const orderingOpen = isBusinessOpenNow(openingHours)
   const todayHoursLabel = formatHoursRange(getTodayHours(openingHours))
-
-  const localeAccess = await loadStoreLocaleAccess(slug)
-  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
-  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
 
   return (
     <CartProvider>
@@ -229,7 +261,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
         }
       >
         <div
-          lang={visitorLocale}
+          lang={activeContentLocale}
           className="min-h-screen w-full max-w-[430px] md:max-w-5xl mx-auto relative flex flex-col"
           style={{
             fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
@@ -289,6 +321,8 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
             slug={slug}
             paymentSettings={paymentSettings}
             locale={visitorLocale}
+            contentLocale={activeContentLocale}
+            primaryLocale={primaryLocale}
             orderingOpen={orderingOpen}
             todayHoursLabel={todayHoursLabel}
           />

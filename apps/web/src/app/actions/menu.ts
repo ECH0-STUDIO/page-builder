@@ -10,6 +10,7 @@ export type MenuCategory = {
   id: string
   business_id: string
   name: string
+  name_i18n?: import('@/types/database').Json | null
   sort_order: number
   visible: boolean
   created_at: string
@@ -21,7 +22,9 @@ export type MenuItem = {
   business_id: string
   category_id: string
   name: string
+  name_i18n?: import('@/types/database').Json | null
   description: string | null
+  description_i18n?: import('@/types/database').Json | null
   price: number
   image_url: string | null
   available: boolean
@@ -41,6 +44,7 @@ export type VariantGroup = {
   id: string
   item_id: string
   name: string
+  name_i18n?: import('@/types/database').Json | null
   required: boolean
   sort_order: number
   allow_multiple: boolean
@@ -50,6 +54,7 @@ export type VariantOption = {
   id: string
   group_id: string
   label: string
+  label_i18n?: import('@/types/database').Json | null
   price_delta: number
   sort_order: number
 }

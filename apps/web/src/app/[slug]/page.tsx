@@ -1,5 +1,4 @@
 import { notFound, redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Script from 'next/script'
 import type { Metadata } from 'next'
@@ -27,12 +26,17 @@ import { resolvePublicStoreUrl, resolveQrCustomUrl } from '@/lib/site-urls'
 import { buildStoreMetadata } from '@/lib/store-metadata'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
-import { resolveLiveLocale } from '@/i18n/locale'
-import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import {
+  localizeMenuForLocale,
+  normalizeMenuCategories,
+  normalizeMenuItems,
+  normalizeVariantGroups,
+  normalizeVariantOptions,
+} from '@/i18n/menu-content'
 import { Suspense } from 'react'
 import { StoreLanguageSwitcher } from '@/components/store/StoreLanguageSwitcher'
 import { loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
-import { toStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
+import { toStoreLocaleCode, buildStorePublicPath, type StoreLocaleCode } from '@/i18n/store-locales'
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -95,9 +99,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function SlugPage({
   params,
   searchParams,
+  contentLocale,
 }: {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ table?: string }>
+  /** When set (locale-prefixed routes), serve translated content for this locale. */
+  contentLocale?: StoreLocaleCode
 }) {
   const { slug } = await params
   const sp = await searchParams
@@ -198,7 +205,7 @@ export default async function SlugPage({
       for (let i = 0; i < itemIds.length; i += 50) {
         const chunk = itemIds.slice(i, i + 50)
         const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
-        if (vGroups) variantGroups.push(...vGroups)
+        if (vGroups) variantGroups.push(...normalizeVariantGroups(vGroups as Record<string, unknown>[]))
       }
       if (variantGroups.length > 0) {
         const groupIds = variantGroups.map((g: VariantGroup) => g.id)
@@ -206,7 +213,7 @@ export default async function SlugPage({
         for (let i = 0; i < groupIds.length; i += 50) {
           const chunk = groupIds.slice(i, i + 50)
           const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
-          if (vOpts) variantOptions.push(...vOpts)
+          if (vOpts) variantOptions.push(...normalizeVariantOptions(vOpts as Record<string, unknown>[]))
         }
       }
     }
@@ -220,6 +227,21 @@ export default async function SlugPage({
     ),
   }
   const storeUrl = resolvePublicStoreUrl(slug, storePub)
+
+  const localeAccess = await loadStoreLocaleAccess(slug)
+  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
+  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
+  const activeContentLocale = contentLocale ?? primaryLocale
+
+  const localizedMenu = localizeMenuForLocale(
+    { categories: menuCategories, items: menuItems, variantGroups, variantOptions },
+    activeContentLocale,
+    primaryLocale,
+  )
+  menuCategories = localizedMenu.categories
+  menuItems = localizedMenu.items
+  variantGroups = localizedMenu.variantGroups
+  variantOptions = localizedMenu.variantOptions
 
   // ─── Schema.org JSON-LD ─────────────────────────────────────────────────────
   const pubInfo = {
@@ -236,21 +258,11 @@ export default async function SlugPage({
   }
   const schemaJson = serializeSchemas(schemas)
 
-  const cookieStore = await cookies()
-  const visitorLocale = resolveLiveLocale(
-    cookieStore.get('NEXT_LOCALE')?.value,
-    pubSettings?.language ?? null,
-  )
-
-  const localeAccess = await loadStoreLocaleAccess(slug)
-  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
-  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
-
   return (
     <BrowseOnlyCartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
     <div
-      lang={visitorLocale}
+      lang={activeContentLocale}
       className="min-h-screen w-full max-w-[1440px] mx-auto relative shadow-2xl flex flex-col"
       style={{
         fontFamily: bodyFont !== 'Inter' ? `'${bodyFont}', sans-serif` : undefined,
@@ -292,6 +304,8 @@ export default async function SlugPage({
         config={navbarConfig}
         businessName={business.name}
         logoUrl={business.logo_url ?? undefined}
+        locale={activeContentLocale}
+        primaryLocale={primaryLocale}
       />
 
       <main>
@@ -320,6 +334,8 @@ export default async function SlugPage({
                       businessName={business.name}
                       brandColor={themeTokens.brandColor}
                       contentInset={contentInset}
+                      locale={activeContentLocale}
+                      primaryLocale={primaryLocale}
                     />
                   )}
                   {block.type === 'text_image' && (
@@ -327,6 +343,8 @@ export default async function SlugPage({
                       config={block.config as TextImageConfig}
                       brandColor={themeTokens.brandColor}
                       defaultTextColor={themeTokens.pageText}
+                      locale={activeContentLocale}
+                      primaryLocale={primaryLocale}
                     />
                   )}
                   {block.type === 'contact' && (
@@ -347,6 +365,8 @@ export default async function SlugPage({
                       }}
                       brandColor={themeTokens.brandColor}
                       browseOnly
+                      locale={activeContentLocale}
+                      primaryLocale={primaryLocale}
                     />
                   )}
                   {block.type === 'qr_code' && (() => {
@@ -354,7 +374,15 @@ export default async function SlugPage({
                     const targetUrl = qrConfig.target === 'custom' && qrConfig.custom_url
                       ? resolveQrCustomUrl(slug, storePub, storeUrl, qrConfig.custom_url)
                       : storeUrl
-                    return <QRCodeRender config={qrConfig} targetUrl={targetUrl} paymentSettings={paymentSettings} />
+                    return (
+                      <QRCodeRender
+                        config={qrConfig}
+                        targetUrl={targetUrl}
+                        paymentSettings={paymentSettings}
+                        locale={activeContentLocale}
+                        primaryLocale={primaryLocale}
+                      />
+                    )
                   })()}
                   </SectionShellContent>
                 </div>
@@ -368,6 +396,8 @@ export default async function SlugPage({
         config={footerConfig}
         businessName={business.name}
         logoUrl={business.logo_url}
+        locale={activeContentLocale}
+        primaryLocale={primaryLocale}
       />
 
       {/* Landing is browse-only — cart/order lives on /{slug}/order */}

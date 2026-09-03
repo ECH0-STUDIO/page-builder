@@ -7,6 +7,8 @@ export interface OrderPromoSlide {
   image_url: string
   /** Optional caption / alt text shown for accessibility */
   alt: string
+  /** Localized alt map written by Translation UI */
+  alt_i18n?: import('@/i18n/localized-content').LocalizedString
 }
 
 export const MAX_ORDER_PROMO_SLIDES = 8
@@ -56,6 +58,7 @@ export function normalizeOrderPromoSlides(raw: unknown): OrderPromoSlide[] {
       id: typeof row.id === 'string' && row.id ? row.id : cryptoRandomId(),
       image_url,
       alt: typeof row.alt === 'string' ? row.alt : '',
+      ...(row.alt_i18n != null ? { alt_i18n: row.alt_i18n as OrderPromoSlide['alt_i18n'] } : {}),
     })
     if (slides.length >= MAX_ORDER_PROMO_SLIDES) break
   }
