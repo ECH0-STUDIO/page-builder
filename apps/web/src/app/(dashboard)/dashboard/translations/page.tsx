@@ -5,6 +5,7 @@ import { getAuthUser } from '@/lib/auth-server'
 import { getActiveBusiness } from '@/lib/business-server'
 import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { listBusinessLocalesAction } from '@/app/actions/business-locales'
+import { getTranslationProgressAction } from '@/app/actions/translations'
 import { storeLocaleLabel, STORE_LOCALE_CATALOG } from '@/i18n/store-locales'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import type { Metadata } from 'next'
@@ -25,6 +26,11 @@ export default async function TranslationsIndexPage() {
     ? listed.data.locales.filter(l => l.status === 'active')
     : []
   const primary = listed.success ? listed.data.primary : 'vi'
+
+  const progressRes = active.length
+    ? await getTranslationProgressAction(business.id, active.map(r => r.locale))
+    : { success: true as const, data: {} as Record<string, { translated: number; total: number }> }
+  const progress = progressRes.success ? progressRes.data : {}
 
   return (
     <div className="p-4 md:p-8 max-w-2xl space-y-6">
@@ -56,6 +62,7 @@ export default async function TranslationsIndexPage() {
         <div className="rounded-xl border divide-y">
           {active.map(row => {
             const meta = STORE_LOCALE_CATALOG[row.locale]
+            const prog = progress[row.locale]
             return (
               <Link
                 key={row.id}
@@ -64,7 +71,14 @@ export default async function TranslationsIndexPage() {
               >
                 <div>
                   <p className="text-sm font-medium">{meta.label}</p>
-                  <p className="text-xs text-muted-foreground">{meta.labelEn} · /{row.locale}/…</p>
+                  <p className="text-xs text-muted-foreground">
+                    {meta.labelEn} · /{row.locale}/…
+                    {prog && prog.total > 0 ? (
+                      <span className="ml-2 text-foreground/80">
+                        {prog.translated}/{prog.total} translated
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
                 <span className="text-xs font-medium text-muted-foreground">Edit →</span>
               </Link>

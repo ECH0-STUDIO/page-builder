@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -28,7 +28,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
-import { getCreditBalanceAction } from '@/app/actions/credits'
+import { useCreditBalance } from '@/lib/react-query/hooks/useCredits'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { canAccessNavHref, canAccessSettingsHref } from '@/lib/dashboard-access'
@@ -127,25 +127,12 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
   const role = currentBusiness?.role
   const canSeeCredits = canAccessSettingsHref('/dashboard/settings/credits', role)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [credits, setCredits] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (currentBusiness?.id && canSeeCredits) {
-      getCreditBalanceAction(currentBusiness.id).then(res => {
-        if (res.success && res.data !== undefined) {
-          setCredits(res.data)
-        } else {
-          console.error('Failed to load credits:', res.error)
-          setCredits(0)
-        }
-      })
-    } else {
-      setCredits(null)
-    }
-  }, [currentBusiness?.id, canSeeCredits])
-
-
-
+  const { data: creditBalance } = useCreditBalance(
+    canSeeCredits ? currentBusiness?.id : null,
+  )
+  const credits = canSeeCredits && currentBusiness?.id
+    ? (typeof creditBalance === 'number' ? creditBalance : null)
+    : null
   const initials = (userName ?? userEmail)
     .split(/[\s@]/)
     .filter(Boolean)

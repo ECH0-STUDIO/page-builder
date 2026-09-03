@@ -12,10 +12,12 @@ import {
   collectOrderPromoFields,
   collectPageBlockFields,
   collectSeoFields,
+  translationProgressFromFields,
   type TranslationField,
+  type TranslationProgress,
 } from '@/lib/translation-fields'
 import type { PageBlock, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
-import { normalizeOrderPromoSlides } from '@/components/order-page/promo-slides'
+import { normalizeOrderPromoSlides, type OrderPromoSlide } from '@/components/order-page/promo-slides'
 import { defaultFooterConfig, defaultNavbarConfig } from '@/components/page-builder/types'
 
 type ActionResult<T = void> =
@@ -26,6 +28,29 @@ export type TranslationBundle = {
   primary: StoreLocaleCode
   locale: StoreLocaleCode
   fields: TranslationField[]
+}
+
+type MenuCollectRow = { id: string; name: string; name_i18n?: unknown }
+type MenuItemRow = {
+  id: string
+  name: string
+  description: string | null
+  name_i18n?: unknown
+  description_i18n?: unknown
+  category_id: string
+}
+
+type TranslationSources = {
+  primary: StoreLocaleCode
+  pub: Record<string, unknown> | null
+  blocks: PageBlock[]
+  navbar: NavbarConfig
+  footer: FooterConfig
+  categories: MenuCollectRow[]
+  items: MenuItemRow[]
+  variantGroups: { id: string; item_id: string; name: string; name_i18n?: unknown }[]
+  variantOptions: { id: string; group_id: string; label: string; label_i18n?: unknown }[]
+  slides: OrderPromoSlide[]
 }
 
 async function assertLocaleAccess(businessId: string, locale: StoreLocaleCode, primary: StoreLocaleCode) {
@@ -39,22 +64,8 @@ async function assertLocaleAccess(businessId: string, locale: StoreLocaleCode, p
   return { ok: true as const }
 }
 
-export async function getTranslationBundleAction(
-  businessId: string,
-  localeRaw: string,
-): Promise<ActionResult<TranslationBundle>> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
-  const access = await assertOwnerOrManager(supabase, user.id, businessId)
-  if (!access.ok) return { success: false, error: access.error }
-
-  if (!isStoreLocaleCode(localeRaw)) return { success: false, error: 'Unsupported language' }
-  const locale = localeRaw
+async function loadTranslationSources(businessId: string): Promise<TranslationSources> {
   const primary = await getBusinessPrimaryLocale(businessId)
-  const gate = await assertLocaleAccess(businessId, locale, primary)
-  if (!gate.ok) return { success: false, error: gate.error }
-
   const admin = createAdminClient()
 
   const { data: pub } = await (admin as any)
@@ -117,32 +128,83 @@ export async function getTranslationBundleAction(
     }
   }
 
-  const slides = normalizeOrderPromoSlides(pub?.order_promo_slides)
-
-  const fields: TranslationField[] = [
-    ...collectSeoFields(pub ?? {}, locale, primary),
-    ...collectPageBlockFields(blocks, locale, primary),
-    ...collectChromeFields(navbar, footer, locale, primary),
-    ...collectMenuFields({
-      categories: (cats ?? []) as MenuCollectRow[],
-      items: (items ?? []) as MenuItemRow[],
-      variantGroups,
-      variantOptions,
-    }, locale, primary),
-    ...collectOrderPromoFields(slides, locale, primary),
-  ]
-
-  return { success: true, data: { primary, locale, fields } }
+  return {
+    primary,
+    pub: (pub ?? null) as Record<string, unknown> | null,
+    blocks,
+    navbar,
+    footer,
+    categories: (cats ?? []) as MenuCollectRow[],
+    items: (items ?? []) as MenuItemRow[],
+    variantGroups,
+    variantOptions,
+    slides: normalizeOrderPromoSlides(pub?.order_promo_slides),
+  }
 }
 
-type MenuCollectRow = { id: string; name: string; name_i18n?: unknown }
-type MenuItemRow = {
-  id: string
-  name: string
-  description: string | null
-  name_i18n?: unknown
-  description_i18n?: unknown
-  category_id: string
+function collectFieldsForLocale(sources: TranslationSources, locale: StoreLocaleCode): TranslationField[] {
+  const { primary } = sources
+  return [
+    ...collectSeoFields(sources.pub ?? {}, locale, primary),
+    ...collectPageBlockFields(sources.blocks, locale, primary),
+    ...collectChromeFields(sources.navbar, sources.footer, locale, primary),
+    ...collectMenuFields({
+      categories: sources.categories,
+      items: sources.items,
+      variantGroups: sources.variantGroups,
+      variantOptions: sources.variantOptions,
+    }, locale, primary),
+    ...collectOrderPromoFields(sources.slides, locale, primary),
+  ]
+}
+
+export async function getTranslationBundleAction(
+  businessId: string,
+  localeRaw: string,
+): Promise<ActionResult<TranslationBundle>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
+
+  if (!isStoreLocaleCode(localeRaw)) return { success: false, error: 'Unsupported language' }
+  const locale = localeRaw
+  const sources = await loadTranslationSources(businessId)
+  const gate = await assertLocaleAccess(businessId, locale, sources.primary)
+  if (!gate.ok) return { success: false, error: gate.error }
+
+  return {
+    success: true,
+    data: {
+      primary: sources.primary,
+      locale,
+      fields: collectFieldsForLocale(sources, locale),
+    },
+  }
+}
+
+/** Progress (translated / total fields) for each requested secondary locale. */
+export async function getTranslationProgressAction(
+  businessId: string,
+  localesRaw: string[],
+): Promise<ActionResult<Record<string, TranslationProgress>>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Unauthorized' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
+
+  const locales = localesRaw.filter(isStoreLocaleCode)
+  if (!locales.length) return { success: true, data: {} }
+
+  const sources = await loadTranslationSources(businessId)
+  const out: Record<string, TranslationProgress> = {}
+  for (const locale of locales) {
+    if (locale === sources.primary) continue
+    out[locale] = translationProgressFromFields(collectFieldsForLocale(sources, locale))
+  }
+  return { success: true, data: out }
 }
 
 export async function saveTranslationsAction(

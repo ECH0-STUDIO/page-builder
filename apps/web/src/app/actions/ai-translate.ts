@@ -32,6 +32,7 @@ export type AiTranslateQuote = {
 export type AiTranslateResult = {
   saved: number
   creditsCharged: number
+  creditBalance?: number
   fields: TranslationField[]
 }
 
@@ -169,6 +170,7 @@ export async function applyAiTranslateAction(
     data: {
       saved: saved.data.saved,
       creditsCharged: quote.credits,
+      creditBalance: typeof deduct.balance === 'number' ? deduct.balance : undefined,
       fields: refreshed.success ? refreshed.data.fields : bundle.data.fields,
     },
   }

@@ -42,9 +42,11 @@ export default async function PublishingPage() {
     console.error('Publishing page billing error:', error)
   }
 
-  const [{ publishing, slug }, analytics, domainSetup] = await Promise.all([
+  const [{ publishing, slug }, analytics7, analytics30, domainSetup] = await Promise.all([
     getPublishingAction(business.id),
-    getPageViewsAction(business.id, 7),
+    // Billing already ran above — skip reconcile so period data loads in parallel cheaply
+    getPageViewsAction(business.id, 7, { reconcileBilling: false }),
+    getPageViewsAction(business.id, 30, { reconcileBilling: false }),
     getCustomDomainSetupAction(business.id).catch((error) => {
       console.error('Publishing page domain setup error:', error)
       return { domain: null, verified: false, dnsRecords: [], refundedCredits: 0 }
@@ -70,7 +72,8 @@ export default async function PublishingPage() {
         businessId={business.id}
         publishing={publishing}
         slug={slug ?? business.id}
-        analytics={analytics}
+        analytics={analytics7}
+        analytics30={analytics30}
         baseUrl={siteOrigin}
         initialDomainSetup={setupWithRefund}
       />
