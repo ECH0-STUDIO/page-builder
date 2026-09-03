@@ -232,18 +232,21 @@ export interface Database {
           id: string
           business_id: string
           viewed_at: string
+          locale: string
           count: number
         }
         Insert: {
           id?: string
           business_id: string
           viewed_at?: string
+          locale?: string
           count?: number
         }
         Update: {
           id?: string
           business_id?: string
           viewed_at?: string
+          locale?: string
           count?: number
         }
         Relationships: [
@@ -884,8 +887,21 @@ export interface Database {
         Returns: boolean
       }
       increment_page_view: {
-        Args: { p_business_id: string, p_date: string }
+        Args: { p_business_id: string; p_date: string; p_locale?: string }
         Returns: undefined
+      }
+      increment_page_view_and_bill: {
+        Args: {
+          p_business_id: string
+          p_date: string
+          p_views_per_credit?: number
+          p_locale?: string
+        }
+        Returns: {
+          credits_charged: number
+          total_views: number
+          views_billed: number
+        }[]
       }
       purge_orders_outside_retention: {
         Args: Record<string, never>

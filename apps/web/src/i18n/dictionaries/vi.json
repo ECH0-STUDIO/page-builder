@@ -136,6 +136,8 @@
     "save": "Lưu",
     "analytics": "Phân tích lượt truy cập",
     "totalViews": "Tổng lượt xem",
+    "byLocale": "Theo ngôn ngữ",
+    "byLocaleHint": "Phân tích theo kỳ này. Credits vẫn dùng chung một pool cho mọi ngôn ngữ.",
     "sevenDays": "7 ngày",
     "thirtyDays": "30 ngày",
     "seo": "SEO & Metadata",

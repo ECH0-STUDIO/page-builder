@@ -270,7 +270,7 @@ export default async function SlugPage({
       }}
     >
       {/* Silent visit tracker */}
-      <ViewTracker slug={slug} />
+      <ViewTracker slug={slug} locale={activeContentLocale} />
 
       {publicLocales.length > 1 && (
         <Suspense fallback={null}>

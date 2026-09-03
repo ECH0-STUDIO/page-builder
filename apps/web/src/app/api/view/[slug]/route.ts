@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { PAGE_VIEWS_PER_CREDIT } from '@/lib/credit-packs'
+import { isStoreLocaleCode } from '@/i18n/store-locales'
 
 /**
- * POST /api/view/[slug]
+ * POST /api/view/[slug]?locale=en
  *
- * Increments the daily page_views counter and bills 1 credit / 500 views.
+ * Increments the daily page_views counter (per locale for analytics)
+ * and bills 1 credit / 500 views across ALL locales (shared pool).
  * Uses service-role key to bypass RLS (no auth needed from client).
- * Called silently on every public live-page visit.
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+
+  const url = new URL(req.url)
+  const localeRaw = (url.searchParams.get('locale') ?? '').trim().toLowerCase()
+  const locale = isStoreLocaleCode(localeRaw) ? localeRaw : ''
 
   // Service-role client — bypasses RLS for the upsert
   const supabase = createClient(
@@ -36,6 +41,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     p_business_id: biz.id,
     p_date: today,
     p_views_per_credit: PAGE_VIEWS_PER_CREDIT,
+    p_locale: locale,
   })
 
   if (error) {
@@ -44,14 +50,24 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     const { error: legacyErr } = await supabase.rpc('increment_page_view', {
       p_business_id: biz.id,
       p_date: today,
+      p_locale: locale,
     })
     if (legacyErr) {
-      await supabase
+      // Last resort: try locale-aware upsert, then legacy unique key
+      const { error: upsertErr } = await supabase
         .from('page_views')
         .upsert(
-          { business_id: biz.id, viewed_at: today, count: 1 },
-          { onConflict: 'business_id,viewed_at', ignoreDuplicates: false },
+          { business_id: biz.id, viewed_at: today, locale, count: 1 },
+          { onConflict: 'business_id,viewed_at,locale', ignoreDuplicates: false },
         )
+      if (upsertErr) {
+        await supabase
+          .from('page_views')
+          .upsert(
+            { business_id: biz.id, viewed_at: today, count: 1 },
+            { onConflict: 'business_id,viewed_at', ignoreDuplicates: false },
+          )
+      }
     }
   }
 

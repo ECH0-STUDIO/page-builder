@@ -662,6 +662,12 @@ export async function savePublishingSettingsAction(
 
 export interface DayViewStat { date: string; count: number }
 
+export interface LocaleViewStat {
+  locale: string
+  label: string
+  count: number
+}
+
 export async function getPageViewsAction(
   businessId: string,
   period: 7 | 30 = 7
@@ -669,8 +675,9 @@ export async function getPageViewsAction(
   total: number
   periodTotal: number
   daily: DayViewStat[]  // last `period` days, oldest → newest, gaps filled with 0
+  byLocale: LocaleViewStat[]
 }> {
-  const empty = { total: 0, periodTotal: 0, daily: [] as DayViewStat[] }
+  const empty = { total: 0, periodTotal: 0, daily: [] as DayViewStat[], byLocale: [] as LocaleViewStat[] }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return empty
@@ -689,12 +696,27 @@ export async function getPageViewsAction(
   since.setDate(since.getDate() - (period - 1))
   const sinceStr = since.toISOString().slice(0, 10)
 
-  const { data: rows } = await db
+  const { data: rows, error: rowsErr } = await db
     .from('page_views')
-    .select('viewed_at, count')
+    .select('viewed_at, count, locale')
     .eq('business_id', businessId)
     .gte('viewed_at', sinceStr)
     .order('viewed_at', { ascending: true })
+
+  // Pre-migration fallback (no locale column yet)
+  let periodRows = (rows ?? []) as { viewed_at: string; count: number; locale?: string | null }[]
+  if (rowsErr) {
+    const { data: legacyRows } = await db
+      .from('page_views')
+      .select('viewed_at, count')
+      .eq('business_id', businessId)
+      .gte('viewed_at', sinceStr)
+      .order('viewed_at', { ascending: true })
+    periodRows = ((legacyRows ?? []) as { viewed_at: string; count: number }[]).map(r => ({
+      ...r,
+      locale: '',
+    }))
+  }
 
   const { data: allRows } = await db
     .from('page_views')
@@ -703,9 +725,10 @@ export async function getPageViewsAction(
 
   const total = (allRows ?? []).reduce((s: number, r: { count: number }) => s + r.count, 0)
 
+  // Daily totals — sum across locales for each day (billing chart stays aggregate)
   const dailyMap: Record<string, number> = {}
-  for (const row of (rows ?? [])) {
-    dailyMap[row.viewed_at] = row.count
+  for (const row of periodRows) {
+    dailyMap[row.viewed_at] = (dailyMap[row.viewed_at] ?? 0) + (row.count ?? 0)
   }
 
   const daily: DayViewStat[] = []
@@ -718,7 +741,25 @@ export async function getPageViewsAction(
 
   const periodTotal = daily.reduce((s, d) => s + d.count, 0)
 
-  return { total, periodTotal, daily }
+  // Period breakdown by locale (analytics only)
+  const { storeLocaleLabel, isStoreLocaleCode } = await import('@/i18n/store-locales')
+  const localeMap: Record<string, number> = {}
+  for (const row of periodRows) {
+    const code = typeof row.locale === 'string' ? row.locale : ''
+    localeMap[code] = (localeMap[code] ?? 0) + (row.count ?? 0)
+  }
+  const byLocale: LocaleViewStat[] = Object.entries(localeMap)
+    .map(([locale, count]) => ({
+      locale,
+      label: isStoreLocaleCode(locale)
+        ? storeLocaleLabel(locale)
+        : (locale || 'Unknown'),
+      count,
+    }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count)
+
+  return { total, periodTotal, daily, byLocale }
 }
 
 // ─── Custom domain (self-service via Vercel API) ─────────────────────────────
