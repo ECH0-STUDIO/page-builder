@@ -182,10 +182,10 @@ Actions:
 
 ### Phase D — AI translate
 
-- Vercel AI SDK + Gemini 2.5 Flash
-- `estimateTranslateCredits(words)` → `max(1, ceil(words/300))`
-- Chunk large menus; Zod-validated output; debit on success only
-- Translation UI: estimate + confirm + progress
+- [x] Vercel AI SDK + Gemini 2.5 Flash
+- [x] `estimateTranslateCredits(words)` → `max(1, ceil(words/300))`
+- [x] Chunk large menus; Zod-validated output; debit on success only
+- [x] Translation UI: estimate + confirm + progress
 
 ### Phase E — Analytics by locale (optional)
 
