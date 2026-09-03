@@ -1,5 +1,5 @@
 import { plainText, type LegacyLocalized } from './locale-content'
-import { readLocaleText } from './localized-content'
+import { readLocaleText, type LocalizedString } from './localized-content'
 
 /** Locales supported for system UI (dashboard, cart, auth). */
 export const SUPPORTED_LOCALES = ['vi', 'en'] as const
@@ -7,6 +7,14 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 export function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
   return value === 'vi' || value === 'en'
+}
+
+/** Live store content locale — prefers store primary when provided. */
+export function resolveLiveLocale(
+  _cookieLocale?: string | null,
+  storeDefaultLocale?: string | null,
+): SupportedLocale {
+  return toSupportedLocale(storeDefaultLocale)
 }
 
 export function toSupportedLocale(locale: string | null | undefined): SupportedLocale {
@@ -18,35 +26,14 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',
 }
 
-export interface ResolveLiveLocaleOptions {
-  /** Locale from URL prefix (/en/{slug}) */
-  pathLocale?: SupportedLocale | null
-  /** Store primary locale (publishing_settings.language) */
-  storePrimary?: string | null
-  /** Whether dual language is enabled for this store */
-  dualEnabled?: boolean
-}
-
-/**
- * Resolve which locale to use for live store content.
- * Unprefixed URLs always serve the store primary locale.
- * Prefixed URLs serve the path locale when dual language is on.
- */
-export function resolveLiveLocale(options: ResolveLiveLocaleOptions): SupportedLocale {
-  const primary = toSupportedLocale(options.storePrimary)
-  if (options.pathLocale && isSupportedLocale(options.pathLocale)) {
-    return options.pathLocale
-  }
-  return primary
-}
-
-/** Read localized block/menu text for a visitor locale with primary fallback. */
+/** Read localized storefront text with primary fallback. */
 export function pickLocale(
   value: LegacyLocalized,
-  locale: SupportedLocale,
-  primary: SupportedLocale = 'vi',
+  locale?: string,
+  primary: string = 'vi',
 ): string {
-  return readLocaleText(value, locale, primary)
+  const target = locale || primary
+  return readLocaleText(value as LocalizedString, target, primary)
 }
 
 export { plainText, type LegacyLocalized }

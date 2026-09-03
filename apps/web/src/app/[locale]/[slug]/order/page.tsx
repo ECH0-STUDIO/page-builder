@@ -1,8 +1,10 @@
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import OrderPage from '../../[slug]/order/page'
+import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
+import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-import { guardPrefixedStoreRoute, runStoreLocaleGuard } from '@/lib/store-locale-guard'
-import { StoreOrderPage } from '@/components/store/StoreOrderPage'
+import { createClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({
   params,
@@ -10,39 +12,61 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
   const { locale, slug } = await params
-  const guard = await guardPrefixedStoreRoute(locale, slug, 'order')
-  if ('redirect' in guard) return { title: slug }
+  if (!isStoreLocaleCode(locale)) return { title: 'Not Found' }
+
+  const access = await loadStoreLocaleAccess(slug)
+  if (!access || !isPurchasedPathLocale(access, locale)) {
+    return { title: 'Not Found' }
+  }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
-
-  const { data: business } = await db
+  const { data: business } = await supabase
     .from('businesses')
     .select('id, name')
     .eq('slug', slug)
     .single()
-
   if (!business) return { title: 'Not Found' }
 
-  const { data: pub } = await db
+  const { data: pub } = await supabase
     .from('publishing_settings')
     .select(
-      'seo_title, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language, dual_language_enabled, dual_language_setup_status, enabled_locales',
+      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
     )
     .eq('business_id', business.id)
     .single()
 
-  return buildStoreMetadata({
+  const base = buildStoreMetadata({
     slug,
     businessName: business.name,
     pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
+    pathSuffix: '/order',
     title: `${business.name} — Order`,
     description: `Order from ${business.name}`,
-    pathSuffix: '/order',
-    languageConfig: guard.languageConfig,
-    activeLocale: guard.pathLocale,
+    contentLocale: locale,
+    primaryLocale: access.primary,
   })
+
+  const languages: Record<string, string> = {}
+  for (const code of allPublicLocales(access)) {
+    languages[code] = buildStorePublicPath(slug, {
+      locale: code,
+      primary: access.primary,
+      kind: 'order',
+    })
+  }
+
+  return {
+    ...base,
+    alternates: {
+      ...(typeof base.alternates === 'object' ? base.alternates : {}),
+      canonical: buildStorePublicPath(slug, {
+        locale,
+        primary: access.primary,
+        kind: 'order',
+      }),
+      languages,
+    },
+  }
 }
 
 export default async function LocaleOrderPage({
@@ -51,13 +75,21 @@ export default async function LocaleOrderPage({
   params: Promise<{ locale: string; slug: string }>
 }) {
   const { locale, slug } = await params
-  const guard = await runStoreLocaleGuard(locale, slug, 'order')
+  if (!isStoreLocaleCode(locale)) notFound()
 
-  return (
-    <StoreOrderPage
-      slug={guard.slug}
-      pathLocale={guard.pathLocale}
-      languageConfig={guard.languageConfig}
-    />
-  )
+  const access = await loadStoreLocaleAccess(slug)
+  if (!access) notFound()
+
+  if (locale === access.primary) {
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary, kind: 'order' }))
+  }
+
+  if (!isPurchasedPathLocale(access, locale)) {
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary, kind: 'order' }))
+  }
+
+  // Next.js page modules are typed to their own route params; cast when reusing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Page = OrderPage as any
+  return <Page params={Promise.resolve({ slug })} contentLocale={locale} />
 }

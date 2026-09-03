@@ -4,6 +4,7 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { getPublishingAction, getPageViewsAction, getCustomDomainSetupAction } from '@/app/actions/page-builder'
 import { billCustomDomainIfDueAction, billPageViewsIfDueAction, refundPendingCustomDomainCharges } from '@/app/actions/credits'
+import { billLocalesIfDueAction } from '@/app/actions/business-locales'
 import type { Metadata } from 'next'
 import { PublishingClient } from '@/components/publishing/PublishingClient'
 import { getAppBaseUrl, getMarketingBaseUrl, isSplitDomainDeployment } from '@/lib/site-urls'
@@ -35,6 +36,7 @@ export default async function PublishingPage() {
     await Promise.all([
       billCustomDomainIfDueAction(business.id),
       billPageViewsIfDueAction(business.id),
+      billLocalesIfDueAction(business.id),
     ])
   } catch (error) {
     console.error('Publishing page billing error:', error)

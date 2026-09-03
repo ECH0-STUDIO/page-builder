@@ -1,50 +1,72 @@
 'use client'
 
 import Link from 'next/link'
-import { Globe } from 'lucide-react'
-import type { SupportedLocale } from '@/i18n/locale'
-import { LOCALE_LABELS } from '@/i18n/locale'
-import type { StoreLanguageConfig } from '@/i18n/store-locale'
-import {
-  alternateStoreLocale,
-  storePublicPathForLocale,
-} from '@/lib/store-routing'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import {
+  buildStorePublicPath,
+  isStoreLocaleCode,
+  storeLocaleLabel,
+  type StoreLocaleCode,
+} from '@/i18n/store-locales'
 
-interface StoreLanguageSwitcherProps {
-  slug: string
-  currentLocale: SupportedLocale
-  languageConfig: StoreLanguageConfig
-  kind?: 'landing' | 'order'
-  className?: string
-}
-
-/** Guest-facing control to switch between primary and secondary store URLs. */
 export function StoreLanguageSwitcher({
   slug,
-  currentLocale,
-  languageConfig,
+  primary,
+  locales,
   kind = 'landing',
-  className,
-}: StoreLanguageSwitcherProps) {
-  if (!languageConfig.dual_language_enabled) return null
+}: {
+  slug: string
+  primary: StoreLocaleCode
+  locales: StoreLocaleCode[]
+  /** @deprecated inferred from pathname */
+  current?: StoreLocaleCode
+  kind?: 'landing' | 'order'
+}) {
+  const pathname = usePathname() || ''
+  const searchParams = useSearchParams()
+  if (locales.length < 2) return null
 
-  const targetLocale = alternateStoreLocale(currentLocale, languageConfig)
-  if (!targetLocale) return null
+  const segments = pathname.split('/').filter(Boolean)
+  const first = segments[0]
+  const inferred: StoreLocaleCode =
+    isStoreLocaleCode(first) && first !== slug && locales.includes(first)
+      ? first
+      : primary
 
-  const href = storePublicPathForLocale(slug, languageConfig, kind, targetLocale)
+  const query = searchParams?.toString()
+  const qs = query ? `?${query}` : ''
+  const onOrder = kind === 'order' || pathname.includes('/order')
 
   return (
-    <Link
-      href={href}
-      className={cn(
-        'inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors',
-        className,
-      )}
-      hrefLang={targetLocale}
+    <div
+      className="fixed bottom-4 right-4 z-40 flex items-center gap-1 rounded-full border border-black/10 bg-white/95 p-1 shadow-lg backdrop-blur"
+      role="navigation"
+      aria-label="Language"
     >
-      <Globe className="size-4 shrink-0" aria-hidden />
-      <span>{LOCALE_LABELS[targetLocale]}</span>
-    </Link>
+      {locales.map(locale => {
+        const href = `${buildStorePublicPath(slug, {
+          locale,
+          primary,
+          kind: onOrder ? 'order' : 'landing',
+        })}${qs}`
+        const active = locale === inferred
+        return (
+          <Link
+            key={locale}
+            href={href}
+            className={cn(
+              'px-2.5 py-1 text-xs font-medium rounded-full transition-colors',
+              active
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+            )}
+            hrefLang={locale}
+          >
+            {storeLocaleLabel(locale)}
+          </Link>
+        )
+      })}
+    </div>
   )
 }

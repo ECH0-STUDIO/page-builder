@@ -17,9 +17,7 @@ import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { CtaEditor, DEFAULT_CTA_BUTTON } from './CtaEditor'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
-import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
-import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
+import { plainText } from '@/i18n/locale'
 import type {
   HeroConfig, HeroLayout, BlockHeight, ImagePosition, SplitImageSide, PageBlock, ContentAlign,
 } from '../types'
@@ -29,8 +27,7 @@ import { resolveHeroHeight } from '../hero-utils'
 
 export function HeroPreview({ config }: { config: HeroConfig }) {
   const { t } = useTranslation()
-  const { contentLocale, primaryLocale } = useEditorLocale()
-  const heading = readEditorLocaleText(config.heading, contentLocale, primaryLocale)
+  const heading = plainText(config.heading)
   const layoutLabels: Record<HeroLayout, string> = {
     centered: t('heroBlock.overlay'), // backward-compat: old centered = overlay
     split: t('heroBlock.split'),
@@ -92,7 +89,6 @@ export function HeroSettings({
   omitHeight?: boolean
 }) {
   const { t } = useTranslation()
-  const { secondaryLocked } = useEditorLocale()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -387,22 +383,14 @@ export function HeroSettings({
             ))}
           </div>
         </div>
-        <LocalizedTextField
-          id="hero-heading"
-          label={t('heroBlock.heading')}
-          value={config.heading}
-          onChange={v => set('heading', v)}
-          placeholder={t('heroBlock.headingPlaceholder')}
-        />
-        <LocalizedTextField
-          id="hero-body"
-          label={t('heroBlock.bodyText')}
-          value={config.body}
-          onChange={v => set('body', v)}
-          placeholder={t('heroBlock.bodyPlaceholder')}
-          multiline
-          rows={2}
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
+          <Input id="hero-heading" value={plainText(config.heading)} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
+          <Textarea id="hero-body" value={plainText(config.body)} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+        </div>
       </div>
 
       <Separator />

@@ -52,9 +52,6 @@ import { buildBlocksFromTemplate, getTemplateThemePreset } from '@/lib/apply-pag
 import { DEFAULT_PAGE_TEMPLATE_ID } from '../templates'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { SupportedLocale } from '@/i18n/locale'
-import { parseStoreLanguageConfig } from '@/i18n/store-locale'
-import { EditorLocaleProvider, useEditorLocale } from '@/components/i18n/EditorLocaleContext'
 
 interface PuckEditorShellProps {
   business: Business
@@ -69,16 +66,7 @@ interface PuckEditorShellProps {
   builderMode?: BuilderPageMode
 }
 
-export function PuckEditorShell(props: PuckEditorShellProps) {
-  const storeLanguage = parseStoreLanguageConfig(props.initialPublishing)
-  return (
-    <EditorLocaleProvider storeLanguage={storeLanguage}>
-      <PuckEditorShellInner {...props} />
-    </EditorLocaleProvider>
-  )
-}
-
-function PuckEditorShellInner({
+export function PuckEditorShell({
   business,
   initialBlocks,
   initialPublishing,
@@ -90,7 +78,6 @@ function PuckEditorShellInner({
   builderMode = 'landing',
 }: PuckEditorShellProps) {
   const { t } = useTranslation()
-  const editorLocale = useEditorLocale()
 
   const normalizedInitial = useMemo(
     () =>
@@ -159,10 +146,7 @@ function PuckEditorShellInner({
     theme?.background_color,
     theme?.text_color,
   ])
-  const puckMetadata = useMemo(
-    () => ({ themeRevision, localeRevision: editorLocale.contentLocale }),
-    [themeRevision, editorLocale.contentLocale],
-  )
+  const puckMetadata = useMemo(() => ({ themeRevision }), [themeRevision])
   const navbarConfig: NavbarConfig = theme?.navbar_config ?? defaultNavbarConfig
   const footerConfig: FooterConfig = theme?.footer_config ?? defaultFooterConfig
   const fontFamily = theme?.font_family ?? defaultThemeSettings.font_family
@@ -201,9 +185,6 @@ function PuckEditorShellInner({
       previewInteractive: previewMode,
       viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
-      contentLocale: editorLocale.contentLocale,
-      primaryLocale: editorLocale.primaryLocale,
-      secondaryLocked: editorLocale.secondaryLocked,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -215,9 +196,6 @@ function PuckEditorShellInner({
       storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
-      locale: editorLocale.contentLocale,
-      primaryLocale: editorLocale.primaryLocale,
-      editorLocaleMode: !previewMode,
     }),
     t,
   })
@@ -235,9 +213,6 @@ function PuckEditorShellInner({
       previewInteractive: previewMode,
       viewMode,
       paymentSettings: business.payment_settings as PaymentSettings | null,
-      contentLocale: editorLocale.contentLocale,
-      primaryLocale: editorLocale.primaryLocale,
-      secondaryLocked: editorLocale.secondaryLocked,
     }),
     getBlocks: () => blocksRef.current,
     getRenderCtx: () => ({
@@ -249,9 +224,6 @@ function PuckEditorShellInner({
       storeUrl,
       previewInteractive: previewMode,
       previewLayout: canvasPreviewLayout,
-      locale: editorLocale.contentLocale,
-      primaryLocale: editorLocale.primaryLocale,
-      editorLocaleMode: !previewMode,
     }),
     t,
   }
@@ -378,7 +350,6 @@ function PuckEditorShellInner({
             previewMode={previewMode}
             viewMode={viewMode}
             themeRevision={themeRevision}
-            localeRevision={editorLocale.contentLocale}
           />
           <PuckDragRecovery />
           <PuckCustomHeader
@@ -393,7 +364,7 @@ function PuckEditorShellInner({
       ),
       headerActions: () => <PuckHeaderActions {...chromeProps} />,
     }),
-    [chromeProps, previewMode, viewMode, builderMode, themeRevision, editorLocale.contentLocale],
+    [chromeProps, previewMode, viewMode, builderMode, themeRevision],
   )
 
   const puckIframe = useMemo(() => ({ enabled: false as const }), [])

@@ -1,6 +1,7 @@
-import type { SupportedLocale } from '@/i18n/locale'
+/**
+ * Per-locale jsonb text maps for storefront content (any purchased store locale).
+ */
 
-/** Stored in jsonb / block config — plain string (legacy) or per-locale map. */
 export type LocalizedMap = Record<string, string | boolean | Record<string, boolean> | undefined>
 
 export type LocalizedString =
@@ -9,10 +10,6 @@ export type LocalizedString =
   | null
   | undefined
 
-export function otherStoreLocale(locale: SupportedLocale): SupportedLocale {
-  return locale === 'vi' ? 'en' : 'vi'
-}
-
 export function getCustomizedFlags(
   record: Record<string, unknown> | null | undefined,
 ): Record<string, boolean> {
@@ -20,18 +17,16 @@ export function getCustomizedFlags(
   const raw = record._customized
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
   return Object.fromEntries(
-    Object.entries(raw as Record<string, unknown>).filter((entry): entry is [string, boolean] => entry[1] === true),
+    Object.entries(raw as Record<string, unknown>).filter(
+      (entry): entry is [string, boolean] => entry[1] === true,
+    ),
   )
 }
 
-/**
- * True when this locale has its own translation (explicitly edited).
- * Untranslated locales fall back to primary in the editor and on the live site.
- */
 export function isLocaleCustomized(
   value: LocalizedString,
-  locale: SupportedLocale,
-  primary: SupportedLocale,
+  locale: string,
+  primary: string,
 ): boolean {
   if (value == null) return false
   if (typeof value === 'string') return locale === primary
@@ -40,7 +35,6 @@ export function isLocaleCustomized(
   const flags = getCustomizedFlags(record)
   if (flags[locale]) return true
 
-  // Legacy: secondary text that differs from primary was an explicit translation.
   if (locale !== primary) {
     const direct = record[locale]
     const primaryText = record[primary]
@@ -60,18 +54,16 @@ export function isLocaleCustomized(
 
 function pickFromRecord(
   record: Record<string, unknown>,
-  locale: SupportedLocale,
-  primary: SupportedLocale,
+  locale: string,
+  primary: string,
 ): string {
   const customized = getCustomizedFlags(record)
 
-  // Customized locale — use stored value as-is (including intentional empty string).
   if (customized[locale]) {
     const direct = record[locale]
     return typeof direct === 'string' ? direct : ''
   }
 
-  // Not customized — Webflow-style fallback to primary for secondary locales.
   if (locale !== primary) {
     const primaryText = record[primary]
     if (typeof primaryText === 'string') return primaryText
@@ -90,39 +82,59 @@ function pickFromRecord(
   return ''
 }
 
-/**
- * Read text for a locale.
- * Untranslated secondary locales fall back to primary (Webflow localization model).
- */
+/** Read text for a locale — untranslated locales fall back to primary. */
 export function readLocaleText(
   value: LocalizedString,
-  locale: SupportedLocale,
-  primary: SupportedLocale,
+  locale: string,
+  primary: string,
 ): string {
   if (value == null) return ''
   if (typeof value === 'string') return value
   return pickFromRecord(value as Record<string, unknown>, locale, primary)
 }
 
-/** Seed primary only — secondary starts untranslated (falls back until edited). */
-export function seedLocalizedPair(
+/**
+ * Write one locale slice. Marks the locale as customized.
+ * Never overwrites other customized locales.
+ */
+export function writeLocaleText(
   value: LocalizedString,
-  primary: SupportedLocale,
-  secondary: SupportedLocale,
+  locale: string,
+  text: string,
+  primary: string,
 ): LocalizedMap {
-  const text = readLocaleText(value, primary, primary)
-  return { [primary]: text, [secondary]: '', _customized: { [primary]: true } }
+  const existingRecord =
+    value != null && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null
+
+  const stringEntries: Record<string, string> = {}
+  if (existingRecord) {
+    for (const [k, v] of Object.entries(existingRecord)) {
+      if (typeof v === 'string') stringEntries[k] = v
+    }
+  } else if (typeof value === 'string') {
+    stringEntries[primary] = value
+  }
+
+  if (stringEntries[primary] === undefined) {
+    stringEntries[primary] = typeof value === 'string' ? value : ''
+  }
+
+  const flags = getCustomizedFlags(existingRecord ?? stringEntries)
+  const next: LocalizedMap = { ...stringEntries, [locale]: text }
+  next._customized = { ...flags, [locale]: true }
+  return next
 }
 
-/** True when value is already a locale map with both keys populated. */
-export function hasBothLocaleTexts(
+export function primaryPlainText(value: LocalizedString, primary: string): string {
+  return readLocaleText(value, primary, primary)
+}
+
+export function resolveContentText(
   value: LocalizedString,
-  primary: SupportedLocale,
-  secondary: SupportedLocale,
-): boolean {
-  if (value == null || typeof value === 'string') return false
-  const record = value as Record<string, unknown>
-  const a = record[primary]
-  const b = record[secondary]
-  return typeof a === 'string' && typeof b === 'string'
+  locale: string,
+  primary: string,
+): string {
+  return readLocaleText(value, locale, primary)
 }

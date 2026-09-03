@@ -44,7 +44,6 @@ import type { PuckBlockProps } from './adapters'
 import { buildThemeStyle } from '../theme-tokens'
 import { BrowseOnlyCartProvider } from '../render/CartContext'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
-import type { SupportedLocale } from '@/i18n/locale'
 import { SITE_FOOTER, SITE_NAVBAR, SITE_FOOTER_ID, SITE_NAVBAR_ID } from './constants'
 import { PreviewLayoutProvider } from './PreviewLayoutContext'
 
@@ -61,9 +60,6 @@ export interface PuckShellState {
   previewInteractive: boolean
   viewMode: 'desktop' | 'mobile'
   paymentSettings: PaymentSettings | null
-  contentLocale: SupportedLocale
-  primaryLocale: SupportedLocale
-  secondaryLocked: boolean
 }
 
 export interface PuckEditorRefs {
@@ -381,8 +377,5 @@ export function defaultShellState(business: Business): PuckShellState {
     previewInteractive: false,
     viewMode: 'desktop',
     paymentSettings: null,
-    contentLocale: 'vi',
-    primaryLocale: 'vi',
-    secondaryLocked: false,
   }
 }

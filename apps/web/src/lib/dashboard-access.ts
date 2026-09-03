@@ -9,6 +9,15 @@ const ALL: BusinessRole[] = ['owner', 'manager', 'staff']
 const OWNER_MANAGER: BusinessRole[] = ['owner', 'manager']
 const OWNER: BusinessRole[] = ['owner']
 
+/** Settings sub-nav */
+export const SETTINGS_NAV_ACCESS: Record<string, BusinessRole[]> = {
+  '/dashboard/settings/security': ALL,
+  '/dashboard/settings/team': OWNER_MANAGER,
+  '/dashboard/settings/localization': ALL, // personal dashboard language/currency
+  '/dashboard/settings/languages': OWNER_MANAGER, // storefront paid locales
+  '/dashboard/settings/credits': OWNER_MANAGER,
+}
+
 /** Main sidebar nav href → roles that may see it */
 export const DASHBOARD_NAV_ACCESS: Record<string, BusinessRole[]> = {
   '/dashboard': OWNER_MANAGER, // setup overview — staff land on orders
@@ -21,15 +30,7 @@ export const DASHBOARD_NAV_ACCESS: Record<string, BusinessRole[]> = {
   '/dashboard/payments': OWNER, // payment account settings are owner-only to edit
   '/dashboard/gallery': OWNER_MANAGER,
   '/dashboard/publishing': OWNER_MANAGER,
-}
-
-/** Settings sub-nav */
-export const SETTINGS_NAV_ACCESS: Record<string, BusinessRole[]> = {
-  '/dashboard/settings/security': ALL,
-  '/dashboard/settings/team': OWNER_MANAGER,
-  '/dashboard/settings/localization': ALL, // personal dashboard language/currency
-  '/dashboard/settings/language': OWNER_MANAGER,
-  '/dashboard/settings/credits': OWNER_MANAGER,
+  '/dashboard/translations': OWNER_MANAGER,
 }
 
 export function normalizeBusinessRole(role: string | null | undefined): BusinessRole {

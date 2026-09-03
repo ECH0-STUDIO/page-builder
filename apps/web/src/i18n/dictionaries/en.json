@@ -17,6 +17,7 @@
     "addNewBusiness": "Add new business",
     "selectBusiness": "Select business",
     "gallery": "Gallery",
+    "translations": "Translations",
     "topUp": "TOP UP"
   },
   "overview": {
@@ -135,6 +136,8 @@
     "save": "Save",
     "analytics": "Visitor Analytics",
     "totalViews": "Total views",
+    "byLocale": "By language",
+    "byLocaleHint": "Breakdown for this period. Credits still use one shared pool across languages.",
     "sevenDays": "7 days",
     "thirtyDays": "30 days",
     "seo": "SEO & Metadata",
@@ -608,8 +611,8 @@
     "tabs": {
       "security": "Security",
       "team": "Team Management",
+      "languages": "Store languages",
       "localization": "Localization",
-      "storeLanguage": "Store Language",
       "credits": "Billing & Credits"
     },
     "security": {
@@ -665,26 +668,6 @@
       "save": "Save Preferences",
       "toastUpdated": "Preferences updated",
       "toastFailed": "Failed to update preferences"
-    },
-    "storeLanguage": {
-      "title": "Store language",
-      "description": "Choose your storefront primary language and optionally enable Vietnamese + English content.",
-      "dualToggle": "Enable dual language (Vietnamese + English)",
-      "dualToggleHint": "When off, your live site uses one language only. When on, you can edit secondary text in the page builder, order page, and menu.",
-      "primaryLabel": "Primary language",
-      "primaryHint": "Used for your main URL, SEO, and default content. Switching primary only changes URLs — your content is kept.",
-      "vietnamese": "Tiếng Việt",
-      "english": "English",
-      "savePrimary": "Save primary language",
-      "primarySaved": "Primary language updated",
-      "dualEnabled": "Dual language is ready",
-      "dualDisabled": "Dual language turned off",
-      "setupProgress": "Setting up languages…",
-      "urlsTitle": "Live URLs",
-      "primaryUrl": "Primary: yourstore.com{{path}}",
-      "secondaryUrl": "Secondary: yourstore.com{{path}}",
-      "secondaryEditHint": "Secondary pages mirror layout from primary — only text can differ.",
-      "phase2Notice": "Page builder, order page, and menu editors will get language toggles in the next update. Secondary URLs go live then too."
     }
   },
   "heroBlock": {

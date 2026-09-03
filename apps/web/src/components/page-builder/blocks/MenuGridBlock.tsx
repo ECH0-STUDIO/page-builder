@@ -18,9 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { useEditorLocale } from '@/components/i18n/EditorLocaleContext'
-import { readEditorLocaleText } from '@/i18n/editor-locale-utils'
-import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
+import { plainText } from '@/i18n/locale'
 import type { BorderRadius, MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem } from '@/app/actions/menu'
 import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
@@ -30,15 +28,13 @@ import { RadiusPicker } from '@/components/shared/RadiusPicker'
 
 export function MenuGridPreview({ config }: { config: MenuGridConfig }) {
   const { t } = useTranslation()
-  const { contentLocale, primaryLocale } = useEditorLocale()
-  const heading = readEditorLocaleText(config.heading, contentLocale, primaryLocale)
   const colMap: Record<string, string> = { '2col': t('menuGridBlock.col2'), '3col': t('menuGridBlock.col3'), list: t('menuGridBlock.list') }
   return (
     <div className="rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <div className="size-8 rounded bg-muted flex items-center justify-center text-base">🍽️</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold">{heading || t('menuGridBlock.menu')}</p>
+          <p className="text-xs font-semibold">{plainText(config.heading) || t('menuGridBlock.menu')}</p>
           <p className="text-[10px] text-muted-foreground">{colMap[config.layout]} · {config.show_category_tabs ? t('menuGridBlock.tabsOn') : t('menuGridBlock.noTabs')}</p>
         </div>
       </div>
@@ -114,23 +110,26 @@ export function MenuGridSettings({
       {/* Heading — landing Menu Grid only (order page has no section title) */}
       {!layoutOnly && (
         <>
-          <LocalizedTextField
-            label={t('menuGridBlock.sectionHeading')}
-            value={config.heading}
-            onChange={v => set('heading', v)}
-            placeholder={t('menuGridBlock.headingPlaceholder')}
-          />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
+            <Input
+              value={plainText(config.heading)}
+              onChange={e => set('heading', e.target.value)}
+              placeholder={t('menuGridBlock.headingPlaceholder')}
+              className="h-8 text-sm"
+            />
             <p className="text-[11px] text-muted-foreground">{t('menuGridBlock.headingHelp')}</p>
+          </div>
 
-          <LocalizedTextField
-            label={t('menuGridBlock.description')}
-            value={config.description ?? ''}
-            onChange={v => set('description', v)}
-            placeholder={t('menuGridBlock.descPlaceholder')}
-            multiline
-            rows={3}
-            className="[&_textarea]:text-sm [&_textarea]:min-h-[60px]"
-          />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
+            <Textarea
+              value={plainText(config.description ?? '')}
+              onChange={e => set('description', e.target.value)}
+              placeholder={t('menuGridBlock.descPlaceholder')}
+              className="text-sm min-h-[60px]"
+            />
+          </div>
 
           <Separator />
         </>

@@ -1,9 +1,10 @@
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
+import SlugPage from '../../[slug]/page'
 import { createClient } from '@/lib/supabase/server'
+import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
+import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-import { guardPrefixedStoreRoute, runStoreLocaleGuard } from '@/lib/store-locale-guard'
-import { storePublicPathForLocale } from '@/lib/store-routing'
-import { StoreLandingPage } from '@/components/store/StoreLandingPage'
 
 export async function generateMetadata({
   params,
@@ -11,16 +12,15 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
   const { locale, slug } = await params
-  const guard = await guardPrefixedStoreRoute(locale, slug, 'landing')
-  if ('redirect' in guard) {
-    return { title: slug }
+  if (!isStoreLocaleCode(locale)) return { title: 'Not Found' }
+
+  const access = await loadStoreLocaleAccess(slug)
+  if (!access || !isPurchasedPathLocale(access, locale)) {
+    return { title: 'Not Found' }
   }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any
-
-  const { data: business } = await db
+  const { data: business } = await supabase
     .from('businesses')
     .select('id, name')
     .eq('slug', slug)
@@ -28,26 +28,43 @@ export async function generateMetadata({
 
   if (!business) return { title: 'Not Found' }
 
-  const { data: pub } = await db
+  const { data: pub } = await supabase
     .from('publishing_settings')
     .select(
-      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language, dual_language_enabled, dual_language_setup_status, enabled_locales',
+      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
     )
     .eq('business_id', business.id)
     .single()
 
-  const seoI18n = pub?.seo_i18n as Record<string, { title?: string; description?: string }> | null
-  const localeSeo = seoI18n?.[guard.pathLocale]
-
-  return buildStoreMetadata({
+  const base = buildStoreMetadata({
     slug,
     businessName: business.name,
     pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
-    title: localeSeo?.title,
-    description: localeSeo?.description,
-    languageConfig: guard.languageConfig,
-    activeLocale: guard.pathLocale,
+    contentLocale: locale,
+    primaryLocale: access.primary,
   })
+
+  const languages: Record<string, string> = {}
+  for (const code of allPublicLocales(access)) {
+    languages[code] = buildStorePublicPath(slug, {
+      locale: code,
+      primary: access.primary,
+      kind: 'landing',
+    })
+  }
+
+  return {
+    ...base,
+    alternates: {
+      ...(typeof base.alternates === 'object' ? base.alternates : {}),
+      canonical: buildStorePublicPath(slug, {
+        locale,
+        primary: access.primary,
+        kind: 'landing',
+      }),
+      languages,
+    },
+  }
 }
 
 export default async function LocaleSlugPage({
@@ -58,21 +75,28 @@ export default async function LocaleSlugPage({
   searchParams: Promise<{ table?: string }>
 }) {
   const { locale, slug } = await params
-  const sp = await searchParams
-  const guard = await runStoreLocaleGuard(locale, slug, 'landing')
+  if (!isStoreLocaleCode(locale)) notFound()
 
-  const tableParam = (sp.table ?? '').trim()
-  const tableRedirect = tableParam
-    ? storePublicPathForLocale(guard.slug, guard.languageConfig, 'order') +
-      `?table=${encodeURIComponent(tableParam)}`
-    : null
+  const access = await loadStoreLocaleAccess(slug)
+  if (!access) notFound()
 
+  // Primary must stay unprefixed
+  if (locale === access.primary) {
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
+  }
+
+  if (!isPurchasedPathLocale(access, locale)) {
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
+  }
+
+  // Next.js page modules are typed to their own route params; cast when reusing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Page = SlugPage as any
   return (
-    <StoreLandingPage
-      slug={guard.slug}
-      pathLocale={guard.pathLocale}
-      languageConfig={guard.languageConfig}
-      tableRedirect={tableRedirect}
+    <Page
+      params={Promise.resolve({ slug })}
+      searchParams={searchParams}
+      contentLocale={locale}
     />
   )
 }

@@ -85,11 +85,7 @@ export async function createBusiness(input: { name: string; slug: string; catego
 
   // Create default records (errors here are non-fatal — business exists)
   await db.from('theme_settings').insert({ business_id: business.id })
-  await db.from('publishing_settings').insert({
-    business_id: business.id,
-    published: false,
-    language: 'vi',
-  })
+  await db.from('publishing_settings').insert({ business_id: business.id, published: false })
   await db.from('payment_settings').insert({ business_id: business.id })
 
   return business as Business

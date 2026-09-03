@@ -232,18 +232,21 @@ export interface Database {
           id: string
           business_id: string
           viewed_at: string
+          locale: string
           count: number
         }
         Insert: {
           id?: string
           business_id: string
           viewed_at?: string
+          locale?: string
           count?: number
         }
         Update: {
           id?: string
           business_id?: string
           viewed_at?: string
+          locale?: string
           count?: number
         }
         Relationships: [
@@ -355,7 +358,6 @@ export interface Database {
           id: string
           group_id: string
           label: string
-          label_i18n: Json | null
           price_delta: number
           sort_order: number
         }
@@ -363,7 +365,6 @@ export interface Database {
           id?: string
           group_id: string
           label: string
-          label_i18n?: Json | null
           price_delta?: number
           sort_order?: number
         }
@@ -371,7 +372,6 @@ export interface Database {
           id?: string
           group_id?: string
           label?: string
-          label_i18n?: Json | null
           price_delta?: number
           sort_order?: number
         }
@@ -523,8 +523,6 @@ export interface Database {
           has_unpublished_changes: boolean | null
           enabled_locales: string[] | null
           seo_i18n: Json | null
-          dual_language_enabled: boolean
-          dual_language_setup_status: string
         }
         Insert: {
           id?: string
@@ -552,8 +550,6 @@ export interface Database {
           has_unpublished_changes?: boolean | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
-          dual_language_enabled?: boolean
-          dual_language_setup_status?: string
         }
         Update: {
           id?: string
@@ -581,14 +577,45 @@ export interface Database {
           has_unpublished_changes?: boolean | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
-          dual_language_enabled?: boolean
-          dual_language_setup_status?: string
         }
         Relationships: [
           
         ]
       }
       storage_subscriptions: { Row: any; Insert: any; Update: any; Relationships: any }
+      business_locales: {
+        Row: {
+          id: string
+          business_id: string
+          locale: string
+          status: string
+          activated_at: string
+          next_bill_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          locale: string
+          status?: string
+          activated_at?: string
+          next_bill_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          locale?: string
+          status?: string
+          activated_at?: string
+          next_bill_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_balances: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_orders: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_transactions: { Row: any; Insert: any; Update: any; Relationships: any }
@@ -710,7 +737,6 @@ export interface Database {
           id: string
           item_id: string
           name: string
-          name_i18n: Json | null
           required: boolean
           sort_order: number
           allow_multiple: boolean
@@ -719,7 +745,6 @@ export interface Database {
           id?: string
           item_id: string
           name: string
-          name_i18n?: Json | null
           required?: boolean
           sort_order?: number
           allow_multiple?: boolean
@@ -728,7 +753,6 @@ export interface Database {
           id?: string
           item_id?: string
           name?: string
-          name_i18n?: Json | null
           required?: boolean
           sort_order?: number
           allow_multiple?: boolean
@@ -863,8 +887,21 @@ export interface Database {
         Returns: boolean
       }
       increment_page_view: {
-        Args: { p_business_id: string, p_date: string }
+        Args: { p_business_id: string; p_date: string; p_locale?: string }
         Returns: undefined
+      }
+      increment_page_view_and_bill: {
+        Args: {
+          p_business_id: string
+          p_date: string
+          p_views_per_credit?: number
+          p_locale?: string
+        }
+        Returns: {
+          credits_charged: number
+          total_views: number
+          views_billed: number
+        }[]
       }
       purge_orders_outside_retention: {
         Args: Record<string, never>

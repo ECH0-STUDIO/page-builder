@@ -36,7 +36,6 @@ import {
   PageBuilderModeSwitcher,
   type BuilderPageMode,
 } from '@/components/page-builder/PageBuilderModeSwitcher'
-import { LocaleEditBar } from '@/components/i18n/LocaleEditBar'
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
@@ -51,13 +50,10 @@ export function PuckPreviewSync({
   previewMode,
   viewMode = 'desktop',
   themeRevision = 0,
-  localeRevision,
 }: {
   previewMode: boolean
   viewMode?: 'desktop' | 'mobile'
   themeRevision?: number
-  /** Changes when editor VI/EN tab switches — forces canvas to re-read locale. */
-  localeRevision?: string
 }) {
   const { dispatch } = usePuck()
 
@@ -68,7 +64,7 @@ export function PuckPreviewSync({
         previewMode: previewMode ? 'interactive' : 'edit',
         leftSideBarVisible: !previewMode,
         rightSideBarVisible: !previewMode,
-        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop/theme/locale switch
+        // Touch viewports so root + blocks re-read editorRefs on mobile/desktop/theme switch
         viewports: {
           controlsVisible: false,
           options: [],
@@ -80,7 +76,7 @@ export function PuckPreviewSync({
       },
       recordHistory: false,
     })
-  }, [previewMode, viewMode, themeRevision, localeRevision, dispatch])
+  }, [previewMode, viewMode, themeRevision, dispatch])
 
   return null
 }
@@ -288,7 +284,6 @@ export function PuckCustomHeader({
     <header className="eatery-puck-header flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-x-auto">
       <PuckHeaderBack />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
-      <LocaleEditBar />
       <PuckSidebarToggles />
       <div className="flex-1 min-w-0" />
       <div className="flex items-center gap-1 shrink-0 justify-end">{chrome}</div>

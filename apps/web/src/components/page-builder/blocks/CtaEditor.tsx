@@ -21,9 +21,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
 import type { CtaButton, CtaAction, CtaStyle, PageBlock } from '../types'
 import { resolveCtaColor } from '../cta-styles'
+import { plainText } from '@/i18n/locale'
 // Re-export so existing client-side imports from CtaEditor still resolve
 export { ctaHref } from '../cta-utils'
 
@@ -106,11 +106,11 @@ export function CtaEditor({
       </div>
 
       {/* Label */}
-      <LocalizedTextField
+      <Input
         placeholder={t('ctaEditor.buttonLabel')}
-        value={value.label}
-        onChange={v => onChange({ ...value, label: v })}
-        className="[&_input]:h-8 [&_input]:text-sm"
+        value={plainText(value.label)}
+        onChange={e => onChange({ ...value, label: e.target.value })}
+        className="h-8 text-sm"
       />
 
       {/* Action + Style */}

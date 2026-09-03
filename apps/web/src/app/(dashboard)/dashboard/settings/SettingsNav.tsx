@@ -27,14 +27,14 @@ export function SettingsNav() {
       icon: Users,
     },
     {
+      title: t('settings.tabs.languages') || 'Store languages',
+      href: '/dashboard/settings/languages',
+      icon: Languages,
+    },
+    {
       title: t('settings.tabs.localization'),
       href: '/dashboard/settings/localization',
       icon: Globe,
-    },
-    {
-      title: t('settings.tabs.storeLanguage'),
-      href: '/dashboard/settings/language',
-      icon: Languages,
     },
     {
       title: t('settings.tabs.credits'),

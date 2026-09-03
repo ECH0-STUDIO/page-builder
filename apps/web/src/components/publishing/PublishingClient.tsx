@@ -17,7 +17,7 @@ import {
   connectCustomDomainAction, disconnectCustomDomainAction,
 } from '@/app/actions/page-builder'
 import type { DnsRecord } from '@/lib/vercel-domains'
-import type { PublishingSettings, DayViewStat } from '@/app/actions/page-builder'
+import type { PublishingSettings, DayViewStat, LocaleViewStat } from '@/app/actions/page-builder'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -29,7 +29,12 @@ interface PublishingClientProps {
   businessId: string
   publishing: PublishingSettings | null
   slug: string
-  analytics: { total: number; periodTotal: number; daily: DayViewStat[] }
+  analytics: {
+    total: number
+    periodTotal: number
+    daily: DayViewStat[]
+    byLocale: LocaleViewStat[]
+  }
   baseUrl: string
   initialDomainSetup?: {
     domain: string | null
@@ -84,6 +89,56 @@ function MiniChart({ daily, period }: { daily: DayViewStat[]; period: 7 | 30 }) 
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function LocaleBreakdown({
+  byLocale,
+  periodTotal,
+}: {
+  byLocale: LocaleViewStat[]
+  periodTotal: number
+}) {
+  const { t } = useTranslation()
+  if (!byLocale.length || periodTotal <= 0) return null
+  const max = Math.max(...byLocale.map(r => r.count), 1)
+
+  return (
+    <div className="space-y-3 pt-2 border-t border-gray-100">
+      <div>
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+          {t('publishing.byLocale')}
+        </p>
+        <p className="text-[11px] text-gray-400 mt-0.5">{t('publishing.byLocaleHint')}</p>
+      </div>
+      <div className="space-y-2.5">
+        {byLocale.map(row => {
+          const pct = Math.round((row.count / periodTotal) * 100)
+          const widthPct = Math.max((row.count / max) * 100, 4)
+          return (
+            <div key={row.locale || 'unknown'} className="space-y-1">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="font-medium text-gray-700 truncate">
+                  {row.label}
+                  {row.locale ? (
+                    <span className="text-gray-400 font-normal"> · {row.locale}</span>
+                  ) : null}
+                </span>
+                <span className="text-gray-500 tabular-nums shrink-0">
+                  {row.count.toLocaleString()} · {pct}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gray-800/80"
+                  style={{ width: `${widthPct}%` }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -248,7 +303,13 @@ export function PublishingClient({
   // ── CSV download ──────────────────────────────────────────────────────────
 
   function handleDownloadCsv() {
-    const rows = [['date', 'views'], ...analytics.daily.map(d => [d.date, d.count.toString()])]
+    const rows = [
+      ['date', 'views'],
+      ...analytics.daily.map(d => [d.date, d.count.toString()]),
+      [],
+      ['locale', 'label', 'views'],
+      ...(analytics.byLocale ?? []).map(r => [r.locale || 'unknown', r.label, r.count.toString()]),
+    ]
     const csv = rows.map(r => r.join(',')).join('\n')
     // UTF-8 BOM ensures correct encoding in Excel / Numbers
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -610,6 +671,7 @@ export function PublishingClient({
             </button>
           </div>
           <MiniChart daily={analytics.daily} period={period} />
+          <LocaleBreakdown byLocale={analytics.byLocale ?? []} periodTotal={analytics.periodTotal} />
         </div>
       </Card>
 

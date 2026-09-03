@@ -38,7 +38,9 @@ interface OrderPageLiveProps {
   slug: string
   paymentSettings: PaymentSettings
   locale: string
-  primaryLocale?: import('@/i18n/locale').SupportedLocale
+  /** Storefront content locale (may differ from system UI locale). */
+  contentLocale?: string
+  primaryLocale?: string
   /** False outside opening hours — browse only, no checkout */
   orderingOpen?: boolean
   /** Optional "08:00 – 22:00" for closed banner */
@@ -61,6 +63,7 @@ export function OrderPageLive({
   slug,
   paymentSettings,
   locale,
+  contentLocale,
   primaryLocale = 'vi',
   orderingOpen = true,
   todayHoursLabel = null,
@@ -334,7 +337,7 @@ export function OrderPageLive({
               activeCategoryId={activeCategoryId}
               onActiveCategoryChange={setActiveCategoryId}
               browseOnly={!orderingOpen}
-              locale={locale}
+              locale={contentLocale || locale}
               primaryLocale={primaryLocale}
             />
           </div>

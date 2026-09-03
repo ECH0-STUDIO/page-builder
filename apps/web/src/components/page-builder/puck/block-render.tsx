@@ -21,7 +21,6 @@ import { NavbarRender } from '../render/NavbarRender'
 import { FooterRender } from '../render/FooterRender'
 import type { Business } from '@/lib/business'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
-import type { SupportedLocale } from '@/i18n/locale'
 import { resolveThemeTokens } from '../theme-tokens'
 import { cn } from '@/lib/utils'
 
@@ -35,10 +34,6 @@ export interface PuckRenderContext {
   storeUrl?: string
   previewInteractive?: boolean
   previewLayout?: import('../render/preview-layout').PreviewLayout
-  locale?: SupportedLocale
-  primaryLocale?: SupportedLocale
-  /** When true, canvas shows only the active locale (no primary fallback). */
-  editorLocaleMode?: boolean
 }
 
 function propsToPageBlock(type: BlockType, props: PuckBlockProps, businessId: string): PageBlock {
@@ -117,9 +112,6 @@ export function renderHeroBlock(props: PuckBlockProps, ctx: PuckRenderContext) {
         brandColor={ctx.brandColor ?? tokens.brandColor}
         contentInset={contentInset}
         previewLayout={ctx.previewLayout}
-        locale={ctx.locale}
-        primaryLocale={ctx.primaryLocale}
-        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -136,9 +128,6 @@ export function renderTextImageBlock(props: PuckBlockProps, ctx: PuckRenderConte
         brandColor={ctx.brandColor ?? tokens.brandColor}
         defaultTextColor={ctx.defaultTextColor ?? tokens.pageText}
         previewLayout={ctx.previewLayout}
-        locale={ctx.locale}
-        primaryLocale={ctx.primaryLocale}
-        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -166,9 +155,6 @@ export function renderMenuGridBlock(props: PuckBlockProps, ctx: PuckRenderContex
         brandColor={ctx.brandColor ?? tokens.brandColor}
         browseOnly
         previewLayout={ctx.previewLayout}
-        locale={ctx.locale}
-        primaryLocale={ctx.primaryLocale}
-        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -191,9 +177,6 @@ export function renderQrCodeBlock(
         targetUrl={targetUrl}
         paymentSettings={ctx.paymentSettings ?? ctx.business.payment_settings}
         downloadLabel={ctx.qrDownloadLabel}
-        locale={ctx.locale}
-        primaryLocale={ctx.primaryLocale}
-        editorLocaleMode={ctx.editorLocaleMode}
       />
     </PuckBlockShell>
   )
@@ -211,9 +194,6 @@ export function renderSiteNavbar(props: PuckBlockProps, ctx: PuckRenderContext) 
       logoUrl={ctx.business.logo_url ?? undefined}
       inEditor={inEditor}
       isMobilePreview={isMobilePreview}
-      locale={ctx.locale}
-      primaryLocale={ctx.primaryLocale}
-      editorLocaleMode={ctx.editorLocaleMode}
     />
   )
 }
@@ -228,9 +208,6 @@ export function renderSiteFooter(props: PuckBlockProps, ctx: PuckRenderContext) 
       businessName={ctx.business.name}
       logoUrl={ctx.business.logo_url}
       inEditor={inEditor}
-      locale={ctx.locale}
-      primaryLocale={ctx.primaryLocale}
-      editorLocaleMode={ctx.editorLocaleMode}
     />
   )
 }
