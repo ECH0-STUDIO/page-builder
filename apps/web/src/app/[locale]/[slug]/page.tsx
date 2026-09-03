@@ -1,8 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import SlugPage, { generateMetadata as generatePrimaryMetadata } from '../../[slug]/page'
+import SlugPage from '../../[slug]/page'
+import { createClient } from '@/lib/supabase/server'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
+import { buildStoreMetadata } from '@/lib/store-metadata'
 
 export async function generateMetadata({
   params,
@@ -14,10 +16,34 @@ export async function generateMetadata({
 
   const access = await loadStoreLocaleAccess(slug)
   if (!access || !isPurchasedPathLocale(access, locale)) {
-    return generatePrimaryMetadata({ params: Promise.resolve({ slug }) })
+    return { title: 'Not Found' }
   }
 
-  const base = await generatePrimaryMetadata({ params: Promise.resolve({ slug }) })
+  const supabase = await createClient()
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id, name')
+    .eq('slug', slug)
+    .single()
+
+  if (!business) return { title: 'Not Found' }
+
+  const { data: pub } = await supabase
+    .from('publishing_settings')
+    .select(
+      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
+    )
+    .eq('business_id', business.id)
+    .single()
+
+  const base = buildStoreMetadata({
+    slug,
+    businessName: business.name,
+    pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
+    contentLocale: locale,
+    primaryLocale: access.primary,
+  })
+
   const languages: Record<string, string> = {}
   for (const code of allPublicLocales(access)) {
     languages[code] = buildStorePublicPath(slug, {
@@ -63,8 +89,11 @@ export default async function LocaleSlugPage({
     redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
   }
 
-  // Phase B: serve primary content at the locale URL (translations land in Phase C).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Page = SlugPage as any
-  return <Page params={Promise.resolve({ slug })} searchParams={searchParams} />
+  return (
+    <SlugPage
+      params={Promise.resolve({ slug })}
+      searchParams={searchParams}
+      contentLocale={locale}
+    />
+  )
 }

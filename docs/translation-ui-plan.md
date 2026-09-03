@@ -175,10 +175,10 @@ Actions:
 
 ### Phase C — Translation UI (manual)
 
-- `/dashboard/translations/[locale]` checklist
-- Collect all translatable fields from pages, menu, order, SEO
-- Save → batch write `*_i18n` via existing `writeLocaleText` helpers
-- Live site reads target locale with primary fallback
+- [x] `/dashboard/translations/[locale]` checklist
+- [x] Collect all translatable fields from pages, menu, order, SEO
+- [x] Save → batch write `*_i18n` via existing `writeLocaleText` helpers
+- [x] Live site reads target locale with primary fallback
 
 ### Phase D — AI translate
 

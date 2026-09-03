@@ -13,7 +13,7 @@ import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'luc
 import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
-import { plainText } from '@/i18n/locale'
+import { pickLocale } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import { defaultMenuGridConfig, defaultThemeSettings, type BorderRadius, type MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -575,6 +575,8 @@ function MenuGridInner({
   hideCategoryTabs = false,
   activeCategoryId,
   onActiveCategoryChange,
+  locale,
+  primaryLocale = 'vi',
 }: MenuGridRenderProps & {
   previewLayout?: PreviewLayout
   isMobilePreview?: boolean
@@ -585,8 +587,9 @@ function MenuGridInner({
   onActiveCategoryChange?: (id: string) => void
 }) {
   const config = resolveMenuGridConfig(rawConfig)
-  const sectionHeading = plainText(config.heading)
-  const sectionDescription = plainText(config.description)
+  const activeLocale = locale || primaryLocale
+  const sectionHeading = pickLocale(config.heading, activeLocale, primaryLocale)
+  const sectionDescription = pickLocale(config.description, activeLocale, primaryLocale)
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -880,6 +883,8 @@ interface MenuGridRenderProps {
   /** Controlled active category (used with hideCategoryTabs). */
   activeCategoryId?: string | null
   onActiveCategoryChange?: (id: string) => void
+  locale?: string
+  primaryLocale?: string
 }
 
 export function MenuGridRender({
@@ -892,6 +897,8 @@ export function MenuGridRender({
   hideCategoryTabs = false,
   activeCategoryId,
   onActiveCategoryChange,
+  locale,
+  primaryLocale = 'vi',
 }: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
@@ -904,6 +911,8 @@ export function MenuGridRender({
       hideCategoryTabs={hideCategoryTabs}
       activeCategoryId={activeCategoryId}
       onActiveCategoryChange={onActiveCategoryChange}
+      locale={locale}
+      primaryLocale={primaryLocale}
     />
   )
 }
