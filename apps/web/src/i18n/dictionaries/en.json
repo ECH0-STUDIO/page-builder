@@ -17,6 +17,7 @@
     "addNewBusiness": "Add new business",
     "selectBusiness": "Select business",
     "gallery": "Gallery",
+    "translations": "Translations",
     "topUp": "TOP UP"
   },
   "overview": {
@@ -608,6 +609,7 @@
     "tabs": {
       "security": "Security",
       "team": "Team Management",
+      "languages": "Store languages",
       "localization": "Localization",
       "credits": "Billing & Credits"
     },

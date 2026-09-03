@@ -17,6 +17,9 @@ import { resolveLiveLocale } from '@/i18n/locale'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
 import { OrderPageHeader } from '@/components/order-page/OrderPageHeader'
 import { OrderPageLive } from '@/components/order-page/OrderPageLive'
+import { StoreLanguageSwitcher } from '@/components/store/StoreLanguageSwitcher'
+import { loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
+import { toStoreLocaleCode } from '@/i18n/store-locales'
 import { resolvePromoSlides } from '@/components/order-page/buildPromoSlides'
 import {
   normalizeCarouselAspect,
@@ -205,6 +208,10 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
   const orderingOpen = isBusinessOpenNow(openingHours)
   const todayHoursLabel = formatHoursRange(getTodayHours(openingHours))
 
+  const localeAccess = await loadStoreLocaleAccess(slug)
+  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
+  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
+
   return (
     <CartProvider>
       <div
@@ -231,6 +238,17 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
           }}
         >
           <ViewTracker slug={slug} />
+
+          {publicLocales.length > 1 && (
+            <Suspense fallback={null}>
+              <StoreLanguageSwitcher
+                slug={slug}
+                primary={primaryLocale}
+                locales={publicLocales}
+                kind="order"
+              />
+            </Suspense>
+          )}
 
           <AnalyticsScripts
             google_analytics_id={pubSettings?.google_analytics_id}

@@ -29,6 +29,10 @@ import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import { resolveLiveLocale } from '@/i18n/locale'
 import { normalizeMenuCategories, normalizeMenuItems } from '@/i18n/menu-content'
+import { Suspense } from 'react'
+import { StoreLanguageSwitcher } from '@/components/store/StoreLanguageSwitcher'
+import { loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
+import { toStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -49,16 +53,41 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { data: pub } = await db
     .from('publishing_settings')
     .select(
-      'seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
+      'seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
     )
     .eq('business_id', business.id)
     .single()
 
-  return buildStoreMetadata({
+  const base = buildStoreMetadata({
     slug,
     businessName: business.name,
     pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
   })
+
+  try {
+    const access = await loadStoreLocaleAccess(slug)
+    if (access && access.activeExtra.length > 0) {
+      const languages: Record<string, string> = {}
+      for (const code of allPublicLocales(access)) {
+        languages[code] = buildStorePublicPath(slug, {
+          locale: code,
+          primary: access.primary,
+          kind: 'landing',
+        })
+      }
+      return {
+        ...base,
+        alternates: {
+          ...(typeof base.alternates === 'object' ? base.alternates : {}),
+          languages,
+        },
+      }
+    }
+  } catch {
+    // ignore — hreflang is best-effort
+  }
+
+  return base
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -213,6 +242,10 @@ export default async function SlugPage({
     pubSettings?.language ?? null,
   )
 
+  const localeAccess = await loadStoreLocaleAccess(slug)
+  const primaryLocale = localeAccess?.primary ?? toStoreLocaleCode(pubSettings?.language)
+  const publicLocales = localeAccess ? allPublicLocales(localeAccess) : [primaryLocale]
+
   return (
     <BrowseOnlyCartProvider>
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col items-center">
@@ -226,6 +259,17 @@ export default async function SlugPage({
     >
       {/* Silent visit tracker */}
       <ViewTracker slug={slug} />
+
+      {publicLocales.length > 1 && (
+        <Suspense fallback={null}>
+          <StoreLanguageSwitcher
+            slug={slug}
+            primary={primaryLocale}
+            locales={publicLocales}
+            kind="landing"
+          />
+        </Suspense>
+      )}
 
       {/* Schema.org JSON-LD + analytics (GSC/canonical/icons come from generateMetadata → <head>) */}
       <Script id="schema-json" type="application/ld+json" dangerouslySetInnerHTML={{ __html: schemaJson }} />

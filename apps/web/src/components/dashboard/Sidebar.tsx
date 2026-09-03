@@ -19,6 +19,7 @@ import {
   Menu,
   Coins,
   Image as ImageIcon,
+  Languages,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'
@@ -93,6 +94,13 @@ const NAV_ITEMS = [
     labelKey: 'gallery',
     href: '/dashboard/gallery',
     icon: ImageIcon,
+    phase: 'v1',
+    exact: false,
+  },
+  {
+    labelKey: 'translations',
+    href: '/dashboard/translations',
+    icon: Languages,
     phase: 'v1',
     exact: false,
   },
