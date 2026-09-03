@@ -80,7 +80,7 @@ export function collectPageBlockFields(
   const out: TranslationField[] = []
   for (const block of blocks) {
     const group = `${block.type} · ${block.block_anchor_id || block.id.slice(0, 8)}`
-    const cfg = block.config as Record<string, unknown>
+    const cfg = block.config as unknown as Record<string, unknown>
 
     if (block.type === 'hero') {
       const c = cfg as unknown as HeroConfig

@@ -89,8 +89,11 @@ export default async function LocaleSlugPage({
     redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
   }
 
+  // Next.js page modules are typed to their own route params; cast when reusing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Page = SlugPage as any
   return (
-    <SlugPage
+    <Page
       params={Promise.resolve({ slug })}
       searchParams={searchParams}
       contentLocale={locale}
