@@ -46,11 +46,7 @@ export async function createBusinessAction(input: {
 
   // Create default child records (errors are non-fatal)
   await db.from('theme_settings').insert({ business_id: business.id })
-  await db.from('publishing_settings').insert({
-    business_id: business.id,
-    published: false,
-    language: 'vi',
-  })
+  await db.from('publishing_settings').insert({ business_id: business.id, published: false })
   await db.from('payment_settings').insert({ business_id: business.id })
 
   revalidatePath('/dashboard')

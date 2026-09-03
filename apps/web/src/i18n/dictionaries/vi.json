@@ -609,7 +609,6 @@
       "security": "Bảo mật",
       "team": "Quản lý nhóm",
       "localization": "Khu vực & Ngôn ngữ",
-      "storeLanguage": "Ngôn ngữ cửa hàng",
       "credits": "Thanh toán & Credit"
     },
     "security": {
@@ -665,26 +664,6 @@
       "save": "Lưu tùy chọn",
       "toastUpdated": "Đã cập nhật tùy chọn",
       "toastFailed": "Không cập nhật được tùy chọn"
-    },
-    "storeLanguage": {
-      "title": "Ngôn ngữ cửa hàng",
-      "description": "Chọn ngôn ngữ chính cho cửa hàng và bật song ngữ Việt + Anh nếu cần.",
-      "dualToggle": "Bật song ngữ (Tiếng Việt + English)",
-      "dualToggleHint": "Khi tắt, trang công khai chỉ dùng một ngôn ngữ. Khi bật, bạn có thể chỉnh nội dung phụ trong page builder, trang đặt món và thực đơn.",
-      "primaryLabel": "Ngôn ngữ chính",
-      "primaryHint": "Dùng cho URL chính, SEO và nội dung mặc định. Đổi ngôn ngữ chính chỉ đổi URL — nội dung được giữ nguyên.",
-      "vietnamese": "Tiếng Việt",
-      "english": "English",
-      "savePrimary": "Lưu ngôn ngữ chính",
-      "primarySaved": "Đã cập nhật ngôn ngữ chính",
-      "dualEnabled": "Song ngữ đã sẵn sàng",
-      "dualDisabled": "Đã tắt song ngữ",
-      "setupProgress": "Đang thiết lập ngôn ngữ…",
-      "urlsTitle": "URL công khai",
-      "primaryUrl": "Chính: yourstore.com{{path}}",
-      "secondaryUrl": "Phụ: yourstore.com{{path}}",
-      "secondaryEditHint": "Trang phụ giữ bố cục từ trang chính — chỉ khác phần chữ.",
-      "phase2Notice": "Page builder, trang đặt món và thực đơn sẽ có chuyển ngôn ngữ ở bản cập nhật tiếp theo. URL phụ cũng hoạt động khi đó."
     }
   },
   "heroBlock": {

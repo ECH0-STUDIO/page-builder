@@ -7,7 +7,6 @@ import {
   isMarketingRoute,
   MARKETING_LANG_PARAM,
 } from '@/lib/marketing-locale'
-import { rewriteCustomDomainStorePath } from '@/lib/store-routing'
 import {
   appPath,
   getAppHostname,
@@ -78,7 +77,8 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(cleanUrl)
       }
       const rewriteUrl = request.nextUrl.clone()
-      rewriteUrl.pathname = rewriteCustomDomainStorePath(pathname, slug)
+      const suffix = pathname === '/' ? '' : pathname
+      rewriteUrl.pathname = `/${slug}${suffix}`
       return NextResponse.rewrite(rewriteUrl)
     }
   }

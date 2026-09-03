@@ -13,16 +13,7 @@ import { ShoppingBag, ChevronDown, Check, Info, Plus, X, AlertCircle } from 'luc
 import { useTranslation } from '@/i18n/I18nProvider'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 import { useThemeBrandColor } from '../puck/ThemeTokensContext'
-import { resolveContentText } from '@/i18n/editor-locale-utils'
-import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
-import { useRenderLocale } from '@/components/i18n/useRenderLocale'
-import {
-  menuCategoryName,
-  menuItemDescription,
-  menuItemName,
-  variantGroupName,
-  variantOptionLabel,
-} from '@/i18n/menu-content'
+import { plainText } from '@/i18n/locale'
 import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import { defaultMenuGridConfig, defaultThemeSettings, type BorderRadius, type MenuGridConfig } from '../types'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
@@ -584,9 +575,6 @@ function MenuGridInner({
   hideCategoryTabs = false,
   activeCategoryId,
   onActiveCategoryChange,
-  locale,
-  primaryLocale = 'vi',
-  editorLocaleMode = false,
 }: MenuGridRenderProps & {
   previewLayout?: PreviewLayout
   isMobilePreview?: boolean
@@ -595,16 +583,10 @@ function MenuGridInner({
   hideCategoryTabs?: boolean
   activeCategoryId?: string | null
   onActiveCategoryChange?: (id: string) => void
-  editorLocaleMode?: boolean
 }) {
-  const { activeLocale, activePrimary } = useRenderLocale(
-    editorLocaleMode,
-    locale,
-    primaryLocale,
-  )
   const config = resolveMenuGridConfig(rawConfig)
-  const sectionHeading = resolveContentText(config.heading, activeLocale, activePrimary)
-  const sectionDescription = resolveContentText(config.description, activeLocale, activePrimary)
+  const sectionHeading = plainText(config.heading)
+  const sectionDescription = plainText(config.description)
   const ctxLayout = usePreviewLayout()
   const liveBrandColor = useThemeBrandColor(brandColor)
   // Prefer live PreviewLayoutContext over baked props (props can be stale on first viewport toggle)
@@ -891,12 +873,13 @@ function MenuGridInner({
 interface MenuGridRenderProps {
   config: MenuGridConfig
   data: MenuGridData
+  /** View menu details only — hide add-to-cart actions (landing page). */
   browseOnly?: boolean
+  /** Hide built-in category tabs (order page uses external drawer). */
   hideCategoryTabs?: boolean
+  /** Controlled active category (used with hideCategoryTabs). */
   activeCategoryId?: string | null
   onActiveCategoryChange?: (id: string) => void
-  locale?: string
-  primaryLocale?: import('@/i18n/locale').SupportedLocale
 }
 
 export function MenuGridRender({
@@ -909,10 +892,7 @@ export function MenuGridRender({
   hideCategoryTabs = false,
   activeCategoryId,
   onActiveCategoryChange,
-  locale,
-  primaryLocale = 'vi',
-  editorLocaleMode = false,
-}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string; editorLocaleMode?: boolean }) {
+}: MenuGridRenderProps & { previewLayout?: PreviewLayout; isMobilePreview?: boolean; brandColor?: string }) {
   return (
     <MenuGridInner
       config={config}
@@ -924,9 +904,6 @@ export function MenuGridRender({
       hideCategoryTabs={hideCategoryTabs}
       activeCategoryId={activeCategoryId}
       onActiveCategoryChange={onActiveCategoryChange}
-      locale={locale}
-      primaryLocale={primaryLocale}
-      editorLocaleMode={editorLocaleMode}
     />
   )
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Shield, Globe, Users, CreditCard, LogOut, Languages } from 'lucide-react'
+import { Shield, Globe, Users, CreditCard, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -30,11 +30,6 @@ export function SettingsNav() {
       title: t('settings.tabs.localization'),
       href: '/dashboard/settings/localization',
       icon: Globe,
-    },
-    {
-      title: t('settings.tabs.storeLanguage'),
-      href: '/dashboard/settings/language',
-      icon: Languages,
     },
     {
       title: t('settings.tabs.credits'),

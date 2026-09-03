@@ -15,9 +15,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { NavbarConfig, NavLink } from '../types'
 import { resolveNavHref, navLinkOpensNewTab } from '../nav-link-utils'
-import { resolveContentText } from '@/i18n/editor-locale-utils'
-import { toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
-import { useRenderLocale } from '@/components/i18n/useRenderLocale'
+import { pickLocale, toSupportedLocale, type SupportedLocale } from '@/i18n/locale'
 import { usePreviewLayout } from '../puck/PreviewLayoutContext'
 
 function isInternalPath(href: string) {
@@ -28,12 +26,10 @@ interface NavbarRenderProps {
   config: NavbarConfig
   businessName?: string
   logoUrl?: string
+  /** If true (editor canvas) disable pointer events on links */
   inEditor?: boolean
   isMobilePreview?: boolean
   locale?: string
-  primaryLocale?: SupportedLocale
-  editorLocaleMode?: boolean
-  languageSwitcher?: React.ReactNode
 }
 
 export function NavbarRender({
@@ -43,15 +39,8 @@ export function NavbarRender({
   inEditor,
   isMobilePreview,
   locale,
-  primaryLocale = 'vi',
-  editorLocaleMode = false,
-  languageSwitcher,
 }: NavbarRenderProps) {
-  const { activeLocale, activePrimary } = useRenderLocale(
-    editorLocaleMode,
-    locale,
-    primaryLocale,
-  )
+  const activeLocale = toSupportedLocale(locale)
   const [open, setOpen] = useState(false)
   const previewLayout = usePreviewLayout()
   const forceMobile = Boolean(isMobilePreview) || previewLayout === 'mobile'
@@ -149,7 +138,7 @@ export function NavbarRender({
             >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, activePrimary)
+              const label = pickLocale(link.label, activeLocale)
               const sharedProps = {
                 style: { ...linkStyle, opacity: 0.85 } as React.CSSProperties,
                 onMouseEnter: (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -184,9 +173,6 @@ export function NavbarRender({
                 </a>
               )
             })}
-            {languageSwitcher && (
-              <div className="shrink-0 ml-2">{languageSwitcher}</div>
-            )}
           </div>
           )}
 
@@ -241,7 +227,7 @@ export function NavbarRender({
           >
             {config.links.map((link, i) => {
               const href = getHref(link)
-              const label = resolveContentText(link.label, activeLocale, activePrimary)
+              const label = pickLocale(link.label, activeLocale)
               const style: React.CSSProperties = {
                 ...linkStyle,
                 display: 'block',

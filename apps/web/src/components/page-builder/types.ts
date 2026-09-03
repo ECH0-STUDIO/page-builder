@@ -7,7 +7,6 @@ import type {
   CarouselAspectMobile,
   OrderPromoSlide,
 } from '@/components/order-page/promo-slides'
-import type { LegacyLocalized } from '@/i18n/locale-content'
 
 // ─── Block types ──────────────────────────────────────────────────────────────
 
@@ -109,7 +108,7 @@ export type CtaAction = 'url' | 'tel' | 'anchor' | 'email'
 export type CtaStyle = 'filled' | 'outlined' | 'text'
 
 export interface CtaButton {
-  label: LegacyLocalized
+  label: string
   action: CtaAction
   value: string
   style: CtaStyle
@@ -129,10 +128,10 @@ export type ContentAlign = 'left' | 'center' | 'right'
 
 export interface HeroConfig {
   layout: HeroLayout
-  heading: LegacyLocalized
+  heading: string
   /** @deprecated Removed from hero UI — kept for legacy saved pages */
   tagline: string
-  body: LegacyLocalized
+  body: string
   image_url: string
   image_position: ImagePosition
   overlay_opacity: number
@@ -193,8 +192,8 @@ export type BorderRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full'
 
 export interface TextImageConfig {
   layout: TextImageLayout
-  heading: LegacyLocalized
-  body: LegacyLocalized
+  heading: string
+  body: string
   cta: CtaButton | null
   image_url: string
   aspect_ratio: AspectRatio
@@ -294,7 +293,7 @@ export interface MenuGridConfig {
   show_price: boolean
   show_unavailable_badge: boolean
   /** Section heading shown above the grid (optional) */
-  heading: LegacyLocalized
+  heading: string
   /** Show tabs/buttons to filter by category on the live page */
   show_category_tabs: boolean
   /** Section background colour */
@@ -310,7 +309,7 @@ export interface MenuGridConfig {
   /** Menu item card corner radius */
   card_border_radius?: BorderRadius
   /** Description shown below heading */
-  description?: LegacyLocalized
+  description?: string
   /** Selection mode: 'category' (default) or 'custom_items' */
   selection_mode?: 'category' | 'custom_items'
   /** Array of item IDs to show when selection_mode is 'custom_items' */
@@ -353,7 +352,7 @@ export interface QRCodeConfig {
   target: 'payment' | 'custom'
   custom_url: string
   size: 'sm' | 'md' | 'lg'
-  label: LegacyLocalized
+  label: string
   show_download: boolean
   background_color: string
   background_image?: string
@@ -383,7 +382,7 @@ export const defaultQRCodeConfig: QRCodeConfig = {
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
 export interface NavLink {
-  label: LegacyLocalized
+  label: string
   href: string
   anchor: boolean   // true = scroll to #section-id on the same page
   /** External URL only — open in a new browser tab */
@@ -411,7 +410,7 @@ export const defaultNavbarConfig: NavbarConfig = {
 export interface FooterConfig {
   show_logo?: boolean
   show_business_name: boolean
-  copyright_text: LegacyLocalized
+  copyright_text: string
   background_color: string
   background_image?: string
   text_color: string
@@ -466,11 +465,6 @@ export interface PublishingSettings {
   favicon_url: string | null
   apple_touch_icon_url: string | null
   language: string
-  /** When true, VI + EN storefront content is available */
-  dual_language_enabled?: boolean
-  dual_language_setup_status?: 'idle' | 'running' | 'ready' | 'failed'
-  enabled_locales?: string[]
-  seo_i18n?: Record<string, { title?: string; description?: string }> | null
   gsc_verification: string | null
   has_unpublished_changes: boolean | null
   google_analytics_id?: string | null

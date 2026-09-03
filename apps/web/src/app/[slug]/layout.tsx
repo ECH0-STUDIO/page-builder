@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { I18nProvider } from '@/i18n/I18nProvider'
 import { getDictionary } from '@/i18n/getDictionary'
 import { resolveLiveLocale } from '@/i18n/locale'
-import { languageConfigFromPublishing } from '@/lib/store-routing'
 
 /**
  * Public live store layout — light mode only, with i18n for menu/cart strings.
@@ -19,10 +18,9 @@ export default async function SlugLayout({
 }) {
   const { slug } = await params
   const cookieStore = await cookies()
-  void cookieStore.get('NEXT_LOCALE')?.value
+  const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value
 
   let storeDefaultLocale: string | null = null
-  let dualEnabled = false
   try {
     const supabase = await createClient()
     const { data: business } = await supabase
@@ -34,21 +32,16 @@ export default async function SlugLayout({
     if (business) {
       const { data: pub } = await supabase
         .from('publishing_settings')
-        .select('language, dual_language_enabled, dual_language_setup_status, enabled_locales')
+        .select('language')
         .eq('business_id', business.id)
         .single()
       storeDefaultLocale = pub?.language ?? null
-      dualEnabled = Boolean(pub?.dual_language_enabled)
     }
   } catch {
     // Slug may not exist yet during static generation — fall back to cookie only
   }
 
-  const locale = resolveLiveLocale({
-    pathLocale: null,
-    storePrimary: storeDefaultLocale,
-    dualEnabled,
-  })
+  const locale = resolveLiveLocale(cookieLocale, storeDefaultLocale)
   const dictionary = await getDictionary(locale)
 
   return (

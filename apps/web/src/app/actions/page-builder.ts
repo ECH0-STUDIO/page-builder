@@ -36,19 +36,11 @@ export type { PublishingSettings } from '@/components/page-builder/types'
 function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
   if (!row) return null
   const published = Boolean(row.published)
-  const setupStatus = row.dual_language_setup_status
   return {
     ...(row as unknown as PublishingSettings),
     published,
+    // Fall back to landing publish if column not yet migrated
     order_published: row.order_published == null ? published : Boolean(row.order_published),
-    dual_language_enabled: Boolean(row.dual_language_enabled),
-    dual_language_setup_status:
-      setupStatus === 'running' || setupStatus === 'ready' || setupStatus === 'failed'
-        ? setupStatus
-        : 'idle',
-    enabled_locales: Array.isArray(row.enabled_locales)
-      ? (row.enabled_locales as string[])
-      : undefined,
     order_promo_slides: normalizeOrderPromoSlides(row.order_promo_slides),
     order_menu_config: normalizeOrderMenuConfig(row.order_menu_config) ?? undefined,
     order_background_color: typeof row.order_background_color === 'string'

@@ -9,9 +9,6 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { OrderChromeTokens } from '@/lib/color-contrast'
-import type { SupportedLocale } from '@/i18n/locale'
-import type { StoreLanguageConfig } from '@/i18n/store-locale'
-import { StoreLanguageSwitcher } from '@/components/store/StoreLanguageSwitcher'
 
 interface OrderPageHeaderProps {
   slug: string
@@ -19,19 +16,9 @@ interface OrderPageHeaderProps {
   logoUrl?: string | null
   brandColor: string
   chrome?: OrderChromeTokens
-  languageConfig?: StoreLanguageConfig
-  currentLocale?: SupportedLocale
 }
 
-export function OrderPageHeader({
-  slug,
-  businessName,
-  logoUrl,
-  brandColor,
-  chrome,
-  languageConfig,
-  currentLocale,
-}: OrderPageHeaderProps) {
+export function OrderPageHeader({ businessName, logoUrl, brandColor, chrome }: OrderPageHeaderProps) {
   const searchParams = useSearchParams()
   const table = (searchParams.get('table') ?? '').trim()
   const { t } = useTranslation()
@@ -79,14 +66,6 @@ export function OrderPageHeader({
           >
             {t('orderPage.table')} {table}
           </span>
-        ) : languageConfig && currentLocale ? (
-          <StoreLanguageSwitcher
-            slug={slug}
-            currentLocale={currentLocale}
-            languageConfig={languageConfig}
-            kind="order"
-            className="absolute right-4 sm:right-6"
-          />
         ) : null}
       </div>
     </header>

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { LocalizedTextField } from '@/components/i18n/LocalizedTextField'
+import { plainText } from '@/i18n/locale'
 import { uploadImageToStorage } from '@/lib/image-utils'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { ColorSwatchField } from '@/components/shared/ColorSwatchField'
@@ -107,12 +107,14 @@ export function FooterSettings({
           />
         </div>
 
-        <LocalizedTextField
-          label={t('footerBlock.copyrightText')}
-          value={config.copyright_text}
-          onChange={v => set('copyright_text', v)}
-          className="space-y-1.5 [&_input]:h-8 [&_input]:text-xs"
-        />
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t('footerBlock.copyrightText')}</Label>
+          <Input
+            value={plainText(config.copyright_text)}
+            onChange={e => set('copyright_text', e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
       </div>
 
       <Separator />

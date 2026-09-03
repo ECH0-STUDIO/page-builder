@@ -32,13 +32,6 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { EditorLocaleProvider, useEditorLocale } from '@/components/i18n/EditorLocaleContext'
-import { MenuLocaleTabs } from '@/components/i18n/LocaleEditBar'
-import { menuCategoryName, menuCategoryNameEditor, menuItemDescription, menuItemDescriptionEditor, menuItemName, menuItemNameEditor } from '@/i18n/menu-content'
-import type { StoreLanguageConfig } from '@/i18n/store-locale'
-import { parseStoreLanguageConfig } from '@/i18n/store-locale'
-import { writeLocaleText, primaryPlainText } from '@/i18n/editor-locale-utils'
-import type { LocalizedString } from '@/i18n/localized-content'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -328,15 +321,8 @@ function CategoryDialog({
   initial?: MenuCategory
 }) {
   const { t } = useTranslation()
-  const { contentLocale, primaryLocale } = useEditorLocale()
-  const [name, setName] = useState('')
+  const [name, setName] = useState(initial?.name ?? '')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setName(initial ? menuCategoryNameEditor(initial, contentLocale, primaryLocale) : '')
-    }
-  }, [open, initial, contentLocale, primaryLocale])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -357,7 +343,6 @@ function CategoryDialog({
             <Label htmlFor="cat-name">{t('menuBuilder.categoryName')}</Label>
             <Input
               id="cat-name"
-              key={contentLocale}
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={t('menuBuilder.categoryPlaceholder')}
@@ -400,9 +385,8 @@ function ItemDialog({
   initial?: MenuItem
 }) {
   const { t } = useTranslation()
-  const { contentLocale, primaryLocale } = useEditorLocale()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
@@ -418,8 +402,8 @@ function ItemDialog({
 
   useEffect(() => {
     if (!open) return
-    setName(initial ? menuItemNameEditor(initial, contentLocale, primaryLocale) : '')
-    setDescription(initial ? menuItemDescriptionEditor(initial, contentLocale, primaryLocale) : '')
+    setName(initial?.name ?? '')
+    setDescription(initial?.description ?? '')
     setPrice(initial?.price?.toString() ?? '')
     const rawTags = initial?.tags ?? []
     setTags(rawTags.filter(tag => {
@@ -431,7 +415,7 @@ function ItemDialog({
     setIsFeatured(Boolean(initial?.is_featured))
     setImageUrl(initial?.image_url ?? '')
     setActiveTab('details')
-  }, [open, initial, contentLocale, primaryLocale])
+  }, [open, initial])
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -535,12 +519,12 @@ function ItemDialog({
 
               <div className="space-y-1.5">
                 <Label htmlFor="item-name">{t('menuBuilder.itemName')}</Label>
-                <Input id="item-name" key={`item-name-${contentLocale}`} value={name} onChange={e => setName(e.target.value)} placeholder={t('menuBuilder.itemNamePlaceholder')} required autoFocus />
+                <Input id="item-name" value={name} onChange={e => setName(e.target.value)} placeholder={t('menuBuilder.itemNamePlaceholder')} required autoFocus />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="item-desc">{t('menuBuilder.description')}</Label>
-                <Textarea id="item-desc" key={`item-desc-${contentLocale}`} value={description} onChange={e => setDescription(e.target.value)} placeholder={t('menuBuilder.descriptionPlaceholder')} rows={2} className="resize-none" />
+                <Textarea id="item-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder={t('menuBuilder.descriptionPlaceholder')} rows={2} className="resize-none" />
               </div>
 
               <div className="space-y-1.5">
@@ -646,20 +630,9 @@ interface MenuBuilderProps {
   businessId: string
   initialCategories: MenuCategory[]
   initialItems: MenuItem[]
-  storeLanguage?: StoreLanguageConfig
 }
 
-export function MenuBuilder(props: MenuBuilderProps) {
-  const storeLanguage = props.storeLanguage ?? parseStoreLanguageConfig({ language: 'vi' })
-  return (
-    <EditorLocaleProvider storeLanguage={storeLanguage} lockSecondary={false}>
-      <MenuBuilderInner {...props} />
-    </EditorLocaleProvider>
-  )
-}
-
-function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
-  const { contentLocale, primaryLocale } = useEditorLocale()
+export function MenuBuilder({ businessId, initialCategories, initialItems }: MenuBuilderProps) {
   const { currentBusiness } = useBusiness()
   const isStaff = currentBusiness?.role === 'staff'
   const { t } = useTranslation()
@@ -724,27 +697,12 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
   // ── Category handlers ──
   async function handleSaveCategory(name: string) {
     if (catDialog.editing) {
-      const result = await updateCategoryAction(catDialog.editing.id, {
-        name,
-        locale: contentLocale,
-        primary_locale: primaryLocale,
-      })
+      const result = await updateCategoryAction(catDialog.editing.id, { name })
       if (!result.success) { toast.error(result.error); return }
-      setCategories(prev => prev.map(c => {
-        if (c.id !== catDialog.editing!.id) return c
-        const name_i18n = writeLocaleText((c.name_i18n ?? c.name) as LocalizedString, contentLocale, name.trim(), primaryLocale)
-        return {
-          ...c,
-          name_i18n,
-          name: primaryPlainText(name_i18n, primaryLocale),
-        }
-      }))
+      setCategories(prev => prev.map(c => c.id === catDialog.editing!.id ? { ...c, name } : c))
       toast.success(t('menuBuilder.categoryUpdated'))
     } else {
-      const result = await addCategoryAction(businessId, name, {
-        locale: contentLocale,
-        primary_locale: primaryLocale,
-      })
+      const result = await addCategoryAction(businessId, name)
       if (!result.success) { toast.error(result.error); return }
       setCategories(prev => [...prev, result.data])
       setSelectedCatId(result.data.id)
@@ -790,41 +748,27 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
         is_vegetarian: itemData.is_vegetarian,
         spicy_level: itemData.spicy_level,
         is_featured: itemData.is_featured,
-        locale: contentLocale,
-        primary_locale: primaryLocale,
       })
       if (!result.success) { toast.error(result.error); return }
-      setItems(prev => prev.map(i => {
-        if (i.id !== itemDialog.editing!.id) return i
-        const name_i18n = writeLocaleText((i.name_i18n ?? i.name) as LocalizedString, contentLocale, itemData.name.trim(), primaryLocale)
-        const description_i18n = writeLocaleText(
-          (i.description_i18n ?? i.description) as LocalizedString,
-          contentLocale,
-          itemData.description?.trim() ?? '',
-          primaryLocale,
-        )
-        return {
-          ...i,
-          name_i18n,
-          name: primaryPlainText(name_i18n, primaryLocale),
-          description_i18n,
-          description: primaryPlainText(description_i18n, primaryLocale) || null,
-          price: itemData.price,
-          image_url: itemData.image_url || null,
-          tags: itemData.tags,
-          is_vegetarian: itemData.is_vegetarian,
-          spicy_level: itemData.spicy_level,
-          is_featured: itemData.is_featured,
-        }
-      }))
+      setItems(prev => prev.map(i =>
+        i.id === itemDialog.editing!.id
+          ? {
+              ...i,
+              name: itemData.name,
+              description: itemData.description || null,
+              price: itemData.price,
+              image_url: itemData.image_url || null,
+              tags: itemData.tags,
+              is_vegetarian: itemData.is_vegetarian,
+              spicy_level: itemData.spicy_level,
+              is_featured: itemData.is_featured,
+            }
+          : i
+      ))
       toast.success(t('menuBuilder.itemSaved'))
     } else {
       const catId = itemDialog.catId ?? selectedCatId!
-      const result = await addItemAction(businessId, catId, {
-        ...itemData,
-        locale: contentLocale,
-        primary_locale: primaryLocale,
-      })
+      const result = await addItemAction(businessId, catId, itemData)
       if (!result.success) { toast.error(result.error); return }
       setItems(prev => [...prev, result.data])
       toast.success(t('menuBuilder.itemAdded'))
@@ -912,7 +856,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
         }}
       >
         <span className={cn('flex-1 text-sm font-medium truncate', !cat.visible && !isSelected && 'opacity-40')}>
-          {menuCategoryName(cat, contentLocale, primaryLocale)}
+          {cat.name}
         </span>
         {!cat.visible && (
           <EyeOff className={cn('size-3 shrink-0 mr-0.5', isSelected ? 'text-primary-foreground/50' : 'text-muted-foreground/50')} />
@@ -955,7 +899,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
           <DrawerTrigger asChild>
             <Button variant="outline" className="flex-1 justify-between font-normal bg-background">
-              <span className="truncate">{selectedCat ? menuCategoryName(selectedCat, contentLocale, primaryLocale) : t('menuBuilder.categories')}</span>
+              <span className="truncate">{selectedCat ? selectedCat.name : t('menuBuilder.categories')}</span>
               <ChevronDown className="size-4 opacity-50 shrink-0" />
             </Button>
           </DrawerTrigger>
@@ -1001,15 +945,14 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
         {/* Sticky Headers Wrapper */}
         <div className="sticky top-0 z-20 flex flex-col bg-background/95 backdrop-blur shadow-sm">
           {/* CSV import/export bar */}
-          <div className="px-6 py-3 border-b border-border bg-muted/20 flex flex-wrap items-center justify-between gap-3">
-            <MenuLocaleTabs />
+          <div className="px-6 py-3 border-b border-border bg-muted/20">
             {!isStaff && (<MenuCsvActions businessId={businessId} categories={categories} items={items} onRefresh={handleCsvRefresh} />)}
           </div>
 
           {selectedCat && (
             <div className="border-b border-border px-6 py-4 flex items-center justify-between gap-3 bg-background">
               <div className="min-w-0 shrink">
-                <h2 className="font-semibold text-base truncate">{menuCategoryName(selectedCat, contentLocale, primaryLocale)}</h2>
+                <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
                 <p className="text-xs text-muted-foreground">
                   {visibleItems.length} {t('menuBuilder.items')}
                   {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} {t('menuBuilder.selected')}</span>}
@@ -1109,7 +1052,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
                         {/* Thumbnail with "Unavailable" overlay */}
                         <div className="relative h-36">
                           {item.image_url ? (
-                            <img src={item.image_url} alt={menuItemName(item, contentLocale, primaryLocale)} className="w-full h-full object-cover bg-muted" />
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover bg-muted" />
                           ) : (
                             <div className="w-full h-full bg-muted/60 flex items-center justify-center">
                               <ImageIcon className="size-8 text-muted-foreground/30" />
@@ -1125,7 +1068,7 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
                         {/* Content */}
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className="font-semibold text-sm line-clamp-1">{menuItemName(item, contentLocale, primaryLocale)}</h3>
+                            <h3 className="font-semibold text-sm line-clamp-1">{item.name}</h3>
                             {!isStaff && (<DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="size-6 rounded flex items-center justify-center text-muted-foreground hover:bg-accent opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0">
@@ -1172,8 +1115,8 @@ function MenuBuilderInner({ businessId, initialCategories, initialItems }: MenuB
                             </div>
                           )}
 
-                          {menuItemDescription(item, contentLocale, primaryLocale) && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{menuItemDescription(item, contentLocale, primaryLocale)}</p>
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
                           )}
 
                           {(item.tags || []).length > 0 && (
