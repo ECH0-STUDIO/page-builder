@@ -3,12 +3,27 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Check, Loader2, Save } from 'lucide-react'
+import { Check, Loader2, Save, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/currency'
 import { saveTranslationsAction } from '@/app/actions/translations'
+import {
+  applyAiTranslateAction,
+  estimateAiTranslateAction,
+  type AiTranslateQuote,
+} from '@/app/actions/ai-translate'
+import type { AiTranslateScope } from '@/lib/ai-translate'
 import type { TranslationField } from '@/lib/translation-fields'
 import { SECTION_LABELS, type TranslationSectionId } from '@/lib/translation-fields'
 import { storeLocaleLabel, type StoreLocaleCode } from '@/i18n/store-locales'
@@ -32,6 +47,9 @@ export function TranslationEditor({
   )
   const [pending, startTransition] = useTransition()
   const [activeSection, setActiveSection] = useState<TranslationSectionId | 'all'>('all')
+  const [quoting, setQuoting] = useState(false)
+  const [applying, setApplying] = useState(false)
+  const [quote, setQuote] = useState<AiTranslateQuote | null>(null)
 
   const dirty = useMemo(() => {
     const out: Record<string, string> = {}
@@ -43,6 +61,7 @@ export function TranslationEditor({
   }, [drafts, fields])
 
   const dirtyCount = Object.keys(dirty).length
+  const busy = pending || quoting || applying
 
   const bySection = useMemo(() => {
     const map = new Map<TranslationSectionId, TranslationField[]>()
@@ -65,6 +84,22 @@ export function TranslationEditor({
 
   function setDraft(id: string, value: string) {
     setDrafts(prev => ({ ...prev, [id]: value }))
+  }
+
+  function applyAiResult(next: TranslationField[]) {
+    setFields(next)
+    setDrafts(prev => {
+      const out = { ...prev }
+      for (const f of next) {
+        const previous = fields.find(x => x.id === f.id)
+        const wasDirty = previous != null && prev[f.id] !== previous.translatedText
+        const aiFilled = previous == null || previous.translatedText !== f.translatedText
+        if (aiFilled || !wasDirty) {
+          out[f.id] = f.translatedText
+        }
+      }
+      return out
+    })
   }
 
   function save(ids?: string[]) {
@@ -93,6 +128,45 @@ export function TranslationEditor({
     })
   }
 
+  async function openQuote(scope: AiTranslateScope) {
+    setQuoting(true)
+    const res = await estimateAiTranslateAction(businessId, locale, scope)
+    setQuoting(false)
+    if (!res.success) {
+      toast.error(res.error)
+      return
+    }
+    if (res.data.fieldCount === 0) {
+      toast.message('Nothing left to translate in this section.')
+      return
+    }
+    setQuote(res.data)
+  }
+
+  async function confirmAi() {
+    if (!quote) return
+    setApplying(true)
+    const res = await applyAiTranslateAction(businessId, locale, quote.scope)
+    setApplying(false)
+    if (!res.success) {
+      toast.error(res.error)
+      return
+    }
+    applyAiResult(res.data.fields)
+    setQuote(null)
+    if (res.data.creditsCharged > 0) {
+      toast.success(
+        `Translated ${res.data.saved} field${res.data.saved === 1 ? '' : 's'} · ${res.data.creditsCharged} credit${res.data.creditsCharged === 1 ? '' : 's'}`,
+      )
+    } else {
+      toast.success(`Translated ${res.data.saved} field${res.data.saved === 1 ? '' : 's'}`)
+    }
+  }
+
+  const quoteCopy = quote
+    ? `Translate ${quote.wordCount.toLocaleString('en-US')} words to ${storeLocaleLabel(locale)} — ${quote.credits} credit${quote.credits === 1 ? '' : 's'} (~${formatCurrency(quote.vndEstimate)}). You’ll only be charged if translation succeeds.`
+    : ''
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -114,10 +188,20 @@ export function TranslationEditor({
             )}
           </p>
         </div>
-        <Button onClick={() => save()} disabled={pending || dirtyCount === 0}>
-          {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          Save{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => openQuote(activeSection === 'all' ? 'all' : activeSection)}
+            disabled={busy || visibleFields.length === 0}
+          >
+            {quoting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            Translate with AI
+          </Button>
+          <Button onClick={() => save()} disabled={busy || dirtyCount === 0}>
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            Save{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -173,14 +257,25 @@ export function TranslationEditor({
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     {SECTION_LABELS[section]}
                   </h2>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={pending}
-                    onClick={() => save(sectionFields.map(f => f.id).filter(id => dirty[id] !== undefined))}
-                  >
-                    Save section
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => openQuote(section)}
+                    >
+                      <Sparkles className="size-3.5" />
+                      AI
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => save(sectionFields.map(f => f.id).filter(id => dirty[id] !== undefined))}
+                    >
+                      Save section
+                    </Button>
+                  </div>
                 </div>
 
                 {[...groups.entries()].map(([group, groupFields]) => (
@@ -242,6 +337,61 @@ export function TranslationEditor({
           })}
         </div>
       )}
+
+      <Dialog open={quote != null} onOpenChange={open => { if (!open && !applying) setQuote(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Translate with AI</DialogTitle>
+            <DialogDescription>{quoteCopy}</DialogDescription>
+          </DialogHeader>
+          {quote && (
+            <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-1.5">
+              <p>
+                <span className="text-muted-foreground">Fields: </span>
+                {quote.fieldCount}
+                {quote.scope !== 'all' && (
+                  <span className="text-muted-foreground"> · {SECTION_LABELS[quote.scope]}</span>
+                )}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Balance: </span>
+                {quote.balance} credits
+              </p>
+              {quote.insufficient && (
+                <p className="text-destructive">
+                  Not enough credits.{' '}
+                  <Link href="/dashboard/settings/credits" className="underline underline-offset-2">
+                    Top up
+                  </Link>
+                </p>
+              )}
+              {!quote.configured && (
+                <p className="text-amber-700">
+                  AI is not configured on this environment. You can still translate manually.
+                </p>
+              )}
+            </div>
+          )}
+          {applying && (
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              Translating… this can take a minute. You won’t be charged if it fails.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setQuote(null)} disabled={applying}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmAi}
+              disabled={applying || !quote || quote.insufficient || !quote.configured}
+            >
+              {applying ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

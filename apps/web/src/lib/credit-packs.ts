@@ -28,6 +28,13 @@ export function estimateTranslateCredits(wordCount: number): number {
   return Math.max(1, Math.ceil(wordCount / AI_TRANSLATE_WORDS_PER_CREDIT))
 }
 
+/** Approximate VND using the 100-credit pack rate (plan copy: ~4,500₫ for 5 credits). */
+export function estimateTranslateVnd(credits: number): number {
+  if (credits <= 0) return 0
+  const pack = CREDIT_PACKS.find(p => p.amount === 100) ?? CREDIT_PACKS[0]
+  return Math.round((credits * pack.priceVnd) / pack.amount)
+}
+
 export function findCreditPack(amount: number): CreditPack | undefined {
   return CREDIT_PACKS.find(p => p.amount === amount)
 }
