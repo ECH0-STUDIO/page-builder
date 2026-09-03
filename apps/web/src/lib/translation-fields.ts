@@ -279,6 +279,17 @@ export function collectMenuFields(
   return out
 }
 
+export type TranslationProgress = {
+  total: number
+  translated: number
+}
+
+export function translationProgressFromFields(fields: TranslationField[]): TranslationProgress {
+  const total = fields.length
+  const translated = fields.filter(f => f.customized).length
+  return { total, translated }
+}
+
 export const SECTION_LABELS: Record<TranslationSectionId, string> = {
   seo: 'SEO & social',
   page: 'Landing page',

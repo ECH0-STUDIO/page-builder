@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -19,13 +19,16 @@ import {
   purchaseLocaleAction,
   updatePrimaryLocaleAction,
 } from '@/app/actions/business-locales'
+import { getTranslationProgressAction } from '@/app/actions/translations'
+import type { TranslationProgress } from '@/lib/translation-fields'
+import { useCreditBalance, useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
 import { cn } from '@/lib/utils'
 
 export function LanguagesSettingsForm({
   businessId,
   primaryLocale,
   locales,
-  creditBalance,
+  creditBalance: initialCreditBalance,
 }: {
   businessId: string
   primaryLocale: StoreLocaleCode
@@ -35,6 +38,9 @@ export function LanguagesSettingsForm({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [busyLocale, setBusyLocale] = useState<string | null>(null)
+  const [progress, setProgress] = useState<Record<string, TranslationProgress>>({})
+  const { data: liveBalance = initialCreditBalance } = useCreditBalance(businessId, initialCreditBalance)
+  const syncCredits = useSyncCreditBalance()
 
   const activeExtra = useMemo(
     () => new Set(locales.filter(l => l.status === 'active').map(l => l.locale)),
@@ -45,13 +51,34 @@ export function LanguagesSettingsForm({
     [locales],
   )
 
+  const activeCodes = useMemo(
+    () => locales.filter(l => l.status === 'active').map(l => l.locale).sort(),
+    [locales],
+  )
+  const activeKey = activeCodes.join(',')
+
+  useEffect(() => {
+    if (!activeCodes.length) {
+      setProgress({})
+      return
+    }
+    let cancelled = false
+    getTranslationProgressAction(businessId, activeCodes).then(res => {
+      if (cancelled) return
+      if (res.success) setProgress(res.data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [businessId, activeKey])
+
   function refresh() {
     router.refresh()
   }
 
   function purchase(locale: StoreLocaleCode) {
     if (locale === primaryLocale) return
-    if (creditBalance < LOCALE_CREDITS_PER_MONTH) {
+    if (liveBalance < LOCALE_CREDITS_PER_MONTH) {
       toast.error(`Need ${LOCALE_CREDITS_PER_MONTH} credits. Top up first.`)
       return
     }
@@ -62,6 +89,11 @@ export function LanguagesSettingsForm({
       if (!res.success) {
         toast.error(res.error)
         return
+      }
+      if (typeof res.data.creditBalance === 'number') {
+        await syncCredits(businessId, res.data.creditBalance)
+      } else {
+        await syncCredits(businessId)
       }
       toast.success(`${storeLocaleLabel(locale)} activated — ${LOCALE_CREDITS_PER_MONTH} credits/month`)
       refresh()
@@ -112,7 +144,7 @@ export function LanguagesSettingsForm({
         </p>
         <p>
           Extra languages cost <strong className="text-foreground">{LOCALE_CREDITS_PER_MONTH} credits/month</strong> each.
-          Balance: <strong className="text-foreground">{creditBalance}</strong> credits.{' '}
+          Balance: <strong className="text-foreground">{liveBalance}</strong> credits.{' '}
           <Link href="/dashboard/settings/credits" className="underline underline-offset-2">
             Top up
           </Link>
@@ -170,6 +202,7 @@ export function LanguagesSettingsForm({
             const isPastDue = pastDue.has(code)
             const row = locales.find(l => l.locale === code)
             const busy = busyLocale === code && pending
+            const prog = progress[code]
 
             return (
               <div key={code} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
@@ -184,6 +217,11 @@ export function LanguagesSettingsForm({
                       : isPastDue
                         ? 'Past due — top up credits and reactivate'
                         : `Public URL: /${code}/{slug}`}
+                    {isActive && prog && prog.total > 0 ? (
+                      <span className="ml-2 text-foreground/80">
+                        · {prog.translated}/{prog.total} translated
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -205,7 +243,7 @@ export function LanguagesSettingsForm({
                   ) : (
                     <Button
                       size="sm"
-                      disabled={busy || creditBalance < LOCALE_CREDITS_PER_MONTH}
+                      disabled={busy || liveBalance < LOCALE_CREDITS_PER_MONTH}
                       onClick={() => purchase(code)}
                     >
                       {busy ? (

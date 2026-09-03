@@ -27,6 +27,7 @@ import type { AiTranslateScope } from '@/lib/ai-translate'
 import type { TranslationField } from '@/lib/translation-fields'
 import { SECTION_LABELS, type TranslationSectionId } from '@/lib/translation-fields'
 import { storeLocaleLabel, type StoreLocaleCode } from '@/i18n/store-locales'
+import { useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
 
 const SECTION_ORDER: TranslationSectionId[] = ['seo', 'page', 'chrome', 'menu', 'order']
 
@@ -41,6 +42,7 @@ export function TranslationEditor({
   primary: StoreLocaleCode
   initialFields: TranslationField[]
 }) {
+  const syncCredits = useSyncCreditBalance()
   const [fields, setFields] = useState(initialFields)
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialFields.map(f => [f.id, f.translatedText])),
@@ -154,6 +156,11 @@ export function TranslationEditor({
     }
     applyAiResult(res.data.fields)
     setQuote(null)
+    if (typeof res.data.creditBalance === 'number') {
+      void syncCredits(businessId, res.data.creditBalance)
+    } else if (res.data.creditsCharged > 0) {
+      void syncCredits(businessId)
+    }
     if (res.data.creditsCharged > 0) {
       toast.success(
         `Translated ${res.data.saved} field${res.data.saved === 1 ? '' : 's'} · ${res.data.creditsCharged} credit${res.data.creditsCharged === 1 ? '' : 's'}`,
