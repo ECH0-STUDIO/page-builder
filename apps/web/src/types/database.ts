@@ -580,6 +580,39 @@ export interface Database {
         ]
       }
       storage_subscriptions: { Row: any; Insert: any; Update: any; Relationships: any }
+      business_locales: {
+        Row: {
+          id: string
+          business_id: string
+          locale: string
+          status: string
+          activated_at: string
+          next_bill_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          locale: string
+          status?: string
+          activated_at?: string
+          next_bill_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          locale?: string
+          status?: string
+          activated_at?: string
+          next_bill_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_balances: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_orders: { Row: any; Insert: any; Update: any; Relationships: any }
       credit_transactions: { Row: any; Insert: any; Update: any; Relationships: any }

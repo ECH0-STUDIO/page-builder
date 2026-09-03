@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { isSupportedLocale } from '@/i18n/locale'
+import { isStoreLocaleCode } from '@/i18n/store-locales'
 import { currencyForLocale, localeCookieOptions } from '@/lib/locale-cookie'
 import {
   inferMarketingLocaleFromCountry,
@@ -67,7 +68,7 @@ export async function proxy(request: NextRequest) {
     (host?.endsWith('.vercel.app') ?? false)
 
   // ── Custom domain routing (before marketing ?lang= logic) ──
-  // Published storefronts must never get ?lang=en — single language per business.
+  // Published storefronts must never get ?lang=en — use /{locale} path prefixes instead.
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
     const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
     if (slug) {
@@ -77,8 +78,16 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(cleanUrl)
       }
       const rewriteUrl = request.nextUrl.clone()
-      const suffix = pathname === '/' ? '' : pathname
-      rewriteUrl.pathname = `/${slug}${suffix}`
+      const segments = pathname.split('/').filter(Boolean)
+      const first = segments[0]
+      // /en or /en/order → /en/{slug} or /en/{slug}/order
+      if (first && isStoreLocaleCode(first)) {
+        const rest = segments.slice(1).join('/')
+        rewriteUrl.pathname = rest ? `/${first}/${slug}/${rest}` : `/${first}/${slug}`
+      } else {
+        const suffix = pathname === '/' ? '' : pathname
+        rewriteUrl.pathname = `/${slug}${suffix}`
+      }
       return NextResponse.rewrite(rewriteUrl)
     }
   }

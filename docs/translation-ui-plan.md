@@ -167,11 +167,11 @@ Actions:
 
 ### Phase B — Locale purchase + monthly billing
 
-- Migration `business_locales`
-- `LOCALE_CREDITS_PER_MONTH = 20` in `credit-packs.ts`
-- `purchaseLocaleAction` / `cancelLocaleAction` / `billLocalesIfDueAction`
-- Settings → Languages: list catalog, show active + “Add for 20 credits/month”
-- On activate: enable public `/{locale}/{slug}` routes + hreflang
+- [x] Migration `business_locales`
+- [x] `LOCALE_CREDITS_PER_MONTH = 20` in `credit-packs.ts`
+- [x] `purchaseLocaleAction` / `cancelLocaleAction` / `billLocalesIfDueAction`
+- [x] Settings → Languages: list catalog, show active + “Add for 20 credits/month”
+- [x] On activate: enable public `/{locale}/{slug}` routes + hreflang
 
 ### Phase C — Translation UI (manual)
 

@@ -17,6 +17,7 @@
     "addNewBusiness": "Thêm doanh nghiệp mới",
     "selectBusiness": "Chọn doanh nghiệp",
     "gallery": "Thư viện Ảnh",
+    "translations": "Bản dịch",
     "topUp": "THÊM"
   },
   "overview": {
@@ -608,6 +609,7 @@
     "tabs": {
       "security": "Bảo mật",
       "team": "Quản lý nhóm",
+      "languages": "Ngôn ngữ cửa hàng",
       "localization": "Khu vực & Ngôn ngữ",
       "credits": "Thanh toán & Credit"
     },
