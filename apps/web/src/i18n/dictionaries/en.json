@@ -136,6 +136,8 @@
     "save": "Save",
     "analytics": "Visitor Analytics",
     "totalViews": "Total views",
+    "byLocale": "By language",
+    "byLocaleHint": "Breakdown for this period. Credits still use one shared pool across languages.",
     "sevenDays": "7 days",
     "thirtyDays": "30 days",
     "seo": "SEO & Metadata",

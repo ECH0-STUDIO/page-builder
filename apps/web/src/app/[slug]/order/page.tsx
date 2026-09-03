@@ -269,7 +269,7 @@ export default async function OrderPage({
             backgroundColor: orderBgColor,
           }}
         >
-          <ViewTracker slug={slug} />
+          <ViewTracker slug={slug} locale={activeContentLocale} />
 
           {publicLocales.length > 1 && (
             <Suspense fallback={null}>

@@ -189,8 +189,8 @@ Actions:
 
 ### Phase E — Analytics by locale (optional)
 
-- Track views with locale dimension
-- Publishing chart: breakdown VI / EN / DE — **billing still one pool**
+- [x] Track views with locale dimension
+- [x] Publishing chart: breakdown VI / EN / DE — **billing still one pool**
 
 ---
 
