@@ -69,6 +69,16 @@ export function storeLocaleLabel(code: StoreLocaleCode): string {
   return STORE_LOCALE_CATALOG[code].label
 }
 
+/**
+ * English clarifying name when it differs from the native label
+ * (avoids "EnglishEnglish" / "Deutsch · German" duplication noise when identical).
+ */
+export function storeLocaleSecondaryLabel(code: StoreLocaleCode): string | null {
+  const { label, labelEn } = STORE_LOCALE_CATALOG[code]
+  if (label.trim().toLowerCase() === labelEn.trim().toLowerCase()) return null
+  return labelEn
+}
+
 export function storeLocaleHreflang(code: StoreLocaleCode): string {
   return STORE_LOCALE_CATALOG[code].hreflang
 }

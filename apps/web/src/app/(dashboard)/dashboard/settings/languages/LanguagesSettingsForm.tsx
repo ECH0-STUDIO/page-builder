@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Check, Loader2, Plus, X } from 'lucide-react'
+import { Check, ChevronDown, Loader2, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import {
   STORE_LOCALE_CATALOG,
   STORE_LOCALE_CODES,
   storeLocaleLabel,
+  storeLocaleSecondaryLabel,
   type StoreLocaleCode,
 } from '@/i18n/store-locales'
 import type { BusinessLocaleRow } from '@/app/actions/business-locales'
@@ -20,14 +21,60 @@ import {
   updatePrimaryLocaleAction,
 } from '@/app/actions/business-locales'
 import { getTranslationProgressAction } from '@/app/actions/translations'
-import type { TranslationProgress } from '@/lib/translation-fields'
+import {
+  formatTranslationProgressParts,
+  type TranslationProgress,
+} from '@/lib/translation-fields'
 import { useCreditBalance, useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
 import { cn } from '@/lib/utils'
 
+function LocaleName({
+  code,
+  emphasize,
+}: {
+  code: StoreLocaleCode
+  emphasize?: 'primary' | 'muted'
+}) {
+  const meta = STORE_LOCALE_CATALOG[code]
+  const secondary = storeLocaleSecondaryLabel(code)
+  return (
+    <span>
+      <span className="font-medium">{meta.label}</span>
+      {secondary ? (
+        <span
+          className={cn(
+            'ml-2 text-xs font-normal',
+            emphasize === 'primary' ? 'text-background/70' : 'text-muted-foreground',
+          )}
+        >
+          {secondary}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+function ProgressLine({ progress }: { progress: TranslationProgress }) {
+  const { summary, sections } = formatTranslationProgressParts(progress)
+  if (progress.total <= 0) return null
+  return (
+    <span className="text-foreground/80">
+      {summary}
+      {sections.length > 0 ? (
+        <span className="text-muted-foreground">
+          {' '}
+          · {sections.slice(0, 3).join(' · ')}
+          {sections.length > 3 ? ' · …' : ''}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 export function LanguagesSettingsForm({
   businessId,
-  primaryLocale,
-  locales,
+  primaryLocale: initialPrimary,
+  locales: initialLocales,
   creditBalance: initialCreditBalance,
 }: {
   businessId: string
@@ -39,8 +86,19 @@ export function LanguagesSettingsForm({
   const [pending, startTransition] = useTransition()
   const [busyLocale, setBusyLocale] = useState<string | null>(null)
   const [progress, setProgress] = useState<Record<string, TranslationProgress>>({})
+  const [locales, setLocales] = useState(initialLocales)
+  const [primaryLocale, setPrimaryLocale] = useState(initialPrimary)
+  const [changePrimaryOpen, setChangePrimaryOpen] = useState(false)
   const { data: liveBalance = initialCreditBalance } = useCreditBalance(businessId, initialCreditBalance)
   const syncCredits = useSyncCreditBalance()
+
+  useEffect(() => {
+    setLocales(initialLocales)
+  }, [initialLocales])
+
+  useEffect(() => {
+    setPrimaryLocale(initialPrimary)
+  }, [initialPrimary])
 
   const activeExtra = useMemo(
     () => new Set(locales.filter(l => l.status === 'active').map(l => l.locale)),
@@ -90,12 +148,27 @@ export function LanguagesSettingsForm({
         toast.error(res.error)
         return
       }
-      if (typeof res.data.creditBalance === 'number') {
-        await syncCredits(businessId, res.data.creditBalance)
+      // Optimistic: flip row to Active immediately (don't wait for router.refresh).
+      const { creditBalance: nextBalance, ...row } = res.data
+      setLocales(prev => {
+        const without = prev.filter(l => l.locale !== locale)
+        return [...without, row]
+      })
+      setProgress(prev => ({
+        ...prev,
+        [locale]: prev[locale] ?? { total: 0, translated: 0, bySection: {} },
+      }))
+      if (typeof nextBalance === 'number') {
+        await syncCredits(businessId, nextBalance)
       } else {
         await syncCredits(businessId)
       }
       toast.success(`${storeLocaleLabel(locale)} activated — ${LOCALE_CREDITS_PER_MONTH} credits/month`)
+      void getTranslationProgressAction(businessId, [locale]).then(p => {
+        if (p.success && p.data[locale]) {
+          setProgress(prev => ({ ...prev, [locale]: p.data[locale] }))
+        }
+      })
       refresh()
     })
   }
@@ -112,6 +185,14 @@ export function LanguagesSettingsForm({
         toast.error(res.error)
         return
       }
+      setLocales(prev =>
+        prev.map(l => (l.locale === locale ? { ...l, status: 'cancelled' as const } : l)),
+      )
+      setProgress(prev => {
+        const next = { ...prev }
+        delete next[locale]
+        return next
+      })
       toast.success(`${storeLocaleLabel(locale)} cancelled`)
       refresh()
     })
@@ -130,10 +211,14 @@ export function LanguagesSettingsForm({
         toast.error(res.error)
         return
       }
+      setPrimaryLocale(locale)
+      setChangePrimaryOpen(false)
       toast.success(`Primary language is now ${storeLocaleLabel(locale)}`)
       refresh()
     })
   }
+
+  const primaryMeta = STORE_LOCALE_CATALOG[primaryLocale]
 
   return (
     <div className="space-y-8">
@@ -158,38 +243,7 @@ export function LanguagesSettingsForm({
         </p>
       </div>
 
-      <section className="space-y-3">
-        <h4 className="text-sm font-semibold">Primary language</h4>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {STORE_LOCALE_CODES.map(code => {
-            const meta = STORE_LOCALE_CATALOG[code]
-            const isPrimary = code === primaryLocale
-            return (
-              <button
-                key={`primary-${code}`}
-                type="button"
-                disabled={pending || isPrimary}
-                onClick={() => setPrimary(code)}
-                className={cn(
-                  'flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
-                  isPrimary
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'hover:border-foreground/40 disabled:opacity-50',
-                )}
-              >
-                <span>
-                  <span className="font-medium">{meta.label}</span>
-                  <span className={cn('ml-2 text-xs', isPrimary ? 'text-background/70' : 'text-muted-foreground')}>
-                    {meta.labelEn}
-                  </span>
-                </span>
-                {isPrimary ? <Check className="size-4 shrink-0" /> : null}
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
+      {/* Extra languages first — primary change is rare; avoid burying this under a tall grid */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-2">
           <h4 className="text-sm font-semibold">Extra languages</h4>
@@ -197,31 +251,40 @@ export function LanguagesSettingsForm({
         </div>
         <div className="divide-y rounded-xl border">
           {STORE_LOCALE_CODES.filter(code => code !== primaryLocale).map(code => {
-            const meta = STORE_LOCALE_CATALOG[code]
             const isActive = activeExtra.has(code)
             const isPastDue = pastDue.has(code)
             const row = locales.find(l => l.locale === code)
             const busy = busyLocale === code && pending
             const prog = progress[code]
+            const secondary = storeLocaleSecondaryLabel(code)
 
             return (
               <div key={code} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">
-                    {meta.label}{' '}
-                    <span className="text-muted-foreground font-normal">· {meta.labelEn}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {isActive && row
-                      ? `Active · next bill ${new Date(row.next_bill_at).toLocaleDateString()}`
-                      : isPastDue
-                        ? 'Past due — top up credits and reactivate'
-                        : `Public URL: /${code}/{slug}`}
-                    {isActive && prog && prog.total > 0 ? (
-                      <span className="ml-2 text-foreground/80">
-                        · {prog.translated}/{prog.total} translated
-                      </span>
+                    {STORE_LOCALE_CATALOG[code].label}
+                    {secondary ? (
+                      <span className="text-muted-foreground font-normal"> · {secondary}</span>
                     ) : null}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 space-x-0">
+                    {isActive && row ? (
+                      <>
+                        <span>
+                          Active · next bill {new Date(row.next_bill_at).toLocaleDateString()}
+                        </span>
+                        {prog && prog.total > 0 ? (
+                          <>
+                            <span aria-hidden="true"> · </span>
+                            <ProgressLine progress={prog} />
+                          </>
+                        ) : null}
+                      </>
+                    ) : isPastDue ? (
+                      'Past due — top up credits and reactivate'
+                    ) : (
+                      `Public URL: /${code}/{slug}`
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -259,6 +322,63 @@ export function LanguagesSettingsForm({
             )
           })}
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h4 className="text-sm font-semibold">Primary language</h4>
+        <div className="rounded-xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              <LocaleName code={primaryLocale} />
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Free · edited in page builder and menu
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => setChangePrimaryOpen(v => !v)}
+          >
+            Change
+            <ChevronDown className={cn('size-3.5 transition-transform', changePrimaryOpen && 'rotate-180')} />
+          </Button>
+        </div>
+        {changePrimaryOpen ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {STORE_LOCALE_CODES.map(code => {
+              const isPrimary = code === primaryLocale
+              return (
+                <button
+                  key={`primary-${code}`}
+                  type="button"
+                  disabled={pending || isPrimary}
+                  onClick={() => setPrimary(code)}
+                  className={cn(
+                    'flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
+                    isPrimary
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'hover:border-foreground/40 disabled:opacity-50',
+                  )}
+                >
+                  <LocaleName code={code} emphasize={isPrimary ? 'primary' : 'muted'} />
+                  {isPrimary ? <Check className="size-4 shrink-0" /> : null}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+        {!changePrimaryOpen ? (
+          <p className="text-xs text-muted-foreground">
+            Current primary: {primaryMeta.label}
+            {storeLocaleSecondaryLabel(primaryLocale)
+              ? ` (${storeLocaleSecondaryLabel(primaryLocale)})`
+              : ''}
+            . Changing primary updates public URLs.
+          </p>
+        ) : null}
       </section>
     </div>
   )

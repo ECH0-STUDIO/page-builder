@@ -6,8 +6,13 @@ import { getActiveBusiness } from '@/lib/business-server'
 import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { listBusinessLocalesAction } from '@/app/actions/business-locales'
 import { getTranslationProgressAction } from '@/app/actions/translations'
-import { storeLocaleLabel, STORE_LOCALE_CATALOG } from '@/i18n/store-locales'
+import {
+  storeLocaleLabel,
+  storeLocaleSecondaryLabel,
+  STORE_LOCALE_CATALOG,
+} from '@/i18n/store-locales'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
+import { formatTranslationProgressParts } from '@/lib/translation-fields'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Translations' }
@@ -29,7 +34,7 @@ export default async function TranslationsIndexPage() {
 
   const progressRes = active.length
     ? await getTranslationProgressAction(business.id, active.map(r => r.locale))
-    : { success: true as const, data: {} as Record<string, { translated: number; total: number }> }
+    : { success: true as const, data: {} as Record<string, never> }
   const progress = progressRes.success ? progressRes.data : {}
 
   return (
@@ -62,25 +67,35 @@ export default async function TranslationsIndexPage() {
         <div className="rounded-xl border divide-y">
           {active.map(row => {
             const meta = STORE_LOCALE_CATALOG[row.locale]
+            const secondary = storeLocaleSecondaryLabel(row.locale)
             const prog = progress[row.locale]
+            const parts = prog && prog.total > 0 ? formatTranslationProgressParts(prog) : null
             return (
               <Link
                 key={row.id}
                 href={`/dashboard/translations/${row.locale}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium">{meta.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    {meta.labelEn} · /{row.locale}/…
-                    {prog && prog.total > 0 ? (
+                    {secondary ? `${secondary} · ` : ''}
+                    /{row.locale}/…
+                    {parts ? (
                       <span className="ml-2 text-foreground/80">
-                        {prog.translated}/{prog.total} translated
+                        {parts.summary}
+                        {parts.sections.length > 0 ? (
+                          <span className="text-muted-foreground">
+                            {' '}
+                            · {parts.sections.slice(0, 3).join(' · ')}
+                            {parts.sections.length > 3 ? ' · …' : ''}
+                          </span>
+                        ) : null}
                       </span>
                     ) : null}
                   </p>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">Edit →</span>
+                <span className="text-xs font-medium text-muted-foreground shrink-0">Edit →</span>
               </Link>
             )
           })}

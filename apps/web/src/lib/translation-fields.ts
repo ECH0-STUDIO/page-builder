@@ -279,15 +279,15 @@ export function collectMenuFields(
   return out
 }
 
-export type TranslationProgress = {
+export type TranslationSectionProgress = {
   total: number
   translated: number
 }
 
-export function translationProgressFromFields(fields: TranslationField[]): TranslationProgress {
-  const total = fields.length
-  const translated = fields.filter(f => f.customized).length
-  return { total, translated }
+export type TranslationProgress = {
+  total: number
+  translated: number
+  bySection: Partial<Record<TranslationSectionId, TranslationSectionProgress>>
 }
 
 export const SECTION_LABELS: Record<TranslationSectionId, string> = {
@@ -296,6 +296,44 @@ export const SECTION_LABELS: Record<TranslationSectionId, string> = {
   chrome: 'Navbar & footer',
   menu: 'Menu',
   order: 'Order page',
+}
+
+const SECTION_PROGRESS_ORDER: TranslationSectionId[] = ['menu', 'page', 'chrome', 'seo', 'order']
+
+export function translationProgressFromFields(fields: TranslationField[]): TranslationProgress {
+  const bySection: TranslationProgress['bySection'] = {}
+  let translated = 0
+  for (const f of fields) {
+    const bucket = bySection[f.section] ?? { total: 0, translated: 0 }
+    bucket.total += 1
+    if (f.customized) {
+      bucket.translated += 1
+      translated += 1
+    }
+    bySection[f.section] = bucket
+  }
+  return { total: fields.length, translated, bySection }
+}
+
+/** Largest sections first — keeps “Menu 0/1857” visible when totals are huge. */
+export function formatTranslationProgressParts(progress: TranslationProgress): {
+  summary: string
+  sections: string[]
+} {
+  const summary = `${progress.translated}/${progress.total} translated`
+  const sections = SECTION_PROGRESS_ORDER
+    .map(id => {
+      const bucket = progress.bySection[id]
+      if (!bucket || bucket.total <= 0) return null
+      const short =
+        id === 'seo' ? 'SEO'
+          : id === 'page' ? 'Landing'
+            : id === 'chrome' ? 'Chrome'
+              : SECTION_LABELS[id]
+      return `${short} ${bucket.translated}/${bucket.total}`
+    })
+    .filter((s): s is string => Boolean(s))
+  return { summary, sections }
 }
 
 export function emptyTranslationCount(fields: TranslationField[], locale: string, primary: string): number {
