@@ -12,16 +12,22 @@ import {
   STORE_LOCALE_CATALOG,
 } from '@/i18n/store-locales'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
-import { formatTranslationProgressParts } from '@/lib/translation-fields'
+import { getTranslationProgressSections } from '@/lib/translation-fields'
+import { getServerTranslation } from '@/i18n/getDictionary'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Translations' }
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation()
+  return { title: t('translations.title') }
+}
 
 export default async function TranslationsIndexPage() {
   const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
+  const { t } = await getServerTranslation()
   const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
   assertDashboardAccess('/dashboard/translations', role, 'nav')
@@ -44,23 +50,26 @@ export default async function TranslationsIndexPage() {
           <Languages className="size-5 text-muted-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Translations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('translations.title')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Fill guest-facing copy for each purchased language. Primary (
-            {storeLocaleLabel(primary)}) is edited in the page builder and menu.
+            {t('translations.description').replace('{{primary}}', storeLocaleLabel(primary))}
           </p>
         </div>
       </div>
 
       {active.length === 0 ? (
         <div className="rounded-xl border bg-muted/30 p-5 text-sm text-muted-foreground space-y-3">
-          <p>No extra languages yet.</p>
+          <p>{t('translations.emptyTitle')}</p>
           <p>
-            Add English, Deutsch, and more under{' '}
-            <Link href="/dashboard/settings/languages" className="underline underline-offset-2 text-foreground">
-              Settings → Store languages
-            </Link>{' '}
-            ({LOCALE_CREDITS_PER_MONTH} credits/month each).
+            {t('translations.emptyHint').replace('{{credits}}', String(LOCALE_CREDITS_PER_MONTH))}{' '}
+            (
+            <Link
+              href="/dashboard/settings/languages"
+              className="underline underline-offset-2 text-foreground"
+            >
+              {t('translations.settingsLink')}
+            </Link>
+            ).
           </p>
         </div>
       ) : (
@@ -69,7 +78,13 @@ export default async function TranslationsIndexPage() {
             const meta = STORE_LOCALE_CATALOG[row.locale]
             const secondary = storeLocaleSecondaryLabel(row.locale)
             const prog = progress[row.locale]
-            const parts = prog && prog.total > 0 ? formatTranslationProgressParts(prog) : null
+            const sections = prog && prog.total > 0 ? getTranslationProgressSections(prog) : []
+            const summary =
+              prog && prog.total > 0
+                ? t('translations.progressSummary')
+                    .replace('{{translated}}', String(prog.translated))
+                    .replace('{{total}}', String(prog.total))
+                : null
             return (
               <Link
                 key={row.id}
@@ -81,21 +96,30 @@ export default async function TranslationsIndexPage() {
                   <p className="text-xs text-muted-foreground">
                     {secondary ? `${secondary} · ` : ''}
                     /{row.locale}/…
-                    {parts ? (
+                    {summary ? (
                       <span className="ml-2 text-foreground/80">
-                        {parts.summary}
-                        {parts.sections.length > 0 ? (
+                        {summary}
+                        {sections.length > 0 ? (
                           <span className="text-muted-foreground">
                             {' '}
-                            · {parts.sections.slice(0, 3).join(' · ')}
-                            {parts.sections.length > 3 ? ' · …' : ''}
+                            ·{' '}
+                            {sections
+                              .slice(0, 3)
+                              .map(
+                                s =>
+                                  `${t(`translations.sectionShort.${s.id}`)} ${s.translated}/${s.total}`,
+                              )
+                              .join(' · ')}
+                            {sections.length > 3 ? ' · …' : ''}
                           </span>
                         ) : null}
                       </span>
                     ) : null}
                   </p>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground shrink-0">Edit →</span>
+                <span className="text-xs font-medium text-muted-foreground shrink-0">
+                  {t('translations.edit')}
+                </span>
               </Link>
             )
           })}

@@ -22,10 +22,12 @@ import {
 } from '@/app/actions/business-locales'
 import { getTranslationProgressAction } from '@/app/actions/translations'
 import {
-  formatTranslationProgressParts,
+  getTranslationProgressSections,
   type TranslationProgress,
+  type TranslationSectionId,
 } from '@/lib/translation-fields'
 import { useCreditBalance, useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
+import { useTranslation } from '@/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 
 function LocaleName({
@@ -54,16 +56,29 @@ function LocaleName({
   )
 }
 
-function ProgressLine({ progress }: { progress: TranslationProgress }) {
-  const { summary, sections } = formatTranslationProgressParts(progress)
+function ProgressLine({
+  progress,
+  t,
+}: {
+  progress: TranslationProgress
+  t: (key: string) => string
+}) {
   if (progress.total <= 0) return null
+  const summary = t('translations.progressSummary')
+    .replace('{{translated}}', String(progress.translated))
+    .replace('{{total}}', String(progress.total))
+  const sections = getTranslationProgressSections(progress)
   return (
     <span className="text-foreground/80">
       {summary}
       {sections.length > 0 ? (
         <span className="text-muted-foreground">
           {' '}
-          · {sections.slice(0, 3).join(' · ')}
+          ·{' '}
+          {sections
+            .slice(0, 3)
+            .map(s => `${t(`translations.sectionShort.${s.id as TranslationSectionId}`)} ${s.translated}/${s.total}`)
+            .join(' · ')}
           {sections.length > 3 ? ' · …' : ''}
         </span>
       ) : null}
@@ -82,6 +97,7 @@ export function LanguagesSettingsForm({
   locales: BusinessLocaleRow[]
   creditBalance: number
 }) {
+  const { t } = useTranslation()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [busyLocale, setBusyLocale] = useState<string | null>(null)
@@ -137,7 +153,9 @@ export function LanguagesSettingsForm({
   function purchase(locale: StoreLocaleCode) {
     if (locale === primaryLocale) return
     if (liveBalance < LOCALE_CREDITS_PER_MONTH) {
-      toast.error(`Need ${LOCALE_CREDITS_PER_MONTH} credits. Top up first.`)
+      toast.error(
+        t('settings.storeLanguages.needCredits').replace('{{credits}}', String(LOCALE_CREDITS_PER_MONTH)),
+      )
       return
     }
     setBusyLocale(locale)
@@ -148,7 +166,6 @@ export function LanguagesSettingsForm({
         toast.error(res.error)
         return
       }
-      // Optimistic: flip row to Active immediately (don't wait for router.refresh).
       const { creditBalance: nextBalance, ...row } = res.data
       setLocales(prev => {
         const without = prev.filter(l => l.locale !== locale)
@@ -163,7 +180,11 @@ export function LanguagesSettingsForm({
       } else {
         await syncCredits(businessId)
       }
-      toast.success(`${storeLocaleLabel(locale)} activated — ${LOCALE_CREDITS_PER_MONTH} credits/month`)
+      toast.success(
+        t('settings.storeLanguages.activated')
+          .replace('{{locale}}', storeLocaleLabel(locale))
+          .replace('{{credits}}', String(LOCALE_CREDITS_PER_MONTH)),
+      )
       void getTranslationProgressAction(businessId, [locale]).then(p => {
         if (p.success && p.data[locale]) {
           setProgress(prev => ({ ...prev, [locale]: p.data[locale] }))
@@ -174,7 +195,13 @@ export function LanguagesSettingsForm({
   }
 
   function cancel(locale: StoreLocaleCode) {
-    if (!confirm(`Cancel ${storeLocaleLabel(locale)}? Public /${locale}/… URLs will stop. Translations are kept.`)) {
+    if (
+      !confirm(
+        t('settings.storeLanguages.cancelConfirm')
+          .replace('{{locale}}', storeLocaleLabel(locale))
+          .replace('{{code}}', locale),
+      )
+    ) {
       return
     }
     setBusyLocale(locale)
@@ -193,14 +220,20 @@ export function LanguagesSettingsForm({
         delete next[locale]
         return next
       })
-      toast.success(`${storeLocaleLabel(locale)} cancelled`)
+      toast.success(
+        t('settings.storeLanguages.cancelled').replace('{{locale}}', storeLocaleLabel(locale)),
+      )
       refresh()
     })
   }
 
   function setPrimary(locale: StoreLocaleCode) {
     if (locale === primaryLocale) return
-    if (!confirm(`Make ${storeLocaleLabel(locale)} the primary (free) storefront language? URLs will update.`)) {
+    if (
+      !confirm(
+        t('settings.storeLanguages.primaryConfirm').replace('{{locale}}', storeLocaleLabel(locale)),
+      )
+    ) {
       return
     }
     setBusyLocale(locale)
@@ -213,41 +246,52 @@ export function LanguagesSettingsForm({
       }
       setPrimaryLocale(locale)
       setChangePrimaryOpen(false)
-      toast.success(`Primary language is now ${storeLocaleLabel(locale)}`)
+      toast.success(
+        t('settings.storeLanguages.primaryUpdated').replace('{{locale}}', storeLocaleLabel(locale)),
+      )
       refresh()
     })
   }
 
   const primaryMeta = STORE_LOCALE_CATALOG[primaryLocale]
+  const primaryDisplay = storeLocaleSecondaryLabel(primaryLocale)
+    ? `${primaryMeta.label} (${storeLocaleSecondaryLabel(primaryLocale)})`
+    : primaryMeta.label
 
   return (
     <div className="space-y-8">
       <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
         <p>
-          Primary language is <strong className="text-foreground">{storeLocaleLabel(primaryLocale)}</strong> — included free.
-          Edit your page and menu in this language only.
+          {t('settings.storeLanguages.introPrimaryBefore')}
+          <strong className="text-foreground">{storeLocaleLabel(primaryLocale)}</strong>
+          {t('settings.storeLanguages.introPrimaryAfter')}
         </p>
         <p>
-          Extra languages cost <strong className="text-foreground">{LOCALE_CREDITS_PER_MONTH} credits/month</strong> each.
-          Balance: <strong className="text-foreground">{liveBalance}</strong> credits.{' '}
+          {t('settings.storeLanguages.introExtra')
+            .replace('{{credits}}', String(LOCALE_CREDITS_PER_MONTH))
+            .replace('{{balance}}', String(liveBalance))}{' '}
           <Link href="/dashboard/settings/credits" className="underline underline-offset-2">
-            Top up
+            {t('settings.storeLanguages.topUp')}
           </Link>
         </p>
         <p>
-          After activating a language, fill translations in{' '}
+          {t('settings.storeLanguages.introTranslatePrefix')}
           <Link href="/dashboard/translations" className="underline underline-offset-2">
-            Translations
+            {t('settings.storeLanguages.translationsLink')}
           </Link>
           .
         </p>
       </div>
 
-      {/* Extra languages first — primary change is rare; avoid burying this under a tall grid */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h4 className="text-sm font-semibold">Extra languages</h4>
-          <span className="text-xs text-muted-foreground">{LOCALE_CREDITS_PER_MONTH} credits / month each</span>
+          <h4 className="text-sm font-semibold">{t('settings.storeLanguages.extraTitle')}</h4>
+          <span className="text-xs text-muted-foreground">
+            {t('settings.storeLanguages.extraCost').replace(
+              '{{credits}}',
+              String(LOCALE_CREDITS_PER_MONTH),
+            )}
+          </span>
         </div>
         <div className="divide-y rounded-xl border">
           {STORE_LOCALE_CODES.filter(code => code !== primaryLocale).map(code => {
@@ -267,23 +311,26 @@ export function LanguagesSettingsForm({
                       <span className="text-muted-foreground font-normal"> · {secondary}</span>
                     ) : null}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 space-x-0">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {isActive && row ? (
                       <>
                         <span>
-                          Active · next bill {new Date(row.next_bill_at).toLocaleDateString()}
+                          {t('settings.storeLanguages.activeNextBill').replace(
+                            '{{date}}',
+                            new Date(row.next_bill_at).toLocaleDateString(),
+                          )}
                         </span>
                         {prog && prog.total > 0 ? (
                           <>
                             <span aria-hidden="true"> · </span>
-                            <ProgressLine progress={prog} />
+                            <ProgressLine progress={prog} t={t} />
                           </>
                         ) : null}
                       </>
                     ) : isPastDue ? (
-                      'Past due — top up credits and reactivate'
+                      t('settings.storeLanguages.pastDue')
                     ) : (
-                      `Public URL: /${code}/{slug}`
+                      t('settings.storeLanguages.publicUrl').replace('{{code}}', code)
                     )}
                   </p>
                 </div>
@@ -291,7 +338,9 @@ export function LanguagesSettingsForm({
                   {isActive ? (
                     <>
                       <Button asChild size="sm" variant="secondary">
-                        <Link href={`/dashboard/translations/${code}`}>Translate</Link>
+                        <Link href={`/dashboard/translations/${code}`}>
+                          {t('settings.storeLanguages.translate')}
+                        </Link>
                       </Button>
                       <Button
                         size="sm"
@@ -300,7 +349,7 @@ export function LanguagesSettingsForm({
                         onClick={() => cancel(code)}
                       >
                         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
-                        Cancel
+                        {t('settings.storeLanguages.cancel')}
                       </Button>
                     </>
                   ) : (
@@ -314,7 +363,10 @@ export function LanguagesSettingsForm({
                       ) : (
                         <Plus className="size-3.5" />
                       )}
-                      {isPastDue ? 'Reactivate' : 'Add'} · {LOCALE_CREDITS_PER_MONTH}
+                      {isPastDue
+                        ? t('settings.storeLanguages.reactivate')
+                        : t('settings.storeLanguages.add')}{' '}
+                      · {LOCALE_CREDITS_PER_MONTH}
                     </Button>
                   )}
                 </div>
@@ -325,14 +377,14 @@ export function LanguagesSettingsForm({
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-sm font-semibold">Primary language</h4>
+        <h4 className="text-sm font-semibold">{t('settings.storeLanguages.primaryTitle')}</h4>
         <div className="rounded-xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">
               <LocaleName code={primaryLocale} />
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Free · edited in page builder and menu
+              {t('settings.storeLanguages.primaryFree')}
             </p>
           </div>
           <Button
@@ -342,7 +394,7 @@ export function LanguagesSettingsForm({
             disabled={pending}
             onClick={() => setChangePrimaryOpen(v => !v)}
           >
-            Change
+            {t('settings.storeLanguages.changePrimary')}
             <ChevronDown className={cn('size-3.5 transition-transform', changePrimaryOpen && 'rotate-180')} />
           </Button>
         </div>
@@ -369,16 +421,11 @@ export function LanguagesSettingsForm({
               )
             })}
           </div>
-        ) : null}
-        {!changePrimaryOpen ? (
+        ) : (
           <p className="text-xs text-muted-foreground">
-            Current primary: {primaryMeta.label}
-            {storeLocaleSecondaryLabel(primaryLocale)
-              ? ` (${storeLocaleSecondaryLabel(primaryLocale)})`
-              : ''}
-            . Changing primary updates public URLs.
+            {t('settings.storeLanguages.primaryHint').replace('{{primary}}', primaryDisplay)}
           </p>
-        ) : null}
+        )}
       </section>
     </div>
   )

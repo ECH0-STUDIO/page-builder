@@ -316,23 +316,32 @@ export function translationProgressFromFields(fields: TranslationField[]): Trans
 }
 
 /** Largest sections first — keeps “Menu 0/1857” visible when totals are huge. */
+export function getTranslationProgressSections(
+  progress: TranslationProgress,
+): Array<{ id: TranslationSectionId; translated: number; total: number }> {
+  return SECTION_PROGRESS_ORDER
+    .map(id => {
+      const bucket = progress.bySection[id]
+      if (!bucket || bucket.total <= 0) return null
+      return { id, translated: bucket.translated, total: bucket.total }
+    })
+    .filter((s): s is { id: TranslationSectionId; translated: number; total: number } => Boolean(s))
+}
+
+/** @deprecated Prefer getTranslationProgressSections + i18n labels in UI */
 export function formatTranslationProgressParts(progress: TranslationProgress): {
   summary: string
   sections: string[]
 } {
   const summary = `${progress.translated}/${progress.total} translated`
-  const sections = SECTION_PROGRESS_ORDER
-    .map(id => {
-      const bucket = progress.bySection[id]
-      if (!bucket || bucket.total <= 0) return null
-      const short =
-        id === 'seo' ? 'SEO'
-          : id === 'page' ? 'Landing'
-            : id === 'chrome' ? 'Chrome'
-              : SECTION_LABELS[id]
-      return `${short} ${bucket.translated}/${bucket.total}`
-    })
-    .filter((s): s is string => Boolean(s))
+  const sections = getTranslationProgressSections(progress).map(({ id, translated, total }) => {
+    const short =
+      id === 'seo' ? 'SEO'
+        : id === 'page' ? 'Landing'
+          : id === 'chrome' ? 'Chrome'
+            : SECTION_LABELS[id]
+    return `${short} ${translated}/${total}`
+  })
   return { summary, sections }
 }
 
