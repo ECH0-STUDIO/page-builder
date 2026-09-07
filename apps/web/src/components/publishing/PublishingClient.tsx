@@ -25,16 +25,20 @@ import { resolvePublicStoreUrl } from '@/lib/site-urls'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type AnalyticsSnapshot = {
+  total: number
+  periodTotal: number
+  daily: DayViewStat[]
+  byLocale: LocaleViewStat[]
+}
+
 interface PublishingClientProps {
   businessId: string
   publishing: PublishingSettings | null
   slug: string
-  analytics: {
-    total: number
-    periodTotal: number
-    daily: DayViewStat[]
-    byLocale: LocaleViewStat[]
-  }
+  analytics: AnalyticsSnapshot
+  /** Prefetched 30-day analytics for instant period switching */
+  analytics30?: AnalyticsSnapshot
   baseUrl: string
   initialDomainSetup?: {
     domain: string | null
@@ -160,6 +164,7 @@ export function PublishingClient({
   publishing,
   slug: initialSlug,
   analytics: initialAnalytics,
+  analytics30: initialAnalytics30,
   baseUrl,
   initialDomainSetup,
 }: PublishingClientProps) {
@@ -178,8 +183,12 @@ export function PublishingClient({
   const [savingDomain, setSavingDomain] = useState(false)
   const [verifyingDns, setVerifyingDns] = useState(false)
   const [period, setPeriod] = useState<7 | 30>(7)
-  const [analytics, setAnalytics] = useState(initialAnalytics)
+  const [analyticsByPeriod, setAnalyticsByPeriod] = useState<Partial<Record<7 | 30, AnalyticsSnapshot>>>(() => ({
+    7: initialAnalytics,
+    ...(initialAnalytics30 ? { 30: initialAnalytics30 } : {}),
+  }))
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+  const analytics = analyticsByPeriod[period] ?? initialAnalytics
   const { t } = useTranslation()
 
   useEffect(() => {
@@ -291,10 +300,11 @@ export function PublishingClient({
   async function switchPeriod(p: 7 | 30) {
     if (p === period || loadingAnalytics) return
     setPeriod(p)
+    if (analyticsByPeriod[p]) return
     setLoadingAnalytics(true)
     try {
-      const data = await getPageViewsAction(businessId, p)
-      setAnalytics(data)
+      const data = await getPageViewsAction(businessId, p, { reconcileBilling: false })
+      setAnalyticsByPeriod(prev => ({ ...prev, [p]: data }))
     } finally {
       setLoadingAnalytics(false)
     }

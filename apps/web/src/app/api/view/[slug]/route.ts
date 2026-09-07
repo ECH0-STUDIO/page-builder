@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { PAGE_VIEWS_PER_CREDIT } from '@/lib/credit-packs'
-import { isStoreLocaleCode } from '@/i18n/store-locales'
+import { isStoreLocaleCode, toStoreLocaleCode } from '@/i18n/store-locales'
 
 /**
  * POST /api/view/[slug]?locale=en
@@ -15,7 +15,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const url = new URL(req.url)
   const localeRaw = (url.searchParams.get('locale') ?? '').trim().toLowerCase()
-  const locale = isStoreLocaleCode(localeRaw) ? localeRaw : ''
 
   // Service-role client — bypasses RLS for the upsert
   const supabase = createClient(
@@ -32,6 +31,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   if (bizErr || !biz) {
     return NextResponse.json({ ok: false }, { status: 404 })
+  }
+
+  // Prefer explicit locale; otherwise tag as store primary (never leave blank → "Unknown")
+  let locale = isStoreLocaleCode(localeRaw) ? localeRaw : ''
+  if (!locale) {
+    const { data: pub } = await supabase
+      .from('publishing_settings')
+      .select('language')
+      .eq('business_id', biz.id)
+      .maybeSingle()
+    locale = toStoreLocaleCode((pub as { language?: string | null } | null)?.language)
   }
 
   const today = new Date().toISOString().slice(0, 10)

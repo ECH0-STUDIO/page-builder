@@ -110,7 +110,7 @@ export async function getActiveBusinessLocales(businessId: string): Promise<Stor
 export async function purchaseLocaleAction(
   businessId: string,
   localeRaw: string,
-): Promise<ActionResult<BusinessLocaleRow>> {
+): Promise<ActionResult<BusinessLocaleRow & { creditBalance: number }>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Unauthorized' }
@@ -186,7 +186,13 @@ export async function purchaseLocaleAction(
   revalidatePath('/dashboard/settings/languages')
   revalidatePath('/dashboard/settings/credits')
   revalidatePath('/dashboard/translations')
-  return { success: true, data: normalized }
+  return {
+    success: true,
+    data: {
+      ...normalized,
+      creditBalance: typeof deduct.balance === 'number' ? deduct.balance : 0,
+    },
+  }
 }
 
 /** Cancel a purchased locale. Keeps DB row + translations; stops public URLs and renewals. */

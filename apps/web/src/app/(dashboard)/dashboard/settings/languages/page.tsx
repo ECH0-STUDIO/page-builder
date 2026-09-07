@@ -6,15 +6,21 @@ import { listBusinessLocalesAction, billLocalesIfDueAction } from '@/app/actions
 import { LanguagesSettingsForm } from './LanguagesSettingsForm'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import { toStoreLocaleCode } from '@/i18n/store-locales'
+import { getServerTranslation } from '@/i18n/getDictionary'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Store Languages' }
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation()
+  return { title: t('settings.storeLanguages.title') }
+}
 
 export default async function StoreLanguagesPage() {
   const { supabase, user } = await getAuthUser()
   if (!user) redirect('/login')
 
+  const { t } = await getServerTranslation()
   const { business, role } = await getActiveBusiness(supabase, user.id)
   if (!business) redirect('/onboarding/new-business')
   assertDashboardAccess('/dashboard/settings/languages', role, 'settings')
@@ -45,10 +51,12 @@ export default async function StoreLanguagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Store languages</h3>
+        <h3 className="text-lg font-medium">{t('settings.storeLanguages.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Primary language is free. Extra languages are {LOCALE_CREDITS_PER_MONTH} credits per month
-          and are edited in Translations — not in the page builder.
+          {t('settings.storeLanguages.description').replace(
+            '{{credits}}',
+            String(LOCALE_CREDITS_PER_MONTH),
+          )}
         </p>
       </div>
 

@@ -25,8 +25,11 @@ import {
 } from '@/app/actions/ai-translate'
 import type { AiTranslateScope } from '@/lib/ai-translate'
 import type { TranslationField } from '@/lib/translation-fields'
-import { SECTION_LABELS, type TranslationSectionId } from '@/lib/translation-fields'
+import { type TranslationSectionId } from '@/lib/translation-fields'
+import { localizeFieldChrome } from '@/lib/translation-ui-i18n'
 import { storeLocaleLabel, type StoreLocaleCode } from '@/i18n/store-locales'
+import { useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
+import { useTranslation } from '@/i18n/I18nProvider'
 
 const SECTION_ORDER: TranslationSectionId[] = ['seo', 'page', 'chrome', 'menu', 'order']
 
@@ -41,6 +44,8 @@ export function TranslationEditor({
   primary: StoreLocaleCode
   initialFields: TranslationField[]
 }) {
+  const { t } = useTranslation()
+  const syncCredits = useSyncCreditBalance()
   const [fields, setFields] = useState(initialFields)
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialFields.map(f => [f.id, f.translatedText])),
@@ -50,6 +55,8 @@ export function TranslationEditor({
   const [quoting, setQuoting] = useState(false)
   const [applying, setApplying] = useState(false)
   const [quote, setQuote] = useState<AiTranslateQuote | null>(null)
+
+  const sectionLabel = (section: TranslationSectionId) => t(`translations.sections.${section}`)
 
   const dirty = useMemo(() => {
     const out: Record<string, string> = {}
@@ -107,7 +114,7 @@ export function TranslationEditor({
       ? Object.fromEntries(Object.entries(dirty).filter(([id]) => ids.includes(id)))
       : dirty
     if (!Object.keys(payload).length) {
-      toast.message('Nothing to save')
+      toast.message(t('translations.nothingToSave'))
       return
     }
     startTransition(async () => {
@@ -124,7 +131,7 @@ export function TranslationEditor({
           customized: true,
         }
       }))
-      toast.success(`Saved ${res.data.saved} field${res.data.saved === 1 ? '' : 's'}`)
+      toast.success(t('translations.savedFields').replace('{{count}}', String(res.data.saved)))
     })
   }
 
@@ -137,7 +144,7 @@ export function TranslationEditor({
       return
     }
     if (res.data.fieldCount === 0) {
-      toast.message('Nothing left to translate in this section.')
+      toast.message(t('translations.nothingLeftInSection'))
       return
     }
     setQuote(res.data)
@@ -154,17 +161,28 @@ export function TranslationEditor({
     }
     applyAiResult(res.data.fields)
     setQuote(null)
+    if (typeof res.data.creditBalance === 'number') {
+      void syncCredits(businessId, res.data.creditBalance)
+    } else if (res.data.creditsCharged > 0) {
+      void syncCredits(businessId)
+    }
     if (res.data.creditsCharged > 0) {
       toast.success(
-        `Translated ${res.data.saved} field${res.data.saved === 1 ? '' : 's'} · ${res.data.creditsCharged} credit${res.data.creditsCharged === 1 ? '' : 's'}`,
+        t('translations.aiSuccessWithCredits')
+          .replace('{{count}}', String(res.data.saved))
+          .replace('{{credits}}', String(res.data.creditsCharged)),
       )
     } else {
-      toast.success(`Translated ${res.data.saved} field${res.data.saved === 1 ? '' : 's'}`)
+      toast.success(t('translations.aiSuccess').replace('{{count}}', String(res.data.saved)))
     }
   }
 
   const quoteCopy = quote
-    ? `Translate ${quote.wordCount.toLocaleString('en-US')} words to ${storeLocaleLabel(locale)} — ${quote.credits} credit${quote.credits === 1 ? '' : 's'} (~${formatCurrency(quote.vndEstimate)}). You’ll only be charged if translation succeeds.`
+    ? t('translations.quoteCopy')
+        .replace('{{words}}', quote.wordCount.toLocaleString('en-US'))
+        .replace('{{locale}}', storeLocaleLabel(locale))
+        .replace('{{credits}}', String(quote.credits))
+        .replace('{{vnd}}', formatCurrency(quote.vndEstimate))
     : ''
 
   return (
@@ -173,18 +191,20 @@ export function TranslationEditor({
         <div>
           <p className="text-sm text-muted-foreground">
             <Link href="/dashboard/translations" className="underline underline-offset-2">
-              Translations
+              {t('translations.breadcrumb')}
             </Link>
             {' / '}
             {storeLocaleLabel(locale)}
           </p>
           <h1 className="text-2xl font-bold tracking-tight mt-1">
-            Translate to {storeLocaleLabel(locale)}
+            {t('translations.translateTo').replace('{{locale}}', storeLocaleLabel(locale))}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Primary ({storeLocaleLabel(primary)}) is shown on the left. Empty fields fall back to primary on the live site until you customize them.
+            {t('translations.editorHint').replace('{{primary}}', storeLocaleLabel(primary))}
             {missingCount > 0 && (
-              <span className="ml-1 text-amber-700">· {missingCount} still using primary</span>
+              <span className="ml-1 text-amber-700">
+                · {t('translations.stillUsingPrimary').replace('{{count}}', String(missingCount))}
+              </span>
             )}
           </p>
         </div>
@@ -195,11 +215,13 @@ export function TranslationEditor({
             disabled={busy || visibleFields.length === 0}
           >
             {quoting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            Translate with AI
+            {t('translations.translateWithAi')}
           </Button>
           <Button onClick={() => save()} disabled={busy || dirtyCount === 0}>
             {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            Save{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
+            {dirtyCount > 0
+              ? t('translations.saveCount').replace('{{count}}', String(dirtyCount))
+              : t('translations.save')}
           </Button>
         </div>
       </div>
@@ -213,7 +235,7 @@ export function TranslationEditor({
             activeSection === 'all' ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
           )}
         >
-          All ({fields.length})
+          {t('translations.all')} ({fields.length})
         </button>
         {SECTION_ORDER.map(section => {
           const count = bySection.get(section)?.length ?? 0
@@ -228,7 +250,7 @@ export function TranslationEditor({
                 activeSection === section ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
               )}
             >
-              {SECTION_LABELS[section]} ({count})
+              {sectionLabel(section)} ({count})
             </button>
           )
         })}
@@ -236,7 +258,7 @@ export function TranslationEditor({
 
       {visibleFields.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No translatable text found in this section yet. Add content in the page builder or menu first.
+          {t('translations.emptySection')}
         </div>
       ) : (
         <div className="space-y-8">
@@ -255,7 +277,7 @@ export function TranslationEditor({
               <section key={section} className="space-y-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    {SECTION_LABELS[section]}
+                    {sectionLabel(section)}
                   </h2>
                   <div className="flex items-center gap-2">
                     <Button
@@ -265,7 +287,7 @@ export function TranslationEditor({
                       onClick={() => openQuote(section)}
                     >
                       <Sparkles className="size-3.5" />
-                      AI
+                      {t('translations.ai')}
                     </Button>
                     <Button
                       size="sm"
@@ -273,36 +295,39 @@ export function TranslationEditor({
                       disabled={busy}
                       onClick={() => save(sectionFields.map(f => f.id).filter(id => dirty[id] !== undefined))}
                     >
-                      Save section
+                      {t('translations.saveSection')}
                     </Button>
                   </div>
                 </div>
 
-                {[...groups.entries()].map(([group, groupFields]) => (
+                {[...groups.entries()].map(([group, groupFields]) => {
+                  const localizedGroup = translateFieldGroupSafe(t, group)
+                  return (
                   <div key={group} className="rounded-xl border overflow-hidden">
                     <div className="px-4 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground">
-                      {group}
+                      {localizedGroup}
                     </div>
                     <div className="divide-y">
                       {groupFields.map(field => {
                         const value = drafts[field.id] ?? ''
                         const isDirty = dirty[field.id] !== undefined
+                        const chrome = localizeFieldChrome(t, field.label, field.group)
                         return (
                           <div key={field.id} className="grid md:grid-cols-2 gap-3 p-4">
                             <div>
                               <div className="flex items-center gap-2 mb-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+                                <p className="text-xs font-medium text-muted-foreground">{chrome.label}</p>
                                 {field.customized && !isDirty && (
                                   <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-700">
-                                    <Check className="size-3" /> translated
+                                    <Check className="size-3" /> {t('translations.badgeTranslated')}
                                   </span>
                                 )}
                                 {isDirty && (
-                                  <span className="text-[10px] text-amber-700">unsaved</span>
+                                  <span className="text-[10px] text-amber-700">{t('translations.badgeUnsaved')}</span>
                                 )}
                               </div>
                               <p className="text-sm whitespace-pre-wrap rounded-lg bg-muted/50 px-3 py-2 min-h-[40px]">
-                                {field.primaryText || <span className="text-muted-foreground italic">Empty</span>}
+                                {field.primaryText || <span className="text-muted-foreground italic">{t('translations.emptyValue')}</span>}
                               </p>
                             </div>
                             <div>
@@ -331,7 +356,8 @@ export function TranslationEditor({
                       })}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </section>
             )
           })}
@@ -341,33 +367,33 @@ export function TranslationEditor({
       <Dialog open={quote != null} onOpenChange={open => { if (!open && !applying) setQuote(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Translate with AI</DialogTitle>
+            <DialogTitle>{t('translations.translateWithAi')}</DialogTitle>
             <DialogDescription>{quoteCopy}</DialogDescription>
           </DialogHeader>
           {quote && (
             <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-1.5">
               <p>
-                <span className="text-muted-foreground">Fields: </span>
+                <span className="text-muted-foreground">{t('translations.fieldsLabel')} </span>
                 {quote.fieldCount}
                 {quote.scope !== 'all' && (
-                  <span className="text-muted-foreground"> · {SECTION_LABELS[quote.scope]}</span>
+                  <span className="text-muted-foreground"> · {sectionLabel(quote.scope)}</span>
                 )}
               </p>
               <p>
-                <span className="text-muted-foreground">Balance: </span>
-                {quote.balance} credits
+                <span className="text-muted-foreground">{t('translations.balanceLabel')} </span>
+                {quote.balance} {t('translations.creditsUnit')}
               </p>
               {quote.insufficient && (
                 <p className="text-destructive">
-                  Not enough credits.{' '}
+                  {t('translations.insufficientCredits')}{' '}
                   <Link href="/dashboard/settings/credits" className="underline underline-offset-2">
-                    Top up
+                    {t('translations.topUp')}
                   </Link>
                 </p>
               )}
               {!quote.configured && (
                 <p className="text-amber-700">
-                  AI is not configured on this environment. You can still translate manually.
+                  {t('translations.aiNotConfigured')}
                 </p>
               )}
             </div>
@@ -375,23 +401,27 @@ export function TranslationEditor({
           {applying && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="size-4 animate-spin" />
-              Translating… this can take a minute. You won’t be charged if it fails.
+              {t('translations.translating')}
             </p>
           )}
           <DialogFooter>
             <Button variant="secondary" onClick={() => setQuote(null)} disabled={applying}>
-              Cancel
+              {t('translations.cancel')}
             </Button>
             <Button
               onClick={confirmAi}
               disabled={applying || !quote || quote.insufficient || !quote.configured}
             >
               {applying ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              Confirm
+              {t('translations.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
+}
+
+function translateFieldGroupSafe(t: (key: string) => string, group: string) {
+  return localizeFieldChrome(t, '', group).group
 }

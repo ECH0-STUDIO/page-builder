@@ -11,8 +11,20 @@ export async function deductCreditsInternal(
   businessId: string,
   amount: number,
   description: string,
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0) return { success: true }
+): Promise<{ success: boolean; error?: string; balance?: number }> {
+  if (amount <= 0) {
+    try {
+      const adminClient = createAdminClient()
+      const { data } = await (adminClient as any)
+        .from('credit_balances')
+        .select('balance')
+        .eq('business_id', businessId)
+        .maybeSingle()
+      return { success: true, balance: (data?.balance as number | undefined) ?? 0 }
+    } catch {
+      return { success: true }
+    }
+  }
 
   try {
     const adminClient = createAdminClient()
@@ -25,12 +37,13 @@ export async function deductCreditsInternal(
 
     const balance = (currentBalance?.balance as number | undefined) ?? 0
     if (balance < amount) {
-      return { success: false, error: 'Không đủ Credits. Vui lòng nạp thêm.' }
+      return { success: false, error: 'Không đủ Credits. Vui lòng nạp thêm.', balance }
     }
 
+    const nextBalance = balance - amount
     await (adminClient as any)
       .from('credit_balances')
-      .update({ balance: balance - amount })
+      .update({ balance: nextBalance })
       .eq('business_id', businessId)
 
     await (adminClient as any).from('credit_transactions').insert({
@@ -41,10 +54,12 @@ export async function deductCreditsInternal(
 
     try {
       revalidatePath('/dashboard/settings/credits')
+      revalidatePath('/dashboard/settings/languages')
+      revalidatePath('/dashboard')
     } catch {
       // Safe to ignore when called during RSC render.
     }
-    return { success: true }
+    return { success: true, balance: nextBalance }
   } catch (error) {
     console.error('deductCreditsInternal error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to deduct credits' }

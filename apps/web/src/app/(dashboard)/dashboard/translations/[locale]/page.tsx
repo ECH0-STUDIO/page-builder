@@ -5,6 +5,7 @@ import { assertDashboardAccess } from '@/lib/assert-dashboard-access'
 import { isStoreLocaleCode, storeLocaleLabel } from '@/i18n/store-locales'
 import { getTranslationBundleAction } from '@/app/actions/translations'
 import { TranslationEditor } from '@/components/translations/TranslationEditor'
+import { getServerTranslation } from '@/i18n/getDictionary'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -15,8 +16,11 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  if (!isStoreLocaleCode(locale)) return { title: 'Translations' }
-  return { title: `Translate · ${storeLocaleLabel(locale)}` }
+  const { t } = await getServerTranslation()
+  if (!isStoreLocaleCode(locale)) return { title: t('translations.title') }
+  return {
+    title: t('translations.translateTo').replace('{{locale}}', storeLocaleLabel(locale)),
+  }
 }
 
 export default async function TranslationLocalePage({

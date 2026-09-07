@@ -670,7 +670,8 @@ export interface LocaleViewStat {
 
 export async function getPageViewsAction(
   businessId: string,
-  period: 7 | 30 = 7
+  period: 7 | 30 = 7,
+  options?: { reconcileBilling?: boolean },
 ): Promise<{
   total: number
   periodTotal: number
@@ -685,9 +686,12 @@ export async function getPageViewsAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return empty
 
-  // Safety-net reconcile for page-view credit charges (primary path is /api/view)
-  const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
-  await billPageViewsIfDueAction(businessId)
+  // Safety-net reconcile for page-view credit charges (primary path is /api/view).
+  // Skip on period toggles / prefetch — billing already runs on Publishing page load.
+  if (options?.reconcileBilling !== false) {
+    const { billPageViewsIfDueAction } = await import('@/app/actions/credits')
+    await billPageViewsIfDueAction(businessId)
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -696,12 +700,19 @@ export async function getPageViewsAction(
   since.setDate(since.getDate() - (period - 1))
   const sinceStr = since.toISOString().slice(0, 10)
 
-  const { data: rows, error: rowsErr } = await db
-    .from('page_views')
-    .select('viewed_at, count, locale')
-    .eq('business_id', businessId)
-    .gte('viewed_at', sinceStr)
-    .order('viewed_at', { ascending: true })
+  const [{ data: rows, error: rowsErr }, { data: pubLang }] = await Promise.all([
+    db
+      .from('page_views')
+      .select('viewed_at, count, locale')
+      .eq('business_id', businessId)
+      .gte('viewed_at', sinceStr)
+      .order('viewed_at', { ascending: true }),
+    db
+      .from('publishing_settings')
+      .select('language')
+      .eq('business_id', businessId)
+      .maybeSingle(),
+  ])
 
   // Pre-migration fallback (no locale column yet)
   let periodRows = (rows ?? []) as { viewed_at: string; count: number; locale?: string | null }[]
@@ -741,19 +752,22 @@ export async function getPageViewsAction(
 
   const periodTotal = daily.reduce((s, d) => s + d.count, 0)
 
-  // Period breakdown by locale (analytics only)
-  const { storeLocaleLabel, isStoreLocaleCode } = await import('@/i18n/store-locales')
+  // Period breakdown by locale (analytics only).
+  // Empty / legacy rows attribute to the store primary language (not "Unknown").
+  const { storeLocaleLabel, isStoreLocaleCode, toStoreLocaleCode } = await import('@/i18n/store-locales')
+  const primaryLocale = toStoreLocaleCode(
+    (pubLang as { language?: string | null } | null)?.language,
+  )
   const localeMap: Record<string, number> = {}
   for (const row of periodRows) {
-    const code = typeof row.locale === 'string' ? row.locale : ''
+    const raw = typeof row.locale === 'string' ? row.locale.trim() : ''
+    const code = isStoreLocaleCode(raw) ? raw : primaryLocale
     localeMap[code] = (localeMap[code] ?? 0) + (row.count ?? 0)
   }
   const byLocale: LocaleViewStat[] = Object.entries(localeMap)
     .map(([locale, count]) => ({
       locale,
-      label: isStoreLocaleCode(locale)
-        ? storeLocaleLabel(locale)
-        : (locale || 'Unknown'),
+      label: isStoreLocaleCode(locale) ? storeLocaleLabel(locale) : locale,
       count,
     }))
     .filter(r => r.count > 0)
