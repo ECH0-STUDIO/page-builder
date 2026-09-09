@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { assertOwnerOrManager } from '@/lib/business-auth'
 import { deductCreditsInternal, grantCreditsInternal } from '@/lib/credits-internal'
+import { billLocalesForBusiness } from '@/lib/billing-internal'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import {
   isStoreLocaleCode,
@@ -284,8 +285,8 @@ export async function updatePrimaryLocaleAction(
 }
 
 /**
- * Monthly renewal for all due active locales.
- * On insufficient credits: mark past_due (public URL stops) — translations kept.
+ * Monthly renewal for all due active locales. Opportunistic entry point for
+ * dashboard renders; /api/cron/billing runs the same core on a schedule.
  */
 export async function billLocalesIfDueAction(
   businessId: string,
@@ -296,55 +297,12 @@ export async function billLocalesIfDueAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
-  const admin = createAdminClient()
-  const now = new Date()
-  const { data: dueRows, error } = await (admin as any)
-    .from('business_locales')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('status', 'active')
-    .lte('next_bill_at', now.toISOString())
+  const result = await billLocalesForBusiness(businessId)
 
-  if (error) {
-    console.error('billLocalesIfDueAction error:', error)
-    return { success: true, billed: 0 }
-  }
-
-  let billed = 0
-  const suspended: string[] = []
-
-  for (const raw of (dueRows ?? []) as Record<string, unknown>[]) {
-    const row = normalizeLocaleRow(raw)
-    if (!row) continue
-    const label = storeLocaleLabel(row.locale)
-    const deduct = await deductCreditsInternal(
-      businessId,
-      LOCALE_CREDITS_PER_MONTH,
-      `Ngôn ngữ cửa hàng (${label}) — ${LOCALE_CREDITS_PER_MONTH} Credits/tháng`,
-    )
-    if (!deduct.success) {
-      await (admin as any)
-        .from('business_locales')
-        .update({ status: 'past_due', updated_at: now.toISOString() })
-        .eq('id', row.id)
-      suspended.push(row.locale)
-      continue
-    }
-
-    await (admin as any)
-      .from('business_locales')
-      .update({
-        next_bill_at: addDays(now, 30).toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq('id', row.id)
-    billed += 1
-  }
-
-  if (billed > 0 || suspended.length > 0) {
+  if ((result.billed ?? 0) > 0 || (result.suspended ?? []).length > 0) {
     revalidatePath('/dashboard/settings/languages')
     revalidatePath('/dashboard/settings/credits')
   }
 
-  return { success: true, billed, suspended }
+  return result
 }

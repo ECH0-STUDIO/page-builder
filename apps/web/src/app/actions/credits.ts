@@ -4,9 +4,9 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { assertOwnerOrManager } from '@/lib/business-auth'
 import { deductCreditsInternal, grantCreditsInternal, refundUnconfiguredCustomDomainCreditsInternal } from '@/lib/credits-internal'
+import { billCustomDomainForBusiness } from '@/lib/billing-internal'
 import {
   CREDIT_PACKS,
-  CUSTOM_DOMAIN_CREDITS_PER_MONTH,
   PAGE_VIEWS_PER_CREDIT,
   STORAGE_CREDITS_PER_20MB,
   findCreditPack,
@@ -214,9 +214,8 @@ export async function refundPendingCustomDomainCharges(
 
 /**
  * Bill custom domain hosting (50 credits / 30 days) while a verified domain is in use.
- * Idempotent until billed_until expires. No cron required — call from dashboard / verify.
- * On insufficient credits, suspends the domain (unverify) so it stops resolving.
- * Re-checks Vercel DNS before charging so ownership-only "verified" domains are not billed.
+ * Opportunistic entry point for dashboard renders; /api/cron/billing runs the same
+ * core on a schedule so renewals do not depend on the owner opening a page.
  */
 export async function billCustomDomainIfDueAction(businessId: string): Promise<{ success: boolean; error?: string; billed?: boolean; suspended?: boolean }> {
   const supabase = await createClient()
@@ -225,85 +224,7 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
-  const adminClient = createAdminClient()
-
-  const { data: pub } = await (adminClient as any)
-    .from('publishing_settings')
-    .select('custom_domain, custom_domain_verified, custom_domain_billed_until')
-    .eq('business_id', businessId)
-    .single()
-
-  if (!pub?.custom_domain) {
-    return { success: true, billed: false }
-  }
-
-  // Only suspend when the domain left Vercel / ownership was revoked — not when
-  // Cloudflare proxy makes the config API report misconfigured.
-  if (isVercelDomainsConfigured()) {
-    try {
-      const assessment = await assessDomainConnection(pub.custom_domain)
-      if (!assessment.stable) {
-        if (pub.custom_domain_verified) {
-          await (adminClient as any)
-            .from('publishing_settings')
-            .update({ custom_domain_verified: false, custom_domain_billed_until: null })
-            .eq('business_id', businessId)
-        }
-        await refundUnconfiguredCustomDomainCreditsInternal(businessId, pub.custom_domain)
-        return { success: true, billed: false, suspended: true }
-      }
-    } catch (error) {
-      console.error('billCustomDomainIfDueAction DNS check error:', error)
-      // Do not charge or suspend when we cannot reach Vercel.
-      return { success: true, billed: false }
-    }
-  }
-
-  if (!pub.custom_domain_verified) {
-    // Re-read in case we just suspended above (stable path already returned).
-    return { success: true, billed: false }
-  }
-
-  const billedUntil = pub.custom_domain_billed_until ? new Date(pub.custom_domain_billed_until) : null
-  if (billedUntil && billedUntil > new Date()) {
-    return { success: true, billed: false }
-  }
-
-  const deduct = await deductCreditsInternal(
-    businessId,
-    CUSTOM_DOMAIN_CREDITS_PER_MONTH,
-    `Tên miền tùy chỉnh (${pub.custom_domain}) — ${CUSTOM_DOMAIN_CREDITS_PER_MONTH} Credits/tháng`
-  )
-
-  if (!deduct.success) {
-    // Stop serving unpaid domains until owner tops up and re-verifies
-    await (adminClient as any)
-      .from('publishing_settings')
-      .update({ custom_domain_verified: false })
-      .eq('business_id', businessId)
-    return { success: false, error: deduct.error, suspended: true }
-  }
-
-  const nextBill = new Date()
-  nextBill.setDate(nextBill.getDate() + 30)
-
-  const { error: cycleError } = await (adminClient as any)
-    .from('publishing_settings')
-    .update({ custom_domain_billed_until: nextBill.toISOString() })
-    .eq('business_id', businessId)
-
-  // Without an advanced billed_until the next dashboard load charges again.
-  if (cycleError) {
-    console.error('billCustomDomainIfDueAction cycle update failed, refunding:', cycleError)
-    await grantCreditsInternal(
-      businessId,
-      CUSTOM_DOMAIN_CREDITS_PER_MONTH,
-      `Hoàn Credits tên miền (không cập nhật được chu kỳ)`,
-    )
-    return { success: false, error: cycleError.message }
-  }
-
-  return { success: true, billed: true }
+  return billCustomDomainForBusiness(businessId)
 }
 
 /**
