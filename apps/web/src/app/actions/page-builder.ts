@@ -793,6 +793,8 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   domain: string | null
   verified: boolean
   dnsRecords: DnsRecord[]
+  /** Domain still active, but Vercel reports DNS/proxy issues (e.g. Cloudflare orange cloud). */
+  dnsWarning?: boolean
   refundedCredits?: number
 }> {
   const supabase = await createClient()
@@ -806,27 +808,30 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   const domain = pub?.custom_domain ?? null
   let verified = pub?.custom_domain_verified === true
   let refundedCredits = 0
+  let dnsWarning = false
 
   if (!domain) {
     return { domain: null, verified: false, dnsRecords: [] }
   }
 
-  // Reconcile false positives + refund unreimbursed charges via transaction history.
+  // Reconcile only when the domain left the Vercel project / ownership was lost.
+  // Do NOT unverify just because Cloudflare proxy makes Vercel report misconfigured —
+  // that wiped verified domains + refunded credits on every Publishing page load.
   // Do NOT call revalidatePath here — this runs during RSC page render.
   if (isVercelDomainsConfigured()) {
     try {
       const assessment = await assessDomainConnection(domain)
-      if (!assessment.ready) {
-        if (verified) {
+      if (verified) {
+        if (!assessment.stable) {
           await (adminClient as any)
             .from('publishing_settings')
             .update({ custom_domain_verified: false, custom_domain_billed_until: null })
             .eq('business_id', businessId)
           verified = false
-        }
-        const refund = await refundUnconfiguredCustomDomainCreditsInternal(businessId, domain)
-        if (refund.refunded) {
-          refundedCredits = refund.amount
+          const refund = await refundUnconfiguredCustomDomainCreditsInternal(businessId, domain)
+          if (refund.refunded) refundedCredits = refund.amount
+        } else if (!assessment.dnsConfigured) {
+          dnsWarning = true
         }
       }
     } catch (error) {
@@ -835,7 +840,7 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   }
 
   if (verified) {
-    return { domain, verified: true, dnsRecords: [], refundedCredits }
+    return { domain, verified: true, dnsRecords: [], dnsWarning, refundedCredits }
   }
 
   const vercel = await getProjectDomain(domain)
@@ -871,8 +876,14 @@ export async function connectCustomDomainAction(
     await refundUnconfiguredCustomDomainCreditsInternal(businessId, existing.custom_domain)
     await removeDomainFromProject(existing.custom_domain)
   } else if (existing?.custom_domain === normalized) {
-    // Re-saving same domain must not wipe an unpaid charge without refunding.
-    await refundUnconfiguredCustomDomainCreditsInternal(businessId, normalized)
+    // Same domain already saved — do not wipe verification or refund. Re-fetch DNS hints only.
+    const vercelExisting = await addDomainToProject(normalized)
+    if (!vercelExisting.ok && !vercelExisting.skipped) {
+      return { success: false, error: vercelExisting.error || 'Không thể đăng ký tên miền với Vercel' }
+    }
+    const dnsRecords = buildDnsRecords(normalized, vercelExisting.verification)
+    revalidatePath('/dashboard/publishing')
+    return { success: true, data: { dnsRecords } }
   }
 
   const vercel = await addDomainToProject(normalized)
@@ -931,6 +942,8 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/dashboard/publishing')
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/qr')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
 }
@@ -947,10 +960,18 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
   try {
     const assessment = await assessDomainConnection(domain)
 
-    if (!assessment.ok) {
+    if (!assessment.onProject && !assessment.ownershipVerified) {
       return {
         success: false,
         error: assessment.error || 'Không kiểm tra được DNS. Vui lòng thử lại sau vài phút.',
+      }
+    }
+
+    if (!assessment.onProject) {
+      return {
+        success: false,
+        error:
+          'Tên miền chưa có trên dự án Vercel. Lưu lại tên miền rồi thử xác minh lại.',
       }
     }
 
@@ -962,17 +983,10 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
       }
     }
 
-    if (!assessment.dnsConfigured) {
-      return {
-        success: false,
-        error:
-          'DNS chưa trỏ về Vercel. Thêm bản ghi A (76.76.21.21) cho tên miền gốc hoặc CNAME (cname.vercel-dns.com) cho subdomain. Nếu dùng Cloudflare, tắt Proxy (đám mây xám / DNS only). Đợi DNS lan truyền rồi thử lại.',
-      }
-    }
-
-    if (!assessment.ready) {
-      return { success: false, error: 'DNS chưa sẵn sàng. Vui lòng đợi vài phút rồi thử lại.' }
-    }
+    // Prefer clean DNS (assessment.ready). If Cloudflare orange-cloud makes Vercel
+    // report misconfigured, still activate when ownership + project membership hold —
+    // otherwise stores get stuck unable to verify while apex already hits Vercel.
+    // Publishing UI shows dnsWarning when verified && !dnsConfigured.
 
     const adminClient = createAdminClient()
     await (adminClient as any)
@@ -990,6 +1004,8 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
     }
 
     revalidatePath('/dashboard/publishing')
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/qr')
     await revalidateLiveStore(supabase, businessId)
     return { success: true, data: undefined }
   } catch {

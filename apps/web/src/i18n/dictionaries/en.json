@@ -199,7 +199,8 @@
     "faviconMustBeSquare": "Favicon must be exactly 48x48 pixels",
     "webclipMustBeSquare": "Webclip must be exactly 180x180 pixels",
     "domainPendingHint": "Your domain is saved but not verified yet. Overview and live links still use the platform URL (eateryvn.com/…) until DNS is verified.",
-    "dnsCloudflareNote": "If your domain uses Cloudflare: set the record to DNS only (grey cloud), not Proxied (orange cloud). Orange proxy often blocks Vercel verification."
+    "dnsCloudflareNote": "If your domain uses Cloudflare: set the record to DNS only (grey cloud), not Proxied (orange cloud). Orange proxy often blocks Vercel verification.",
+    "domainDnsWarning": "Domain stays connected, but Vercel still reports a DNS/proxy issue (often Cloudflare orange cloud). Set the record to DNS only (grey cloud) so traffic reaches your store at https://your-domain.com and /order — without the business slug."
   },
   "qr": {
     "title": "QR Codes",

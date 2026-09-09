@@ -199,7 +199,8 @@
     "faviconMustBeSquare": "Favicon phải có kích thước chính xác 48x48 pixel",
     "webclipMustBeSquare": "Webclip phải có kích thước chính xác 180x180 pixel",
     "domainPendingHint": "Tên miền đã lưu nhưng chưa xác minh. Tổng quan và link live vẫn dùng URL nền tảng (eateryvn.com/…) cho đến khi DNS được xác minh.",
-    "dnsCloudflareNote": "Nếu dùng Cloudflare: đặt bản ghi ở chế độ DNS only (đám mây xám), không Proxied (đám mây cam). Proxy cam thường làm Vercel không xác minh được."
+    "dnsCloudflareNote": "Nếu dùng Cloudflare: đặt bản ghi ở chế độ DNS only (đám mây xám), không Proxied (đám mây cam). Proxy cam thường làm Vercel không xác minh được.",
+    "domainDnsWarning": "Tên miền vẫn được kết nối, nhưng Vercel báo DNS/proxy chưa ổn (thường do Cloudflare đám mây cam). Hãy đặt bản ghi ở chế độ DNS only (đám mây xám) để trang mở tại https://ten-mien-cua-ban.com và /order — không kèm slug cửa hàng."
   },
   "qr": {
     "title": "Mã QR",

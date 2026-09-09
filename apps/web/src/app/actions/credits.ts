@@ -185,12 +185,20 @@ export async function refundPendingCustomDomainCharges(
     const isActiveVerified =
       pub?.custom_domain === domain && pub?.custom_domain_verified === true
 
-    if (isActiveVerified && isVercelDomainsConfigured()) {
-      try {
-        const assessment = await assessDomainConnection(domain)
-        if (assessment.ready) continue
-      } catch {
-        // Fall through to refund when DNS cannot be confirmed.
+    // Keep charges for active verified domains even if Cloudflare makes Vercel
+    // report misconfigured — otherwise every Publishing visit refunded credits.
+    if (isActiveVerified) {
+      if (isVercelDomainsConfigured()) {
+        try {
+          const assessment = await assessDomainConnection(domain)
+          // Only refund if the domain left the project / ownership was revoked.
+          if (assessment.stable) continue
+        } catch {
+          // Cannot confirm — do not refund a verified domain on API flake.
+          continue
+        }
+      } else {
+        continue
       }
     }
 
@@ -229,12 +237,12 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
     return { success: true, billed: false }
   }
 
-  // Never bill (and unverify) if DNS is not pointing at Vercel.
-  // Also refund unreimbursed charges even when already unverified.
+  // Only suspend when the domain left Vercel / ownership was revoked — not when
+  // Cloudflare proxy makes the config API report misconfigured.
   if (isVercelDomainsConfigured()) {
     try {
       const assessment = await assessDomainConnection(pub.custom_domain)
-      if (!assessment.ready) {
+      if (!assessment.stable) {
         if (pub.custom_domain_verified) {
           await (adminClient as any)
             .from('publishing_settings')
@@ -246,12 +254,13 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
       }
     } catch (error) {
       console.error('billCustomDomainIfDueAction DNS check error:', error)
-      // Do not charge when we cannot confirm DNS is ready.
+      // Do not charge or suspend when we cannot reach Vercel.
       return { success: true, billed: false }
     }
   }
 
   if (!pub.custom_domain_verified) {
+    // Re-read in case we just suspended above (stable path already returned).
     return { success: true, billed: false }
   }
 
