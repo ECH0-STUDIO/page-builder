@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Globe, Copy, ExternalLink, CheckCircle2, XCircle,
@@ -19,6 +20,7 @@ import {
 import type { DnsRecord } from '@/lib/vercel-domains'
 import type { PublishingSettings, DayViewStat, LocaleViewStat } from '@/app/actions/page-builder'
 import { useQueryClient } from '@tanstack/react-query'
+import { creditsQueryKey } from '@/lib/react-query/hooks/useCredits'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { resolvePublicStoreUrl } from '@/lib/site-urls'
@@ -44,6 +46,7 @@ interface PublishingClientProps {
     domain: string | null
     verified: boolean
     dnsRecords: DnsRecord[]
+    dnsWarning?: boolean
     refundedCredits?: number
   }
 }
@@ -168,6 +171,7 @@ export function PublishingClient({
   baseUrl,
   initialDomainSetup,
 }: PublishingClientProps) {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(publishing?.published ?? false)
@@ -179,6 +183,7 @@ export function PublishingClient({
   const [domainVerified, setDomainVerified] = useState(
     initialDomainSetup?.verified ?? (publishing as { custom_domain_verified?: boolean } | null)?.custom_domain_verified ?? false
   )
+  const [dnsWarning, setDnsWarning] = useState(Boolean(initialDomainSetup?.dnsWarning))
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>(initialDomainSetup?.dnsRecords ?? [])
   const [savingDomain, setSavingDomain] = useState(false)
   const [verifyingDns, setVerifyingDns] = useState(false)
@@ -199,6 +204,20 @@ export function PublishingClient({
       )
     }
   }, [initialDomainSetup?.refundedCredits, t])
+
+  // Keep client state aligned after router.refresh() (verify / disconnect / billing reconcile).
+  useEffect(() => {
+    if (!initialDomainSetup) return
+    setDomainVerified(initialDomainSetup.verified)
+    setDnsWarning(Boolean(initialDomainSetup.dnsWarning))
+    setDnsRecords(initialDomainSetup.dnsRecords)
+    if (initialDomainSetup.domain) setCustomDomain(initialDomainSetup.domain)
+  }, [
+    initialDomainSetup?.domain,
+    initialDomainSetup?.verified,
+    initialDomainSetup?.dnsWarning,
+    initialDomainSetup?.dnsRecords,
+  ])
 
   // ── Slug state ──
   const [slug, setSlug] = useState(initialSlug)
@@ -236,14 +255,24 @@ export function PublishingClient({
 
   async function handleSaveDomain() {
     if (!customDomain.trim()) return
+    const normalized = customDomain.trim().toLowerCase()
+    // Same domain already connected — avoid re-running connect (would flash UI).
+    if (normalized === (publishing?.custom_domain ?? '').toLowerCase() && (domainVerified || dnsRecords.length > 0)) {
+      return
+    }
     setSavingDomain(true)
     try {
-      const res = await connectCustomDomainAction(businessId, customDomain.trim())
+      const res = await connectCustomDomainAction(businessId, normalized)
       if (res.success) {
         setDnsRecords(res.data.dnsRecords)
-        setDomainVerified(false)
-        setCustomDomain(customDomain.trim().toLowerCase())
+        // Only clear verified when connecting a new / different domain.
+        if (normalized !== (publishing?.custom_domain ?? '').toLowerCase()) {
+          setDomainVerified(false)
+          setDnsWarning(false)
+        }
+        setCustomDomain(normalized)
         toast.success(t('publishing.toastDomainUpdated'))
+        router.refresh()
       } else {
         toast.error(res.error)
       }
@@ -262,7 +291,10 @@ export function PublishingClient({
         setCustomDomain('')
         setDnsRecords([])
         setDomainVerified(false)
+        setDnsWarning(false)
         toast.success(t('publishing.toastDomainUpdated'))
+        void queryClient.invalidateQueries({ queryKey: creditsQueryKey(businessId) })
+        router.refresh()
       } else {
         toast.error(res.error)
       }
@@ -282,7 +314,10 @@ export function PublishingClient({
     if (res.success) {
       setDomainVerified(true)
       setDnsRecords([])
+      setDnsWarning(false)
       toast.success(t('publishing.dnsVerified'))
+      void queryClient.invalidateQueries({ queryKey: creditsQueryKey(businessId) })
+      router.refresh()
     } else {
       toast.error(res.error)
     }
@@ -560,7 +595,15 @@ export function PublishingClient({
               <input type="text" value={customDomain} onChange={e => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
                 placeholder="Enter custom domain"
                 className="flex-1 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
-              <Button onClick={handleSaveDomain} disabled={savingDomain || !customDomain.trim() || (customDomain === publishing?.custom_domain && dnsRecords.length > 0)} className="shrink-0 h-10">
+              <Button
+                onClick={handleSaveDomain}
+                disabled={
+                  savingDomain
+                  || !customDomain.trim()
+                  || customDomain.trim().toLowerCase() === (publishing?.custom_domain ?? '').toLowerCase()
+                }
+                className="shrink-0 h-10"
+              >
                 {savingDomain ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
               </Button>
             </div>
@@ -582,9 +625,15 @@ export function PublishingClient({
                       https://{customDomain}
                     </a>
                   </div>
-                  <p className="text-xs text-blue-700/80 italic px-1">
-                    {t('publishing.domainConnectedDnsNote')}
-                  </p>
+                  {dnsWarning ? (
+                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                      {t('publishing.domainDnsWarning')}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-blue-700/80 italic px-1">
+                      {t('publishing.domainConnectedDnsNote')}
+                    </p>
+                  )}
                   <div className="flex justify-end">
                     <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
                       {t('publishing.cancelDomain')}
@@ -593,8 +642,12 @@ export function PublishingClient({
                 </div>
               ) : (
                 <>
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    {t('publishing.domainPendingHint')}
+                  </p>
                   <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
                   <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
+                  <p className="text-xs text-blue-800/90">{t('publishing.dnsCloudflareNote')}</p>
 
                   <div className="space-y-2">
                     {(dnsRecords.length > 0 ? dnsRecords : [{ type: 'CNAME', name: '@', value: t('publishing.dnsTarget') }]).map((record, i) => (

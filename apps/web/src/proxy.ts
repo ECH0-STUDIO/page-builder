@@ -70,23 +70,47 @@ export async function proxy(request: NextRequest) {
   // ── Custom domain routing (before marketing ?lang= logic) ──
   // Published storefronts must never get ?lang=en — use /{locale} path prefixes instead.
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
-    const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
+    const hostCandidates = host.startsWith('www.')
+      ? [host, host.slice(4)]
+      : [host, `www.${host}`]
+    let slug: string | null = null
+    for (const candidate of hostCandidates) {
+      const { data } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: candidate })
+      if (data) {
+        slug = data as string
+        break
+      }
+    }
     if (slug) {
       if (request.nextUrl.searchParams.has(MARKETING_LANG_PARAM)) {
         const cleanUrl = request.nextUrl.clone()
         cleanUrl.searchParams.delete(MARKETING_LANG_PARAM)
         return NextResponse.redirect(cleanUrl)
       }
-      const rewriteUrl = request.nextUrl.clone()
       const segments = pathname.split('/').filter(Boolean)
       const first = segments[0]
+      // Custom domains never expose /{slug} publicly — redirect staging-style paths.
+      // domain.com/{slug} → domain.com/ ; domain.com/en/{slug}/order → domain.com/en/order
+      if (first === slug) {
+        const rest = segments.slice(1).join('/')
+        const canonical = request.nextUrl.clone()
+        canonical.pathname = rest ? `/${rest}` : '/'
+        return NextResponse.redirect(canonical)
+      }
+      if (first && isStoreLocaleCode(first) && segments[1] === slug) {
+        const rest = segments.slice(2).join('/')
+        const canonical = request.nextUrl.clone()
+        canonical.pathname = rest ? `/${first}/${rest}` : `/${first}`
+        return NextResponse.redirect(canonical)
+      }
+      const rewriteUrl = request.nextUrl.clone()
       // /en or /en/order → /en/{slug} or /en/{slug}/order
       if (first && isStoreLocaleCode(first)) {
         const rest = segments.slice(1).join('/')
         rewriteUrl.pathname = rest ? `/${first}/${slug}/${rest}` : `/${first}/${slug}`
       } else {
-        const suffix = pathname === '/' ? '' : pathname
-        rewriteUrl.pathname = `/${slug}${suffix}`
+        const rest = segments.join('/')
+        rewriteUrl.pathname = rest ? `/${slug}/${rest}` : `/${slug}`
       }
       return NextResponse.rewrite(rewriteUrl)
     }

@@ -185,12 +185,19 @@ export async function getDomainConfig(domain: string): Promise<{
  * Ownership (`verified`) ≠ DNS ready. Vercel often returns verified=true as soon as
  * a domain is added (no TXT challenge). Real connectivity requires DNS pointing at
  * Vercel (`misconfigured === false` from /v6/domains/{domain}/config).
+ *
+ * Cloudflare orange-cloud proxy often makes `misconfigured: true` even when the
+ * site works — so callers must distinguish:
+ * - `ready`: safe to activate (ownership + DNS clean) — used on Verify click
+ * - `stable`: keep an already-activated domain (still on project + ownership)
  */
 export async function assessDomainConnection(domain: string): Promise<{
   ok: boolean
+  onProject: boolean
   ownershipVerified: boolean
   dnsConfigured: boolean
   ready: boolean
+  stable: boolean
   verification?: Array<{ type: string; domain: string; value: string }>
   error?: string
 }> {
@@ -200,28 +207,35 @@ export async function assessDomainConnection(domain: string): Promise<{
     getProjectDomain(domain),
   ])
 
+  const onProject = projectDomain.ok === true
   const ownershipVerified =
     verifyResult.verified === true || projectDomain.verified === true
 
   if (!configResult.ok) {
     return {
       ok: false,
+      onProject,
       ownershipVerified,
       dnsConfigured: false,
       ready: false,
+      // Keep stable if Vercel still has the domain — config API can flake.
+      stable: onProject && ownershipVerified,
       verification: projectDomain.verification,
       error: configResult.error || 'Không kiểm tra được cấu hình DNS.',
     }
   }
 
   const dnsConfigured = configResult.misconfigured === false
-  const ready = ownershipVerified && dnsConfigured
+  const ready = ownershipVerified && dnsConfigured && onProject
+  const stable = onProject && ownershipVerified
 
   return {
     ok: true,
+    onProject,
     ownershipVerified,
     dnsConfigured,
     ready,
+    stable,
     verification: projectDomain.verification,
   }
 }

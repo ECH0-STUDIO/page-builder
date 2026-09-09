@@ -49,7 +49,7 @@ export default async function PublishingPage() {
     getPageViewsAction(business.id, 30, { reconcileBilling: false }),
     getCustomDomainSetupAction(business.id).catch((error) => {
       console.error('Publishing page domain setup error:', error)
-      return { domain: null, verified: false, dnsRecords: [], refundedCredits: 0 }
+      return { domain: null, verified: false, dnsRecords: [], dnsWarning: false, refundedCredits: 0 }
     }),
   ])
 
