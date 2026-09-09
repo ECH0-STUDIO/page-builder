@@ -1392,6 +1392,8 @@
     "enterTableNumber": "Please enter your table number",
     "placeOrderFailed": "Failed to place order:",
     "closedForOrders": "We're closed right now. Ordering will reopen during business hours.",
+    "tooManyOrders": "Too many orders in a row. Please wait a moment and try again.",
+    "networkErrorRetry": "Connection lost. Your cart is saved — please try again.",
     "soldOut": "Sold Out",
     "required": "Required",
     "optional": "Optional",

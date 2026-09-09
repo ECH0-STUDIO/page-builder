@@ -2,7 +2,7 @@
 
 import { getCreditBalanceAction } from '@/app/actions/credits'
 import { getTranslationBundleAction, saveTranslationsAction } from '@/app/actions/translations'
-import { deductCreditsInternal } from '@/lib/credits-internal'
+import { deductCreditsInternal, grantCreditsInternal } from '@/lib/credits-internal'
 import { estimateTranslateCredits, estimateTranslateVnd } from '@/lib/credit-packs'
 import {
   selectTranslateFields,
@@ -140,28 +140,21 @@ export async function applyAiTranslateAction(
     return { success: false, error: message }
   }
 
-  const saved = await saveTranslationsAction(businessId, localeRaw, translations)
-  if (!saved.success) return saved
-
   const label = storeLocaleLabel(bundle.data.locale)
   const scopeLabel = scope === 'all' ? 'all copy' : SECTION_LABELS[scope]
-  const deduct = await deductCreditsInternal(
-    businessId,
-    quote.credits,
-    `AI dịch ${label} (${scopeLabel}) — ${quote.wordCount} từ / ${quote.credits} Credits`,
-  )
+
+  // Debit before saving: a failed debit must not hand out a free translation.
+  // If the save then fails, refund so the customer is not charged for nothing.
+  const description = `AI dịch ${label} (${scopeLabel}) — ${quote.wordCount} từ / ${quote.credits} Credits`
+  const deduct = await deductCreditsInternal(businessId, quote.credits, description)
   if (!deduct.success) {
-    console.error('applyAiTranslateAction debit failed after save:', deduct.error)
-    // Translations already persisted — do not roll back; report charged=0.
-    const refreshed = await getTranslationBundleAction(businessId, localeRaw)
-    return {
-      success: true,
-      data: {
-        saved: saved.data.saved,
-        creditsCharged: 0,
-        fields: refreshed.success ? refreshed.data.fields : bundle.data.fields,
-      },
-    }
+    return { success: false, error: deduct.error || 'Không đủ Credits. Vui lòng nạp thêm.' }
+  }
+
+  const saved = await saveTranslationsAction(businessId, localeRaw, translations)
+  if (!saved.success) {
+    await grantCreditsInternal(businessId, quote.credits, `Hoàn Credits AI dịch ${label} (lưu thất bại)`)
+    return saved
   }
 
   const refreshed = await getTranslationBundleAction(businessId, localeRaw)

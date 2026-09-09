@@ -86,6 +86,7 @@ export interface Database {
           payment_method: string | null
           payment_status: string
           notes: string | null
+          client_token: string | null
           created_at: string
           updated_at: string
         }
@@ -100,6 +101,7 @@ export interface Database {
           payment_method?: string | null
           payment_status?: string
           notes?: string | null
+          client_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -114,6 +116,7 @@ export interface Database {
           payment_method?: string | null
           payment_status?: string
           notes?: string | null
+          client_token?: string | null
           created_at?: string
           updated_at?: string
         }
