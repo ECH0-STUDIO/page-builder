@@ -60,7 +60,7 @@ credits = max(1, ceil(words / 300))
 
 - **Merchant-friendly:** “about 300 words per credit” is easy to explain.
 - **Budget-friendly:** Typical small restaurant (~800 menu words + ~400 page words) ≈ **4 credits** (~3.6k–5k VND) for a full first translate.
-- **Fair margin:** Gemini 2.5 Flash translation COGS for ~1.2k words is well under 1 credit’s retail value; 300 words/credit leaves room for failed retries and support.
+- **Fair margin:** Gemini Flash translation COGS for ~1.2k words is well under 1 credit’s retail value; 300 words/credit leaves room for failed retries and support.
 - **Consistent with old char plan:** Previous draft used 200 **characters**/credit; 300 **words**/credit is roughly similar cost for Latin scripts, cheaper for CJK-heavy menus (words are shorter in character count).
 
 ### Job scopes
@@ -182,7 +182,7 @@ Actions:
 
 ### Phase D — AI translate
 
-- [x] Vercel AI SDK + Gemini 2.5 Flash
+- [x] Vercel AI SDK + Gemini 3.6 Flash
 - [x] `estimateTranslateCredits(words)` → `max(1, ceil(words/300))`
 - [x] Chunk large menus; Zod-validated output; debit on success only
 - [x] Translation UI: estimate + confirm + progress
