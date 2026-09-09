@@ -20,6 +20,47 @@ import {
   marketingPath,
 } from '@/lib/site-urls'
 
+/**
+ * Custom-domain → slug lookups hit the database on every single request to a
+ * connected domain, including every in-store navigation. Cache per middleware
+ * instance; a domain change takes at most this long to show up.
+ */
+const DOMAIN_SLUG_TTL_MS = 60_000
+const domainSlugCache = new Map<string, { slug: string | null; expires: number }>()
+
+function readCachedSlug(host: string): { slug: string | null } | null {
+  const hit = domainSlugCache.get(host)
+  if (!hit) return null
+  if (hit.expires < Date.now()) {
+    domainSlugCache.delete(host)
+    return null
+  }
+  return { slug: hit.slug }
+}
+
+function cacheSlug(host: string, slug: string | null) {
+  // Bound the map so a flood of unknown Host headers cannot grow it without limit.
+  if (domainSlugCache.size > 500) domainSlugCache.clear()
+  domainSlugCache.set(host, { slug, expires: Date.now() + DOMAIN_SLUG_TTL_MS })
+}
+
+/**
+ * Only these paths change behaviour based on who is signed in. Everywhere else —
+ * storefronts, marketing, QR landings — paid an auth round-trip on every request
+ * for a result nothing read.
+ */
+function needsAuthLookup(pathname: string, isAppHost: boolean): boolean {
+  return (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/onboarding') ||
+    // The app host sends signed-in visitors from / to the dashboard.
+    (isAppHost && pathname === '/')
+  )
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -74,12 +115,18 @@ export async function proxy(request: NextRequest) {
       ? [host, host.slice(4)]
       : [host, `www.${host}`]
     let slug: string | null = null
-    for (const candidate of hostCandidates) {
-      const { data } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: candidate })
-      if (data) {
-        slug = data as string
-        break
+    const cached = readCachedSlug(host)
+    if (cached) {
+      slug = cached.slug
+    } else {
+      for (const candidate of hostCandidates) {
+        const { data } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: candidate })
+        if (data) {
+          slug = data as string
+          break
+        }
       }
+      cacheSlug(host, slug)
     }
     if (slug) {
       if (request.nextUrl.searchParams.has(MARKETING_LANG_PARAM)) {
@@ -164,12 +211,13 @@ export async function proxy(request: NextRequest) {
 
   supabaseResponse.headers.set('x-user-country', country)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   // Supabase may redirect with ?code= on Site URL root
   const authCode = request.nextUrl.searchParams.get('code')
+
+  const user = needsAuthLookup(pathname, isAppHost) || authCode
+    ? (await supabase.auth.getUser()).data.user
+    : null
+
   if (authCode && !pathname.startsWith('/api/auth/callback')) {
     const callbackUrl = request.nextUrl.clone()
     callbackUrl.pathname = '/api/auth/callback'

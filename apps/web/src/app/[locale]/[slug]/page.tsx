@@ -1,10 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import SlugPage from '../../[slug]/page'
-import { createClient } from '@/lib/supabase/server'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
+import { getStoreBySlug } from '@/lib/store-data'
 
 export async function generateMetadata({
   params,
@@ -19,22 +19,9 @@ export async function generateMetadata({
     return { title: 'Not Found' }
   }
 
-  const supabase = await createClient()
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id, name')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pub } = await getStoreBySlug(slug)
 
   if (!business) return { title: 'Not Found' }
-
-  const { data: pub } = await supabase
-    .from('publishing_settings')
-    .select(
-      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
-    )
-    .eq('business_id', business.id)
-    .single()
 
   const base = buildStoreMetadata({
     slug,

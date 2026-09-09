@@ -10,6 +10,7 @@ import { buildThemeStyle, resolveThemeTokens } from '@/components/page-builder/t
 import { ViewTracker } from '@/components/ViewTracker'
 import { AnalyticsScripts } from '@/components/AnalyticsScripts'
 import { buildStoreMetadata } from '@/lib/store-metadata'
+import { getStoreBySlug } from '@/lib/store-data'
 import { orderChromeTokens } from '@/lib/color-contrast'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
@@ -45,24 +46,9 @@ import {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const supabase = await createClient()
-  const db = supabase
-
-  const { data: business } = await db
-    .from('businesses')
-    .select('id, name')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pub } = await getStoreBySlug(slug)
 
   if (!business) return { title: 'Not Found' }
-
-  const { data: pub } = await db
-    .from('publishing_settings')
-    .select(
-      'seo_title, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
-    )
-    .eq('business_id', business.id)
-    .single()
 
   return buildStoreMetadata({
     slug,
@@ -86,19 +72,9 @@ export default async function OrderPage({
   const supabase = await createClient()
   const db = supabase
 
-  const { data: business } = await db
-    .from('businesses')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pubSettings } = await getStoreBySlug(slug)
 
   if (!business) notFound()
-
-  const { data: pubSettings } = await db
-    .from('publishing_settings')
-    .select('*')
-    .eq('business_id', business.id)
-    .single()
 
   // Order page has its own publish flag (falls back to landing if column not migrated)
   const orderPublished =

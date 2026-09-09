@@ -1,4 +1,5 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getStoreBySlug } from '@/lib/store-data'
 import {
   isStoreLocaleCode,
   toStoreLocaleCode,
@@ -14,21 +15,9 @@ export type StoreLocaleAccess = {
 
 /** Load primary + active purchased locales for a published store slug. */
 export async function loadStoreLocaleAccess(slug: string): Promise<StoreLocaleAccess | null> {
-  const supabase = await createClient()
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id, slug')
-    .eq('slug', slug)
-    .maybeSingle()
+  const { business, publishing: pub } = await getStoreBySlug(slug)
 
   if (!business) return null
-
-  const { data: pub } = await supabase
-    .from('publishing_settings')
-    .select('language, published')
-    .eq('business_id', business.id)
-    .maybeSingle()
-
   if (!pub?.published) return null
 
   const primary = toStoreLocaleCode((pub as { language?: string | null }).language)
