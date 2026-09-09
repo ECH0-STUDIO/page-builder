@@ -61,6 +61,12 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
 
 export type PublishPage = 'landing' | 'order'
 
+/** True when the RPC does not exist yet, so callers can use the pre-migration path. */
+function isMissingFunction(error: { code?: string } | null): boolean {
+  // PGRST202: PostgREST cannot find the function. 42883: undefined_function.
+  return error?.code === 'PGRST202' || error?.code === '42883'
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ActionResult<T = void> =
@@ -151,54 +157,64 @@ export async function savePageBlocksAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  // Delete existing + insert fresh in a single round-trip using RPC would be ideal,
-  // but since Supabase JS doesn't expose transactions, we do two sequential calls.
-  const { error: delErr } = await db
-    .from('page_blocks')
-    .delete()
-    .eq('business_id', businessId)
+  const rows = blocks.map((b, i) => ({
+    // Temp ids come from unsaved blocks in the editor and are not valid uuids.
+    id: b.id.startsWith('temp-') ? crypto.randomUUID() : b.id,
+    business_id: businessId,
+    type: b.type,
+    sort_order: i,
+    visible: b.visible,
+    config: b.config,
+    spacing: b.spacing ?? {
+      padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0,
+      margin_top: 0, margin_bottom: 0,
+    },
+    custom_css: b.custom_css ?? '',
+    block_anchor_id: b.block_anchor_id ?? null,
+  }))
 
-  if (delErr) return { success: false, error: delErr.message }
-
-  if (blocks.length === 0) {
-    revalidatePath('/dashboard/pages')
-    return { success: true, data: undefined }
-  }
-
-  const rows = blocks.map((b, i) => {
-    const isTemp = b.id.startsWith('temp-')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row: any = {
-      business_id: businessId,
-      type: b.type,
-      sort_order: i,
-      visible: b.visible,
-      config: b.config,
-      spacing: b.spacing ?? {
-        padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0,
-        margin_top: 0, margin_bottom: 0,
-      },
-      custom_css: b.custom_css ?? '',
-      block_anchor_id: b.block_anchor_id ?? null,
-    }
-    if (!isTemp) {
-      row.id = b.id
-    } else {
-      row.id = crypto.randomUUID()
-    }
-    return row
+  // Replace the whole set in one transaction. Done as two client calls, a
+  // failure between them would wipe the page and leave nothing behind.
+  const { error: rpcError } = await (db as any).rpc('save_page_blocks', {
+    p_business_id: businessId,
+    p_blocks: rows,
   })
 
-  const { error: insErr } = await db.from('page_blocks').insert(rows)
-  if (insErr) return { success: false, error: insErr.message }
+  if (rpcError && !isMissingFunction(rpcError)) {
+    return { success: false, error: rpcError.message }
+  }
 
-  // Set has_unpublished_changes to true
-  await db.from('publishing_settings')
-    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+  if (rpcError) {
+    console.warn('save_page_blocks missing — falling back to non-atomic save')
+    const legacy = await savePageBlocksLegacy(db, businessId, rows)
+    if (!legacy.ok) return { success: false, error: legacy.error }
+  }
 
   revalidatePath('/dashboard/pages')
   await revalidateLiveStore(supabase, businessId)
   return { success: true, data: undefined }
+}
+
+/** Pre-060 delete-then-insert path. Kept so a deploy cannot outrun the migration. */
+async function savePageBlocksLegacy(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  businessId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rows: any[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error: delErr } = await db.from('page_blocks').delete().eq('business_id', businessId)
+  if (delErr) return { ok: false, error: delErr.message }
+
+  if (rows.length > 0) {
+    const { error: insErr } = await db.from('page_blocks').insert(rows)
+    if (insErr) return { ok: false, error: insErr.message }
+  }
+
+  await db.from('publishing_settings')
+    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+
+  return { ok: true }
 }
 
 // ─── Publishing ───────────────────────────────────────────────────────────────

@@ -1619,5 +1619,14 @@
       "contact": "Contact",
       "spacer": "Spacer"
     }
+  },
+  "errorBoundary": {
+    "dashboardTitle": "Something went wrong",
+    "dashboardBody": "This page failed to load. Your data is safe — try again, or go back to the overview.",
+    "storeTitle": "This page didn't load",
+    "storeBody": "Something went wrong on our side. Please try again in a moment.",
+    "retry": "Try again",
+    "backToDashboard": "Back to overview",
+    "reference": "Reference"
   }
 }

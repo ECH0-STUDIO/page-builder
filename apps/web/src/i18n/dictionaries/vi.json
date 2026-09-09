@@ -1619,5 +1619,14 @@
       "contact": "Liên hệ",
       "spacer": "Khoảng trống"
     }
+  },
+  "errorBoundary": {
+    "dashboardTitle": "Đã xảy ra lỗi",
+    "dashboardBody": "Không tải được trang này. Dữ liệu của bạn vẫn an toàn — hãy thử lại hoặc quay về trang tổng quan.",
+    "storeTitle": "Không tải được trang",
+    "storeBody": "Đã xảy ra lỗi từ phía chúng tôi. Vui lòng thử lại sau giây lát.",
+    "retry": "Thử lại",
+    "backToDashboard": "Về trang tổng quan",
+    "reference": "Mã tham chiếu"
   }
 }
