@@ -197,7 +197,9 @@
     "toastDomainUpdated": "Custom domain updated",
     "toastDomainFailed": "Failed to save domain",
     "faviconMustBeSquare": "Favicon must be exactly 48x48 pixels",
-    "webclipMustBeSquare": "Webclip must be exactly 180x180 pixels"
+    "webclipMustBeSquare": "Webclip must be exactly 180x180 pixels",
+    "domainPendingHint": "Your domain is saved but not verified yet. Overview and live links still use the platform URL (eateryvn.com/…) until DNS is verified.",
+    "dnsCloudflareNote": "If your domain uses Cloudflare: set the record to DNS only (grey cloud), not Proxied (orange cloud). Orange proxy often blocks Vercel verification."
   },
   "qr": {
     "title": "QR Codes",

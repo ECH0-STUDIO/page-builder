@@ -593,8 +593,12 @@ export function PublishingClient({
                 </div>
               ) : (
                 <>
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    {t('publishing.domainPendingHint')}
+                  </p>
                   <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
                   <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
+                  <p className="text-xs text-blue-800/90">{t('publishing.dnsCloudflareNote')}</p>
 
                   <div className="space-y-2">
                     {(dnsRecords.length > 0 ? dnsRecords : [{ type: 'CNAME', name: '@', value: t('publishing.dnsTarget') }]).map((record, i) => (

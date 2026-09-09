@@ -70,7 +70,17 @@ export async function proxy(request: NextRequest) {
   // ── Custom domain routing (before marketing ?lang= logic) ──
   // Published storefronts must never get ?lang=en — use /{locale} path prefixes instead.
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
-    const { data: slug } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: host })
+    const hostCandidates = host.startsWith('www.')
+      ? [host, host.slice(4)]
+      : [host, `www.${host}`]
+    let slug: string | null = null
+    for (const candidate of hostCandidates) {
+      const { data } = await supabase.rpc('get_slug_by_custom_domain', { p_domain: candidate })
+      if (data) {
+        slug = data as string
+        break
+      }
+    }
     if (slug) {
       if (request.nextUrl.searchParams.has(MARKETING_LANG_PARAM)) {
         const cleanUrl = request.nextUrl.clone()
@@ -81,12 +91,16 @@ export async function proxy(request: NextRequest) {
       const segments = pathname.split('/').filter(Boolean)
       const first = segments[0]
       // /en or /en/order → /en/{slug} or /en/{slug}/order
+      // Avoid double-slug if the browser already requested /en/{slug}.
       if (first && isStoreLocaleCode(first)) {
-        const rest = segments.slice(1).join('/')
+        const restParts = segments.slice(1)
+        if (restParts[0] === slug) restParts.shift()
+        const rest = restParts.join('/')
         rewriteUrl.pathname = rest ? `/${first}/${slug}/${rest}` : `/${first}/${slug}`
       } else {
-        const suffix = pathname === '/' ? '' : pathname
-        rewriteUrl.pathname = `/${slug}${suffix}`
+        const restParts = segments[0] === slug ? segments.slice(1) : segments
+        const rest = restParts.join('/')
+        rewriteUrl.pathname = rest ? `/${slug}/${rest}` : `/${slug}`
       }
       return NextResponse.rewrite(rewriteUrl)
     }

@@ -197,7 +197,9 @@
     "toastDomainUpdated": "Đã cập nhật tên miền thành công",
     "toastDomainFailed": "Lưu tên miền thất bại",
     "faviconMustBeSquare": "Favicon phải có kích thước chính xác 48x48 pixel",
-    "webclipMustBeSquare": "Webclip phải có kích thước chính xác 180x180 pixel"
+    "webclipMustBeSquare": "Webclip phải có kích thước chính xác 180x180 pixel",
+    "domainPendingHint": "Tên miền đã lưu nhưng chưa xác minh. Tổng quan và link live vẫn dùng URL nền tảng (eateryvn.com/…) cho đến khi DNS được xác minh.",
+    "dnsCloudflareNote": "Nếu dùng Cloudflare: đặt bản ghi ở chế độ DNS only (đám mây xám), không Proxied (đám mây cam). Proxy cam thường làm Vercel không xác minh được."
   },
   "qr": {
     "title": "Mã QR",

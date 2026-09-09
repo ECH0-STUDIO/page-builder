@@ -67,20 +67,31 @@ type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string }
 
-/** Revalidate the public store page for a business (by slug). */
+/** Revalidate the public store page for a business (by slug + active locales). */
 async function revalidateLiveStore(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any,
   businessId: string
 ) {
-  const { data } = await db
-    .from('businesses')
-    .select('slug')
-    .eq('id', businessId)
-    .maybeSingle()
-  if (data?.slug) {
-    revalidatePath(`/${data.slug}`)
-    revalidatePath(`/${data.slug}/order`)
+  const [{ data }, { data: localeRows }] = await Promise.all([
+    db.from('businesses').select('slug').eq('id', businessId).maybeSingle(),
+    db
+      .from('business_locales')
+      .select('locale')
+      .eq('business_id', businessId)
+      .eq('status', 'active'),
+  ])
+  if (!data?.slug) return
+
+  const slug = data.slug as string
+  revalidatePath(`/${slug}`)
+  revalidatePath(`/${slug}/order`)
+
+  for (const row of (localeRows ?? []) as { locale?: string }[]) {
+    const locale = typeof row.locale === 'string' ? row.locale : ''
+    if (!locale) continue
+    revalidatePath(`/${locale}/${slug}`)
+    revalidatePath(`/${locale}/${slug}/order`)
   }
 }
 
@@ -955,7 +966,7 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
       return {
         success: false,
         error:
-          'DNS chưa trỏ về Vercel. Thêm bản ghi A (76.76.21.21) cho tên miền gốc hoặc CNAME (cname.vercel-dns.com) cho subdomain, đợi DNS lan truyền rồi thử lại.',
+          'DNS chưa trỏ về Vercel. Thêm bản ghi A (76.76.21.21) cho tên miền gốc hoặc CNAME (cname.vercel-dns.com) cho subdomain. Nếu dùng Cloudflare, tắt Proxy (đám mây xám / DNS only). Đợi DNS lan truyền rồi thử lại.',
       }
     }
 

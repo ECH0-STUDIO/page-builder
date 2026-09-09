@@ -4,11 +4,21 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
+  buildCustomDomainStorePath,
   buildStorePublicPath,
   isStoreLocaleCode,
   storeLocaleLabel,
   type StoreLocaleCode,
 } from '@/i18n/store-locales'
+
+/** True when the browser URL is a custom-domain path (no /{slug} segment). */
+function isOnCustomDomain(pathname: string, slug: string): boolean {
+  const segments = pathname.split('/').filter(Boolean)
+  const clean = slug.replace(/^\/+/, '')
+  if (segments[0] === clean) return false
+  if (isStoreLocaleCode(segments[0]) && segments[1] === clean) return false
+  return true
+}
 
 export function StoreLanguageSwitcher({
   slug,
@@ -29,8 +39,9 @@ export function StoreLanguageSwitcher({
 
   const segments = pathname.split('/').filter(Boolean)
   const first = segments[0]
+  const onCustomDomain = isOnCustomDomain(pathname, slug)
   const inferred: StoreLocaleCode =
-    isStoreLocaleCode(first) && first !== slug && locales.includes(first)
+    isStoreLocaleCode(first) && (onCustomDomain || first !== slug) && locales.includes(first)
       ? first
       : primary
 
@@ -45,11 +56,19 @@ export function StoreLanguageSwitcher({
       aria-label="Language"
     >
       {locales.map(locale => {
-        const href = `${buildStorePublicPath(slug, {
-          locale,
-          primary,
-          kind: onOrder ? 'order' : 'landing',
-        })}${qs}`
+        const href = `${
+          onCustomDomain
+            ? buildCustomDomainStorePath({
+                locale,
+                primary,
+                kind: onOrder ? 'order' : 'landing',
+              })
+            : buildStorePublicPath(slug, {
+                locale,
+                primary,
+                kind: onOrder ? 'order' : 'landing',
+              })
+        }${qs}`
         const active = locale === inferred
         return (
           <Link
