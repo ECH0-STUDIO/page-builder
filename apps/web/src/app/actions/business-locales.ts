@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { assertOwnerOrManager } from '@/lib/business-auth'
-import { deductCreditsInternal } from '@/lib/credits-internal'
+import { deductCreditsInternal, grantCreditsInternal } from '@/lib/credits-internal'
 import { LOCALE_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 import {
   isStoreLocaleCode,
@@ -160,6 +160,15 @@ export async function purchaseLocaleAction(
     updated_at: now.toISOString(),
   }
 
+  // Credits are already debited — refund if the entitlement cannot be written,
+  // otherwise the customer pays for a language they never receive.
+  const refundPurchase = () =>
+    grantCreditsInternal(
+      businessId,
+      LOCALE_CREDITS_PER_MONTH,
+      `Hoàn Credits ngôn ngữ ${label} (kích hoạt thất bại)`,
+    )
+
   let row: Record<string, unknown> | null = null
   if (existing?.id) {
     const { data, error } = await (admin as any)
@@ -168,7 +177,10 @@ export async function purchaseLocaleAction(
       .eq('id', existing.id)
       .select()
       .single()
-    if (error) return { success: false, error: error.message }
+    if (error) {
+      await refundPurchase()
+      return { success: false, error: error.message }
+    }
     row = data as Record<string, unknown>
   } else {
     const { data, error } = await (admin as any)
@@ -176,12 +188,18 @@ export async function purchaseLocaleAction(
       .insert(payload)
       .select()
       .single()
-    if (error) return { success: false, error: error.message }
+    if (error) {
+      await refundPurchase()
+      return { success: false, error: error.message }
+    }
     row = data as Record<string, unknown>
   }
 
   const normalized = row ? normalizeLocaleRow(row) : null
-  if (!normalized) return { success: false, error: 'Failed to save locale' }
+  if (!normalized) {
+    await refundPurchase()
+    return { success: false, error: 'Failed to save locale' }
+  }
 
   revalidatePath('/dashboard/settings/languages')
   revalidatePath('/dashboard/settings/credits')
