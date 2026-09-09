@@ -10,7 +10,7 @@ import { storeLocaleLabel, type StoreLocaleCode } from '@/i18n/store-locales'
 import type { TranslationField } from '@/lib/translation-fields'
 import { chunkTranslateFields } from '@/lib/ai-translate'
 
-const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_MODEL = 'gemini-3.6-flash'
 
 const chunkSchema = z.object({
   items: z.array(z.object({
