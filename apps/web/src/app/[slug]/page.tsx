@@ -24,6 +24,7 @@ import {
 } from '@/lib/schema'
 import { resolvePublicStoreUrl, resolveQrCustomUrl } from '@/lib/site-urls'
 import { buildStoreMetadata } from '@/lib/store-metadata'
+import { getStoreBySlug } from '@/lib/store-data'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import {
@@ -42,25 +43,9 @@ import { toStoreLocaleCode, buildStorePublicPath, type StoreLocaleCode } from '@
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase
-
-  const { data: business } = await db
-    .from('businesses')
-    .select('id, name')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pub } = await getStoreBySlug(slug)
 
   if (!business) return { title: 'Not Found' }
-
-  const { data: pub } = await db
-    .from('publishing_settings')
-    .select(
-      'seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
-    )
-    .eq('business_id', business.id)
-    .single()
 
   const base = buildStoreMetadata({
     slug,
@@ -114,23 +99,11 @@ export default async function SlugPage({
   }
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const { data: business } = await db
-    .from('businesses')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pubSettings } = await getStoreBySlug(slug)
 
   if (!business) notFound()
-
-  const { data: pubSettings } = await db
-    .from('publishing_settings')
-    .select('*')
-    .eq('business_id', business.id)
-    .single()
-
   if (!pubSettings?.published) notFound()
 
   let pageBlocksRaw = pubSettings?.published_blocks as PageBlock[] | null | undefined

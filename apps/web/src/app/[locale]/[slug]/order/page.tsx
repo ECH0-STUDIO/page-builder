@@ -4,7 +4,7 @@ import OrderPage from '../../[slug]/order/page'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-import { createClient } from '@/lib/supabase/server'
+import { getStoreBySlug } from '@/lib/store-data'
 
 export async function generateMetadata({
   params,
@@ -19,21 +19,8 @@ export async function generateMetadata({
     return { title: 'Not Found' }
   }
 
-  const supabase = await createClient()
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id, name')
-    .eq('slug', slug)
-    .single()
+  const { business, publishing: pub } = await getStoreBySlug(slug)
   if (!business) return { title: 'Not Found' }
-
-  const { data: pub } = await supabase
-    .from('publishing_settings')
-    .select(
-      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
-    )
-    .eq('business_id', business.id)
-    .single()
 
   const base = buildStoreMetadata({
     slug,
