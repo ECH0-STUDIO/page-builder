@@ -6,24 +6,29 @@
 # networking.
 set -euo pipefail
 
+LOG=/var/log/cursor-dockerd.log
+
 if sudo docker info >/dev/null 2>&1; then
   sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
   echo "Docker daemon already running."
   exit 0
 fi
 
-echo "Starting dockerd..."
-sudo bash -c 'nohup dockerd >/tmp/dockerd.log 2>&1 &'
+echo "Starting dockerd (log: $LOG)..."
+sudo rm -f "$LOG" 2>/dev/null || true
+sudo bash -c "nohup dockerd >>'$LOG' 2>&1 &"
 
-for i in $(seq 1 30); do
+# dockerd can take a while on first boot from a snapshot while it restores any
+# previously-created containers/networks, so allow generous time.
+for i in $(seq 1 90); do
   if sudo docker info >/dev/null 2>&1; then
     sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-    echo "Docker daemon is up."
+    echo "Docker daemon is up after ${i}s."
     exit 0
   fi
   sleep 1
 done
 
 echo "ERROR: dockerd did not become ready in time. Last log lines:" >&2
-tail -n 20 /tmp/dockerd.log >&2 || true
+sudo tail -n 30 "$LOG" >&2 2>/dev/null || true
 exit 1

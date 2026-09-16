@@ -40,8 +40,8 @@ pnpm install --frozen-lockfile
 echo "==> Local web env file"
 "$ROOT/scripts/write-local-env.sh"
 
-echo "==> Warm Supabase images + schema (captured in the snapshot)"
-"$ROOT/scripts/start-docker.sh"
-"$ROOT/scripts/local-supabase.sh"
-
+# Note: the Docker daemon and the Supabase stack are brought up in `start`
+# (scripts/cloud-agent-start.sh), not here — install must terminate and should
+# not depend on a running daemon. On first boot `local-supabase.sh` will pull
+# the Supabase images if they are not already present in the base snapshot.
 echo "Install complete."
