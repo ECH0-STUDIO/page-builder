@@ -32,7 +32,22 @@ done
 shopt -u nullglob
 
 cd "$ROOT"
-supabase start "$@"
+# `supabase start`'s readiness check can lose a race with container startup on a
+# cold boot (LegacyStatusDbNotReadyError). It is idempotent, so retry: on a
+# second attempt it waits for the already-starting containers to become healthy.
+start_supabase() {
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    if supabase start "$@"; then
+      return 0
+    fi
+    echo "supabase start attempt ${attempt} failed; retrying in 5s..."
+    sleep 5
+  done
+  echo "ERROR: supabase start did not succeed after retries." >&2
+  return 1
+}
+start_supabase "$@"
 
 DB_URL="$(supabase status -o json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).DB_URL))')"
 
