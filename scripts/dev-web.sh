@@ -40,5 +40,7 @@ if [ -d "$LOCALE_DIR" ]; then
   echo "Relocated [locale] route for local dev (restored on exit)."
 fi
 
+# Run in the foreground (not exec) so the EXIT trap restores [locale] when the
+# dev server is stopped with Ctrl-C.
 cd "$ROOT/apps/web"
-exec npx next dev -H 0.0.0.0 "$@"
+npx next dev -H 0.0.0.0 "$@"
