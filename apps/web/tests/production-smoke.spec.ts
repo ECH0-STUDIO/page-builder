@@ -19,8 +19,9 @@ import { join } from 'node:path'
 const slug = process.env.SMOKE_STORE_SLUG || 'la-matcha'
 const customOrigin = (process.env.SMOKE_CUSTOM_DOMAIN || 'https://next2zero.com').replace(/\/$/, '')
 const skipCustomDomain = process.env.SMOKE_SKIP_CUSTOM_DOMAIN === '1'
-const testingProduction = (process.env.PLAYWRIGHT_BASE_URL || '').includes('eateryvn.com')
-const skipLocalePrefix = !testingProduction && !process.env.SUPABASE_SERVICE_ROLE_KEY
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+const isLocalhost = /localhost|127\.0\.0\.1/.test(baseURL)
+const skipLocalePrefix = isLocalhost && !process.env.SUPABASE_SERVICE_ROLE_KEY
 const email = process.env.SMOKE_EMAIL
 const password = process.env.SMOKE_PASSWORD
 const artifactDir = process.env.SMOKE_ARTIFACT_DIR || '/opt/cursor/artifacts/screenshots'
