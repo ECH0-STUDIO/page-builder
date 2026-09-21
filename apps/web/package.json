@@ -6,7 +6,8 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:smoke": "playwright test tests/production-smoke.spec.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.63",
