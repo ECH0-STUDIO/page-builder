@@ -192,6 +192,20 @@ export function isPublicSlugPath(pathname: string): boolean {
     'api',
     '_next',
     'loc',
+    'marketing',
+    'templates',
   ])
   return !reserved.has(segment)
+}
+
+const CUSTOM_DOMAIN_STATIC_PREFIXES = ['/templates/', '/marketing/', '/_next/']
+
+/** Static files that must not be rewritten to /{slug}/... on a custom domain. */
+export function isCustomDomainStaticPath(pathname: string): boolean {
+  if (CUSTOM_DOMAIN_STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return true
+  }
+  const first = pathname.split('/').filter(Boolean)[0]
+  // Root public files: /logo-icon.png, /sw-push.js, /favicon.ico
+  return Boolean(first && !pathname.slice(1).includes('/') && /\.[a-zA-Z0-9]{1,8}$/.test(first))
 }

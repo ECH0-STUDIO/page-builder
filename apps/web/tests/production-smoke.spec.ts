@@ -145,11 +145,15 @@ test.describe('Published storefront', () => {
     await assertLiveOrderUi(page)
   })
 
-  test('unpublished store and its order page are 404s', async ({ request }) => {
+  test('unpublished store and its order page are 404s', async ({ request, page }) => {
     const landing = await fetchTitle(request, '/ph-dn')
     expect(landing.title).toMatch(/Not Found/i)
     const order = await fetchTitle(request, '/ph-dn/order')
     expect(order.title).toMatch(/Not Found/i)
+
+    await page.goto('/ph-dn')
+    await expect(page.locator('h1')).not.toContainText('/h1>')
+    await expect(page.locator('h1')).toContainText(/Không tìm thấy|not found|Page not/i)
   })
 })
 
@@ -184,6 +188,12 @@ test.describe('Custom domain', () => {
     expect(ok).toBeTruthy()
     expect(title).toMatch(/Order/i)
     expect(title).not.toMatch(/Not Found/i)
+  })
+
+  test('template images are served, not rewritten onto /{slug}', async ({ request }) => {
+    const res = await request.get(`${customOrigin}/templates/garden-cafe-hero.jpg`)
+    expect(res.status()).toBe(200)
+    expect(res.headers()['content-type'] || '').toMatch(/image/)
   })
 })
 
