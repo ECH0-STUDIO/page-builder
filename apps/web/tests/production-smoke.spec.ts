@@ -125,17 +125,11 @@ test.describe('Published storefront', () => {
     const closed = await page.getByText(CLOSED).first().isVisible().catch(() => false)
     test.skip(closed, 'Store is outside opening hours — browse-only, no add to cart')
 
-    await expect(page.getByText('Trà đá').first()).toBeVisible()
-
+    await expect(page.getByRole('button', { name: /Món thử vị giác|Đồ uống|Khai vị/i }).first()).toBeVisible()
     const addBtn = page.getByRole('button', { name: ADD_TO_ORDER }).first()
     await expect(addBtn).toBeVisible()
     await addBtn.click()
-    const cartCount = page.getByText(/1 món|1 items/i).first()
-    if (!(await cartCount.isVisible())) {
-      const modalAdd = page.getByRole('button', { name: ADD_TO_ORDER }).last()
-      await modalAdd.click()
-    }
-    await expect(cartCount).toBeVisible()
+    await expect(page.getByText(/1 món|1 items/i).first()).toBeVisible()
     await maybeScreenshot(page, 'diner-order-cart.png')
   })
 
@@ -218,7 +212,9 @@ test.describe('Dashboard login', () => {
     for (const path of ownerPaths) {
       await page.goto(path)
       await expect(page, path).toHaveURL(new RegExp(`${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
-      await expect(page.locator('h1').first()).toBeVisible()
+      // Menu/QR/etc. are not all <h1> pages — sidebar is the stable chrome.
+      await expect(page.getByRole('link', { name: /Tổng quan|Overview/i })).toBeVisible()
+      await expect(page.locator('body')).not.toContainText(/This page couldn’t load|Application error/i)
     }
     await maybeScreenshot(page, 'owner-dashboard-credits.png')
   })
