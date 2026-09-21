@@ -48,5 +48,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.save_page_blocks(uuid, jsonb) FROM PUBLIC;
+-- SECURITY INVOKER, so RLS still decides what the caller may write. anon has no
+-- reason to reach it at all, and REVOKE ... FROM PUBLIC alone would not remove
+-- it: Supabase's default privileges grant anon EXECUTE explicitly. Name the roles.
+REVOKE ALL ON FUNCTION public.save_page_blocks(uuid, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.save_page_blocks(uuid, jsonb) TO authenticated, service_role;
