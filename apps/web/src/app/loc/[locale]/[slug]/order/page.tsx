@@ -1,10 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import SlugPage from '../../[slug]/page'
-import { createClient } from '@/lib/supabase/server'
+import OrderPage from '../../../../[slug]/order/page'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
+import { createClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({
   params,
@@ -25,13 +25,12 @@ export async function generateMetadata({
     .select('id, name')
     .eq('slug', slug)
     .single()
-
   if (!business) return { title: 'Not Found' }
 
   const { data: pub } = await supabase
     .from('publishing_settings')
     .select(
-      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified, language',
+      'seo_title, seo_description, seo_i18n, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, custom_domain, custom_domain_verified',
     )
     .eq('business_id', business.id)
     .single()
@@ -40,6 +39,9 @@ export async function generateMetadata({
     slug,
     businessName: business.name,
     pub: pub as Parameters<typeof buildStoreMetadata>[0]['pub'],
+    pathSuffix: '/order',
+    title: `${business.name} — Order`,
+    description: `Order from ${business.name}`,
     contentLocale: locale,
     primaryLocale: access.primary,
   })
@@ -49,7 +51,7 @@ export async function generateMetadata({
     languages[code] = buildStorePublicPath(slug, {
       locale: code,
       primary: access.primary,
-      kind: 'landing',
+      kind: 'order',
     })
   }
 
@@ -60,19 +62,17 @@ export async function generateMetadata({
       canonical: buildStorePublicPath(slug, {
         locale,
         primary: access.primary,
-        kind: 'landing',
+        kind: 'order',
       }),
       languages,
     },
   }
 }
 
-export default async function LocaleSlugPage({
+export default async function LocaleOrderPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>
-  searchParams: Promise<{ table?: string }>
 }) {
   const { locale, slug } = await params
   if (!isStoreLocaleCode(locale)) notFound()
@@ -80,23 +80,16 @@ export default async function LocaleSlugPage({
   const access = await loadStoreLocaleAccess(slug)
   if (!access) notFound()
 
-  // Primary must stay unprefixed
   if (locale === access.primary) {
-    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary, kind: 'order' }))
   }
 
   if (!isPurchasedPathLocale(access, locale)) {
-    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary }))
+    redirect(buildStorePublicPath(slug, { locale: access.primary, primary: access.primary, kind: 'order' }))
   }
 
   // Next.js page modules are typed to their own route params; cast when reusing.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Page = SlugPage as any
-  return (
-    <Page
-      params={Promise.resolve({ slug })}
-      searchParams={searchParams}
-      contentLocale={locale}
-    />
-  )
+  const Page = OrderPage as any
+  return <Page params={Promise.resolve({ slug })} contentLocale={locale} />
 }

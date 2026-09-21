@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
+import { STORE_LOCALE_CODES } from "./src/i18n/store-locales";
+
+const localeSegment = STORE_LOCALE_CODES.join("|");
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Keep [locale] off the app-root sibling of [slug]. Next cannot have
+        // two different param names at the same path depth, and /{slug}/order
+        // was matching [locale]/[slug] (QR + custom-domain diner 404).
+        {
+          source: `/:locale(${localeSegment})/:slug/:path*`,
+          destination: `/loc/:locale/:slug/:path*`,
+        },
+      ],
+    };
+  },
   async headers() {
     return [
       {

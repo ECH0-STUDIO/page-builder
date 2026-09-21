@@ -185,7 +185,8 @@ export function rewriteMarketingFooterContact(
 export function rewriteMarketingNotFoundCopy(html: string, locale: SupportedLocale): string {
   if (locale !== 'vi') return html
   return html
-    .replace(/>Page not <em>found<\/em></i, '>Không tìm thấy <em>trang</em>')
+    // Do not match the '<' of '</h1>' — that leaked "trang/h1>" onto the live 404.
+    .replace(/Page not <em>found<\/em>/i, 'Không tìm thấy <em>trang</em>')
     .replace(/>Go to home</gi, '>Về trang chủ<')
 }
 

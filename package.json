@@ -17,7 +17,8 @@
     "extract:marketing-strings": "node scripts/extract-marketing-strings.mjs",
     "test:marketing-locale": "node scripts/test-marketing-locale.mjs",
     "test:marketing-i18n": "node scripts/test-marketing-i18n.mjs",
-    "test:marketing-chrome": "node scripts/test-marketing-chrome.mjs"
+    "test:marketing-chrome": "node scripts/test-marketing-chrome.mjs",
+    "test:smoke": "pnpm --filter web test:smoke"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

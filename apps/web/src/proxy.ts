@@ -15,6 +15,7 @@ import {
   isAppHostname,
   isAppOnlyPath,
   isMarketingHostname,
+  isCustomDomainStaticPath,
   isMarketingPath,
   isSplitDomainDeployment,
   marketingPath,
@@ -70,6 +71,12 @@ export async function proxy(request: NextRequest) {
   // ── Custom domain routing (before marketing ?lang= logic) ──
   // Published storefronts must never get ?lang=en — use /{locale} path prefixes instead.
   if (host && !isPlatformHost && !pathname.startsWith('/api')) {
+    // /templates/*, /marketing/*, /logo-icon.png, etc. are public files.
+    // Rewriting them to /{slug}/templates/... 404s the storefront images
+    // (next2zero.com hero) and leaves custom-domain 404s unstyled.
+    if (isCustomDomainStaticPath(pathname)) {
+      return NextResponse.next({ request })
+    }
     const hostCandidates = host.startsWith('www.')
       ? [host, host.slice(4)]
       : [host, `www.${host}`]

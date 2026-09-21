@@ -33,12 +33,23 @@ export async function loadStoreLocaleAccess(slug: string): Promise<StoreLocaleAc
 
   const primary = toStoreLocaleCode((pub as { language?: string | null }).language)
 
-  const admin = createAdminClient()
-  const { data: rows } = await (admin as any)
-    .from('business_locales')
-    .select('locale')
-    .eq('business_id', business.id)
-    .eq('status', 'active')
+  let rows: { locale?: string }[] = []
+  try {
+    const admin = createAdminClient()
+    const { data } = await (admin as any)
+      .from('business_locales')
+      .select('locale')
+      .eq('business_id', business.id)
+      .eq('status', 'active')
+    rows = (data ?? []) as { locale?: string }[]
+  } catch {
+    const { data } = await supabase
+      .from('business_locales')
+      .select('locale')
+      .eq('business_id', business.id)
+      .eq('status', 'active')
+    rows = (data ?? []) as { locale?: string }[]
+  }
 
   const activeExtra: StoreLocaleCode[] = []
   for (const row of (rows ?? []) as { locale?: string }[]) {
