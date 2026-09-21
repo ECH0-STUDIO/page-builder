@@ -11,8 +11,14 @@
 --
 -- Storefront reads only ever use rows where published (landing) or order_published
 -- (order page) is true, so restricting anon to those rows keeps every public page
--- working. Dashboard reads are unaffected: has_business_role() already matches the
--- business owner via businesses.owner_id as well as business_members.
+-- working.
+--
+-- Dashboard reads are unaffected. The live FOR ALL policy on this table is
+-- "Owners and members can manage publishing settings", whose USING clause is
+-- `b.owner_id = auth.uid() OR is_business_member(b.id)`. FOR ALL covers SELECT,
+-- so owners and team members keep full read access without the open policy.
+-- (Note: the live policy set has drifted from these migration files — 027's
+-- has_business_role policy is not actually present on the database.)
 -- ============================================================
 
 DROP POLICY IF EXISTS "Anyone can view publishing settings" ON public.publishing_settings;

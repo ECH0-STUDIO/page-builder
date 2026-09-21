@@ -19,6 +19,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS orders_client_token_key
   ON public.orders (client_token)
   WHERE client_token IS NOT NULL;
 
--- Supports the per-business and per-table flood checks in createOrderAction.
-CREATE INDEX IF NOT EXISTS orders_business_created_at_idx
-  ON public.orders (business_id, created_at DESC);
+-- The per-business and per-table flood checks in createOrderAction are already
+-- covered by idx_orders_business_created (business_id, created_at DESC) from
+-- 034. Adding another one here just doubled the write cost of every insert.
