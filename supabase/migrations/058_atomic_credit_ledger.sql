@@ -46,10 +46,14 @@ BEGIN
     RETURN;
   END IF;
 
-  UPDATE public.credit_balances
-  SET balance = balance - p_amount,
+  -- The row is locked above, so v_balance is current. Using it instead of
+  -- reading the column again also avoids colliding with the RETURNS TABLE
+  -- output parameter that is also named `balance` (otherwise every deduction
+  -- fails with 42702 "column reference balance is ambiguous").
+  UPDATE public.credit_balances cb
+  SET balance = v_balance - p_amount,
       updated_at = now()
-  WHERE business_id = p_business_id;
+  WHERE cb.business_id = p_business_id;
 
   INSERT INTO public.credit_transactions (business_id, amount, description)
   VALUES (p_business_id, -p_amount, p_description);
@@ -80,12 +84,12 @@ BEGIN
     RETURN;
   END IF;
 
-  INSERT INTO public.credit_balances (business_id, balance)
+  INSERT INTO public.credit_balances AS cb (business_id, balance)
   VALUES (p_business_id, p_amount)
   ON CONFLICT (business_id) DO UPDATE
-  SET balance = public.credit_balances.balance + EXCLUDED.balance,
+  SET balance = cb.balance + EXCLUDED.balance,
       updated_at = now()
-  RETURNING public.credit_balances.balance INTO v_balance;
+  RETURNING cb.balance INTO v_balance;
 
   INSERT INTO public.credit_transactions (business_id, amount, description)
   VALUES (p_business_id, p_amount, p_description);
@@ -94,8 +98,14 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.deduct_credits_atomic(uuid, integer, text) FROM PUBLIC;
+-- Supabase's default privileges grant EXECUTE on new public functions to anon
+-- and authenticated, and those are explicit grants that REVOKE ... FROM PUBLIC
+-- does not remove (this is why 043's revoke on fulfill_credit_order never took
+-- effect). Without naming the roles, grant_credits_atomic would be reachable at
+-- /rest/v1/rpc/grant_credits_atomic with the public anon key — anyone could mint
+-- credits. Revoke from the roles by name.
+REVOKE ALL ON FUNCTION public.deduct_credits_atomic(uuid, integer, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.deduct_credits_atomic(uuid, integer, text) TO service_role;
 
-REVOKE ALL ON FUNCTION public.grant_credits_atomic(uuid, integer, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.grant_credits_atomic(uuid, integer, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grant_credits_atomic(uuid, integer, text) TO service_role;
