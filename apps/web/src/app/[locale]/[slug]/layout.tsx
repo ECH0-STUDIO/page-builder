@@ -16,6 +16,8 @@ export default async function LocaleSlugLayout({
   const { locale, slug } = await params
   const cookieStore = await cookies()
   const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value
+  // Same capture as `[locale]/[slug]/page.tsx`: /{storeSlug}/order.
+  const storeSlug = slug === 'order' && !isStoreLocaleCode(locale) ? locale : slug
 
   let storeDefaultLocale: string | null = null
   try {
@@ -23,7 +25,7 @@ export default async function LocaleSlugLayout({
     const { data: business } = await supabase
       .from('businesses')
       .select('id')
-      .eq('slug', slug)
+      .eq('slug', storeSlug)
       .single()
 
     if (business) {
