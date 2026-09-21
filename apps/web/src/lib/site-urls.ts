@@ -191,6 +191,7 @@ export function isPublicSlugPath(pathname: string): boolean {
     'invite',
     'api',
     '_next',
+    'loc',
   ])
   return !reserved.has(segment)
 }

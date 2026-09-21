@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import OrderPage from '../../[slug]/order/page'
+import OrderPage from '../../../../[slug]/order/page'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'

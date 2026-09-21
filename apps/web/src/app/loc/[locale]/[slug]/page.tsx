@@ -1,21 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import SlugPage from '../../[slug]/page'
-import OrderPage, { generateMetadata as generateOrderMetadata } from '../../[slug]/order/page'
+import SlugPage from '../../../[slug]/page'
 import { createClient } from '@/lib/supabase/server'
 import { isStoreLocaleCode, buildStorePublicPath } from '@/i18n/store-locales'
 import { isPurchasedPathLocale, loadStoreLocaleAccess, allPublicLocales } from '@/lib/store-locale-access'
 import { buildStoreMetadata } from '@/lib/store-metadata'
-
-/**
- * Next sibling-matches `/la-matcha/order` as `[locale]=la-matcha, [slug]=order`
- * instead of `[slug]/order`. Recover by rendering the real order page using
- * the first segment as the store slug. Do not use `dynamicParams = false` on
- * `[locale]` for this — that 404s the segment before this shim can run.
- */
-function isCapturedUnprefixedOrder(locale: string, slug: string) {
-  return slug === 'order' && !isStoreLocaleCode(locale)
-}
 
 export async function generateMetadata({
   params,
@@ -23,9 +12,6 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
   const { locale, slug } = await params
-  if (isCapturedUnprefixedOrder(locale, slug)) {
-    return generateOrderMetadata({ params: Promise.resolve({ slug: locale }) })
-  }
   if (!isStoreLocaleCode(locale)) return { title: 'Not Found' }
 
   const access = await loadStoreLocaleAccess(slug)
@@ -89,12 +75,6 @@ export default async function LocaleSlugPage({
   searchParams: Promise<{ table?: string }>
 }) {
   const { locale, slug } = await params
-  if (isCapturedUnprefixedOrder(locale, slug)) {
-    // Next.js page modules are typed to their own route params; cast when reusing.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Page = OrderPage as any
-    return <Page params={Promise.resolve({ slug: locale })} />
-  }
   if (!isStoreLocaleCode(locale)) notFound()
 
   const access = await loadStoreLocaleAccess(slug)
