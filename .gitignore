@@ -34,3 +34,6 @@ apps/web/public/marketing/.marketing-strings-extract.json
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# Local dev route relocation stash (scripts/dev-web.sh)
+.dev-route-stash/
