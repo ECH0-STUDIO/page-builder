@@ -10,6 +10,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
+    ...(process.env.PLAYWRIGHT_STORAGE_STATE
+      ? { storageState: process.env.PLAYWRIGHT_STORAGE_STATE }
+      : {}),
   },
   projects: [
     {
