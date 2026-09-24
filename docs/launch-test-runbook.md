@@ -1,6 +1,6 @@
 # Launch test runbook
 
-Follow this on production after a launch deploy. A screen that only renders is not a pass. Each feature check has to change what the guest or owner sees, then return the screen to how it started. The last smoke pass was 24 Sep 2026 against `main` commit `d7dc482`. Homepage and order builders both use the eye icon for preview as of `75c6274`.
+Follow this on production after a launch deploy. A screen that only renders is not a pass. Each feature check has to change what the guest or owner sees, then return the screen to how it started. Smoke and the feature script last passed on 24 Sep 2026 against `main` commit `75c6274`. Homepage and order builders both use the eye icon for preview as of that commit.
 
 Leaked-password protection is skipped on purpose. The project is on the Supabase Free plan, and that check is Pro-only.
 
@@ -9,6 +9,10 @@ Leaked-password protection is skipped on purpose. The project is on the Supabase
 Do this against `https://www.eateryvn.com` and `https://app.eateryvn.com`. The published test store is `la-matcha`. Its custom domain is `https://next2zero.com`. The unpublished store used for 404 checks is `ph-dn`.
 
 Read credentials from `apps/web/tests/auth.spec.ts` (`testEmail` / `testPassword`). Pass them as `SMOKE_EMAIL` and `SMOKE_PASSWORD`. Do not print the password. Do not commit it.
+
+That account has two roles. A fresh login lands on **The best cafe**, slug `playwright-pub-1779084603686`, where the account is the owner. Use that business for every owner check below. **La Matcha** is a staff membership for the same login: the switcher reloads onto `/dashboard/orders`, owner links disappear, and `/dashboard/menu` redirects back to orders. Guest checks stay on `la-matcha` and `next2zero.com`. Do not expect the dashboard of La Matcha to show the owner menu.
+
+`page.waitForURL` against the dashboard times out if it waits for the `load` event. Wait until `commit`, then give the page about four seconds to hydrate. Shadcn `Input` fields omit the `type` attribute, so `input[type="text"]` misses the business name (`#prof-name`) and the publishing slug (`#pub-slug`). The first real `type="text"` on publishing is the custom domain.
 
 On production, never:
 
@@ -78,18 +82,27 @@ Homepage images on `www.eateryvn.com`, `www.eateryvn.com/la-matcha`, and `next2z
 
 ## 3. Owner features
 
-Log in at `https://app.eateryvn.com/login`. A crash that survives reload is a failure. A single crash that a reload clears is a flake; record it and continue.
+Log in at `https://app.eateryvn.com/login` and stay on **The best cafe**. A crash that survives reload is a failure. A single crash that a reload clears is a flake; record it and continue.
 
-- **Orders** (`/dashboard/orders`): open **Trực tiếp** / Live and **Lịch sử** / History. Each tab shows orders or a real empty state. Do not change a status.
-- **Business** (`/dashboard/business`): the name field contains the store name. Do not save.
-- **Menu** (`/dashboard/menu`): click a category. Its items appear. Click another category. The item list changes. Do not add, edit, or delete.
+- **Orders** (`/dashboard/orders`): open **Trực tiếp** / Live and **Lịch sử** / History. Each tab shows orders or a real empty state. Do not change a status. History is owner and manager only.
+- **Business** (`/dashboard/business`): `#prof-name` is `The best cafe`. Do not save.
+- **Menu** (`/dashboard/menu`): categories are `div.cursor-pointer`, including Starter and Desert. Click one, then the other. The editor contents change. Do not add, edit, or delete.
 - **Print menu** (`/dashboard/print-menu`): item names from the menu are in the preview. Do not start a download.
-- **QR** (`/dashboard/qr`): a QR image is visible and the URL text contains `la-matcha` or `next2zero.com`. Do not regenerate.
+- **QR** (`/dashboard/qr`): the page HTML contains `playwright-pub-` or `thebest.com`, and the **QR Bàn** / Table tab opens. Do not regenerate.
 - **Payments** (`/dashboard/payments`): the saved bank or “not set up” state is visible. Do not save.
 - **Gallery** (`/dashboard/gallery`): the grid or the empty state is visible. Do not upload or delete.
-- **Translations** (`/dashboard/translations`): the locale list is visible. Open English if it is a link. Do not run AI translate.
-- **Publishing** (`/dashboard/publishing`): the public URL shown matches the live store. Do not edit the slug, domain, or publish toggle.
+- **Translations** (`/dashboard/translations`): open the first **Sửa** / Edit link. The URL becomes `/dashboard/translations/en` and text fields are present. Do not run AI translate and do not save.
+- **Publishing** (`/dashboard/publishing`): `#pub-slug` is `playwright-pub-1779084603686`. Do not edit the slug, domain, or publish toggle.
 - **Settings**: `/dashboard/settings` lands on security and shows the account email. Team lists members. Languages lists store locales. Localization shows language and currency. Credits shows a numeric balance. Do not save, invite, buy, or change the password.
+
+## 3b. Staff on La Matcha
+
+From the business switcher, choose **La Matcha** and wait for the reload.
+
+- The sidebar has live orders and does not show **Thực đơn**, **Trình tạo trang**, or **Xuất bản**.
+- Opening `/dashboard/menu` returns to `/dashboard/orders`.
+- The live board shows the empty columns. **Lịch sử** is absent for staff. That is expected.
+- Do not change an order.
 
 ## 4. Page builders
 
@@ -112,8 +125,8 @@ Both builders use a 32×32 eye icon for preview, with no visible label. The acce
 
 Skip this if the badge is not a clean **Live** / **Trực tuyến**.
 
-1. On the order builder Appearance tab, read the page-background color (`input[type="color"]` after the brand color). That is the second color input.
-2. Fetch `https://www.eateryvn.com/la-matcha/order` and keep the HTML.
+1. On the order builder Appearance tab for **The best cafe**, read the page-background color (`input[type="color"]` after the brand color). That is the second color input.
+2. Fetch `https://www.eateryvn.com/playwright-pub-1779084603686/order` and keep the HTML. Do not use the La Matcha page for this check.
 3. Set the background to `#00aa00` (or `#00aa33` if it is already `#00aa00`).
 4. Wait until the badge says **Có thay đổi** / **Changes** and the header says **Đã lưu** / **Saved**.
 5. Fetch the public order page again. It must not contain the new color. Guests still see the published snapshot.
@@ -130,7 +143,7 @@ Say what passed, what failed, and the production commit. Call out anything only 
 - A real PayOS payment and the webhook
 - Signup, password-reset, and team-invite email in an inbox
 - A push notification on a phone
-- A manager account and a staff account (staff should land on live orders and not see owner settings)
+- A separate manager login (staff on La Matcha is already covered by this account)
 - Printing a menu from the print dialog
 
-Those four are outside this run. Do not invent a live payment or a second user to cover them.
+Those are outside this run. Do not invent a live payment or a second user to cover them.
