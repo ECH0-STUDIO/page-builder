@@ -1392,6 +1392,8 @@
     "enterTableNumber": "Please enter your table number",
     "placeOrderFailed": "Failed to place order:",
     "closedForOrders": "We're closed right now. Ordering will reopen during business hours.",
+    "tooManyOrders": "Too many orders in a row. Please wait a moment and try again.",
+    "networkErrorRetry": "Connection lost. Your cart is saved — please try again.",
     "soldOut": "Sold Out",
     "required": "Required",
     "optional": "Optional",
@@ -1619,5 +1621,14 @@
       "contact": "Contact",
       "spacer": "Spacer"
     }
+  },
+  "errorBoundary": {
+    "dashboardTitle": "Something went wrong",
+    "dashboardBody": "This page failed to load. Your data is safe — try again, or go back to the overview.",
+    "storeTitle": "This page didn't load",
+    "storeBody": "Something went wrong on our side. Please try again in a moment.",
+    "retry": "Try again",
+    "backToDashboard": "Back to overview",
+    "reference": "Reference"
   }
 }

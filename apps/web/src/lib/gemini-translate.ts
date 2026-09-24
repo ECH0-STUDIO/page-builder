@@ -12,6 +12,16 @@ import { chunkTranslateFields } from '@/lib/ai-translate'
 
 const GEMINI_MODEL = 'gemini-3.6-flash'
 
+/**
+ * gemini-3.6-flash defaults to 'medium' thinking, and thinking tokens are billed
+ * at the output rate — the most expensive part of a translation call, on a task
+ * that needs no reasoning. 'minimal' is the lowest level this model accepts.
+ */
+const THINKING_LEVEL = 'minimal'
+
+/** Chunks are independent, so run a few at once instead of one after another. */
+const MAX_PARALLEL_CHUNKS = 3
+
 const chunkSchema = z.object({
   items: z.array(z.object({
     id: z.string(),
@@ -55,6 +65,9 @@ async function translateChunk(
     model: google(GEMINI_MODEL),
     schema: chunkSchema,
     prompt: buildPrompt(fields, primary, locale),
+    providerOptions: {
+      google: { thinkingConfig: { thinkingLevel: THINKING_LEVEL } },
+    },
   })
 
   const wanted = new Set(fields.map(f => f.id))
@@ -83,10 +96,16 @@ export async function translateFieldsWithGemini(
   }
   if (!fields.length) return {}
 
+  const chunks = chunkTranslateFields(fields)
   const merged: Record<string, string> = {}
-  for (const chunk of chunkTranslateFields(fields)) {
-    const part = await translateChunk(chunk, primary, locale)
-    Object.assign(merged, part)
+
+  // Bounded so a large "translate all" does not fan out into a rate-limit error.
+  for (let i = 0; i < chunks.length; i += MAX_PARALLEL_CHUNKS) {
+    const batch = chunks.slice(i, i + MAX_PARALLEL_CHUNKS)
+    const parts = await Promise.all(
+      batch.map(chunk => translateChunk(chunk, primary, locale)),
+    )
+    for (const part of parts) Object.assign(merged, part)
   }
   return merged
 }

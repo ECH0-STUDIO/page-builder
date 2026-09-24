@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { assertOwnerOrManager } from '@/lib/business-auth'
 import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -64,59 +65,58 @@ type ActionResult<T = void> =
   | { success: false; error: string }
 
 // ─── Ownership guard ─────────────────────────────────────────────────────────
-// Verify that `user` owns the business that a given category belongs to.
+// Managers are allowed to edit the menu (027_comprehensive_rbac.sql), so every
+// guard resolves the owning business and then checks the caller's role. Checking
+// businesses.owner_id alone silently blocked managers from editing categories
+// and variants while RLS would have let them through.
+async function userCanManageBusiness(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  businessId: string | undefined,
+  userId: string,
+): Promise<boolean> {
+  if (!businessId) return false
+  const access = await assertOwnerOrManager(supabase, userId, businessId)
+  return access.ok
+}
+
 async function userOwnsCategoryBusiness(supabase: Awaited<ReturnType<typeof createClient>>, categoryId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('menu_categories')
-    .select('businesses!inner(owner_id)')
+    .select('business_id')
     .eq('id', categoryId)
-    .single()
-  const ownerRecord = (data as any)?.businesses
-  return Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id === userId : ownerRecord?.owner_id === userId
+    .maybeSingle()
+  return userCanManageBusiness(supabase, (data as { business_id?: string } | null)?.business_id, userId)
 }
 
 async function userOwnsItemBusiness(supabase: Awaited<ReturnType<typeof createClient>>, itemId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('menu_items')
-    .select('business_id, businesses!inner(owner_id)')
+    .select('business_id')
     .eq('id', itemId)
-    .single()
-  if (!data) return false
-  const ownerRecord = (data as any)?.businesses
-  const ownerId = Array.isArray(ownerRecord) ? ownerRecord[0]?.owner_id : ownerRecord?.owner_id
-  if (ownerId === userId) return true
-
-  const businessId = (data as { business_id?: string }).business_id
-  if (!businessId) return false
-  const { data: member } = await supabase
-    .from('business_members')
-    .select('role')
-    .eq('business_id', businessId)
-    .eq('user_id', userId)
     .maybeSingle()
-  return member?.role === 'owner' || member?.role === 'manager'
+  return userCanManageBusiness(supabase, (data as { business_id?: string } | null)?.business_id, userId)
 }
 
 async function userOwnsVariantGroupBusiness(supabase: Awaited<ReturnType<typeof createClient>>, groupId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('menu_item_variant_groups')
-    .select('menu_items!inner(businesses!inner(owner_id))')
+    .select('menu_items!inner(business_id)')
     .eq('id', groupId)
-    .single()
-  const businesses = (data as any)?.menu_items?.businesses
-  const ownerRecord = Array.isArray(businesses) ? businesses[0] : businesses
-  return ownerRecord?.owner_id === userId
+    .maybeSingle()
+  const items = (data as any)?.menu_items
+  const record = Array.isArray(items) ? items[0] : items
+  return userCanManageBusiness(supabase, record?.business_id, userId)
 }
 
 async function userOwnsVariantOptionBusiness(supabase: Awaited<ReturnType<typeof createClient>>, optionId: string, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('menu_item_variant_options')
-    .select('menu_item_variant_groups!inner(menu_items!inner(businesses!inner(owner_id)))')
+    .select('menu_item_variant_groups!inner(menu_items!inner(business_id))')
     .eq('id', optionId)
-    .single()
-  const businesses = (data as any)?.menu_item_variant_groups?.menu_items?.businesses
-  const ownerRecord = Array.isArray(businesses) ? businesses[0] : businesses
-  return ownerRecord?.owner_id === userId
+    .maybeSingle()
+  const items = (data as any)?.menu_item_variant_groups?.menu_items
+  const record = Array.isArray(items) ? items[0] : items
+  return userCanManageBusiness(supabase, record?.business_id, userId)
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -128,6 +128,9 @@ export async function addCategoryAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  if (!(await userCanManageBusiness(supabase, businessId, user.id))) {
+    return { success: false, error: 'Not authorized' }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -222,6 +225,9 @@ export async function addItemAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  if (!(await userCanManageBusiness(supabase, businessId, user.id))) {
+    return { success: false, error: 'Not authorized' }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
