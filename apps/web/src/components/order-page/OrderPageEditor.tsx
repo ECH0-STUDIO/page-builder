@@ -16,7 +16,6 @@ import {
   Copy,
   ExternalLink,
   Eye,
-  Globe,
   ImagePlus,
   Loader2,
   Monitor,
@@ -185,6 +184,9 @@ export function OrderPageEditor({
   const [uploading, setUploading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [published, setPublished] = useState(initialPublished)
+  const [orderHasUnpublishedChanges, setOrderHasUnpublishedChanges] = useState(
+    Boolean(publishing?.order_has_unpublished_changes),
+  )
   const [publishingBusy, setPublishingBusy] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
   const [device, setDevice] = useState<PreviewDevice>('desktop')
@@ -284,9 +286,10 @@ export function OrderPageEditor({
         draftRef.current = next
         return next
       })
+      if (published) setOrderHasUnpublishedChanges(true)
       scheduleSave()
     },
-    [markHistory, scheduleSave],
+    [markHistory, scheduleSave, published],
   )
 
   const applySnapshot = useCallback((snap: OrderDraft) => {
@@ -425,6 +428,7 @@ export function OrderPageEditor({
       return
     }
     setPublished(next)
+    if (next) setOrderHasUnpublishedChanges(false)
     toast.success(next ? t('orderPageAdmin.live') : t('orderPageAdmin.draft'))
   }
 
@@ -598,11 +602,11 @@ export function OrderPageEditor({
           <button
             type="button"
             onClick={() => setPreviewMode(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
             title={t('pageBuilder.preview')}
+            aria-label={t('pageBuilder.preview')}
           >
-            <Globe className="size-4" />
-            <span className="hidden sm:inline">{t('pageBuilder.preview')}</span>
+            <Eye className="size-4" />
           </button>
 
           <button
@@ -631,12 +635,19 @@ export function OrderPageEditor({
             variant="outline"
             className={cn(
               'text-xs shrink-0 hidden sm:flex items-center gap-1.5 pl-2',
-              published
-                ? 'border-green-500/40 bg-green-50 text-green-700'
-                : 'border-border text-muted-foreground',
+              published && orderHasUnpublishedChanges
+                ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700'
+                : published
+                  ? 'border-green-500/40 bg-green-50 text-green-700'
+                  : 'border-border text-muted-foreground',
             )}
           >
-            {published ? (
+            {published && orderHasUnpublishedChanges ? (
+              <>
+                <span className="size-1.5 rounded-full bg-yellow-500 shrink-0" aria-hidden />
+                {t('pageBuilder.changes')}
+              </>
+            ) : published ? (
               <>
                 <span className="size-1.5 rounded-full bg-green-600 shrink-0" aria-hidden />
                 {t('pageBuilder.live')}

@@ -455,6 +455,17 @@ export interface PublishingSettings {
   order_carousel_aspect_desktop?: CarouselAspect | null
   /** Carousel frame on mobile — `same` uses desktop ratio */
   order_carousel_aspect_mobile?: CarouselAspectMobile | null
+  /** True after an order-page edit until Publish. Independent of the landing flag. */
+  order_has_unpublished_changes?: boolean | null
+  /** Last published order-page appearance. Public /order reads this. */
+  published_order?: {
+    order_background_color: string | null
+    order_background_image_url: string | null
+    order_promo_slides: unknown
+    order_carousel_aspect_desktop: unknown
+    order_carousel_aspect_mobile: unknown
+    order_menu_config: unknown
+  } | null
   custom_domain: string | null
   /** True after DNS verify succeeds — public URLs/QR should use the custom domain */
   custom_domain_verified?: boolean

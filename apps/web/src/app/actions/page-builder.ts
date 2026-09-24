@@ -26,6 +26,10 @@ import {
   type DnsRecord,
 } from '@/lib/vercel-domains'
 import {
+  isOrderPublishedSnapshot,
+  orderSnapshotFromRow,
+} from '@/lib/order-published-snapshot'
+import {
   normalizeFacebookPixelId,
   normalizeGoogleAnalyticsId,
   normalizeGscVerification,
@@ -56,6 +60,7 @@ function normalizePublishing(row: Record<string, unknown> | null): PublishingSet
     order_carousel_aspect_mobile: normalizeCarouselAspectMobile(
       row.order_carousel_aspect_mobile ?? 'same',
     ),
+    order_has_unpublished_changes: Boolean(row.order_has_unpublished_changes),
   }
 }
 
@@ -213,10 +218,31 @@ export async function togglePublishAction(
   if (!user) return { success: false, error: 'Not authenticated' }
 
   if (page === 'order') {
+    let published_order: ReturnType<typeof orderSnapshotFromRow> | undefined
+    if (published) {
+      const { data: current } = await supabase
+        .from('publishing_settings')
+        .select(
+          'order_background_color, order_background_image_url, order_promo_slides, order_carousel_aspect_desktop, order_carousel_aspect_mobile, order_menu_config',
+        )
+        .eq('business_id', businessId)
+        .maybeSingle()
+      published_order = orderSnapshotFromRow(current as Record<string, unknown> | null)
+    }
+
     const { data, error } = await supabase
       .from('publishing_settings')
       .upsert(
-        { business_id: businessId, order_published: published },
+        {
+          business_id: businessId,
+          order_published: published,
+          ...(published
+            ? {
+                published_order: published_order as never,
+                order_has_unpublished_changes: false,
+              }
+            : {}),
+        },
         { onConflict: 'business_id' }
       )
       .select()
@@ -449,6 +475,26 @@ export async function saveOrderPageDraftAction(
     }
   }
 
+  const { data: existing } = await supabase
+    .from('publishing_settings')
+    .select(
+      'published, order_published, published_order, order_background_color, order_background_image_url, order_promo_slides, order_carousel_aspect_desktop, order_carousel_aspect_mobile, order_menu_config',
+    )
+    .eq('business_id', businessId)
+    .maybeSingle()
+
+  const existingRow = existing as Record<string, unknown> | null
+  const orderIsLive = existingRow
+    ? existingRow.order_published == null
+      ? Boolean(existingRow.published)
+      : Boolean(existingRow.order_published)
+    : false
+  // First edit after go-live: freeze what's currently public before overwriting the draft.
+  const freezeSnapshot =
+    orderIsLive && !isOrderPublishedSnapshot(existingRow?.published_order)
+      ? orderSnapshotFromRow(existingRow)
+      : undefined
+
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
@@ -460,6 +506,8 @@ export async function saveOrderPageDraftAction(
         order_carousel_aspect_desktop: desktop as unknown as never,
         order_carousel_aspect_mobile: mobile as unknown as never,
         order_menu_config: menuPayload as never,
+        order_has_unpublished_changes: true,
+        ...(freezeSnapshot ? { published_order: freezeSnapshot as never } : {}),
       },
       { onConflict: 'business_id' },
     )
@@ -483,6 +531,20 @@ export async function saveThemeAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
 
+  const { data: previous } = await supabase
+    .from('theme_settings')
+    .select('primary_color, background_color, text_color, font_family, heading_font_family')
+    .eq('business_id', businessId)
+    .maybeSingle()
+
+  const themeChanged =
+    !previous ||
+    previous.primary_color !== theme.primary_color ||
+    previous.background_color !== theme.background_color ||
+    previous.text_color !== theme.text_color ||
+    previous.font_family !== theme.font_family ||
+    (previous.heading_font_family ?? '') !== (theme.heading_font_family ?? '')
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('theme_settings')
@@ -493,8 +555,12 @@ export async function saveThemeAction(
     .select()
     .single()
 
-  await supabase.from('publishing_settings')
-    .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+  // Order-page autosave also calls this. Don't mark the landing page dirty
+  // when the theme values did not change.
+  if (themeChanged) {
+    await supabase.from('publishing_settings')
+      .upsert({ business_id: businessId, has_unpublished_changes: true }, { onConflict: 'business_id' })
+  }
 
   if (error) return { success: false, error: error.message }
   revalidatePath('/dashboard/pages')

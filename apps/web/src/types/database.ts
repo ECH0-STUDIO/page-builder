@@ -521,6 +521,8 @@ export interface Database {
           published_blocks: any | null
           published_theme: any | null
           has_unpublished_changes: boolean | null
+          order_has_unpublished_changes: boolean
+          published_order: Json | null
           enabled_locales: string[] | null
           seo_i18n: Json | null
         }
@@ -548,6 +550,8 @@ export interface Database {
           published_blocks?: any | null
           published_theme?: any | null
           has_unpublished_changes?: boolean | null
+          order_has_unpublished_changes?: boolean
+          published_order?: Json | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
         }
@@ -575,6 +579,8 @@ export interface Database {
           published_blocks?: any | null
           published_theme?: any | null
           has_unpublished_changes?: boolean | null
+          order_has_unpublished_changes?: boolean
+          published_order?: Json | null
           enabled_locales?: string[] | null
           seo_i18n?: Json | null
         }

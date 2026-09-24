@@ -509,7 +509,7 @@ export async function saveTranslationsAction(
 
     await (admin as any)
       .from('publishing_settings')
-      .update({ order_promo_slides: slides })
+      .update({ order_promo_slides: slides, order_has_unpublished_changes: true })
       .eq('business_id', businessId)
   }
 

@@ -42,6 +42,7 @@ import {
   isBusinessOpenNow,
   normalizeOpeningHours,
 } from '@/lib/opening-hours'
+import { resolveLiveOrderConfig } from '@/lib/order-published-snapshot'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -106,6 +107,9 @@ export default async function OrderPage({
       ? Boolean(pubSettings?.published)
       : Boolean(pubSettings.order_published)
   if (!orderPublished) notFound()
+
+  // Draft columns update on autosave. Guests see the last publish snapshot.
+  const liveOrder = resolveLiveOrderConfig(pubSettings as Record<string, unknown> | null)
 
   // Brand/fonts always come from live theme_settings so Order Page edits apply immediately
   const publishedBlocks = pubSettings?.published_blocks as PageBlock[] | null | undefined
@@ -195,9 +199,7 @@ export default async function OrderPage({
   // Prefer dedicated order menu config; else landing menu_grid styling with all items
   const publishedMenuBlock = (pageBlocksRaw ?? []).find(b => b.type === 'menu_grid')
   const menuConfigBase: MenuGridConfig = resolveOrderMenuConfig({
-    configured: normalizeOrderMenuConfig(
-      (pubSettings as { order_menu_config?: unknown } | null)?.order_menu_config,
-    ),
+    configured: normalizeOrderMenuConfig(liveOrder.order_menu_config),
     landingMenuGrid: publishedMenuBlock
       ? (publishedMenuBlock.config as MenuGridConfig)
       : null,
@@ -208,22 +210,15 @@ export default async function OrderPage({
   }
 
   const promoSlides = resolvePromoSlides({
-    configured: normalizeOrderPromoSlides(
-      (pubSettings as { order_promo_slides?: unknown } | null)?.order_promo_slides,
-    ),
+    configured: normalizeOrderPromoSlides(liveOrder.order_promo_slides),
     businessName: business.name,
     locale: activeContentLocale,
     primaryLocale,
   })
 
-  const carouselDesktop = normalizeCarouselAspect(
-    (pubSettings as { order_carousel_aspect_desktop?: unknown } | null)
-      ?.order_carousel_aspect_desktop,
-    '16/9',
-  )
+  const carouselDesktop = normalizeCarouselAspect(liveOrder.order_carousel_aspect_desktop, '16/9')
   const carouselMobile = normalizeCarouselAspectMobile(
-    (pubSettings as { order_carousel_aspect_mobile?: unknown } | null)
-      ?.order_carousel_aspect_mobile ?? 'same',
+    liveOrder.order_carousel_aspect_mobile ?? 'same',
   )
 
   const cookieStore = await cookies()
@@ -233,10 +228,10 @@ export default async function OrderPage({
   )
 
   const orderBgColor =
-    (pubSettings as { order_background_color?: string | null } | null)?.order_background_color
+    (typeof liveOrder.order_background_color === 'string' && liveOrder.order_background_color)
     || '#ffffff'
   const orderBgImage =
-    (pubSettings as { order_background_image_url?: string | null } | null)?.order_background_image_url
+    (typeof liveOrder.order_background_image_url === 'string' && liveOrder.order_background_image_url)
     || null
   const orderChrome = orderChromeTokens(orderBgColor, themeTokens.brandColor)
 
