@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TeamList } from './TeamList'
 import { getServerTranslation } from '@/i18n/getDictionary'
+import { IncomingInvitesSection } from '@/components/team/IncomingInvitesSection'
 
 export const metadata: Metadata = { title: 'Team Management' }
 
@@ -122,6 +123,7 @@ export default async function TeamPage() {
         </p>
       </div>
       
+      <IncomingInvitesSection />
       <TeamList members={fullTeam} pendingInvites={pendingInvites || []} businessId={business.id} />
     </div>
   )

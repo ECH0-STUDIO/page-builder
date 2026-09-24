@@ -16,6 +16,7 @@ import {
   ChevronRight,
   BellRing,
   Settings,
+  LogOut,
   Menu,
   Coins,
   Image as ImageIcon,
@@ -24,8 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { BusinessSwitcher } from './BusinessSwitcher'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import { signOutTo } from '@/lib/sign-out'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
 import { useCreditBalance } from '@/lib/react-query/hooks/useCredits'
@@ -117,9 +117,10 @@ interface SidebarProps {
   userEmail: string
   userAvatar?: string | null
   userName?: string | null
+  incomingInviteCount?: number
 }
 
-export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
+export function Sidebar({ userEmail, userAvatar, userName, incomingInviteCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
@@ -202,7 +203,12 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
             onClick={() => setMobileOpen(false)}
             className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            <Settings className="size-4" />
+            <span className="relative">
+              <Settings className="size-4" />
+              {incomingInviteCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-500" aria-hidden />
+              )}
+            </span>
             {t('sidebar.settings')}
           </Link>
         </div>
@@ -222,6 +228,17 @@ export function Sidebar({ userEmail, userAvatar, userName }: SidebarProps) {
               <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileOpen(false)
+              void signOutTo('/login')
+            }}
+            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-destructive"
+          >
+            <LogOut className="size-4" />
+            {t('sidebar.signOut')}
+          </button>
         </div>
       </div>
     </>

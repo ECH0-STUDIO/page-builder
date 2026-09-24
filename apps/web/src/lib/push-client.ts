@@ -15,6 +15,7 @@ export function urlBase64ToUint8Array(base64String: string) {
 export async function getPushRegistration(): Promise<ServiceWorkerRegistration> {
   await navigator.serviceWorker.register('/sw-push.js', { scope: '/', updateViaCache: 'none' })
   const registration = await navigator.serviceWorker.getRegistration('/')
+  void registration?.update()
   if (registration?.active?.scriptURL?.includes('sw-push.js')) {
     return registration
   }

@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AcceptInviteForm } from './AcceptInviteForm'
+import { SwitchAccountButton } from './SwitchAccountButton'
 import { I18nProvider } from '@/i18n/I18nProvider'
 import { getDictionary } from '@/i18n/getDictionary'
 
@@ -66,7 +67,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     redirect(`/login?next=/invite/${token}`)
   }
 
-  if (user.email !== invite.email) {
+  const inviteEmail = (invite.email || '').trim().toLowerCase()
+  const currentEmail = (user.email || '').trim().toLowerCase()
+  if (inviteEmail !== currentEmail) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm border border-gray-100 text-center">
@@ -75,6 +78,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             {t('invite.mismatchDesc', { email: invite.email, current: user.email || '' })}
           </p>
           <p className="text-sm text-gray-400 mt-4">{t('invite.mismatchHint')}</p>
+          <SwitchAccountButton nextPath={`/invite/${token}`} label={t('invite.switchAccount')} />
         </div>
       </div>
     )

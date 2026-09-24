@@ -55,6 +55,7 @@ function needsAuthLookup(pathname: string, isAppHost: boolean): boolean {
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
+    pathname === '/reset-password' ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     // The app host sends signed-in visitors from / to the dashboard.
@@ -221,7 +222,9 @@ export async function proxy(request: NextRequest) {
   // Supabase may redirect with ?code= on Site URL root
   const authCode = request.nextUrl.searchParams.get('code')
 
-  const user = needsAuthLookup(pathname, isAppHost) || authCode
+  const mustResetPassword = request.cookies.get('eatery_must_reset_password')?.value === '1'
+
+  const user = needsAuthLookup(pathname, isAppHost) || authCode || mustResetPassword
     ? (await supabase.auth.getUser()).data.user
     : null
 
@@ -252,6 +255,21 @@ export async function proxy(request: NextRequest) {
     if (isMarketingPath(pathname) && pathname !== '/') {
       return NextResponse.redirect(marketingPath(pathname + search))
     }
+  }
+
+  if (mustResetPassword && !user) {
+    supabaseResponse.cookies.set('eatery_must_reset_password', '', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 0,
+    })
+  }
+
+  if (mustResetPassword && user && pathname !== '/reset-password') {
+    const resetUrl = new URL('/reset-password', request.url)
+    if (isMarketingHost) return NextResponse.redirect(appPath('/reset-password'))
+    return NextResponse.redirect(resetUrl)
   }
 
   if ((pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) && !user) {

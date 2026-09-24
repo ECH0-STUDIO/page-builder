@@ -1353,6 +1353,18 @@
       "successTitle": "Kiểm tra email",
       "successDescription": "Chúng tôi đã gửi liên kết đặt lại mật khẩu đến",
       "backToSignIn": "Quay lại đăng nhập"
+    },
+    "reset": {
+      "title": "Chọn mật khẩu mới",
+      "description": "Liên kết này đã đăng nhập bạn. Hãy đặt mật khẩu mới trước khi tiếp tục. Tài khoản của bạn là",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu",
+      "save": "Lưu mật khẩu",
+      "saving": "Đang lưu…",
+      "minLength": "Mật khẩu phải có ít nhất 6 ký tự.",
+      "mismatch": "Mật khẩu không khớp.",
+      "needLink": "Hãy mở liên kết đặt lại trong email. Nếu đã hết hạn, hãy yêu cầu liên kết mới.",
+      "request": "Yêu cầu liên kết đặt lại"
     }
   },
   "cart": {
@@ -1531,7 +1543,13 @@
     "joinTitle": "Tham gia nhóm",
     "joinDesc": "Bạn được mời tham gia {business} với vai trò {role}.",
     "accept": "Chấp nhận lời mời",
-    "acceptedToast": "Đã chấp nhận lời mời! Chào mừng bạn."
+    "decline": "Từ chối",
+    "acceptedToast": "Đã chấp nhận lời mời! Chào mừng bạn.",
+    "declinedToast": "Đã từ chối lời mời.",
+    "incomingTitle": "Lời mời dành cho bạn",
+    "incomingHint": "Chấp nhận để tham gia doanh nghiệp đó, hoặc từ chối để bỏ qua.",
+    "incomingDesc": "Bạn được mời tham gia với vai trò {role}.",
+    "switchAccount": "Đăng xuất và dùng email được mời"
   },
   "translations": {
     "title": "Bản dịch",

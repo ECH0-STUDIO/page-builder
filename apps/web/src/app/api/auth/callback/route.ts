@@ -12,7 +12,16 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const response = NextResponse.redirect(`${origin}${next}`)
+      if (next === '/reset-password') {
+        response.cookies.set('eatery_must_reset_password', '1', {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 60 * 30,
+        })
+      }
+      return response
     }
   }
 

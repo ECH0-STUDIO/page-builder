@@ -1353,6 +1353,18 @@
       "successTitle": "Check your email",
       "successDescription": "We sent a password reset link to",
       "backToSignIn": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "description": "This link signed you in. Set a new password before continuing. Your account is",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "save": "Save password",
+      "saving": "Saving…",
+      "minLength": "Password must be at least 6 characters.",
+      "mismatch": "Passwords do not match.",
+      "needLink": "Open the reset link from your email. If it expired, request a new one.",
+      "request": "Request a reset link"
     }
   },
   "cart": {
@@ -1531,7 +1543,13 @@
     "joinTitle": "Join Team",
     "joinDesc": "You've been invited to join {business} as a {role}.",
     "accept": "Accept Invitation",
-    "acceptedToast": "Invitation accepted! Welcome to the team."
+    "decline": "Decline",
+    "acceptedToast": "Invitation accepted! Welcome to the team.",
+    "declinedToast": "Invitation declined.",
+    "incomingTitle": "Invitations for you",
+    "incomingHint": "Accept to join that business, or decline to dismiss it.",
+    "incomingDesc": "You were invited to join as {role}.",
+    "switchAccount": "Log out and use the invited email"
   },
   "translations": {
     "title": "Translations",

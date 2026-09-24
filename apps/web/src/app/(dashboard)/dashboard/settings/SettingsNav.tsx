@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation'
 import { Shield, Globe, Users, CreditCard, LogOut, Languages } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
-import { createClient } from '@/lib/supabase/client'
 import { useBusiness } from '@/context/BusinessContext'
 import { canAccessSettingsHref } from '@/lib/dashboard-access'
+import { signOutTo } from '@/lib/sign-out'
 
-export function SettingsNav() {
+export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?: number }) {
   const pathname = usePathname()
   const { t } = useTranslation()
   const { currentBusiness } = useBusiness()
@@ -44,16 +44,7 @@ export function SettingsNav() {
   ].filter(item => canAccessSettingsHref(item.href, role))
 
   async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    try {
-      localStorage.removeItem('eatery_current_business_id')
-    } catch {
-      // ignore
-    }
-    document.cookie = 'eatery_current_business_id=; path=/; max-age=0'
-    // Full navigation clears React Query cache so the next login cannot show the previous role's nav.
-    window.location.assign('/login')
+    await signOutTo('/login')
   }
 
   return (
@@ -74,11 +65,14 @@ export function SettingsNav() {
             >
               <item.icon className="h-4 w-4" />
               {item.title}
+              {item.href === '/dashboard/settings/team' && incomingInviteCount > 0 && (
+                <span className="ml-auto size-2 rounded-full bg-red-500" aria-hidden />
+              )}
             </Link>
           )
         })}
       </div>
-      <div className="hidden md:block pt-4 mt-4 border-t">
+      <div className="pt-4 mt-4 border-t">
         <button
           onClick={handleSignOut}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-destructive shrink-0"

@@ -26,8 +26,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || 'Live Orders', {
       body: payload.body || '',
-      icon: '/vercel.svg',
-      badge: '/vercel.svg',
+      icon: '/logo-icon.png',
+      badge: '/logo-icon.png',
       tag: 'eatery-live-' + Date.now(),
       renotify: true,
       requireInteraction: true,

@@ -48,7 +48,7 @@ export function showLocalOrderAlert(title: string, body: string) {
   try {
     new Notification(title, {
       body,
-      icon: '/vercel.svg',
+      icon: '/logo-icon.png',
       tag: `eatery-alert-${Date.now()}`,
     })
   } catch {

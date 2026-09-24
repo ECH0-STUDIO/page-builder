@@ -8,6 +8,7 @@ import { getDictionary } from '@/i18n/getDictionary'
 import { GlobalNavLoader } from '@/components/GlobalNavLoader'
 import { Suspense } from 'react'
 import { getActiveBusiness, getAllUserBusinessesServer } from '@/lib/business-server'
+import { listIncomingInvites } from '@/lib/pending-invitations'
 
 export default async function DashboardLayout({
   children,
@@ -34,6 +35,7 @@ export default async function DashboardLayout({
 
   // Fetch ALL businesses the user has access to for the Switcher
   const businesses = await getAllUserBusinessesServer(user.id)
+  const incomingInvites = await listIncomingInvites(user.email)
 
   // Load the dictionary for the current session's language
   const dictionary = await getDictionary()
@@ -47,6 +49,7 @@ export default async function DashboardLayout({
               userEmail={user.email ?? ''}
               userAvatar={profile?.avatar_url}
               userName={profile?.full_name}
+              incomingInviteCount={incomingInvites.length}
             />
           }
         >

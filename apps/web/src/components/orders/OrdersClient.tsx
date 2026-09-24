@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrders } from '@/lib/react-query/hooks/useOrders'
@@ -147,6 +147,14 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   const [removingOrderId, setRemovingOrderId] = useState<string | null>(null)
   const [removeBusy, setRemoveBusy] = useState(false)
   const supabase = useMemo(() => createClient(), [])
+  const knownOrderIds = useRef<Set<string> | null>(null)
+  const alertedOrderIds = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    const prime = () => primeOrderAlertSound()
+    window.addEventListener('pointerdown', prime, { once: true })
+    return () => window.removeEventListener('pointerdown', prime)
+  }, [])
 
   const setOrders = useCallback((updater: (prev: Order[]) => Order[]) => {
     queryClient.setQueryData(['orders', businessId], (old: Order[] = []) => updater(old))
@@ -165,7 +173,9 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${businessId}` },
-        () => {
+        (payload) => {
+          const id = typeof payload.new?.id === 'string' ? payload.new.id : ''
+          if (id) alertedOrderIds.current.add(id)
           toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
           alertNewOrder(t('orders.newOrderReceived'))
           refreshLiveBoardSoon()
@@ -219,6 +229,23 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
       void supabase.removeChannel(channel)
     }
   }, [boardMode, businessId, refreshLiveBoard, refreshLiveBoardSoon, setOrders, setServiceRequests, supabase, t])
+
+  useEffect(() => {
+    if (loading) return
+    const ids = orders.map(order => order.id)
+    if (knownOrderIds.current === null) {
+      knownOrderIds.current = new Set(ids)
+      return
+    }
+    const fresh = orders.filter(order => !knownOrderIds.current!.has(order.id))
+    for (const id of ids) knownOrderIds.current.add(id)
+    if (boardMode !== 'today' || fresh.length === 0) return
+    const unseen = fresh.filter(order => order.status !== 'cancelled' && !alertedOrderIds.current.has(order.id))
+    if (unseen.length === 0) return
+    for (const order of unseen) alertedOrderIds.current.add(order.id)
+    toast.success(t('orders.newOrderReceived'), { duration: 5000, icon: '🔔' })
+    alertNewOrder(t('orders.newOrderReceived'))
+  }, [orders, boardMode, loading, t])
 
   const openRequests = serviceRequests.filter(r => r.status === 'open')
 
@@ -487,7 +514,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
     : ''
 
   const renderColumn = (title: string, icon: React.ReactNode, list: Order[], statusColor: string) => (
-    <div className="flex flex-col flex-1 min-w-[320px] bg-gray-50/50 rounded-2xl p-4 border border-gray-100/80">
+    <div className="flex flex-col w-full md:flex-1 md:min-w-[320px] md:min-h-0 bg-gray-50/50 rounded-2xl p-4 border border-gray-100/80">
       <div className="flex items-center gap-2 mb-4 px-2">
         <div className={`p-1.5 rounded-lg ${statusColor}`}>{icon}</div>
         <h2 className="font-bold text-gray-900 text-lg">{title}</h2>
@@ -496,7 +523,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
         </span>
       </div>
 
-      <div className="flex flex-col gap-3 overflow-y-auto">
+      <div className="flex flex-col gap-3 md:flex-1 md:min-h-0 md:overflow-y-auto">
         {list.length === 0 ? (
           <div className="text-center py-12 text-sm text-gray-400 font-medium border-2 border-dashed border-gray-200 rounded-xl">
             {t('orders.noOrders')}
@@ -625,7 +652,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
   )
 
   return (
-    <div className="p-4 md:p-6 h-[calc(100vh-4rem)] flex flex-col">
+    <div className="p-4 md:p-6 flex flex-col md:h-[calc(100vh-4rem)]">
       <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-6">
         <div className="flex flex-col order-1 md:order-none">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">
@@ -802,7 +829,7 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
             )}
           </div>
 
-          <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:flex-1 md:min-h-0 md:overflow-x-auto pb-4">
             {renderColumn(t('orders.received'), <Clock className="size-5 text-blue-600" />, pending, 'bg-blue-100')}
             {renderColumn(t('orders.completed'), <CheckCircle2 className="size-5 text-amber-600" />, completed, 'bg-amber-100')}
             {renderColumn(t('orders.paid'), <DollarSign className="size-5 text-green-600" />, paid, 'bg-green-100')}
