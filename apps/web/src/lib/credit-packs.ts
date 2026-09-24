@@ -20,8 +20,15 @@ export const STORAGE_CREDITS_PER_20MB = 1
 /** Monthly cost per additional storefront content locale (Translation UI model). Primary locale is free. */
 export const LOCALE_CREDITS_PER_MONTH = 20
 
-/** AI bulk translate: credits = max(1, ceil(wordCount / AI_TRANSLATE_WORDS_PER_CREDIT)). */
-export const AI_TRANSLATE_WORDS_PER_CREDIT = 300
+/**
+ * AI bulk translate: credits = max(1, ceil(wordCount / AI_TRANSLATE_WORDS_PER_CREDIT)).
+ *
+ * At the 100-credit pack rate a credit is worth ~900₫. 300 words/credit left a
+ * thin margin once Gemini's thinking tokens (billed at the output rate) were
+ * counted, and a negative one on longer menus. 200 keeps AI translate clearly
+ * profitable while staying far cheaper for the owner than translating by hand.
+ */
+export const AI_TRANSLATE_WORDS_PER_CREDIT = 200
 
 export function estimateTranslateCredits(wordCount: number): number {
   if (wordCount <= 0) return 0
