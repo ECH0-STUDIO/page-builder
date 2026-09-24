@@ -12,7 +12,6 @@ import {
   Check,
   ChevronDown,
   ExternalLink,
-  Globe,
   Loader2,
   Monitor,
   PanelLeft,
@@ -347,7 +346,7 @@ export function PuckHeaderActions({
         title={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
         aria-label={previewMode ? t('pageBuilder.closePreview') : t('pageBuilder.preview')}
       >
-        <Globe className="size-4" />
+        <Eye className="size-4" />
       </button>
 
       {published && (
