@@ -49,3 +49,41 @@ export async function sendTeamInvite(params: {
     return { error: err.message || 'Failed to send email' }
   }
 }
+
+export async function sendPasswordResetEmail(params: {
+  toEmail: string
+  resetLink: string
+  subject: string
+  intro: string
+  button: string
+}) {
+  const html = `<div style="font-family:sans-serif;line-height:1.5;color:#111">
+    <p>${params.intro}</p>
+    <p><a href="${params.resetLink}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px">${params.button}</a></p>
+    <p style="color:#666;font-size:13px">${params.resetLink}</p>
+  </div>`
+
+  try {
+    if (!resend) {
+      console.log('[password-reset] email sender is not configured')
+      return { error: 'Email is not configured.' }
+    }
+
+    const { error } = await resend.emails.send({
+      from: `Eatery <${SENDER_EMAIL}>`,
+      to: params.toEmail,
+      subject: params.subject,
+      html,
+    })
+
+    if (error) {
+      console.error('Resend password reset error:', error)
+      return { error: error.message }
+    }
+
+    return { success: true }
+  } catch (err: any) {
+    console.error('Failed to send password reset email:', err)
+    return { error: err.message || 'Failed to send email' }
+  }
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { completePasswordReset } from '@/app/actions/password-reset'
+import { completePasswordReset, establishRecoverySession } from '@/app/actions/password-reset'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,10 +21,30 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    void supabase.auth.getUser().then(({ data }) => {
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+
+    async function load() {
+      if (tokenHash && (type === 'recovery' || type === 'magiclink')) {
+        const established = await establishRecoverySession(tokenHash)
+        window.history.replaceState({}, '', '/reset-password')
+        if (established.error) {
+          setError(established.error)
+          setReady(true)
+          return
+        }
+        setEmail(established.email ?? null)
+        setReady(true)
+        return
+      }
+
+      const { data } = await supabase.auth.getUser()
       setEmail(data.user?.email ?? null)
       setReady(true)
-    })
+    }
+
+    void load()
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {

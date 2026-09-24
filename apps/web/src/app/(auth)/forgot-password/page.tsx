@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { getAuthCallbackUrl } from '@/lib/site-urls'
+import { requestPasswordReset } from '@/app/actions/password-reset'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,23 +16,24 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'reset_link') setError(t('auth.forgot.linkFailed'))
+  }, [t])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getAuthCallbackUrl('/reset-password'),
-    })
-
-    if (error) {
-      setError(error.message)
+    const result = await requestPasswordReset(email)
+    if (result.error) {
+      setError(result.error)
       setLoading(false)
-    } else {
-      setSent(true)
-      setLoading(false)
+      return
     }
+    setSent(true)
+    setLoading(false)
   }
 
   if (sent) {
@@ -44,7 +44,8 @@ export default function ForgotPasswordPage() {
           <CardTitle className="text-xl">{t('auth.forgot.successTitle')}</CardTitle>
           <CardDescription>
             {t('auth.forgot.successDescription')}{' '}
-            <span className="font-medium text-foreground">{email}</span>.
+            <span className="font-medium text-foreground">{email}</span>.{' '}
+            {t('auth.forgot.successHint')}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">

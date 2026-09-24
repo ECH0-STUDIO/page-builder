@@ -8,8 +8,30 @@ export async function GET(request: Request) {
   const rawNext = searchParams.get('next') ?? '/dashboard'
   const next = rawNext.startsWith('/') && !rawNext.includes('://') ? rawNext : '/dashboard'
 
+  const tokenHash = searchParams.get('token_hash')
+  const otpType = searchParams.get('type')
+  const supabase = await createClient()
+
+  if (tokenHash && (otpType === 'recovery' || otpType === 'magiclink' || otpType === 'signup' || otpType === 'invite' || otpType === 'email')) {
+    const { error } = await supabase.auth.verifyOtp({
+      type: otpType,
+      token_hash: tokenHash,
+    })
+    if (!error) {
+      const response = NextResponse.redirect(`${origin}${otpType === 'recovery' ? '/reset-password' : next}`)
+      if (otpType === 'recovery') {
+        response.cookies.set('eatery_must_reset_password', '1', {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 60 * 30,
+        })
+      }
+      return response
+    }
+  }
+
   if (code) {
-    const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       const response = NextResponse.redirect(`${origin}${next}`)
@@ -23,6 +45,10 @@ export async function GET(request: Request) {
       }
       return response
     }
+  }
+
+  if (next === '/reset-password' || otpType === 'recovery') {
+    return NextResponse.redirect(`${origin}/forgot-password?error=reset_link`)
   }
 
   // Auth error — redirect to login with error param

@@ -1352,6 +1352,11 @@
       "signIn": "Đăng nhập",
       "successTitle": "Kiểm tra email",
       "successDescription": "Chúng tôi đã gửi liên kết đặt lại mật khẩu đến",
+      "successHint": "Hãy mở email mới nhất. Liên kết dùng được trên mọi thiết bị.",
+      "linkFailed": "Liên kết đặt lại không dùng được. Hãy yêu cầu liên kết mới và mở email mới nhất.",
+      "emailSubject": "Đặt lại mật khẩu Eatery",
+      "emailIntro": "Hãy chọn mật khẩu mới cho tài khoản Eatery. Liên kết này dùng được trên mọi thiết bị và sẽ hết hạn sớm.",
+      "emailButton": "Chọn mật khẩu mới",
       "backToSignIn": "Quay lại đăng nhập"
     },
     "reset": {

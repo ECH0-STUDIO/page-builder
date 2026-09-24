@@ -1352,6 +1352,11 @@
       "signIn": "Sign in",
       "successTitle": "Check your email",
       "successDescription": "We sent a password reset link to",
+      "successHint": "Open the newest email. It works on any device.",
+      "linkFailed": "That reset link did not work. Request a new one and open the newest email.",
+      "emailSubject": "Reset your Eatery password",
+      "emailIntro": "Choose a new password for your Eatery account. This link works on any device and expires soon.",
+      "emailButton": "Choose a new password",
       "backToSignIn": "Back to sign in"
     },
     "reset": {
