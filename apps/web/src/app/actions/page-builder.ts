@@ -152,6 +152,8 @@ export async function savePageBlocksAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
@@ -216,6 +218,8 @@ export async function togglePublishAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   if (page === 'order') {
     let published_order: ReturnType<typeof orderSnapshotFromRow> | undefined
@@ -294,6 +298,8 @@ export async function saveOrderPromoSlidesAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const cleaned = normalizeOrderPromoSlides(slides).slice(0, MAX_ORDER_PROMO_SLIDES)
 
@@ -323,6 +329,8 @@ export async function saveOrderMenuConfigAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const cleaned = normalizeOrderMenuConfig(config)
   if (!cleaned) return { success: false, error: 'Invalid menu config' }
@@ -365,6 +373,8 @@ export async function clearOrderMenuConfigAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const { error } = await supabase
     .from('publishing_settings')
@@ -390,6 +400,8 @@ export async function saveOrderAppearanceAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const { data, error } = await supabase
     .from('publishing_settings')
@@ -420,6 +432,8 @@ export async function saveOrderCarouselAspectAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const desktop = normalizeCarouselAspect(fields.desktop, '16/9')
   const mobile = normalizeCarouselAspectMobile(fields.mobile)
@@ -458,6 +472,8 @@ export async function saveOrderPageDraftAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const slides = normalizeOrderPromoSlides(draft.order_promo_slides).slice(0, MAX_ORDER_PROMO_SLIDES)
   const desktop = normalizeCarouselAspect(draft.order_carousel_aspect_desktop, '16/9')
@@ -530,6 +546,8 @@ export async function saveThemeAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const { data: previous } = await supabase
     .from('theme_settings')
@@ -577,6 +595,8 @@ export async function saveNavbarAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
@@ -604,6 +624,8 @@ export async function saveFooterAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const { data, error } = await supabase
     .from('theme_settings')
@@ -671,6 +693,8 @@ export async function savePublishingSettingsAction(
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
+    const access = await assertOwnerOrManager(supabase, user.id, businessId)
+    if (!access.ok) return { success: false, error: access.error }
 
     if ('custom_domain' in fields) {
       fields.custom_domain_verified = false
@@ -864,6 +888,11 @@ export async function getCustomDomainSetupAction(businessId: string): Promise<{
   refundedCredits?: number
 }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { domain: null, verified: false, dnsRecords: [] }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { domain: null, verified: false, dnsRecords: [] }
+
   const adminClient = createAdminClient()
   const { data: pub } = await (supabase as any)
     .from('publishing_settings')
@@ -922,6 +951,8 @@ export async function connectCustomDomainAction(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const normalized = domain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
   if (!normalized || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(normalized)) {
@@ -981,6 +1012,8 @@ export async function disconnectCustomDomainAction(businessId: string): Promise<
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   const { data: existing } = await (supabase as any)
     .from('publishing_settings')
@@ -1018,6 +1051,8 @@ export async function verifyDnsAction(domain: string, businessId: string): Promi
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated' }
+  const access = await assertOwnerOrManager(supabase, user.id, businessId)
+  if (!access.ok) return { success: false, error: access.error }
 
   if (!isVercelDomainsConfigured()) {
     return { success: false, error: 'Custom domains chưa được cấu hình trên máy chủ.' }

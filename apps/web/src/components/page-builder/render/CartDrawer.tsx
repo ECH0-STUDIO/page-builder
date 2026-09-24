@@ -4,7 +4,7 @@
  * CartDrawer — floating cart button + side drawer with Current / Placed tabs
  */
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams, usePathname } from 'next/navigation'
 import { ShoppingBag, Plus, Minus, Trash2, ChevronRight, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
@@ -87,6 +87,22 @@ interface CartDrawerProps {
 
 type DrawerTab = 'current' | 'placed'
 
+/** randomUUID is unavailable on http:// origins and older in-app browsers. */
+function createSubmitToken(): string {
+  const cryptoApi = globalThis.crypto
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID()
+  const bytes = new Uint8Array(16)
+  if (cryptoApi?.getRandomValues) {
+    cryptoApi.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 function formatOrderTime(timestamp: number, locale: SupportedLocale): string {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
     weekday: 'short',
@@ -119,6 +135,7 @@ export function CartDrawer({
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<DrawerTab>('current')
   const [justPlaced, setJustPlaced] = useState(false)
+  const submitTokenRef = useRef<string | null>(null)
   const [tableNumber, setTableNumber] = useState(tableFromUrl)
   const [tableHydrated, setTableHydrated] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -227,25 +244,46 @@ export function CartDrawer({
     const tableForOrder = effectiveTable
     writeRememberedTable(businessId, tableForOrder)
 
+    // One token per checkout attempt, set synchronously so a double-tap reuses it
+    // and the server resolves both calls to a single order. Cleared on success.
+    if (!submitTokenRef.current) {
+      submitTokenRef.current = createSubmitToken()
+    }
+    const submitToken = submitTokenRef.current
+
     startTransition(async () => {
-      const res = await createOrderAction(businessId, tableForOrder, items, totalPrice)
-      if (res.success) {
-        const orderData: GuestPastOrder = {
-          id: res.orderId ?? `local-${Date.now()}`,
-          items,
-          total: totalPrice,
-          timestamp: Date.now(),
-          table: tableForOrder,
+      try {
+        const res = await createOrderAction(businessId, tableForOrder, items, totalPrice, '', submitToken)
+        if (res.success) {
+          submitTokenRef.current = null
+          const orderData: GuestPastOrder = {
+            id: res.orderId ?? `local-${Date.now()}`,
+            items,
+            total: totalPrice,
+            timestamp: Date.now(),
+            table: tableForOrder,
+          }
+          const updatedOrders = [orderData, ...pastOrders]
+          setPastOrders(updatedOrders)
+          savePastOrders(businessId, tableForOrder, updatedOrders)
+          clearCart()
+          setJustPlaced(true)
+          setTab('placed')
+        } else {
+          const code = 'code' in res ? res.code : undefined
+          if (res.error === 'CLOSED' || code === 'CLOSED') {
+            toast.error(t('cart.closedForOrders'))
+          } else if (code === 'TOO_MANY_ORDERS') {
+            toast.error(t('cart.tooManyOrders'))
+          } else {
+            toast.error(`${t('cart.placeOrderFailed')} ${res.error}`)
+          }
         }
-        const updatedOrders = [orderData, ...pastOrders]
-        setPastOrders(updatedOrders)
-        savePastOrders(businessId, tableForOrder, updatedOrders)
-        clearCart()
-        setJustPlaced(true)
-        setTab('placed')
-      } else {
-        const closed = res.error === 'CLOSED' || ('code' in res && res.code === 'CLOSED')
-        toast.error(closed ? t('cart.closedForOrders') : `${t('cart.placeOrderFailed')} ${res.error}`)
+      } catch (error) {
+        // Offline or dropped connection — keep the cart and the token so a retry
+        // cannot create a second order.
+        console.error('createOrderAction failed:', error)
+        toast.error(t('cart.networkErrorRetry'))
       }
     })
   }

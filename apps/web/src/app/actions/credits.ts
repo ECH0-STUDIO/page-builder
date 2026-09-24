@@ -287,10 +287,21 @@ export async function billCustomDomainIfDueAction(businessId: string): Promise<{
   const nextBill = new Date()
   nextBill.setDate(nextBill.getDate() + 30)
 
-  await (adminClient as any)
+  const { error: cycleError } = await (adminClient as any)
     .from('publishing_settings')
     .update({ custom_domain_billed_until: nextBill.toISOString() })
     .eq('business_id', businessId)
+
+  // Without an advanced billed_until the next dashboard load charges again.
+  if (cycleError) {
+    console.error('billCustomDomainIfDueAction cycle update failed, refunding:', cycleError)
+    await grantCreditsInternal(
+      businessId,
+      CUSTOM_DOMAIN_CREDITS_PER_MONTH,
+      `Hoàn Credits tên miền (không cập nhật được chu kỳ)`,
+    )
+    return { success: false, error: cycleError.message }
+  }
 
   return { success: true, billed: true }
 }
@@ -373,13 +384,25 @@ export async function billStorageIfDueAction(
   const nextDate = new Date()
   nextDate.setDate(nextDate.getDate() + 30)
 
-  await (adminClient as any)
+  const { error: cycleError } = await (adminClient as any)
     .from('storage_subscriptions')
     .update({
       current_quota_mb: Math.ceil(usedMb),
       next_billing_date: nextDate.toISOString(),
     })
     .eq('business_id', businessId)
+
+  // The debit already happened. If the cycle date did not advance, the next
+  // gallery visit would charge again — refund now rather than double-bill.
+  if (cycleError) {
+    console.error('billStorageIfDueAction cycle update failed, refunding:', cycleError)
+    await grantCreditsInternal(
+      businessId,
+      creditsNeeded,
+      `Hoàn Credits lưu trữ ảnh (không cập nhật được chu kỳ)`,
+    )
+    return { success: false, error: cycleError.message }
+  }
 
   return { success: true, billed: true, creditsCharged: creditsNeeded }
 }

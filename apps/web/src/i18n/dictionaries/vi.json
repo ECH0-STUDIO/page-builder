@@ -1392,6 +1392,8 @@
     "enterTableNumber": "Vui lòng nhập số bàn",
     "placeOrderFailed": "Đặt hàng thất bại:",
     "closedForOrders": "Hiện quán đang đóng cửa. Vui lòng đặt món trong giờ mở cửa.",
+    "tooManyOrders": "Bạn đặt món quá nhanh. Vui lòng đợi một chút rồi thử lại.",
+    "networkErrorRetry": "Mất kết nối. Giỏ hàng vẫn được giữ — vui lòng thử lại.",
     "soldOut": "Hết hàng",
     "required": "Bắt buộc",
     "optional": "Tùy chọn",

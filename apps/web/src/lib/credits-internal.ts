@@ -6,6 +6,26 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { CUSTOM_DOMAIN_CREDITS_PER_MONTH } from '@/lib/credit-packs'
 
+/**
+ * True when the Postgres function does not exist yet, so callers can fall back
+ * to the legacy read-modify-write path until 058_atomic_credit_ledger.sql runs.
+ */
+function isMissingFunction(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  // PGRST202: PostgREST could not find the function. 42883: undefined_function.
+  return error.code === 'PGRST202' || error.code === '42883'
+}
+
+function revalidateCreditViews() {
+  try {
+    revalidatePath('/dashboard/settings/credits')
+    revalidatePath('/dashboard/settings/languages')
+    revalidatePath('/dashboard')
+  } catch {
+    // Safe to ignore when called during RSC render.
+  }
+}
+
 /** Deduct credits from a business balance. Returns false if insufficient balance. */
 export async function deductCreditsInternal(
   businessId: string,
@@ -29,6 +49,29 @@ export async function deductCreditsInternal(
   try {
     const adminClient = createAdminClient()
 
+    const { data: rpcData, error: rpcError } = await (adminClient as any).rpc(
+      'deduct_credits_atomic',
+      { p_business_id: businessId, p_amount: amount, p_description: description },
+    )
+
+    if (!rpcError) {
+      const row = Array.isArray(rpcData) ? rpcData[0] : rpcData
+      const balance = Number(row?.balance ?? 0)
+      if (!row?.ok) {
+        return { success: false, error: 'Không đủ Credits. Vui lòng nạp thêm.', balance }
+      }
+      revalidateCreditViews()
+      return { success: true, balance }
+    }
+
+    if (!isMissingFunction(rpcError)) {
+      console.error('deduct_credits_atomic error:', rpcError)
+      return { success: false, error: rpcError.message || 'Failed to deduct credits' }
+    }
+
+    // ── Legacy path: only reached before the atomic migration is applied ──
+    console.warn('deduct_credits_atomic missing — falling back to non-atomic deduct')
+
     const { data: currentBalance } = await (adminClient as any)
       .from('credit_balances')
       .select('balance')
@@ -41,10 +84,14 @@ export async function deductCreditsInternal(
     }
 
     const nextBalance = balance - amount
-    await (adminClient as any)
+    const { error: updateError } = await (adminClient as any)
       .from('credit_balances')
       .update({ balance: nextBalance })
       .eq('business_id', businessId)
+
+    if (updateError) {
+      return { success: false, error: updateError.message, balance }
+    }
 
     await (adminClient as any).from('credit_transactions').insert({
       business_id: businessId,
@@ -52,13 +99,7 @@ export async function deductCreditsInternal(
       description,
     })
 
-    try {
-      revalidatePath('/dashboard/settings/credits')
-      revalidatePath('/dashboard/settings/languages')
-      revalidatePath('/dashboard')
-    } catch {
-      // Safe to ignore when called during RSC render.
-    }
+    revalidateCreditViews()
     return { success: true, balance: nextBalance }
   } catch (error) {
     console.error('deductCreditsInternal error:', error)
@@ -76,6 +117,24 @@ export async function grantCreditsInternal(
 
   try {
     const adminClient = createAdminClient()
+
+    const { error: rpcError } = await (adminClient as any).rpc(
+      'grant_credits_atomic',
+      { p_business_id: businessId, p_amount: amount, p_description: description },
+    )
+
+    if (!rpcError) {
+      revalidateCreditViews()
+      return { success: true }
+    }
+
+    if (!isMissingFunction(rpcError)) {
+      console.error('grant_credits_atomic error:', rpcError)
+      return { success: false, error: rpcError.message || 'Failed to grant credits' }
+    }
+
+    // ── Legacy path: only reached before the atomic migration is applied ──
+    console.warn('grant_credits_atomic missing — falling back to non-atomic grant')
 
     const { data: currentBalance } = await (adminClient as any)
       .from('credit_balances')
@@ -102,11 +161,7 @@ export async function grantCreditsInternal(
       description,
     })
 
-    try {
-      revalidatePath('/dashboard/settings/credits')
-    } catch {
-      // Safe to ignore when called during RSC render.
-    }
+    revalidateCreditViews()
     return { success: true }
   } catch (error) {
     console.error('grantCreditsInternal error:', error)
