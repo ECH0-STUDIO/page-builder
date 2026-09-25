@@ -36,7 +36,7 @@ export async function getGalleryImagesAction(businessId: string) {
       supabase
         .from('publishing_settings')
         .select(
-          'favicon_url, apple_touch_icon_url, og_image_url, order_background_image_url, order_promo_slides, published_blocks, published_theme',
+          'favicon_url, apple_touch_icon_url, og_image_url, order_background_image_url, order_promo_slides, published_blocks, published_theme, published_seo',
         )
         .eq('business_id', businessId)
         .single(),
@@ -74,6 +74,7 @@ export async function getGalleryImagesAction(businessId: string) {
       activeUrlsString += JSON.stringify(p.order_promo_slides || {}) + ' '
       activeUrlsString += JSON.stringify(p.published_blocks || {}) + ' '
       activeUrlsString += JSON.stringify(p.published_theme || {}) + ' '
+      activeUrlsString += JSON.stringify(p.published_seo || {}) + ' '
     }
     if (theme.data) {
       const th = theme.data as Record<string, unknown>

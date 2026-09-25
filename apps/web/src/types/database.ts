@@ -523,6 +523,7 @@ export interface Database {
           tiktok_pixel_id: string | null
           published_blocks: any | null
           published_theme: any | null
+          published_seo: Json | null
           has_unpublished_changes: boolean | null
           order_has_unpublished_changes: boolean
           published_order: Json | null
@@ -552,6 +553,7 @@ export interface Database {
           tiktok_pixel_id?: string | null
           published_blocks?: any | null
           published_theme?: any | null
+          published_seo?: Json | null
           has_unpublished_changes?: boolean | null
           order_has_unpublished_changes?: boolean
           published_order?: Json | null
@@ -581,6 +583,7 @@ export interface Database {
           tiktok_pixel_id?: string | null
           published_blocks?: any | null
           published_theme?: any | null
+          published_seo?: Json | null
           has_unpublished_changes?: boolean | null
           order_has_unpublished_changes?: boolean
           published_order?: Json | null

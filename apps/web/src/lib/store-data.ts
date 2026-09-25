@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { resolveLiveSeo } from '@/lib/published-seo'
 
 /**
  * Storefront rendering used to load the same two rows several times per request:
@@ -30,5 +31,10 @@ export const getStoreBySlug = cache(async (slug: string): Promise<{
     .eq('business_id', business.id)
     .maybeSingle()
 
-  return { business, publishing }
+  return {
+    business,
+    publishing: publishing
+      ? resolveLiveSeo(publishing as Record<string, unknown>)
+      : null,
+  }
 })

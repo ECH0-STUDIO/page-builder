@@ -43,6 +43,7 @@ import {
 import type { Business } from '@/lib/business'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import type { SaveStatus } from '../PublishBar'
+import { PUBLISHED_SEO_KEYS } from '@/lib/published-seo'
 
 import type { PaymentSettings } from '@/lib/vietqr-utils'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
@@ -432,6 +433,14 @@ export function PuckEditorShell({
 
   const handlePublishingChange = useCallback(
     (updated: Partial<PublishingSettings>) => {
+      const metaChanged = (Object.keys(updated) as (keyof PublishingSettings)[]).some((key) => {
+        if (!(PUBLISHED_SEO_KEYS as readonly string[]).includes(key)) return false
+        const nextVal = updated[key] ?? null
+        const prevVal = publishingSettings?.[key] ?? null
+        return nextVal !== prevVal
+      })
+      if (metaChanged && published) setHasUnpublishedChanges(true)
+
       pendingPubRef.current = { ...pendingPubRef.current, ...updated }
       setPublishingSettings(prev => {
         const next = prev
@@ -442,13 +451,17 @@ export function PuckEditorShell({
           const payload = pendingPubRef.current
           pendingPubRef.current = {}
           savePublishingSettingsAction(business.id, payload).then(res => {
-            if (!res.success) toast.error(res.error)
+            if (!res.success) {
+              toast.error(res.error)
+              return
+            }
+            if (res.data?.has_unpublished_changes) setHasUnpublishedChanges(true)
           })
         }, 800)
         return next
       })
     },
-    [business.id],
+    [business.id, published, publishingSettings],
   )
 
   const applyTemplate = useCallback(

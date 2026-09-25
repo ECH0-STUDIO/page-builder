@@ -24,6 +24,7 @@ import {
 } from '@/lib/translation-fields'
 import type { PageBlock, NavbarConfig, FooterConfig } from '@/components/page-builder/types'
 import { normalizeOrderPromoSlides, type OrderPromoSlide } from '@/components/order-page/promo-slides'
+import { isPublishedSeoSnapshot, patchPublishedSeoLocale } from '@/lib/published-seo'
 import { defaultFooterConfig, defaultNavbarConfig } from '@/components/page-builder/types'
 
 type ActionResult<T = void> =
@@ -537,7 +538,7 @@ export async function saveTranslationsAction(
   if (Object.keys(seoPatches).length) {
     const { data: pub } = await (admin as any)
       .from('publishing_settings')
-      .select('seo_title, seo_description, seo_i18n')
+      .select('seo_title, seo_description, seo_i18n, published_seo')
       .eq('business_id', businessId)
       .maybeSingle()
 
@@ -574,6 +575,17 @@ export async function saveTranslationsAction(
         seo_description: primaryPlainText((next.description as LocalizedString) ?? descSource, primary) || pub?.seo_description,
       })
       .eq('business_id', businessId)
+
+    if (isPublishedSeoSnapshot(pub?.published_seo)) {
+      const published_seo = patchPublishedSeoLocale(pub.published_seo, locale, primary, {
+        ...(seoPatches.title !== undefined ? { title: seoPatches.title } : {}),
+        ...(seoPatches.description !== undefined ? { description: seoPatches.description } : {}),
+      })
+      await (admin as any)
+        .from('publishing_settings')
+        .update({ published_seo })
+        .eq('business_id', businessId)
+    }
   }
 
   // ── Order promo alts ──

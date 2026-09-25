@@ -30,6 +30,12 @@ import {
   orderSnapshotFromRow,
 } from '@/lib/order-published-snapshot'
 import {
+  isPublishedSeoSnapshot,
+  publishedSeoEquals,
+  seoSnapshotFromRow,
+  type PublishedSeoKey,
+} from '@/lib/published-seo'
+import {
   normalizeFacebookPixelId,
   normalizeGoogleAnalyticsId,
   normalizeGscVerification,
@@ -300,17 +306,20 @@ export async function togglePublishAction(
     return { success: true, data: normalizePublishing(data as Record<string, unknown>)! }
   }
 
-  // Landing publish — snapshot draft blocks/theme into the live snapshot
+  // Landing publish — snapshot draft blocks/theme/SEO into the live snapshot
   let published_blocks = undefined
   let published_theme = undefined
+  let published_seo = undefined
 
   if (published) {
-    const [blocksRes, themeRes] = await Promise.all([
+    const [blocksRes, themeRes, pubRes] = await Promise.all([
       supabase.from('page_blocks').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }),
-      supabase.from('theme_settings').select('*').eq('business_id', businessId).single()
+      supabase.from('theme_settings').select('*').eq('business_id', businessId).single(),
+      supabase.from('publishing_settings').select('*').eq('business_id', businessId).maybeSingle(),
     ])
     if (blocksRes.data) published_blocks = blocksRes.data
     if (themeRes.data) published_theme = themeRes.data
+    published_seo = seoSnapshotFromRow(pubRes.data as Record<string, unknown> | null)
   }
 
   const { data, error } = await supabase
@@ -319,7 +328,14 @@ export async function togglePublishAction(
       {
         business_id: businessId,
         published,
-        ...(published ? { has_unpublished_changes: false, published_blocks, published_theme } : {})
+        ...(published
+          ? {
+              has_unpublished_changes: false,
+              published_blocks,
+              published_theme,
+              published_seo: published_seo as unknown as Record<string, never>,
+            }
+          : {})
       },
       { onConflict: 'business_id' }
     )
@@ -829,13 +845,29 @@ export async function savePublishingSettingsAction(
 
     const payload: Record<string, unknown> = { business_id: businessId, ...fields }
 
-    if ('seo_title' in fields || 'seo_description' in fields) {
-      const primary = await getBusinessPrimaryLocale(businessId)
-      const { data: existingPub } = await supabase
+    const metaKeys: PublishedSeoKey[] = [
+      'seo_title',
+      'seo_description',
+      'og_image_url',
+      'favicon_url',
+      'apple_touch_icon_url',
+      'gsc_verification',
+      'google_analytics_id',
+      'facebook_pixel_id',
+      'tiktok_pixel_id',
+    ]
+    const touchesMeta = metaKeys.some((key) => key in fields)
+
+    const { data: existingPub } = touchesMeta
+      ? await supabase
         .from('publishing_settings')
-        .select('seo_i18n, seo_title, seo_description')
+        .select('published, published_seo, seo_i18n, seo_title, seo_description, og_image_url, favicon_url, apple_touch_icon_url, gsc_verification, google_analytics_id, facebook_pixel_id, tiktok_pixel_id')
         .eq('business_id', businessId)
         .maybeSingle()
+      : { data: null }
+
+    if ('seo_title' in fields || 'seo_description' in fields) {
+      const primary = await getBusinessPrimaryLocale(businessId)
       const existing = (existingPub?.seo_i18n && typeof existingPub.seo_i18n === 'object' && !Array.isArray(existingPub.seo_i18n))
         ? { ...(existingPub.seo_i18n as Record<string, unknown>) }
         : {}
@@ -854,6 +886,18 @@ export async function savePublishingSettingsAction(
         )
       }
       payload.seo_i18n = existing
+    }
+
+    if (touchesMeta && existingPub?.published) {
+      const currentRow = existingPub as Record<string, unknown>
+      const frozen = isPublishedSeoSnapshot(currentRow.published_seo)
+        ? currentRow.published_seo
+        : seoSnapshotFromRow(currentRow)
+      const draft = seoSnapshotFromRow({ ...currentRow, ...payload })
+      payload.published_seo = frozen
+      if (!publishedSeoEquals(frozen, draft)) {
+        payload.has_unpublished_changes = true
+      }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
