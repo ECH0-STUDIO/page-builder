@@ -65,6 +65,10 @@ function pickFromRecord(
   }
 
   if (locale !== primary) {
+    const direct = record[locale]
+    // A stored locale string is the last saved translation. Do not replace it
+    // with a newer primary edit until the user saves that translation.
+    if (typeof direct === 'string' && direct.trim()) return direct
     const primaryText = record[primary]
     if (typeof primaryText === 'string') return primaryText
   }
@@ -144,16 +148,51 @@ export function setPrimaryLocaleText(
   value: LocalizedString,
   text: string,
   primary: string,
+  otherLocales: readonly string[] = [],
 ): LocalizedString {
-  if (!isLocalizedMap(value)) return text
-  const flags = getCustomizedFlags(value as Record<string, unknown>)
-  const hasOtherLocale = Object.entries(value).some(([key, entry]) => {
+  const oldPrimary = primaryPlainText(value, primary)
+  const base: Record<string, unknown> = isLocalizedMap(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {}
+  if (!isLocalizedMap(value) && typeof value === 'string') {
+    base[primary] = value
+  }
+
+  const flags = getCustomizedFlags(base)
+  const localesToKeep = new Set<string>()
+  for (const locale of otherLocales) {
+    if (locale && locale !== primary) localesToKeep.add(locale)
+  }
+  for (const key of Object.keys(base)) {
+    if (key !== '_customized' && key !== primary && typeof base[key] === 'string') {
+      localesToKeep.add(key)
+    }
+  }
+
+  if (oldPrimary !== text && oldPrimary.trim()) {
+    for (const locale of localesToKeep) {
+      if (flags[locale]) continue
+      const current = base[locale]
+      if (typeof current === 'string' && current.trim() && current !== oldPrimary) continue
+      base[locale] = oldPrimary
+    }
+  }
+
+  const hasOtherLocale = Object.entries(base).some(([key, entry]) => {
     if (key === '_customized' || key === primary) return false
     return typeof entry === 'string' && entry.trim().length > 0
   })
   const hasCustomTranslation = Object.entries(flags).some(([key, on]) => key !== primary && on)
   if (!hasOtherLocale && !hasCustomTranslation) return text
-  return { ...value, [primary]: text, _customized: flags }
+
+  const next: LocalizedMap = {}
+  for (const [key, entry] of Object.entries(base)) {
+    if (key === '_customized') continue
+    if (typeof entry === 'string') next[key] = entry
+  }
+  next[primary] = text
+  if (Object.keys(flags).length > 0) next._customized = flags
+  return next
 }
 
 /** Use the builder/menu column when it has text. Leave stored copy alone when the column is empty. */
@@ -222,11 +261,18 @@ function firstLocaleMap(values: unknown[]): LocalizedMap | null {
   return null
 }
 
-function mergeTextValue(incoming: unknown, primary: string, previous: unknown[]): unknown {
+function mergeTextValue(
+  incoming: unknown,
+  primary: string,
+  previous: unknown[],
+  otherLocales: readonly string[],
+): unknown {
   if (typeof incoming !== 'string') return incoming
   const map = firstLocaleMap(previous)
-  if (!map) return incoming
-  return setPrimaryLocaleText(map, incoming, primary)
+  const previousPlain = previous.find((value): value is string => typeof value === 'string')
+  const base = map ?? previousPlain ?? null
+  if (base == null) return incoming
+  return setPrimaryLocaleText(base, incoming, primary, otherLocales)
 }
 
 /**
@@ -237,6 +283,7 @@ export function syncLocalizedConfig<T extends Record<string, unknown>>(
   incoming: T,
   primary: string,
   fallbacks: Array<Record<string, unknown> | null | undefined>,
+  otherLocales: readonly string[] = [],
 ): T {
   const prevs = fallbacks.filter(
     (row): row is Record<string, unknown> => !!row && typeof row === 'object' && !Array.isArray(row),
@@ -245,7 +292,7 @@ export function syncLocalizedConfig<T extends Record<string, unknown>>(
 
   for (const key of LOCALIZED_TEXT_KEYS) {
     if (!(key in next)) continue
-    next[key] = mergeTextValue(next[key], primary, prevs.map(row => row[key]))
+    next[key] = mergeTextValue(next[key], primary, prevs.map(row => row[key]), otherLocales)
   }
 
   for (const ctaKey of ['cta', 'cta_secondary'] as const) {
@@ -256,7 +303,7 @@ export function syncLocalizedConfig<T extends Record<string, unknown>>(
       .map(row => row[ctaKey])
       .filter((row): row is Record<string, unknown> => isLocalizedMap(row))
     if ('label' in ctaRec) {
-      ctaRec.label = mergeTextValue(ctaRec.label, primary, prevCtas.map(row => row.label))
+      ctaRec.label = mergeTextValue(ctaRec.label, primary, prevCtas.map(row => row.label), otherLocales)
     }
     next[ctaKey] = ctaRec
   }
@@ -272,7 +319,7 @@ export function syncLocalizedConfig<T extends Record<string, unknown>>(
         if (!isLocalizedMap(item)) return undefined
         return item.label
       })
-      if ('label' in rec) rec.label = mergeTextValue(rec.label, primary, prevLabels)
+      if ('label' in rec) rec.label = mergeTextValue(rec.label, primary, prevLabels, otherLocales)
       return rec
     })
   }

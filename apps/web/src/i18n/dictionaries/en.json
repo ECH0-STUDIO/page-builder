@@ -503,6 +503,8 @@
     "publishToLive": "Publish to Live",
     "closePreview": "Close Preview",
     "changes": "Changes",
+    "undo": "Undo",
+    "redo": "Redo",
     "nothingToUndo": "Nothing more to undo",
     "nothingToRedo": "Nothing more to redo",
     "toastPublished": "Page published successfully!",
@@ -1556,6 +1558,13 @@
     "incomingDesc": "You were invited to join as {role}.",
     "switchAccount": "Log out and use the invited email"
   },
+  "unsavedPrompt": {
+    "title": "Save your edits?",
+    "body": "You have edits that are not saved yet. Save them before leaving, or leave and discard them.",
+    "save": "Save",
+    "discard": "Leave without saving",
+    "stay": "Keep editing"
+  },
   "translations": {
     "title": "Translations",
     "description": "Fill guest-facing copy for each purchased language. Primary ({{primary}}) is edited in the page builder and menu.",
@@ -1565,7 +1574,7 @@
     "edit": "Edit →",
     "breadcrumb": "Translations",
     "translateTo": "Translate to {{locale}}",
-    "editorHint": "Primary ({{primary}}) is shown on the left. Empty fields fall back to primary on the live site until you customize them.",
+    "editorHint": "Primary ({{primary}}) is on the left. Edits stay in this editor until you save. The live site keeps the previous translation until then.",
     "stillUsingPrimary": "{{count}} still using primary",
     "translateWithAi": "Translate with AI",
     "save": "Save",

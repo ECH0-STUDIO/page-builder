@@ -38,6 +38,7 @@ import {
 import { VIETNAM_CITIES, VIETNAM_CITY_OTHER, isKnownVietnamCity } from '@/lib/vietnam-cities'
 import { useBusiness } from '@/context/BusinessContext'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 
 type OpeningHoursEntry = {
@@ -154,6 +155,11 @@ export function BusinessProfileForm({ business }: { business: Business }) {
   )
 
   const [saving, setSaving] = useState(false)
+  const profileSnap = JSON.stringify({
+    name, category, tags, address, citySelect, cityOther, googleMapsUrl, phone, email, hours, socials, marketplaceListed,
+  })
+  const [savedSnap, setSavedSnap] = useState(profileSnap)
+  const profileDirty = profileSnap !== savedSnap
 
   function toggleTag(tag: string) {
     setTags(prev =>
@@ -262,13 +268,23 @@ export function BusinessProfileForm({ business }: { business: Business }) {
         marketplace_listed: marketplaceListed,
       })
       await refreshBusinesses()
+      setSavedSnap(JSON.stringify({
+        name, category, tags, address, citySelect, cityOther, googleMapsUrl, phone, email, hours, socials, marketplaceListed,
+      }))
       toast.success(t('businessProfile.toastSaved'))
+      return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t('businessProfile.toastSaveFailed'))
+      return false
     } finally {
       setSaving(false)
     }
   }
+
+  useRegisterUnsavedChanges(profileDirty, async () => {
+    const fake = { preventDefault() {} } as React.FormEvent
+    return Boolean(await handleSave(fake))
+  })
 
   return (
     <>

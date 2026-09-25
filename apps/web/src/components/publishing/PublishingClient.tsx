@@ -23,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { creditsQueryKey } from '@/lib/react-query/hooks/useCredits'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import { resolvePublicStoreUrl } from '@/lib/site-urls'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -240,25 +241,31 @@ export function PublishingClient({
   }, [slug, initialSlug, businessId])
 
   async function handleSaveSlug() {
-    if (slug !== initialSlug && slugStatus !== 'available') return
+    if (slug === initialSlug) return true
+    if (slugStatus !== 'available') return false
     setSavingSlug(true)
     try {
       const res = await updateBusinessAction(businessId, { slug })
-      if (res.success) toast.success(t('publishing.toastUrlUpdated'))
-      else toast.error(res.error)
+      if (res.success) {
+        toast.success(t('publishing.toastUrlUpdated'))
+        return true
+      }
+      toast.error(res.error)
+      return false
     } catch {
       toast.error(t('publishing.toastUrlFailed'))
+      return false
     } finally {
       setSavingSlug(false)
     }
   }
 
   async function handleSaveDomain() {
-    if (!customDomain.trim()) return
+    if (!customDomain.trim()) return false
     const normalized = customDomain.trim().toLowerCase()
     // Same domain already connected — avoid re-running connect (would flash UI).
     if (normalized === (publishing?.custom_domain ?? '').toLowerCase() && (domainVerified || dnsRecords.length > 0)) {
-      return
+      return true
     }
     setSavingDomain(true)
     try {
@@ -273,15 +280,27 @@ export function PublishingClient({
         setCustomDomain(normalized)
         toast.success(t('publishing.toastDomainUpdated'))
         router.refresh()
-      } else {
-        toast.error(res.error)
+        return true
       }
+      toast.error(res.error)
+      return false
     } catch {
       toast.error(t('publishing.toastDomainFailed'))
+      return false
     } finally {
       setSavingDomain(false)
     }
   }
+
+  const savedDomain = (publishing?.custom_domain ?? initialDomainSetup?.domain ?? '').trim().toLowerCase()
+  const publishingDirty = slug !== initialSlug || customDomain.trim().toLowerCase() !== savedDomain
+
+  useRegisterUnsavedChanges(publishingDirty, async () => {
+    let ok = true
+    if (slug !== initialSlug) ok = (await handleSaveSlug()) && ok
+    if (customDomain.trim().toLowerCase() !== savedDomain) ok = (await handleSaveDomain()) && ok
+    return ok
+  })
 
   async function handleRemoveDomain() {
     setSavingDomain(true)

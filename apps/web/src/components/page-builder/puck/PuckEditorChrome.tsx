@@ -18,6 +18,8 @@ import {
   PanelRight,
   Smartphone,
   Eye,
+  Redo2,
+  Undo2,
   X,
 } from 'lucide-react'
 import { usePuck } from '@puckeditor/core'
@@ -38,6 +40,7 @@ import {
 import type { SaveStatus } from '../PublishBar'
 import { ROOT_ZONE } from './constants'
 import type { PreviewLayout } from '../render/preview-layout'
+import { useConfirmLeave } from '@/components/unsaved-changes'
 
 /**
  * Keep Puck's internal UI in sync with shell state.
@@ -148,11 +151,12 @@ interface PuckEditorChromeProps {
 export function PuckHeaderBack() {
   const router = useRouter()
   const { t } = useTranslation()
+  const confirmLeave = useConfirmLeave()
 
   return (
     <button
       type="button"
-      onClick={() => router.push('/dashboard')}
+      onClick={() => confirmLeave(() => router.push('/dashboard'))}
       className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-accent shrink-0 mr-1"
       title={t('pageBuilder.back')}
     >
@@ -290,6 +294,36 @@ export function PuckCustomHeader({
   )
 }
 
+function PuckHistoryButtons() {
+  const { history } = usePuck()
+  const { t } = useTranslation()
+
+  return (
+    <div className="hidden sm:flex items-center gap-0.5 mr-1">
+      <button
+        type="button"
+        onClick={() => history.back()}
+        disabled={!history.hasPast}
+        className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+        title={t('pageBuilder.undo')}
+        aria-label={t('pageBuilder.undo')}
+      >
+        <Undo2 className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => history.forward()}
+        disabled={!history.hasFuture}
+        className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+        title={t('pageBuilder.redo')}
+        aria-label={t('pageBuilder.redo')}
+      >
+        <Redo2 className="size-4" />
+      </button>
+    </div>
+  )
+}
+
 export function PuckHeaderActions({
   saveStatus,
   published,
@@ -309,6 +343,7 @@ export function PuckHeaderActions({
 
   return (
     <>
+      <PuckHistoryButtons />
       <div className="flex items-center gap-2 shrink-0 mr-1">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">

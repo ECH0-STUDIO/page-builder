@@ -32,6 +32,7 @@ import { formatCurrency, formatPriceDelta } from '@/lib/currency'
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
 import { MenuCsvActions } from '@/components/menu/MenuCsvActions'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useConfirmLeave, useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -54,6 +55,12 @@ const ITEM_TAG_SUGGESTIONS = [
 ]
 
 // ─── Variant Option Row ───────────────────────────────────────────────────────
+
+const HIDDEN_ITEM_TAGS = ['vegetarian', 'vegan', 'spicy', 'chay', 'cay', 'thuần chay']
+
+function visibleItemTags(tags: string[] | null | undefined) {
+  return (tags ?? []).filter(tag => !HIDDEN_ITEM_TAGS.includes(tag.trim().toLowerCase()))
+}
 
 function VariantOptionRow({ option, onDelete }: { option: VariantOption; onDelete: () => void }) {
   const { t } = useTranslation()
@@ -94,13 +101,16 @@ function VariantGroupCard({
   const [expanded, setExpanded] = useState(true)
 
   async function handleAdd() {
-    if (!newLabel.trim()) return
+    if (!newLabel.trim()) return false
     setAdding(true)
     await onAddOption(newLabel, parseFloat(newPrice) || 0)
     setNewLabel('')
     setNewPrice('0')
     setAdding(false)
+    return true
   }
+
+  useRegisterUnsavedChanges(newLabel.trim().length > 0 || newPrice !== '0', handleAdd)
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -199,17 +209,20 @@ function VariantsPanel({ itemId }: { itemId: string }) {
   }, [itemId, loaded])
 
   async function handleAddGroup() {
-    if (!newGroupName.trim()) return
+    if (!newGroupName.trim()) return false
     setAddingGroup(true)
     const result = await addVariantGroupAction(itemId, newGroupName, newGroupRequired, newGroupAllowMultiple)
+    setAddingGroup(false)
     if (result.success) {
       setGroups(prev => [...prev, result.data])
       setNewGroupName('')
-    } else {
-      toast.error(result.error)
+      return true
     }
-    setAddingGroup(false)
+    toast.error(result.error)
+    return false
   }
+
+  useRegisterUnsavedChanges(newGroupName.trim().length > 0, handleAddGroup)
 
   async function handleDeleteGroup(id: string) {
     const result = await deleteVariantGroupAction(id)
@@ -317,23 +330,36 @@ function CategoryDialog({
 }: {
   open: boolean
   onClose: () => void
-  onSave: (name: string) => Promise<void>
+  onSave: (name: string) => Promise<boolean>
   initial?: MenuCategory
 }) {
   const { t } = useTranslation()
+  const confirmLeave = useConfirmLeave()
   const [name, setName] = useState(initial?.name ?? '')
   const [loading, setLoading] = useState(false)
+  const dirty = name !== (initial?.name ?? '')
+
+  async function persist() {
+    if (!name.trim()) return false
+    setLoading(true)
+    const ok = await onSave(name)
+    setLoading(false)
+    return ok
+  }
+
+  useRegisterUnsavedChanges(open && dirty, persist)
+
+  function requestClose() {
+    confirmLeave(onClose)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-    await onSave(name)
-    setLoading(false)
-    onClose()
+    if (await persist()) onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+    <Dialog open={open} onOpenChange={v => { if (!v) requestClose() }}>
       <DialogContent className="sm:max-w-sm w-[95vw] rounded-xl sm:w-full">
         <DialogHeader>
           <DialogTitle>{initial ? t('menuBuilder.renameCategory') : t('menuBuilder.addCategory')}</DialogTitle>
@@ -351,7 +377,7 @@ function CategoryDialog({
             />
           </div>
           <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{t('menuBuilder.cancel')}</Button>
+            <Button type="button" variant="secondary" onClick={requestClose} disabled={loading}>{t('menuBuilder.cancel')}</Button>
             <Button type="submit" disabled={!name.trim() || loading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : initial ? t('menuBuilder.save') : t('menuBuilder.add')}
             </Button>
@@ -379,7 +405,7 @@ function ItemDialog({
     is_vegetarian: boolean
     spicy_level: number
     is_featured: boolean
-  }) => Promise<void>
+  }) => Promise<boolean>
   categoryId: string
   businessId: string
   initial?: MenuItem
@@ -388,7 +414,7 @@ function ItemDialog({
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '')
-  const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
+  const [tags, setTags] = useState<string[]>(() => visibleItemTags(initial?.tags))
   const [isVegetarian, setIsVegetarian] = useState(Boolean(initial?.is_vegetarian))
   const [spicyLevel, setSpicyLevel] = useState(initial?.spicy_level ?? 0)
   const [isFeatured, setIsFeatured] = useState(Boolean(initial?.is_featured))
@@ -399,17 +425,14 @@ function ItemDialog({
   const fileRef = useRef<HTMLInputElement>(null)
 
   const isEditing = !!initial
+  const confirmLeave = useConfirmLeave()
 
   useEffect(() => {
     if (!open) return
     setName(initial?.name ?? '')
     setDescription(initial?.description ?? '')
     setPrice(initial?.price?.toString() ?? '')
-    const rawTags = initial?.tags ?? []
-    setTags(rawTags.filter(tag => {
-      const lower = tag.trim().toLowerCase()
-      return !['vegetarian', 'vegan', 'spicy', 'chay', 'cay', 'thuần chay'].includes(lower)
-    }))
+    setTags(visibleItemTags(initial?.tags))
     setIsVegetarian(Boolean(initial?.is_vegetarian))
     setSpicyLevel(initial?.spicy_level ?? 0)
     setIsFeatured(Boolean(initial?.is_featured))
@@ -442,12 +465,35 @@ function ItemDialog({
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const savedTags = visibleItemTags(initial?.tags)
+  const itemDirty = JSON.stringify({
+    name,
+    description,
+    price,
+    tags,
+    isVegetarian,
+    spicyLevel,
+    isFeatured,
+    imageUrl,
+  }) !== JSON.stringify({
+    name: initial?.name ?? '',
+    description: initial?.description ?? '',
+    price: initial?.price?.toString() ?? '',
+    tags: savedTags,
+    isVegetarian: Boolean(initial?.is_vegetarian),
+    spicyLevel: initial?.spicy_level ?? 0,
+    isFeatured: Boolean(initial?.is_featured),
+    imageUrl: initial?.image_url ?? '',
+  })
+
+  async function persist() {
     const parsedPrice = parseFloat(price)
-    if (isNaN(parsedPrice) || parsedPrice < 0) { toast.error('Enter a valid price'); return }
+    if (!name.trim() || isNaN(parsedPrice) || parsedPrice < 0) {
+      toast.error('Enter a valid price')
+      return false
+    }
     setSaving(true)
-    await onSave({
+    const ok = await onSave({
       name,
       description,
       price: parsedPrice,
@@ -458,11 +504,22 @@ function ItemDialog({
       is_featured: isFeatured,
     })
     setSaving(false)
-    onClose()
+    return ok
+  }
+
+  useRegisterUnsavedChanges(open && itemDirty, persist)
+
+  function requestClose() {
+    confirmLeave(onClose)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (await persist()) onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+    <Dialog open={open} onOpenChange={v => { if (!v) requestClose() }}>
       <DialogContent className="sm:max-w-lg p-0 flex flex-col w-[95vw] md:w-full" style={{ maxHeight: 'min(90vh, 700px)' }}>
         <DialogHeader className="px-4 md:px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>{isEditing ? t('menuBuilder.editItem') : t('menuBuilder.addItem')}</DialogTitle>
@@ -603,7 +660,7 @@ function ItemDialog({
         <div className="shrink-0 border-t border-border/60 px-6 py-4 bg-background rounded-b-xl sm:rounded-b-2xl">
           {activeTab === 'details' ? (
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{t('menuBuilder.cancel')}</Button>
+              <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>{t('menuBuilder.cancel')}</Button>
               <Button
                 type="submit"
                 form="item-detail-form"
@@ -615,7 +672,7 @@ function ItemDialog({
           ) : (
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">{t('menuBuilder.changesSaveAuto')}</span>
-              <Button type="button" variant="secondary" onClick={onClose}>{t('menuBuilder.close')}</Button>
+              <Button type="button" variant="secondary" onClick={requestClose}>{t('menuBuilder.close')}</Button>
             </div>
           )}
         </div>
@@ -698,16 +755,17 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
   async function handleSaveCategory(name: string) {
     if (catDialog.editing) {
       const result = await updateCategoryAction(catDialog.editing.id, { name })
-      if (!result.success) { toast.error(result.error); return }
+      if (!result.success) { toast.error(result.error); return false }
       setCategories(prev => prev.map(c => c.id === catDialog.editing!.id ? { ...c, name } : c))
       toast.success(t('menuBuilder.categoryUpdated'))
-    } else {
-      const result = await addCategoryAction(businessId, name)
-      if (!result.success) { toast.error(result.error); return }
-      setCategories(prev => [...prev, result.data])
-      setSelectedCatId(result.data.id)
-      toast.success(t('menuBuilder.categoryAdded'))
+      return true
     }
+    const result = await addCategoryAction(businessId, name)
+    if (!result.success) { toast.error(result.error); return false }
+    setCategories(prev => [...prev, result.data])
+    setSelectedCatId(result.data.id)
+    toast.success(t('menuBuilder.categoryAdded'))
+    return true
   }
 
   async function handleDeleteCategory(id: string) {
@@ -749,7 +807,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         spicy_level: itemData.spicy_level,
         is_featured: itemData.is_featured,
       })
-      if (!result.success) { toast.error(result.error); return }
+      if (!result.success) { toast.error(result.error); return false }
       setItems(prev => prev.map(i =>
         i.id === itemDialog.editing!.id
           ? {
@@ -766,13 +824,14 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           : i
       ))
       toast.success(t('menuBuilder.itemSaved'))
-    } else {
-      const catId = itemDialog.catId ?? selectedCatId!
-      const result = await addItemAction(businessId, catId, itemData)
-      if (!result.success) { toast.error(result.error); return }
-      setItems(prev => [...prev, result.data])
-      toast.success(t('menuBuilder.itemAdded'))
+      return true
     }
+    const catId = itemDialog.catId ?? selectedCatId!
+    const result = await addItemAction(businessId, catId, itemData)
+    if (!result.success) { toast.error(result.error); return false }
+    setItems(prev => [...prev, result.data])
+    toast.success(t('menuBuilder.itemAdded'))
+    return true
   }
 
   async function handleDeleteItem(id: string) {

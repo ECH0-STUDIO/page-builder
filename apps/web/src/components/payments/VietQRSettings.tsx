@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import { toast } from 'sonner'
 import { Save, Trash2 } from 'lucide-react'
 import { upsertPaymentSettingsAction } from '@/app/actions/payments'
@@ -36,15 +37,16 @@ export function VietQRSettings({
   initialSettings: PaymentSettings
   businessName: string
 }) {
-  const [form, setForm] = useState<VietQRSettings>(
-    initialSettings.vietqr ?? { ...EMPTY, note_template: `Thanh toán tại ${businessName}` }
-  )
+  const baseline = initialSettings.vietqr ?? { ...EMPTY, note_template: `Thanh toán tại ${businessName}` }
+  const [form, setForm] = useState<VietQRSettings>(baseline)
+  const [saved, setSaved] = useState<VietQRSettings>(baseline)
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
   const { t } = useTranslation()
   const { currentBusiness } = useBusiness()
   
   const isOwner = currentBusiness?.role === 'owner'
+  const paymentDirty = isOwner && JSON.stringify(form) !== JSON.stringify(saved)
 
   const isComplete = form.bank_code && form.account_number && form.account_name
   const previewUrl = isComplete ? buildVietQRUrl(form) : null
@@ -56,14 +58,21 @@ export function VietQRSettings({
   async function save() {
     if (!isComplete) {
       toast.error(t('payments.toastFillRequired'))
-      return
+      return false
     }
     setSaving(true)
     const result = await upsertPaymentSettingsAction(businessId, { vietqr: form })
     setSaving(false)
-    if (result.error) { toast.error(result.error) }
-    else { toast.success(t('payments.toastSaved')) }
+    if (result.error) {
+      toast.error(result.error)
+      return false
+    }
+    setSaved(form)
+    toast.success(t('payments.toastSaved'))
+    return true
   }
+
+  useRegisterUnsavedChanges(paymentDirty, save)
 
   async function remove() {
     setRemoving(true)
@@ -71,7 +80,9 @@ export function VietQRSettings({
     setRemoving(false)
     if (result.error) { toast.error(result.error) }
     else {
-      setForm({ ...EMPTY, note_template: `Thanh toán tại ${businessName}` })
+      const next = { ...EMPTY, note_template: `Thanh toán tại ${businessName}` }
+      setForm(next)
+      setSaved(next)
       toast.success(t('payments.toastRemoved'))
     }
   }

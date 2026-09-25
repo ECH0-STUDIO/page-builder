@@ -46,6 +46,7 @@ import type { SaveStatus } from '../PublishBar'
 import { PUBLISHED_SEO_KEYS } from '@/lib/published-seo'
 
 import type { PaymentSettings } from '@/lib/vietqr-utils'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import type { BuilderPageMode } from '@/components/page-builder/PageBuilderModeSwitcher'
 import { StartPageDialog } from '../StartPageDialog'
 import { PuckTemplateContext } from './PuckTemplateContext'
@@ -138,6 +139,19 @@ export function PuckEditorShell({
   const saveNavbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingThemeSave = useRef<ThemeSettings | null>(null)
+  const pendingNavSave = useRef<NavbarConfig | null>(null)
+  const pendingFooterSave = useRef<FooterConfig | null>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
+  const refreshEditorDirty = useCallback(() => {
+    setEditorDirty(Boolean(
+      saveTimer.current
+      || saveThemeTimer.current
+      || saveNavbarTimer.current
+      || saveFooterTimer.current
+      || savePubTimer.current
+    ))
+  }, [])
   const pendingPubRef = useRef<Partial<PublishingSettings>>({})
   const isFirstRender = useRef(true)
   const puckDataRef = useRef(puckData)
@@ -247,27 +261,36 @@ export function PuckEditorShell({
               footer_config: chrome.footerConfig,
             } as ThemeSettings)
 
+        pendingNavSave.current = chrome.navbarConfig
+        pendingFooterSave.current = chrome.footerConfig
         if (saveNavbarTimer.current) clearTimeout(saveNavbarTimer.current)
         saveNavbarTimer.current = setTimeout(() => {
-          saveNavbarAction(business.id, chrome.navbarConfig).then(res => {
+          const config = pendingNavSave.current ?? chrome.navbarConfig
+          saveNavbarTimer.current = null
+          saveNavbarAction(business.id, config).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
             else toast.error(t('pageBuilder.toastSaveNavbarFailed') + res.error)
+            refreshEditorDirty()
           })
         }, 1000)
 
         if (saveFooterTimer.current) clearTimeout(saveFooterTimer.current)
         saveFooterTimer.current = setTimeout(() => {
-          saveFooterAction(business.id, chrome.footerConfig).then(res => {
+          const config = pendingFooterSave.current ?? chrome.footerConfig
+          saveFooterTimer.current = null
+          saveFooterAction(business.id, config).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
             else toast.error(t('pageBuilder.toastSaveFooterFailed') + res.error)
+            refreshEditorDirty()
           })
         }, 1000)
+        setEditorDirty(true)
 
         return next
       })
       return chrome
     },
-    [business.id, t],
+    [business.id, t, refreshEditorDirty],
   )
 
   const performSave = useCallback(
@@ -279,13 +302,15 @@ export function PuckEditorShell({
         if (res.success) {
           setSaveStatus('saved')
           if (published) setHasUnpublishedChanges(true)
-        } else {
-          setSaveStatus('idle')
-          console.error('Failed to auto-save:', res.error)
+          return true
         }
+        setSaveStatus('idle')
+        console.error('Failed to auto-save:', res.error)
+        return false
       } catch (e) {
         setSaveStatus('idle')
         console.error('Save error:', e)
+        return false
       }
     },
     [business.id, published],
@@ -294,10 +319,14 @@ export function PuckEditorShell({
   const triggerAutoSave = useCallback(
     (data: Data) => {
       setSaveStatus('idle')
+      setEditorDirty(true)
       if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => performSave(data), 1500)
+      saveTimer.current = setTimeout(() => {
+        saveTimer.current = null
+        void performSave(data).finally(refreshEditorDirty)
+      }, 1500)
     },
-    [performSave],
+    [performSave, refreshEditorDirty],
   )
 
   const saveNow = useCallback(() => {
@@ -410,17 +439,22 @@ export function PuckEditorShell({
         const next = prev
           ? { ...prev, ...updated }
           : ({ ...defaultThemeSettings, business_id: business.id, id: '', ...updated } as ThemeSettings)
+        pendingThemeSave.current = next
         if (saveThemeTimer.current) clearTimeout(saveThemeTimer.current)
+        setEditorDirty(true)
         saveThemeTimer.current = setTimeout(() => {
+          const snapshot = pendingThemeSave.current ?? next
+          saveThemeTimer.current = null
           saveThemeAction(business.id, {
-            primary_color: next.primary_color,
-            background_color: next.background_color,
-            text_color: next.text_color ?? defaultThemeSettings.text_color,
-            font_family: next.font_family,
-            heading_font_family: next.heading_font_family || 'Inter',
+            primary_color: snapshot.primary_color,
+            background_color: snapshot.background_color,
+            text_color: snapshot.text_color ?? defaultThemeSettings.text_color,
+            font_family: snapshot.font_family,
+            heading_font_family: snapshot.heading_font_family || 'Inter',
           }).then(res => {
             if (res.success) setHasUnpublishedChanges(true)
             else toast.error(t('pageBuilder.toastSaveThemeFailed') + res.error)
+            refreshEditorDirty()
           })
         }, 1000)
         return next
@@ -428,7 +462,7 @@ export function PuckEditorShell({
       // Force Puck canvas to re-read theme refs (brand color, fonts, etc.)
       setThemeRevision(r => r + 1)
     },
-    [business.id, t],
+    [business.id, t, refreshEditorDirty],
   )
 
   const handlePublishingChange = useCallback(
@@ -447,22 +481,84 @@ export function PuckEditorShell({
           ? { ...prev, ...updated }
           : ({ business_id: business.id, ...updated } as PublishingSettings)
         if (savePubTimer.current) clearTimeout(savePubTimer.current)
+        setEditorDirty(true)
         savePubTimer.current = setTimeout(() => {
           const payload = pendingPubRef.current
           pendingPubRef.current = {}
+          savePubTimer.current = null
           savePublishingSettingsAction(business.id, payload).then(res => {
             if (!res.success) {
               toast.error(res.error)
-              return
+            } else if (res.data?.has_unpublished_changes) {
+              setHasUnpublishedChanges(true)
             }
-            if (res.data?.has_unpublished_changes) setHasUnpublishedChanges(true)
+            refreshEditorDirty()
           })
         }, 800)
         return next
       })
     },
-    [business.id, published, publishingSettings],
+    [business.id, published, publishingSettings, refreshEditorDirty],
   )
+
+  const flushEditorSaves = useCallback(async () => {
+    const jobs: Promise<boolean>[] = []
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+      jobs.push(performSave(puckDataRef.current))
+    }
+    if (saveThemeTimer.current && pendingThemeSave.current) {
+      clearTimeout(saveThemeTimer.current)
+      saveThemeTimer.current = null
+      const snapshot = pendingThemeSave.current
+      jobs.push(saveThemeAction(business.id, {
+        primary_color: snapshot.primary_color,
+        background_color: snapshot.background_color,
+        text_color: snapshot.text_color ?? defaultThemeSettings.text_color,
+        font_family: snapshot.font_family,
+        heading_font_family: snapshot.heading_font_family || 'Inter',
+      }).then(res => {
+        if (res.success) setHasUnpublishedChanges(true)
+        else toast.error(t('pageBuilder.toastSaveThemeFailed') + res.error)
+        return res.success
+      }))
+    }
+    if (saveNavbarTimer.current && pendingNavSave.current) {
+      clearTimeout(saveNavbarTimer.current)
+      saveNavbarTimer.current = null
+      jobs.push(saveNavbarAction(business.id, pendingNavSave.current).then(res => {
+        if (res.success) setHasUnpublishedChanges(true)
+        else toast.error(t('pageBuilder.toastSaveNavbarFailed') + res.error)
+        return res.success
+      }))
+    }
+    if (saveFooterTimer.current && pendingFooterSave.current) {
+      clearTimeout(saveFooterTimer.current)
+      saveFooterTimer.current = null
+      jobs.push(saveFooterAction(business.id, pendingFooterSave.current).then(res => {
+        if (res.success) setHasUnpublishedChanges(true)
+        else toast.error(t('pageBuilder.toastSaveFooterFailed') + res.error)
+        return res.success
+      }))
+    }
+    if (savePubTimer.current && Object.keys(pendingPubRef.current).length > 0) {
+      clearTimeout(savePubTimer.current)
+      savePubTimer.current = null
+      const payload = pendingPubRef.current
+      pendingPubRef.current = {}
+      jobs.push(savePublishingSettingsAction(business.id, payload).then(res => {
+        if (!res.success) toast.error(res.error)
+        else if (res.data?.has_unpublished_changes) setHasUnpublishedChanges(true)
+        return res.success
+      }))
+    }
+    const results = await Promise.all(jobs)
+    refreshEditorDirty()
+    return results.every(Boolean)
+  }, [business.id, performSave, refreshEditorDirty, t])
+
+  useRegisterUnsavedChanges(editorDirty, flushEditorSaves)
 
   const applyTemplate = useCallback(
     async (templateId: string) => {

@@ -9,9 +9,12 @@ import { useRouter } from 'next/navigation'
 import { updateLocalizationAction } from '@/app/actions/settings'
 
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 
 export function LocalizationForm({ initialLanguage, initialCurrency }: { initialLanguage: string, initialCurrency: string }) {
-  const [region, setRegion] = useState(`${initialLanguage}-${initialCurrency}`)
+  const initialRegion = `${initialLanguage}-${initialCurrency}`
+  const [region, setRegion] = useState(initialRegion)
+  const [savedRegion, setSavedRegion] = useState(initialRegion)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { t, setDictionary, resetDictionary } = useTranslation()
@@ -43,8 +46,8 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.()
     setLoading(true)
     
     const [language, currency] = region.split('-')
@@ -54,12 +57,16 @@ export function LocalizationForm({ initialLanguage, initialCurrency }: { initial
 
     if (res.error) {
       toast.error(t('settings.localization.toastFailed'))
-    } else {
-      savedRef.current = true
-      toast.success(t('settings.localization.toastUpdated'))
-      router.refresh()
+      return false
     }
+    savedRef.current = true
+    setSavedRegion(region)
+    toast.success(t('settings.localization.toastUpdated'))
+    router.refresh()
+    return true
   }
+
+  useRegisterUnsavedChanges(region !== savedRegion, () => handleSubmit())
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-sm">

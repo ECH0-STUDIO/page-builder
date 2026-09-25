@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getBusinessPrimaryLocale } from '@/app/actions/business-locales'
+import { getActiveBusinessLocales, getBusinessPrimaryLocale } from '@/app/actions/business-locales'
 import { setPrimaryLocaleText, type LocalizedString } from '@/i18n/localized-content'
 import { revalidatePath } from 'next/cache'
 import { assertOwnerOrManager } from '@/lib/business-auth'
@@ -184,13 +184,17 @@ export async function updateCategoryAction(
       .eq('id', id)
       .maybeSingle()
     if (row?.business_id) {
-      const primary = await getBusinessPrimaryLocale(row.business_id)
+      const [primary, otherLocales] = await Promise.all([
+        getBusinessPrimaryLocale(row.business_id),
+        getActiveBusinessLocales(row.business_id),
+      ])
       const name = update.name.trim()
       payload.name = name
       payload.name_i18n = setPrimaryLocaleText(
         (row.name_i18n ?? row.name) as LocalizedString,
         name,
         primary,
+        otherLocales,
       )
     }
   }
@@ -322,7 +326,10 @@ export async function updateItemAction(
       .eq('id', id)
       .maybeSingle()
     if (row?.business_id) {
-      const primary = await getBusinessPrimaryLocale(row.business_id)
+      const [primary, otherLocales] = await Promise.all([
+        getBusinessPrimaryLocale(row.business_id),
+        getActiveBusinessLocales(row.business_id),
+      ])
       if (typeof update.name === 'string') {
         const name = update.name.trim()
         payload.name = name
@@ -330,6 +337,7 @@ export async function updateItemAction(
           (row.name_i18n ?? row.name) as LocalizedString,
           name,
           primary,
+          otherLocales,
         )
       }
       if ('description' in update) {
@@ -339,6 +347,7 @@ export async function updateItemAction(
           (row.description_i18n ?? row.description ?? '') as LocalizedString,
           description,
           primary,
+          otherLocales,
         )
       }
     }
@@ -461,13 +470,17 @@ export async function updateVariantGroupAction(
         .eq('id', row.item_id)
         .maybeSingle()
       if (item?.business_id) {
-        const primary = await getBusinessPrimaryLocale(item.business_id)
+        const [primary, otherLocales] = await Promise.all([
+          getBusinessPrimaryLocale(item.business_id),
+          getActiveBusinessLocales(item.business_id),
+        ])
         const name = update.name.trim()
         payload.name = name
         payload.name_i18n = setPrimaryLocaleText(
           (row.name_i18n ?? row.name) as LocalizedString,
           name,
           primary,
+          otherLocales,
         )
       }
     }

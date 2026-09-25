@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useConfirmLeave } from '@/components/unsaved-changes'
 
 export type BuilderPageMode = 'landing' | 'order'
 
@@ -21,6 +22,7 @@ export function builderPagesHref(mode: BuilderPageMode): string {
 export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
   const router = useRouter()
   const { t } = useTranslation()
+  const confirmLeave = useConfirmLeave()
   const [isPending, startTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
 
@@ -30,8 +32,10 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
 
   function switchTo(next: BuilderPageMode) {
     if (next === mode || isPending) return
-    startTransition(() => {
-      router.push(builderPagesHref(next))
+    confirmLeave(() => {
+      startTransition(() => {
+        router.push(builderPagesHref(next))
+      })
     })
   }
 

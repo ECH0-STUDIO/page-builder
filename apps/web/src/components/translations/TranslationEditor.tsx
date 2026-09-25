@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Check, Loader2, Save, Sparkles } from 'lucide-react'
@@ -30,6 +30,7 @@ import { localizeFieldChrome } from '@/lib/translation-ui-i18n'
 import { storeLocaleLabel, type StoreLocaleCode } from '@/i18n/store-locales'
 import { useSyncCreditBalance } from '@/lib/react-query/hooks/useCredits'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 
 const SECTION_ORDER: TranslationSectionId[] = ['seo', 'page', 'chrome', 'menu', 'order']
 
@@ -51,7 +52,7 @@ export function TranslationEditor({
     Object.fromEntries(initialFields.map(f => [f.id, f.translatedText])),
   )
   const [resets, setResets] = useState<Set<string>>(() => new Set())
-  const [pending, startTransition] = useTransition()
+  const [saving, setSaving] = useState(false)
   const [activeSection, setActiveSection] = useState<TranslationSectionId | 'all'>('all')
   const [quoting, setQuoting] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -69,7 +70,7 @@ export function TranslationEditor({
   }, [drafts, fields, resets])
 
   const dirtyCount = Object.keys(dirty).length
-  const busy = pending || quoting || applying
+  const busy = saving || quoting || applying
 
   const bySection = useMemo(() => {
     const map = new Map<TranslationSectionId, TranslationField[]>()
@@ -125,7 +126,7 @@ export function TranslationEditor({
     })
   }
 
-  function save(ids?: string[]) {
+  async function save(ids?: string[]): Promise<boolean> {
     const source = ids
       ? Object.fromEntries(Object.entries(dirty).filter(([id]) => ids.includes(id)))
       : dirty
@@ -134,34 +135,37 @@ export function TranslationEditor({
       payload[id] = resets.has(id) ? null : text
     }
     if (!Object.keys(payload).length) {
-      toast.message(t('translations.nothingToSave'))
-      return
+      if (!ids) toast.message(t('translations.nothingToSave'))
+      return true
     }
-    startTransition(async () => {
-      const res = await saveTranslationsAction(businessId, locale, payload)
-      if (!res.success) {
-        toast.error(res.error)
-        return
+    setSaving(true)
+    const res = await saveTranslationsAction(businessId, locale, payload)
+    setSaving(false)
+    if (!res.success) {
+      toast.error(res.error)
+      return false
+    }
+    setFields(prev => prev.map(f => {
+      if (payload[f.id] === undefined) return f
+      if (payload[f.id] === null) {
+        return { ...f, translatedText: f.primaryText, customized: false }
       }
-      setFields(prev => prev.map(f => {
-        if (payload[f.id] === undefined) return f
-        if (payload[f.id] === null) {
-          return { ...f, translatedText: f.primaryText, customized: false }
-        }
-        return {
-          ...f,
-          translatedText: payload[f.id] as string,
-          customized: true,
-        }
-      }))
-      setResets(prev => {
-        const next = new Set(prev)
-        for (const id of Object.keys(payload)) next.delete(id)
-        return next
-      })
-      toast.success(t('translations.savedFields').replace('{{count}}', String(res.data.saved)))
+      return {
+        ...f,
+        translatedText: payload[f.id] as string,
+        customized: true,
+      }
+    }))
+    setResets(prev => {
+      const next = new Set(prev)
+      for (const id of Object.keys(payload)) next.delete(id)
+      return next
     })
+    toast.success(t('translations.savedFields').replace('{{count}}', String(res.data.saved)))
+    return true
   }
+
+  useRegisterUnsavedChanges(dirtyCount > 0, () => save())
 
   async function openQuote(scope: AiTranslateScope) {
     setQuoting(true)
@@ -245,8 +249,8 @@ export function TranslationEditor({
             {quoting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             {t('translations.translateWithAi')}
           </Button>
-          <Button onClick={() => save()} disabled={busy || dirtyCount === 0}>
-            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          <Button onClick={() => void save()} disabled={busy || dirtyCount === 0}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             {dirtyCount > 0
               ? t('translations.saveCount').replace('{{count}}', String(dirtyCount))
               : t('translations.save')}

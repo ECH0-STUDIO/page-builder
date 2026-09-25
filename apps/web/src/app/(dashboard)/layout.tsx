@@ -4,6 +4,7 @@ import { BusinessProvider } from '@/context/BusinessContext'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { I18nProvider } from '@/i18n/I18nProvider'
+import { UnsavedChangesProvider } from '@/components/unsaved-changes'
 import { getDictionary } from '@/i18n/getDictionary'
 import { GlobalNavLoader } from '@/components/GlobalNavLoader'
 import { Suspense } from 'react'
@@ -42,6 +43,7 @@ export default async function DashboardLayout({
 
   return (
     <I18nProvider dictionary={dictionary}>
+      <UnsavedChangesProvider>
       <BusinessProvider initialBusinesses={businesses} initialActiveBusinessId={business.id}>
         <DashboardShell
           sidebar={
@@ -59,6 +61,7 @@ export default async function DashboardLayout({
           <GlobalNavLoader />
         </Suspense>
       </BusinessProvider>
+      </UnsavedChangesProvider>
     </I18nProvider>
   )
 }

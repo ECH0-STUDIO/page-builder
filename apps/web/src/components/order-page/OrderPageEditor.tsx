@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useConfirmLeave, useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 import {
   OrderPromoSlidesEditor,
 } from '@/components/order-page/OrderPromoSlidesEditor'
@@ -178,6 +179,7 @@ export function OrderPageEditor({
 }: OrderPageEditorProps) {
   const { t } = useTranslation()
   const router = useRouter()
+  const confirmLeave = useConfirmLeave()
 
   const [tab, setTab] = useState<SettingsTab>('appearance')
   const [copied, setCopied] = useState(false)
@@ -219,42 +221,58 @@ export function OrderPageEditor({
     [draft.slides, businessName],
   )
 
+  const persistDraft = useCallback(async () => {
+    const current = draftRef.current
+    setSaveStatus('saving')
+    const [orderRes, themeRes] = await Promise.all([
+      saveOrderPageDraftAction(businessId, {
+        order_background_color: current.bgColor || null,
+        order_background_image_url: current.bgImage || null,
+        order_promo_slides: current.slides,
+        order_carousel_aspect_desktop: current.aspectDesktop,
+        order_carousel_aspect_mobile: current.aspectMobile,
+        order_menu_config: current.menuConfig,
+      }),
+      saveThemeAction(businessId, {
+        primary_color: current.brandColor,
+        background_color: current.themeBgColor,
+        text_color: current.themeTextColor,
+        font_family: current.bodyFont,
+        heading_font_family: current.headingFont,
+      }),
+    ])
+    if (!orderRes.success) {
+      toast.error(orderRes.error)
+      setSaveStatus('idle')
+      return false
+    }
+    if (!themeRes.success) {
+      toast.error(themeRes.error)
+      setSaveStatus('idle')
+      return false
+    }
+    setSaveStatus('saved')
+    return true
+  }, [businessId])
+
   const scheduleSave = useCallback(() => {
     setSaveStatus('idle')
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
-      const current = draftRef.current
-      setSaveStatus('saving')
-      const [orderRes, themeRes] = await Promise.all([
-        saveOrderPageDraftAction(businessId, {
-          order_background_color: current.bgColor || null,
-          order_background_image_url: current.bgImage || null,
-          order_promo_slides: current.slides,
-          order_carousel_aspect_desktop: current.aspectDesktop,
-          order_carousel_aspect_mobile: current.aspectMobile,
-          order_menu_config: current.menuConfig,
-        }),
-        saveThemeAction(businessId, {
-          primary_color: current.brandColor,
-          background_color: current.themeBgColor,
-          text_color: current.themeTextColor,
-          font_family: current.bodyFont,
-          heading_font_family: current.headingFont,
-        }),
-      ])
-      if (!orderRes.success) {
-        toast.error(orderRes.error)
-        setSaveStatus('idle')
-        return
-      }
-      if (!themeRes.success) {
-        toast.error(themeRes.error)
-        setSaveStatus('idle')
-        return
-      }
-      setSaveStatus('saved')
+      saveTimer.current = null
+      await persistDraft()
     }, AUTOSAVE_MS)
-  }, [businessId])
+  }, [persistDraft])
+
+  const flushOrderSave = useCallback(async () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    return persistDraft()
+  }, [persistDraft])
+
+  useRegisterUnsavedChanges(saveStatus !== 'saved', flushOrderSave)
 
   const pushHistory = useCallback(() => {
     if (skipHistory.current) return
@@ -520,7 +538,7 @@ export function OrderPageEditor({
       <header className="shrink-0 flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-x-auto">
         <button
           type="button"
-          onClick={() => router.push('/dashboard')}
+          onClick={() => confirmLeave(() => router.push('/dashboard'))}
           className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-accent shrink-0"
         >
           <ArrowLeft className="size-4" />

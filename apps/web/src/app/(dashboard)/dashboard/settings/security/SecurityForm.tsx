@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 
 export function SecurityForm() {
   const [password, setPassword] = useState('')
@@ -12,17 +13,15 @@ export function SecurityForm() {
   const [loading, setLoading] = useState(false)
   const { t } = useTranslation()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  async function save() {
     if (password.length < 6) {
       toast.error(t('settings.security.minLength'))
-      return
+      return false
     }
 
     if (password !== confirmPassword) {
       toast.error(t('settings.security.mismatch'))
-      return
+      return false
     }
 
     setLoading(true)
@@ -36,11 +35,19 @@ export function SecurityForm() {
 
     if (error) {
       toast.error(error.message)
-    } else {
-      toast.success(t('settings.security.success'))
-      setPassword('')
-      setConfirmPassword('')
+      return false
     }
+    toast.success(t('settings.security.success'))
+    setPassword('')
+    setConfirmPassword('')
+    return true
+  }
+
+  useRegisterUnsavedChanges(password.length > 0 || confirmPassword.length > 0, save)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await save()
   }
 
   return (

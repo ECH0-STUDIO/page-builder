@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Loader2, Plus, UserX, User, ShieldAlert, Mail, Clock } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
+import { useRegisterUnsavedChanges } from '@/components/unsaved-changes'
 
 export function TeamList({ members, pendingInvites = [], businessId }: { members: any[], pendingInvites?: any[], businessId: string }) {
   const [isInviting, setIsInviting] = useState(false)
@@ -37,20 +38,22 @@ export function TeamList({ members, pendingInvites = [], businessId }: { members
     return role
   }
 
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault()
+  async function sendInvite() {
     setIsInviting(true)
-
     const res = await inviteTeamMemberAction({ email, role, businessId })
-    
     setIsInviting(false)
-
     if (res.error) {
       toast.error(res.error)
-    } else {
-      toast.success(t('settings.team.inviteSent'))
-      setEmail('')
+      return false
     }
+    toast.success(t('settings.team.inviteSent'))
+    setEmail('')
+    return true
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault()
+    await sendInvite()
   }
 
   async function handleRemove(memberId: string) {
@@ -66,7 +69,7 @@ export function TeamList({ members, pendingInvites = [], businessId }: { members
 
   async function handleBatchSave() {
     const updates = Object.entries(pendingRole).map(([memberId, newRole]) => ({ memberId, newRole }))
-    if (updates.length === 0) return
+    if (updates.length === 0) return true
 
     setIsSavingBatch(true)
     const res = await updateTeamMemberRolesAction({ updates, businessId })
@@ -74,14 +77,24 @@ export function TeamList({ members, pendingInvites = [], businessId }: { members
 
     if (res.error) {
       toast.error(res.error)
-    } else if (res.hasErrors) {
+      return false
+    }
+    if (res.hasErrors) {
       toast.error('Some roles could not be updated')
       setPendingRole({})
-    } else {
-      toast.success(t('settings.team.roleChanged') || 'Roles updated successfully')
-      setPendingRole({})
+      return false
     }
+    toast.success(t('settings.team.roleChanged') || 'Roles updated successfully')
+    setPendingRole({})
+    return true
   }
+
+  useRegisterUnsavedChanges(email.trim().length > 0 || Object.keys(pendingRole).length > 0, async () => {
+    let ok = true
+    if (email.trim()) ok = (await sendInvite()) && ok
+    if (Object.keys(pendingRole).length > 0) ok = (await handleBatchSave()) && ok
+    return ok
+  })
 
   async function handleResend(inviteEmail: string, inviteRole: string, inviteId: string) {
     setResendingId(inviteId)

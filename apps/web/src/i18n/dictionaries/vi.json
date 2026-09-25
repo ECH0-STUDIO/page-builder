@@ -503,6 +503,8 @@
     "publishToLive": "Xuất bản trực tuyến",
     "closePreview": "Đóng xem trước",
     "changes": "Có thay đổi",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
     "nothingToUndo": "Không còn thao tác để hoàn tác",
     "nothingToRedo": "Không còn thao tác để làm lại",
     "toastPublished": "Đã xuất bản trang thành công!",
@@ -1556,6 +1558,13 @@
     "incomingDesc": "Bạn được mời tham gia với vai trò {role}.",
     "switchAccount": "Đăng xuất và dùng email được mời"
   },
+  "unsavedPrompt": {
+    "title": "Lưu chỉnh sửa?",
+    "body": "Bạn có chỉnh sửa chưa được lưu. Lưu trước khi rời, hoặc rời đi và hủy các chỉnh sửa đó.",
+    "save": "Lưu",
+    "discard": "Rời đi, không lưu",
+    "stay": "Ở lại"
+  },
   "translations": {
     "title": "Bản dịch",
     "description": "Điền nội dung hiển thị cho từng ngôn ngữ đã mua. Ngôn ngữ chính ({{primary}}) được chỉnh trong trình tạo trang và thực đơn.",
@@ -1565,7 +1574,7 @@
     "edit": "Sửa →",
     "breadcrumb": "Bản dịch",
     "translateTo": "Dịch sang {{locale}}",
-    "editorHint": "Ngôn ngữ chính ({{primary}}) hiển thị bên trái. Trường trống sẽ dùng bản chính trên trang live cho đến khi bạn tùy chỉnh.",
+    "editorHint": "Ngôn ngữ chính ({{primary}}) ở bên trái. Chỉnh sửa chỉ được áp dụng khi bạn bấm Lưu. Trang đang chạy giữ bản dịch trước đó cho đến lúc đó.",
     "stillUsingPrimary": "{{count}} vẫn dùng bản chính",
     "translateWithAi": "Dịch bằng AI",
     "save": "Lưu",

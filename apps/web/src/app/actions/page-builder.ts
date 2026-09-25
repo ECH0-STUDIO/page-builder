@@ -41,7 +41,7 @@ import {
   normalizeGscVerification,
   normalizeTikTokPixelId,
 } from '@/lib/tracking-ids'
-import { getBusinessPrimaryLocale } from '@/app/actions/business-locales'
+import { getActiveBusinessLocales, getBusinessPrimaryLocale } from '@/app/actions/business-locales'
 import { setPrimaryLocaleText, syncLocalizedConfig, type LocalizedString } from '@/i18n/localized-content'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
@@ -172,7 +172,10 @@ export async function savePageBlocksAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const primary = await getBusinessPrimaryLocale(businessId)
+  const [primary, otherLocales] = await Promise.all([
+    getBusinessPrimaryLocale(businessId),
+    getActiveBusinessLocales(businessId),
+  ])
   const [{ data: existingBlocks }, { data: pubRow }] = await Promise.all([
     supabase.from('page_blocks').select('id, config').eq('business_id', businessId),
     supabase.from('publishing_settings').select('published_blocks').eq('business_id', businessId).maybeSingle(),
@@ -195,6 +198,7 @@ export async function savePageBlocksAction(
       (b.config ?? {}) as unknown as Record<string, unknown>,
       primary,
       [existingById.get(b.id) ?? null, publishedById.get(b.id) ?? null],
+      otherLocales,
     )
     return {
       id,
@@ -360,7 +364,10 @@ export async function saveOrderPromoSlidesAction(
   if (!access.ok) return { success: false, error: access.error }
 
   const cleaned = normalizeOrderPromoSlides(slides).slice(0, MAX_ORDER_PROMO_SLIDES)
-  const primary = await getBusinessPrimaryLocale(businessId)
+  const [primary, otherLocales] = await Promise.all([
+    getBusinessPrimaryLocale(businessId),
+    getActiveBusinessLocales(businessId),
+  ])
   const { data: prevRow } = await supabase
     .from('publishing_settings')
     .select('order_promo_slides')
@@ -371,7 +378,7 @@ export async function saveOrderPromoSlidesAction(
     const old = previous.find(item => item.id === slide.id)
     return {
       ...slide,
-      alt_i18n: setPrimaryLocaleText(old?.alt_i18n ?? old?.alt ?? slide.alt, slide.alt ?? '', primary),
+      alt_i18n: setPrimaryLocaleText(old?.alt_i18n ?? old?.alt ?? slide.alt, slide.alt ?? '', primary, otherLocales),
     }
   })
 
@@ -670,7 +677,10 @@ export async function saveNavbarAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
-  const primary = await getBusinessPrimaryLocale(businessId)
+  const [primary, otherLocales] = await Promise.all([
+    getBusinessPrimaryLocale(businessId),
+    getActiveBusinessLocales(businessId),
+  ])
   const [{ data: existingTheme }, { data: pubTheme }] = await Promise.all([
     supabase.from('theme_settings').select('navbar_config').eq('business_id', businessId).maybeSingle(),
     supabase.from('publishing_settings').select('published_theme').eq('business_id', businessId).maybeSingle(),
@@ -685,6 +695,7 @@ export async function saveNavbarAction(
       (existingTheme?.navbar_config ?? null) as Record<string, unknown> | null,
       publishedNav ?? null,
     ],
+    otherLocales,
   ) as unknown as NavbarConfig
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -716,7 +727,10 @@ export async function saveFooterAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
-  const primary = await getBusinessPrimaryLocale(businessId)
+  const [primary, otherLocales] = await Promise.all([
+    getBusinessPrimaryLocale(businessId),
+    getActiveBusinessLocales(businessId),
+  ])
   const [{ data: existingTheme }, { data: pubTheme }] = await Promise.all([
     supabase.from('theme_settings').select('footer_config').eq('business_id', businessId).maybeSingle(),
     supabase.from('publishing_settings').select('published_theme').eq('business_id', businessId).maybeSingle(),
@@ -731,6 +745,7 @@ export async function saveFooterAction(
       (existingTheme?.footer_config ?? null) as Record<string, unknown> | null,
       publishedFooter ?? null,
     ],
+    otherLocales,
   ) as unknown as FooterConfig
 
   const { data, error } = await supabase
@@ -867,7 +882,10 @@ export async function savePublishingSettingsAction(
       : { data: null }
 
     if ('seo_title' in fields || 'seo_description' in fields) {
-      const primary = await getBusinessPrimaryLocale(businessId)
+      const [primary, otherLocales] = await Promise.all([
+        getBusinessPrimaryLocale(businessId),
+        getActiveBusinessLocales(businessId),
+      ])
       const existing = (existingPub?.seo_i18n && typeof existingPub.seo_i18n === 'object' && !Array.isArray(existingPub.seo_i18n))
         ? { ...(existingPub.seo_i18n as Record<string, unknown>) }
         : {}
@@ -876,6 +894,7 @@ export async function savePublishingSettingsAction(
           (existing.title as LocalizedString) ?? existingPub?.seo_title ?? '',
           fields.seo_title ?? '',
           primary,
+          otherLocales,
         )
       }
       if ('seo_description' in fields) {
@@ -883,6 +902,7 @@ export async function savePublishingSettingsAction(
           (existing.description as LocalizedString) ?? existingPub?.seo_description ?? '',
           fields.seo_description ?? '',
           primary,
+          otherLocales,
         )
       }
       payload.seo_i18n = existing
