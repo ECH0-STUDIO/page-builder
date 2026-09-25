@@ -4,9 +4,8 @@ import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { StableInput, StableNumberInput, StableTextarea } from '../stable-text-field'
 import { Separator } from '@/components/ui/separator'
 import { Slider } from '@/components/ui/slider'
 import {
@@ -110,7 +109,7 @@ export function HeroSettings({
   ]
 
   function set<K extends keyof HeroConfig>(key: K, value: HeroConfig[K]) {
-    onChange({ ...config, [key]: value })
+    return onChange({ ...config, [key]: value })
   }
 
   function resolvedHeight(): BlockHeight {
@@ -280,8 +279,8 @@ export function HeroSettings({
               <input type="color" value={config.text_only_color ?? '#1a1a2e'}
                 onChange={e => set('text_only_color', e.target.value)}
                 className="size-8 rounded border border-border cursor-pointer" />
-              <Input value={config.text_only_color ?? '#1a1a2e'}
-                onChange={e => set('text_only_color', e.target.value)}
+              <StableInput value={config.text_only_color ?? '#1a1a2e'}
+                onValueChange={v => set('text_only_color', v)}
                 className="h-7 text-xs font-mono flex-1" maxLength={7} />
             </div>
           ) : (
@@ -385,11 +384,11 @@ export function HeroSettings({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-heading" className="text-xs">{t('heroBlock.heading')}</Label>
-          <Input id="hero-heading" value={plainText(config.heading)} onChange={e => set('heading', e.target.value)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
+          <StableInput id="hero-heading" value={plainText(config.heading)} onValueChange={v => set('heading', v)} placeholder={t('heroBlock.headingPlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="hero-body" className="text-xs">{t('heroBlock.bodyText')}</Label>
-          <Textarea id="hero-body" value={plainText(config.body)} onChange={e => set('body', e.target.value)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
+          <StableTextarea id="hero-body" value={plainText(config.body)} onValueChange={v => set('body', v)} placeholder={t('heroBlock.bodyPlaceholder')} rows={2} className="resize-none text-sm" />
         </div>
       </div>
 
@@ -461,21 +460,12 @@ export function HeroSettings({
             )}
             <Label htmlFor="hero-min-height" className="text-xs">{t('heroBlock.minHeight')}</Label>
             <div className="flex items-center gap-2">
-              <Input
+              <StableNumberInput
                 id="hero-min-height"
-                type="number"
-                min={0}
-                step={10}
-                value={config.min_height && config.min_height > 0 ? config.min_height : ''}
-                onChange={e => {
-                  const raw = e.target.value.trim()
-                  if (raw === '') {
-                    set('min_height', null)
-                    return
-                  }
-                  const n = Number(raw)
-                  set('min_height', Number.isFinite(n) && n > 0 ? Math.round(n) : null)
-                }}
+                min={1}
+                fallback={null}
+                value={config.min_height && config.min_height > 0 ? config.min_height : null}
+                onValueChange={n => set('min_height', n == null ? null : Math.round(n))}
                 placeholder={t('heroBlock.minHeightPlaceholder')}
                 className="h-8 text-sm"
               />

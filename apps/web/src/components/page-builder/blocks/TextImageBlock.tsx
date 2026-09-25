@@ -4,9 +4,8 @@ import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { StableInput, StableNumberInput, StableTextarea } from '../stable-text-field'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -120,7 +119,7 @@ export function TextImageSettings({
 
 
   function set<K extends keyof TextImageConfig>(key: K, value: TextImageConfig[K]) {
-    onChange({ ...config, [key]: value })
+    return onChange({ ...config, [key]: value })
   }
 
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -237,20 +236,20 @@ export function TextImageSettings({
             <div className="space-y-1.5">
               <Label className="text-xs">{t('textImageBlock.customAspectRatio')}</Label>
               <div className="flex items-center gap-2">
-                <Input
-                  type="number"
+                <StableNumberInput
                   min={1}
+                  fallback={1}
                   value={config.aspect_ratio_width ?? 4}
-                  onChange={e => set('aspect_ratio_width', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  onValueChange={n => set('aspect_ratio_width', n == null ? 1 : Math.round(n))}
                   className="h-8 text-xs text-center"
                   aria-label={t('textImageBlock.aspectRatioWidth')}
                 />
                 <span className="text-xs text-muted-foreground shrink-0">:</span>
-                <Input
-                  type="number"
+                <StableNumberInput
                   min={1}
+                  fallback={1}
                   value={config.aspect_ratio_height ?? 3}
-                  onChange={e => set('aspect_ratio_height', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  onValueChange={n => set('aspect_ratio_height', n == null ? 1 : Math.round(n))}
                   className="h-8 text-xs text-center"
                   aria-label={t('textImageBlock.aspectRatioHeight')}
                 />
@@ -292,20 +291,20 @@ export function TextImageSettings({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-heading" className="text-xs">{t('textImageBlock.headingOptional')}</Label>
-            <Input
+            <StableInput
               id="ti-heading"
               value={plainText(config.heading)}
-              onChange={e => set('heading', e.target.value)}
+              onValueChange={v => set('heading', v)}
               placeholder={t('textImageBlock.headingPlaceholder')}
               className="h-8 text-sm"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ti-body" className="text-xs">{t('textImageBlock.bodyText')}</Label>
-            <Textarea
+            <StableTextarea
               id="ti-body"
               value={plainText(config.body)}
-              onChange={e => set('body', e.target.value)}
+              onValueChange={v => set('body', v)}
               placeholder="Write your content here…&#10;Line breaks are preserved."
               rows={5}
               className="resize-none text-sm"
@@ -362,9 +361,9 @@ export function TextImageSettings({
                 onChange={e => set('background_color', e.target.value)}
                 className="size-7 rounded border border-border cursor-pointer"
               />
-              <Input
+              <StableInput
                 value={config.background_color}
-                onChange={e => set('background_color', e.target.value)}
+                onValueChange={v => set('background_color', v)}
                 className="h-7 text-xs font-mono flex-1"
                 maxLength={7}
               />

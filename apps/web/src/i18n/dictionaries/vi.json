@@ -1576,6 +1576,7 @@
     "emptySection": "Chưa có nội dung dịch được trong mục này. Hãy thêm nội dung trong trình tạo trang hoặc thực đơn trước.",
     "badgeTranslated": "đã dịch",
     "badgeUnsaved": "chưa lưu",
+    "resetToOriginal": "Đặt lại về bản gốc",
     "emptyValue": "Trống",
     "nothingToSave": "Không có gì để lưu",
     "savedFields": "Đã lưu {{count}} trường",

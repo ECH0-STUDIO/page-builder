@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { resolvePublicStoreUrl, type StorePublicUrlMeta } from '@/lib/site-urls'
-import { readLocaleText, type LocalizedString } from '@/i18n/localized-content'
+import { overlayLivePrimary, readLocaleText, type LocalizedString } from '@/i18n/localized-content'
 
 type StorePublishingMeta = StorePublicUrlMeta & {
   seo_title?: string | null
@@ -30,12 +30,24 @@ export function resolveStoreSeoCopy(opts: {
       ? (opts.pub.seo_i18n as Record<string, unknown>)
       : null
 
-  const titleFromI18n = map
-    ? readLocaleText(map.title as LocalizedString, locale, primary)
-    : ''
-  const descFromI18n = map
-    ? readLocaleText(map.description as LocalizedString, locale, primary)
-    : ''
+  const titleFromI18n = readLocaleText(
+    overlayLivePrimary(
+      (map?.title as LocalizedString) ?? opts.pub?.seo_title ?? '',
+      opts.pub?.seo_title,
+      primary,
+    ),
+    locale,
+    primary,
+  )
+  const descFromI18n = readLocaleText(
+    overlayLivePrimary(
+      (map?.description as LocalizedString) ?? opts.pub?.seo_description ?? '',
+      opts.pub?.seo_description,
+      primary,
+    ),
+    locale,
+    primary,
+  )
 
   const title =
     opts.titleOverride

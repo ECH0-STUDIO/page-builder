@@ -7,6 +7,7 @@ import type { OrderPromoSlide } from '@/components/order-page/promo-slides'
 import {
   isLocaleCustomized,
   readLocaleText,
+  overlayLivePrimary,
   type LocalizedString,
 } from '@/i18n/localized-content'
 import type { StoreLocaleCode } from '@/i18n/store-locales'
@@ -160,8 +161,18 @@ export function collectSeoFields(
     ? seo.seo_i18n as Record<string, unknown>
     : null
 
-  const titleSource = map?.title ?? seo.seo_title ?? ''
-  const descSource = map?.description ?? seo.seo_description ?? ''
+  // Plain columns are what the page builder saves. Overlay them onto the locale
+  // map so a builder edit shows up here without wiping customized translations.
+  const titleSource = overlayLivePrimary(
+    asLocalized(map?.title ?? seo.seo_title ?? ''),
+    seo.seo_title,
+    primary,
+  )
+  const descSource = overlayLivePrimary(
+    asLocalized(map?.description ?? seo.seo_description ?? ''),
+    seo.seo_description,
+    primary,
+  )
 
   const out: TranslationField[] = []
   const title = fieldFromValue('seo.title', 'seo', 'SEO', 'Meta title', titleSource, locale, primary)
@@ -184,7 +195,11 @@ export function collectOrderPromoFields(
       'order',
       'Promo carousel',
       `Slide ${i + 1} caption`,
-      (slide as { alt?: unknown; alt_i18n?: unknown }).alt_i18n ?? slide.alt,
+      overlayLivePrimary(
+        asLocalized((slide as { alt?: unknown; alt_i18n?: unknown }).alt_i18n ?? slide.alt),
+        slide.alt,
+        primary,
+      ),
       locale,
       primary,
     )
@@ -214,7 +229,7 @@ export function collectMenuFields(
       'menu',
       'Categories',
       cat.name || 'Category',
-      cat.name_i18n ?? cat.name,
+      overlayLivePrimary(asLocalized(cat.name_i18n ?? cat.name), cat.name, primary),
       locale,
       primary,
     )
@@ -228,7 +243,7 @@ export function collectMenuFields(
       'menu',
       group,
       'Item name',
-      item.name_i18n ?? item.name,
+      overlayLivePrimary(asLocalized(item.name_i18n ?? item.name), item.name, primary),
       locale,
       primary,
     )
@@ -237,7 +252,11 @@ export function collectMenuFields(
       'menu',
       group,
       `${item.name} · description`,
-      item.description_i18n ?? item.description,
+      overlayLivePrimary(
+        asLocalized(item.description_i18n ?? item.description),
+        item.description,
+        primary,
+      ),
       locale,
       primary,
       true,
@@ -254,7 +273,7 @@ export function collectMenuFields(
       'menu',
       `${parent} · options`,
       'Option group',
-      group.name_i18n ?? group.name,
+      overlayLivePrimary(asLocalized(group.name_i18n ?? group.name), group.name, primary),
       locale,
       primary,
     )
@@ -269,7 +288,7 @@ export function collectMenuFields(
       'menu',
       parent,
       'Option',
-      opt.label_i18n ?? opt.label,
+      overlayLivePrimary(asLocalized(opt.label_i18n ?? opt.label), opt.label, primary),
       locale,
       primary,
     )

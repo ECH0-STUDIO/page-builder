@@ -35,6 +35,8 @@ import {
   normalizeGscVerification,
   normalizeTikTokPixelId,
 } from '@/lib/tracking-ids'
+import { getBusinessPrimaryLocale } from '@/app/actions/business-locales'
+import { setPrimaryLocaleText, syncLocalizedConfig, type LocalizedString } from '@/i18n/localized-content'
 export type { PublishingSettings } from '@/components/page-builder/types'
 
 function normalizePublishing(row: Record<string, unknown> | null): PublishingSettings | null {
@@ -164,21 +166,45 @@ export async function savePageBlocksAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase
 
-  const rows = blocks.map((b, i) => ({
+  const primary = await getBusinessPrimaryLocale(businessId)
+  const [{ data: existingBlocks }, { data: pubRow }] = await Promise.all([
+    supabase.from('page_blocks').select('id, config').eq('business_id', businessId),
+    supabase.from('publishing_settings').select('published_blocks').eq('business_id', businessId).maybeSingle(),
+  ])
+  const existingById = new Map(
+    ((existingBlocks ?? []) as { id: string; config: Record<string, unknown> | null }[])
+      .map(row => [row.id, row.config]),
+  )
+  const publishedList = Array.isArray(pubRow?.published_blocks)
+    ? pubRow.published_blocks as { id?: string; config?: Record<string, unknown> }[]
+    : []
+  const publishedById = new Map(
+    publishedList.filter(row => row?.id).map(row => [String(row.id), row.config ?? null]),
+  )
+
+  const rows = blocks.map((b, i) => {
     // Temp ids come from unsaved blocks in the editor and are not valid uuids.
-    id: b.id.startsWith('temp-') ? crypto.randomUUID() : b.id,
-    business_id: businessId,
-    type: b.type,
-    sort_order: i,
-    visible: b.visible,
-    config: b.config,
-    spacing: b.spacing ?? {
-      padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0,
-      margin_top: 0, margin_bottom: 0,
-    },
-    custom_css: b.custom_css ?? '',
-    block_anchor_id: b.block_anchor_id ?? null,
-  }))
+    const id = b.id.startsWith('temp-') ? crypto.randomUUID() : b.id
+    const config = syncLocalizedConfig(
+      (b.config ?? {}) as unknown as Record<string, unknown>,
+      primary,
+      [existingById.get(b.id) ?? null, publishedById.get(b.id) ?? null],
+    )
+    return {
+      id,
+      business_id: businessId,
+      type: b.type,
+      sort_order: i,
+      visible: b.visible,
+      config,
+      spacing: b.spacing ?? {
+        padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0,
+        margin_top: 0, margin_bottom: 0,
+      },
+      custom_css: b.custom_css ?? '',
+      block_anchor_id: b.block_anchor_id ?? null,
+    }
+  })
 
   // Replace the whole set in one transaction. Done as two client calls, a
   // failure between them would wipe the page and leave nothing behind.
@@ -318,11 +344,25 @@ export async function saveOrderPromoSlidesAction(
   if (!access.ok) return { success: false, error: access.error }
 
   const cleaned = normalizeOrderPromoSlides(slides).slice(0, MAX_ORDER_PROMO_SLIDES)
+  const primary = await getBusinessPrimaryLocale(businessId)
+  const { data: prevRow } = await supabase
+    .from('publishing_settings')
+    .select('order_promo_slides')
+    .eq('business_id', businessId)
+    .maybeSingle()
+  const previous = normalizeOrderPromoSlides(prevRow?.order_promo_slides)
+  const withLocales = cleaned.map(slide => {
+    const old = previous.find(item => item.id === slide.id)
+    return {
+      ...slide,
+      alt_i18n: setPrimaryLocaleText(old?.alt_i18n ?? old?.alt ?? slide.alt, slide.alt ?? '', primary),
+    }
+  })
 
   const { data, error } = await supabase
     .from('publishing_settings')
     .upsert(
-      { business_id: businessId, order_promo_slides: cleaned as unknown as never },
+      { business_id: businessId, order_promo_slides: withLocales as unknown as never },
       { onConflict: 'business_id' },
     )
     .select('order_promo_slides')
@@ -614,11 +654,28 @@ export async function saveNavbarAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
+  const primary = await getBusinessPrimaryLocale(businessId)
+  const [{ data: existingTheme }, { data: pubTheme }] = await Promise.all([
+    supabase.from('theme_settings').select('navbar_config').eq('business_id', businessId).maybeSingle(),
+    supabase.from('publishing_settings').select('published_theme').eq('business_id', businessId).maybeSingle(),
+  ])
+  const publishedNav = (pubTheme?.published_theme && typeof pubTheme.published_theme === 'object')
+    ? (pubTheme.published_theme as { navbar_config?: Record<string, unknown> }).navbar_config
+    : null
+  const navbarToSave = syncLocalizedConfig(
+    navbarConfig as unknown as Record<string, unknown>,
+    primary,
+    [
+      (existingTheme?.navbar_config ?? null) as Record<string, unknown> | null,
+      publishedNav ?? null,
+    ],
+  ) as unknown as NavbarConfig
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('theme_settings')
     .upsert(
-      { business_id: businessId, navbar_config: navbarConfig },
+      { business_id: businessId, navbar_config: navbarToSave },
       { onConflict: 'business_id' }
     )
     .select()
@@ -643,10 +700,27 @@ export async function saveFooterAction(
   const access = await assertOwnerOrManager(supabase, user.id, businessId)
   if (!access.ok) return { success: false, error: access.error }
 
+  const primary = await getBusinessPrimaryLocale(businessId)
+  const [{ data: existingTheme }, { data: pubTheme }] = await Promise.all([
+    supabase.from('theme_settings').select('footer_config').eq('business_id', businessId).maybeSingle(),
+    supabase.from('publishing_settings').select('published_theme').eq('business_id', businessId).maybeSingle(),
+  ])
+  const publishedFooter = (pubTheme?.published_theme && typeof pubTheme.published_theme === 'object')
+    ? (pubTheme.published_theme as { footer_config?: Record<string, unknown> }).footer_config
+    : null
+  const footerToSave = syncLocalizedConfig(
+    footerConfig as unknown as Record<string, unknown>,
+    primary,
+    [
+      (existingTheme?.footer_config ?? null) as Record<string, unknown> | null,
+      publishedFooter ?? null,
+    ],
+  ) as unknown as FooterConfig
+
   const { data, error } = await supabase
     .from('theme_settings')
     .upsert(
-      { business_id: businessId, footer_config: footerConfig },
+      { business_id: businessId, footer_config: footerToSave },
       { onConflict: 'business_id' }
     )
     .select()
@@ -754,6 +828,33 @@ export async function savePublishingSettingsAction(
     }
 
     const payload: Record<string, unknown> = { business_id: businessId, ...fields }
+
+    if ('seo_title' in fields || 'seo_description' in fields) {
+      const primary = await getBusinessPrimaryLocale(businessId)
+      const { data: existingPub } = await supabase
+        .from('publishing_settings')
+        .select('seo_i18n, seo_title, seo_description')
+        .eq('business_id', businessId)
+        .maybeSingle()
+      const existing = (existingPub?.seo_i18n && typeof existingPub.seo_i18n === 'object' && !Array.isArray(existingPub.seo_i18n))
+        ? { ...(existingPub.seo_i18n as Record<string, unknown>) }
+        : {}
+      if ('seo_title' in fields) {
+        existing.title = setPrimaryLocaleText(
+          (existing.title as LocalizedString) ?? existingPub?.seo_title ?? '',
+          fields.seo_title ?? '',
+          primary,
+        )
+      }
+      if ('seo_description' in fields) {
+        existing.description = setPrimaryLocaleText(
+          (existing.description as LocalizedString) ?? existingPub?.seo_description ?? '',
+          fields.seo_description ?? '',
+          primary,
+        )
+      }
+      payload.seo_i18n = existing
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)

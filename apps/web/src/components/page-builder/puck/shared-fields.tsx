@@ -1,6 +1,9 @@
+'use client'
+
 import type { Field } from '@puckeditor/core'
 import type { SectionSize } from '../spacing-presets'
 import type { BlockHeight, HeroLayout } from '../types'
+import { useStableTextField } from '../stable-text-field'
 
 type Translate = (key: string) => string
 
@@ -50,6 +53,41 @@ export function heroHeightField(t: Translate) {
   } satisfies Field<{ height: BlockHeight }>
 }
 
+function AnchorIdInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: unknown
+  onChange: (value: string) => void
+  placeholder: string
+}) {
+  const external = typeof value === 'string' ? value : ''
+  const field = useStableTextField(external, (next) => onChange(next.replace(/[^a-zA-Z0-9-_]/g, '')))
+  return (
+    <input
+      type="text"
+      value={field.value}
+      onFocus={field.onFocus}
+      onBlur={field.onBlur}
+      onChange={e => {
+        const el = e.target
+        const raw = el.value
+        const start = el.selectionStart ?? raw.length
+        const cleaned = raw.replace(/[^a-zA-Z0-9-_]/g, '')
+        const before = raw.slice(0, start).replace(/[^a-zA-Z0-9-_]/g, '').length
+        field.onChange(cleaned)
+        requestAnimationFrame(() => {
+          const pos = Math.min(before, cleaned.length)
+          el.setSelectionRange(pos, pos)
+        })
+      }}
+      placeholder={placeholder}
+      className="flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm font-mono"
+    />
+  )
+}
+
 /** Section ID used for #anchor scroll-to links (navbar / CTA). */
 export function anchorIdField(t: Translate) {
   return {
@@ -62,12 +100,10 @@ export function anchorIdField(t: Translate) {
         </p>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground font-mono">#</span>
-          <input
-            type="text"
-            value={typeof value === 'string' ? value : ''}
-            onChange={e => onChange(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
+          <AnchorIdInput
+            value={value}
+            onChange={onChange}
             placeholder={t('pageBuilder.sectionAnchorPlaceholder')}
-            className="flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm font-mono"
           />
         </div>
       </div>

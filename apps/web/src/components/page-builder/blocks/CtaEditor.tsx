@@ -14,7 +14,7 @@
 
 import { useId } from 'react'
 import { X, LinkIcon, Phone, Anchor, Mail } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { StableInput } from '../stable-text-field'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -106,10 +106,10 @@ export function CtaEditor({
       </div>
 
       {/* Label */}
-      <Input
+      <StableInput
         placeholder={t('ctaEditor.buttonLabel')}
         value={plainText(value.label)}
-        onChange={e => onChange({ ...value, label: e.target.value })}
+        onValueChange={v => onChange({ ...value, label: v })}
         className="h-8 text-sm"
       />
 
@@ -195,14 +195,14 @@ export function CtaEditor({
         )
       ) : (
         <div className="space-y-2">
-          <Input
+          <StableInput
             placeholder={
               value.action === 'tel' ? '+84 9xx xxx xxx'
               : value.action === 'email' ? 'hello@example.com'
               : t('ctaEditor.urlPlaceholder')
             }
             value={value.value}
-            onChange={e => onChange({ ...value, value: e.target.value })}
+            onValueChange={v => onChange({ ...value, value: v })}
             className="h-8 text-sm"
           />
           {value.action === 'url' && (

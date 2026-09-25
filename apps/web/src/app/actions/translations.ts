@@ -5,7 +5,13 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { assertOwnerOrManager } from '@/lib/business-auth'
 import { getActiveBusinessLocales, getBusinessPrimaryLocale } from '@/app/actions/business-locales'
 import { isStoreLocaleCode, type StoreLocaleCode } from '@/i18n/store-locales'
-import { writeLocaleText, primaryPlainText, type LocalizedString } from '@/i18n/localized-content'
+import {
+  applyLocaleChange,
+  primaryPlainText,
+  setPrimaryLocaleText,
+  syncLocalizedConfig,
+  type LocalizedString,
+} from '@/i18n/localized-content'
 import {
   collectChromeFields,
   collectMenuFields,
@@ -80,22 +86,46 @@ async function loadTranslationSources(businessId: string): Promise<TranslationSo
     .eq('business_id', businessId)
     .maybeSingle()
 
-  let blocks: PageBlock[] = []
-  if (Array.isArray(pub?.published_blocks) && pub.published_blocks.length) {
-    blocks = (pub.published_blocks as PageBlock[]).filter(b => b.visible !== false)
-  } else {
-    const { data: draftBlocks } = await (admin as any)
-      .from('page_blocks')
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('visible', true)
-      .order('sort_order', { ascending: true })
-    blocks = (draftBlocks ?? []) as PageBlock[]
-  }
+  const { data: draftBlocks } = await (admin as any)
+    .from('page_blocks')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('visible', true)
+    .order('sort_order', { ascending: true })
 
-  const themeSource = pub?.published_theme ?? theme
-  const navbar = (themeSource?.navbar_config as NavbarConfig | null) ?? defaultNavbarConfig
-  const footer = (themeSource?.footer_config as FooterConfig | null) ?? defaultFooterConfig
+  const publishedBlocks = Array.isArray(pub?.published_blocks)
+    ? (pub.published_blocks as PageBlock[])
+    : []
+  const publishedById = new Map(publishedBlocks.map(block => [block.id, block]))
+
+  // Draft blocks are what the page builder is editing. Published snapshots are
+  // only a fallback for translations the builder replaced with a plain string.
+  const draftList = (draftBlocks ?? []) as PageBlock[]
+  const blocks: PageBlock[] = (draftList.length ? draftList : publishedBlocks).map(block => {
+    const previous = publishedById.get(block.id)
+    return {
+      ...block,
+      config: syncLocalizedConfig(
+        (block.config ?? {}) as unknown as Record<string, unknown>,
+        primary,
+        [previous?.config as unknown as Record<string, unknown> | undefined],
+      ) as unknown as PageBlock['config'],
+    }
+  })
+
+  const publishedTheme = (pub?.published_theme && typeof pub.published_theme === 'object')
+    ? pub.published_theme as { navbar_config?: NavbarConfig; footer_config?: FooterConfig }
+    : null
+  const navbar = syncLocalizedConfig(
+    { ...defaultNavbarConfig, ...((theme?.navbar_config as NavbarConfig | null) ?? publishedTheme?.navbar_config ?? {}) },
+    primary,
+    [publishedTheme?.navbar_config as Record<string, unknown> | undefined],
+  ) as NavbarConfig
+  const footer = syncLocalizedConfig(
+    { ...defaultFooterConfig, ...((theme?.footer_config as FooterConfig | null) ?? publishedTheme?.footer_config ?? {}) },
+    primary,
+    [publishedTheme?.footer_config as Record<string, unknown> | undefined],
+  ) as FooterConfig
 
   const [{ data: cats }, { data: items }] = await Promise.all([
     (admin as any).from('menu_categories').select('id, name, name_i18n').eq('business_id', businessId).order('sort_order'),
@@ -210,7 +240,7 @@ export async function getTranslationProgressAction(
 export async function saveTranslationsAction(
   businessId: string,
   localeRaw: string,
-  updates: Record<string, string>,
+  updates: Record<string, string | null>,
 ): Promise<ActionResult<{ saved: number }>> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -224,22 +254,22 @@ export async function saveTranslationsAction(
   const gate = await assertLocaleAccess(businessId, locale, primary)
   if (!gate.ok) return { success: false, error: gate.error }
 
-  const entries = Object.entries(updates).filter(([, v]) => typeof v === 'string')
+  const entries = Object.entries(updates).filter(([, v]) => v === null || typeof v === 'string')
   if (!entries.length) return { success: true, data: { saved: 0 } }
 
   const admin = createAdminClient()
   let saved = 0
 
   // Group updates by target
-  const menuCategory: Record<string, string> = {}
-  const menuItemName: Record<string, string> = {}
-  const menuItemDesc: Record<string, string> = {}
-  const variantGroup: Record<string, string> = {}
-  const variantOption: Record<string, string> = {}
-  const blockPatches: Record<string, Record<string, string>> = {}
-  const chromePatches: Record<string, string> = {}
-  const seoPatches: Record<string, string> = {}
-  const orderPatches: Record<string, string> = {}
+  const menuCategory: Record<string, string | null> = {}
+  const menuItemName: Record<string, string | null> = {}
+  const menuItemDesc: Record<string, string | null> = {}
+  const variantGroup: Record<string, string | null> = {}
+  const variantOption: Record<string, string | null> = {}
+  const blockPatches: Record<string, Record<string, string | null>> = {}
+  const chromePatches: Record<string, string | null> = {}
+  const seoPatches: Record<string, string | null> = {}
+  const orderPatches: Record<string, string | null> = {}
 
   for (const [id, text] of entries) {
     const parts = id.split('.')
@@ -271,7 +301,13 @@ export async function saveTranslationsAction(
   for (const [id, text] of Object.entries(menuCategory)) {
     const { data: row } = await (admin as any).from('menu_categories').select('name, name_i18n').eq('id', id).eq('business_id', businessId).maybeSingle()
     if (!row) continue
-    const name_i18n = writeLocaleText((row.name_i18n ?? row.name) as LocalizedString, locale, text, primary)
+    const name_i18n = applyLocaleChange(
+      (row.name_i18n ?? row.name) as LocalizedString,
+      locale,
+      text,
+      primary,
+      row.name ?? '',
+    )
     await (admin as any).from('menu_categories').update({
       name_i18n,
       name: primaryPlainText(name_i18n, primary),
@@ -291,17 +327,24 @@ export async function saveTranslationsAction(
     if (!row) continue
     const patch: Record<string, unknown> = {}
     if (menuItemName[id] !== undefined) {
-      const name_i18n = writeLocaleText((row.name_i18n ?? row.name) as LocalizedString, locale, menuItemName[id], primary)
+      const name_i18n = applyLocaleChange(
+        (row.name_i18n ?? row.name) as LocalizedString,
+        locale,
+        menuItemName[id],
+        primary,
+        row.name ?? '',
+      )
       patch.name_i18n = name_i18n
       patch.name = primaryPlainText(name_i18n, primary)
       saved++
     }
     if (menuItemDesc[id] !== undefined) {
-      const description_i18n = writeLocaleText(
+      const description_i18n = applyLocaleChange(
         (row.description_i18n ?? row.description) as LocalizedString,
         locale,
         menuItemDesc[id],
         primary,
+        row.description ?? '',
       )
       patch.description_i18n = description_i18n
       patch.description = primaryPlainText(description_i18n, primary) || null
@@ -315,7 +358,13 @@ export async function saveTranslationsAction(
   for (const [id, text] of Object.entries(variantGroup)) {
     const { data: row } = await (admin as any).from('menu_item_variant_groups').select('name, name_i18n').eq('id', id).maybeSingle()
     if (!row) continue
-    const name_i18n = writeLocaleText((row.name_i18n ?? row.name) as LocalizedString, locale, text, primary)
+    const name_i18n = applyLocaleChange(
+      (row.name_i18n ?? row.name) as LocalizedString,
+      locale,
+      text,
+      primary,
+      row.name ?? '',
+    )
     await (admin as any).from('menu_item_variant_groups').update({
       name_i18n,
       name: primaryPlainText(name_i18n, primary),
@@ -326,7 +375,13 @@ export async function saveTranslationsAction(
   for (const [id, text] of Object.entries(variantOption)) {
     const { data: row } = await (admin as any).from('menu_item_variant_options').select('label, label_i18n').eq('id', id).maybeSingle()
     if (!row) continue
-    const label_i18n = writeLocaleText((row.label_i18n ?? row.label) as LocalizedString, locale, text, primary)
+    const label_i18n = applyLocaleChange(
+      (row.label_i18n ?? row.label) as LocalizedString,
+      locale,
+      text,
+      primary,
+      row.label ?? '',
+    )
     await (admin as any).from('menu_item_variant_options').update({
       label_i18n,
       label: primaryPlainText(label_i18n, primary),
@@ -334,57 +389,65 @@ export async function saveTranslationsAction(
     saved++
   }
 
-  // ── Page blocks (draft + published snapshot) ──
+  // ── Page blocks (draft + the same text fields on the published snapshot) ──
   if (Object.keys(blockPatches).length) {
-    const { data: draftBlocks } = await (admin as any)
-      .from('page_blocks')
-      .select('*')
-      .eq('business_id', businessId)
+    const [{ data: draftBlocks }, { data: pubBlocksRow }] = await Promise.all([
+      (admin as any).from('page_blocks').select('*').eq('business_id', businessId),
+      (admin as any).from('publishing_settings').select('published_blocks').eq('business_id', businessId).maybeSingle(),
+    ])
 
     const byId = new Map<string, Record<string, unknown>>()
     for (const b of (draftBlocks ?? []) as Record<string, unknown>[]) {
       byId.set(String(b.id), b)
     }
+    const publishedList = Array.isArray(pubBlocksRow?.published_blocks)
+      ? pubBlocksRow.published_blocks as Record<string, unknown>[]
+      : []
+    const publishedById = new Map(publishedList.map(b => [String(b.id), b]))
+    const healedById = new Map<string, Record<string, unknown>>()
 
     for (const [blockId, fields] of Object.entries(blockPatches)) {
       const row = byId.get(blockId)
       if (!row) continue
-      const config = { ...((row.config as Record<string, unknown>) ?? {}) }
+      const publishedConfig = (publishedById.get(blockId)?.config ?? null) as Record<string, unknown> | null
+      const config = syncLocalizedConfig(
+        { ...((row.config as Record<string, unknown>) ?? {}) },
+        primary,
+        [publishedConfig],
+      )
       for (const [path, text] of Object.entries(fields)) {
         if (path === 'cta.label' || path === 'cta_secondary.label') {
           const key = path.startsWith('cta_secondary') ? 'cta_secondary' : 'cta'
           const cta = { ...((config[key] as Record<string, unknown>) ?? {}) }
-          cta.label = writeLocaleText(cta.label as LocalizedString, locale, text, primary)
+          cta.label = applyLocaleChange(cta.label as LocalizedString, locale, text, primary)
           config[key] = cta
         } else {
-          config[path] = writeLocaleText(config[path] as LocalizedString, locale, text, primary)
+          config[path] = applyLocaleChange(config[path] as LocalizedString, locale, text, primary)
         }
         saved++
       }
+      healedById.set(blockId, config)
       await (admin as any).from('page_blocks').update({ config }).eq('id', blockId)
     }
 
-    // Refresh published_blocks snapshot if present
-    const { data: pub } = await (admin as any)
-      .from('publishing_settings')
-      .select('published_blocks')
-      .eq('business_id', businessId)
-      .maybeSingle()
-
-    if (Array.isArray(pub?.published_blocks)) {
-      const nextBlocks = (pub.published_blocks as Record<string, unknown>[]).map(b => {
-        const id = String(b.id)
-        const patches = blockPatches[id]
+    if (publishedList.length && healedById.size) {
+      const nextBlocks = publishedList.map(b => {
+        const healed = healedById.get(String(b.id))
+        if (!healed) return b
+        const patches = blockPatches[String(b.id)]
         if (!patches) return b
         const config = { ...((b.config as Record<string, unknown>) ?? {}) }
-        for (const [path, text] of Object.entries(patches)) {
+        for (const path of Object.keys(patches)) {
           if (path === 'cta.label' || path === 'cta_secondary.label') {
             const key = path.startsWith('cta_secondary') ? 'cta_secondary' : 'cta'
-            const cta = { ...((config[key] as Record<string, unknown>) ?? {}) }
-            cta.label = writeLocaleText(cta.label as LocalizedString, locale, text, primary)
-            config[key] = cta
-          } else {
-            config[path] = writeLocaleText(config[path] as LocalizedString, locale, text, primary)
+            const healedCta = healed[key]
+            if (healedCta && typeof healedCta === 'object') {
+              const cta = { ...((config[key] as Record<string, unknown>) ?? {}) }
+              cta.label = (healedCta as Record<string, unknown>).label
+              config[key] = cta
+            }
+          } else if (path in healed) {
+            config[path] = healed[path]
           }
         }
         return { ...b, config }
@@ -398,14 +461,33 @@ export async function saveTranslationsAction(
 
   // ── Chrome (navbar / footer) on theme_settings + published_theme ──
   if (Object.keys(chromePatches).length) {
-    const { data: theme } = await (admin as any)
-      .from('theme_settings')
-      .select('navbar_config, footer_config')
-      .eq('business_id', businessId)
-      .maybeSingle()
+    const [{ data: theme }, { data: pubThemeRow }] = await Promise.all([
+      (admin as any)
+        .from('theme_settings')
+        .select('navbar_config, footer_config')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+      (admin as any)
+        .from('publishing_settings')
+        .select('published_theme')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+    ])
 
-    let navbar = { ...((theme?.navbar_config as NavbarConfig) ?? defaultNavbarConfig) }
-    let footer = { ...((theme?.footer_config as FooterConfig) ?? defaultFooterConfig) }
+    const publishedTheme = (pubThemeRow?.published_theme && typeof pubThemeRow.published_theme === 'object')
+      ? pubThemeRow.published_theme as { navbar_config?: NavbarConfig; footer_config?: FooterConfig }
+      : null
+
+    let navbar = syncLocalizedConfig(
+      { ...defaultNavbarConfig, ...((theme?.navbar_config as NavbarConfig | null) ?? {}) },
+      primary,
+      [publishedTheme?.navbar_config as Record<string, unknown> | undefined],
+    ) as NavbarConfig
+    let footer = syncLocalizedConfig(
+      { ...defaultFooterConfig, ...((theme?.footer_config as FooterConfig | null) ?? {}) },
+      primary,
+      [publishedTheme?.footer_config as Record<string, unknown> | undefined],
+    ) as FooterConfig
 
     for (const [path, text] of Object.entries(chromePatches)) {
       if (path.startsWith('navbar.link.')) {
@@ -414,7 +496,7 @@ export async function saveTranslationsAction(
         if (links[idx]) {
           links[idx] = {
             ...links[idx],
-            label: writeLocaleText(links[idx].label as LocalizedString, locale, text, primary) as unknown as string,
+            label: applyLocaleChange(links[idx].label as LocalizedString, locale, text, primary) as unknown as string,
           }
           navbar = { ...navbar, links }
           saved++
@@ -422,7 +504,7 @@ export async function saveTranslationsAction(
       } else if (path === 'footer.copyright_text') {
         footer = {
           ...footer,
-          copyright_text: writeLocaleText(footer.copyright_text as LocalizedString, locale, text, primary) as unknown as string,
+          copyright_text: applyLocaleChange(footer.copyright_text as LocalizedString, locale, text, primary) as unknown as string,
         }
         saved++
       }
@@ -463,16 +545,24 @@ export async function saveTranslationsAction(
       ? pub.seo_i18n as Record<string, unknown>
       : {}
 
-    const titleSource = (existing.title as LocalizedString) ?? pub?.seo_title ?? ''
-    const descSource = (existing.description as LocalizedString) ?? pub?.seo_description ?? ''
+    const titleSource = setPrimaryLocaleText(
+      (existing.title as LocalizedString) ?? pub?.seo_title ?? '',
+      pub?.seo_title ?? '',
+      primary,
+    )
+    const descSource = setPrimaryLocaleText(
+      (existing.description as LocalizedString) ?? pub?.seo_description ?? '',
+      pub?.seo_description ?? '',
+      primary,
+    )
 
     const next: Record<string, unknown> = { ...existing }
     if (seoPatches.title !== undefined) {
-      next.title = writeLocaleText(titleSource, locale, seoPatches.title, primary)
+      next.title = applyLocaleChange(titleSource, locale, seoPatches.title, primary)
       saved++
     }
     if (seoPatches.description !== undefined) {
-      next.description = writeLocaleText(descSource, locale, seoPatches.description, primary)
+      next.description = applyLocaleChange(descSource, locale, seoPatches.description, primary)
       saved++
     }
 
@@ -497,8 +587,12 @@ export async function saveTranslationsAction(
     const slides = normalizeOrderPromoSlides(pub?.order_promo_slides).map(slide => {
       const key = `${slide.id}.alt`
       if (orderPatches[key] === undefined) return slide
-      const prev = (slide as { alt_i18n?: LocalizedString }).alt_i18n ?? slide.alt
-      const alt_i18n = writeLocaleText(prev, locale, orderPatches[key], primary)
+      const prev = setPrimaryLocaleText(
+        (slide as { alt_i18n?: LocalizedString }).alt_i18n ?? slide.alt,
+        slide.alt ?? '',
+        primary,
+      )
+      const alt_i18n = applyLocaleChange(prev, locale, orderPatches[key], primary)
       saved++
       return {
         ...slide,

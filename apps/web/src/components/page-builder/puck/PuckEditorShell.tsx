@@ -137,6 +137,7 @@ export function PuckEditorShell({
   const saveNavbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveFooterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savePubTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPubRef = useRef<Partial<PublishingSettings>>({})
   const isFirstRender = useRef(true)
   const puckDataRef = useRef(puckData)
   puckDataRef.current = puckData
@@ -431,16 +432,19 @@ export function PuckEditorShell({
 
   const handlePublishingChange = useCallback(
     (updated: Partial<PublishingSettings>) => {
+      pendingPubRef.current = { ...pendingPubRef.current, ...updated }
       setPublishingSettings(prev => {
         const next = prev
           ? { ...prev, ...updated }
           : ({ business_id: business.id, ...updated } as PublishingSettings)
         if (savePubTimer.current) clearTimeout(savePubTimer.current)
         savePubTimer.current = setTimeout(() => {
-          savePublishingSettingsAction(business.id, updated).then(res => {
+          const payload = pendingPubRef.current
+          pendingPubRef.current = {}
+          savePublishingSettingsAction(business.id, payload).then(res => {
             if (!res.success) toast.error(res.error)
           })
-        }, 1000)
+        }, 800)
         return next
       })
     },

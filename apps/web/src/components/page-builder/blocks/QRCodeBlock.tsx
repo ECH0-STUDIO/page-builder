@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { StableInput } from '../stable-text-field'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -100,7 +100,7 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
     { value: 'right', label: t('qrCodeBlock.right') },
   ]
   function set<K extends keyof QRCodeConfig>(key: K, value: QRCodeConfig[K]) {
-    onChange({ ...config, [key]: value })
+    return onChange({ ...config, [key]: value })
   }
 
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -155,9 +155,9 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
           ))}
         </div>
         {config.target === 'custom' && (
-          <Input
+          <StableInput
             value={config.custom_url}
-            onChange={e => set('custom_url', e.target.value)}
+            onValueChange={v => set('custom_url', v)}
             placeholder="https://example.com"
             className="h-8 text-sm"
           />
@@ -169,9 +169,9 @@ export function QRCodeSettings({ config, businessSlug, businessId, onChange }: Q
       {/* Label */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('qrCodeBlock.label')}</Label>
-        <Input
+        <StableInput
           value={plainText(config.label)}
-          onChange={e => set('label', e.target.value)}
+          onValueChange={v => set('label', v)}
           placeholder={t('qrCodeBlock.scanToView')}
           className="h-8 text-sm"
         />

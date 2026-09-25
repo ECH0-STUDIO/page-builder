@@ -234,7 +234,7 @@ export function Sidebar({ userEmail, userAvatar, userName, incomingInviteCount =
               setMobileOpen(false)
               void signOutTo('/login')
             }}
-            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-destructive"
+            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-destructive md:hidden"
           >
             <LogOut className="size-4" />
             {t('sidebar.signOut')}

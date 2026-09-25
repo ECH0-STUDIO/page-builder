@@ -1576,6 +1576,7 @@
     "emptySection": "No translatable text found in this section yet. Add content in the page builder or menu first.",
     "badgeTranslated": "translated",
     "badgeUnsaved": "unsaved",
+    "resetToOriginal": "Reset to original",
     "emptyValue": "Empty",
     "nothingToSave": "Nothing to save",
     "savedFields": "Saved {{count}} field(s)",

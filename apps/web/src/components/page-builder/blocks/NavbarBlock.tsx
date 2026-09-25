@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { StableInput } from '../stable-text-field'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
@@ -64,7 +64,7 @@ export function NavbarSettings({
   const { t } = useTranslation()
 
   function set<K extends keyof NavbarConfig>(key: K, value: NavbarConfig[K]) {
-    onChange({ ...config, [key]: value })
+    return onChange({ ...config, [key]: value })
   }
 
   function addLink() {
@@ -73,7 +73,7 @@ export function NavbarSettings({
 
   function updateLink(i: number, patch: Partial<NavLink>) {
     const updated = config.links.map((l, idx) => idx === i ? { ...l, ...patch } : l)
-    set('links', updated)
+    return set('links', updated)
   }
 
   function removeLink(i: number) {
@@ -163,9 +163,9 @@ export function NavbarSettings({
                     <ChevronDown className="size-3.5" />
                   </button>
                 </div>
-                <Input
+                <StableInput
                   value={plainText(link.label)}
-                  onChange={e => updateLink(i, { label: e.target.value })}
+                  onValueChange={v => updateLink(i, { label: v })}
                   placeholder={t('navbarBlock.linkLabel')}
                   className="h-7 text-xs flex-1"
                 />
@@ -216,9 +216,9 @@ export function NavbarSettings({
                 )
               ) : (
                 <>
-                  <Input
+                  <StableInput
                     value={link.href}
-                    onChange={e => updateLink(i, { href: e.target.value })}
+                    onValueChange={v => updateLink(i, { href: v })}
                     placeholder={t('navbarBlock.urlPlaceholder')}
                     className="h-7 text-xs font-mono"
                   />

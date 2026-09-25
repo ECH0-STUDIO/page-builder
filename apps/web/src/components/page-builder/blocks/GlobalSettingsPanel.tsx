@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { StableInput, StableTextarea } from '../stable-text-field'
 import { Separator } from '@/components/ui/separator'
 import { Loader2, ImageIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,65 +26,6 @@ interface GlobalSettingsPanelProps {
   onPublishingChange: (updated: Partial<PublishingSettings>) => void
 }
 
-/**
- * Local draft for text fields so typing does not lift state into PuckEditorShell
- * on every keystroke (that remounts Puck UI and steals focus).
- */
-function useDeferredPublishingField(
-  external: string | null | undefined,
-  key: keyof PublishingSettings,
-  onPublishingChange: (updated: Partial<PublishingSettings>) => void,
-) {
-  const [value, setValue] = useState(external || '')
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const latestRef = useRef(value)
-  latestRef.current = value
-
-  useEffect(() => {
-    // Don't clobber in-progress typing when a deferred save lands.
-    if (timerRef.current) return
-    const next = external || ''
-    if (next !== latestRef.current) {
-      setValue(next)
-      latestRef.current = next
-    }
-  }, [external])
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
-
-  const flush = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    const next = latestRef.current.trim() ? latestRef.current : null
-    const prev = external || null
-    if (next !== prev) {
-      onPublishingChange({ [key]: next } as Partial<PublishingSettings>)
-    }
-  }, [external, key, onPublishingChange])
-
-  const onChange = useCallback(
-    (next: string) => {
-      setValue(next)
-      latestRef.current = next
-      if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null
-        const saved = next.trim() ? next : null
-        onPublishingChange({ [key]: saved } as Partial<PublishingSettings>)
-      }, 600)
-    },
-    [key, onPublishingChange],
-  )
-
-  return { value, onChange, onBlur: flush }
-}
-
 export function GlobalSettingsPanel({
   theme,
   publishing,
@@ -103,12 +43,10 @@ export function GlobalSettingsPanel({
   const [uploadingWebclip, setUploadingWebclip] = useState(false)
   const [uploadingOg, setUploadingOg] = useState(false)
 
-  const seoTitle = useDeferredPublishingField(p.seo_title, 'seo_title', onPublishingChange)
-  const seoDesc = useDeferredPublishingField(p.seo_description, 'seo_description', onPublishingChange)
-  const gaId = useDeferredPublishingField(p.google_analytics_id, 'google_analytics_id', onPublishingChange)
-  const fbPixel = useDeferredPublishingField(p.facebook_pixel_id, 'facebook_pixel_id', onPublishingChange)
-  const ttPixel = useDeferredPublishingField(p.tiktok_pixel_id, 'tiktok_pixel_id', onPublishingChange)
-  const gscTag = useDeferredPublishingField(p.gsc_verification, 'gsc_verification', onPublishingChange)
+  const publishText = (key: keyof PublishingSettings) => (next: string) => {
+    const saved = next.trim() ? next : null
+    onPublishingChange({ [key]: saved } as Partial<PublishingSettings>)
+  }
 
   async function handleUploadFavicon(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -184,20 +122,18 @@ export function GlobalSettingsPanel({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.pageTitle')}</Label>
-            <Input
-              value={seoTitle.value}
-              onChange={e => seoTitle.onChange(e.target.value)}
-              onBlur={seoTitle.onBlur}
+            <StableInput
+              value={p.seo_title || ''}
+              onValueChange={publishText('seo_title')}
               placeholder={t('pageBuilder.pageTitlePlaceholder')}
               className="text-xs"
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.metaDesc')}</Label>
-            <Textarea
-              value={seoDesc.value}
-              onChange={e => seoDesc.onChange(e.target.value)}
-              onBlur={seoDesc.onBlur}
+            <StableTextarea
+              value={p.seo_description || ''}
+              onValueChange={publishText('seo_description')}
               placeholder={t('pageBuilder.metaDescPlaceholder')}
               className="text-xs min-h-[80px]"
             />
@@ -349,53 +285,49 @@ export function GlobalSettingsPanel({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.gaId')}</Label>
-            <Input
-              value={gaId.value}
-              onChange={e => gaId.onChange(e.target.value)}
-              onBlur={gaId.onBlur}
+            <StableInput
+              value={p.google_analytics_id || ''}
+              onValueChange={publishText('google_analytics_id')}
               placeholder="G-XXXXXXXXXX"
               className="text-xs"
             />
-            {!isValidGoogleAnalyticsId(gaId.value) && (
+            {!isValidGoogleAnalyticsId(p.google_analytics_id) && (
               <p className="text-[11px] text-destructive">{t('pageBuilder.gaIdInvalid')}</p>
             )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.fbPixel')}</Label>
-            <Input
-              value={fbPixel.value}
-              onChange={e => fbPixel.onChange(e.target.value)}
-              onBlur={fbPixel.onBlur}
+            <StableInput
+              value={p.facebook_pixel_id || ''}
+              onValueChange={publishText('facebook_pixel_id')}
               placeholder="1234567890"
               className="text-xs"
             />
-            {!isValidFacebookPixelId(fbPixel.value) && (
+            {!isValidFacebookPixelId(p.facebook_pixel_id) && (
               <p className="text-[11px] text-destructive">{t('pageBuilder.fbPixelInvalid')}</p>
             )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.tiktokPixel')}</Label>
-            <Input
-              value={ttPixel.value}
-              onChange={e => ttPixel.onChange(e.target.value)}
-              onBlur={ttPixel.onBlur}
+            <StableInput
+              value={p.tiktok_pixel_id || ''}
+              onValueChange={publishText('tiktok_pixel_id')}
               placeholder="CXXXXXXXXXXXXXXXXX"
               className="text-xs"
             />
-            {!isValidTikTokPixelId(ttPixel.value) && (
+            {!isValidTikTokPixelId(p.tiktok_pixel_id) && (
               <p className="text-[11px] text-destructive">{t('pageBuilder.tiktokPixelInvalid')}</p>
             )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{t('pageBuilder.gscTag')}</Label>
-            <Input
-              value={gscTag.value}
-              onChange={e => gscTag.onChange(e.target.value)}
-              onBlur={gscTag.onBlur}
+            <StableInput
+              value={p.gsc_verification || ''}
+              onValueChange={publishText('gsc_verification')}
               placeholder={t('pageBuilder.gscPlaceholder')}
               className="text-xs"
             />
-            {!isValidGscVerification(gscTag.value) && (
+            {!isValidGscVerification(p.gsc_verification) && (
               <p className="text-[11px] text-destructive">{t('pageBuilder.gscInvalid')}</p>
             )}
           </div>

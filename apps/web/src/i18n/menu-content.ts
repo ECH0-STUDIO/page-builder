@@ -1,5 +1,5 @@
 import type { MenuCategory, MenuItem, VariantGroup, VariantOption } from '@/app/actions/menu'
-import { readLocaleText, type LocalizedString } from '@/i18n/localized-content'
+import { overlayLivePrimary, readLocaleText, type LocalizedString } from '@/i18n/localized-content'
 
 export function normalizeMenuCategory(row: Record<string, unknown>): MenuCategory {
   return {
@@ -32,23 +32,43 @@ function asLocalized(value: unknown): LocalizedString {
 }
 
 export function menuCategoryName(cat: MenuCategory, locale: string, primary: string): string {
-  return readLocaleText(asLocalized(cat.name_i18n ?? cat.name), locale, primary) || cat.name
+  return readLocaleText(
+    overlayLivePrimary(asLocalized(cat.name_i18n ?? cat.name), cat.name, primary),
+    locale,
+    primary,
+  ) || cat.name
 }
 
 export function menuItemName(item: MenuItem, locale: string, primary: string): string {
-  return readLocaleText(asLocalized(item.name_i18n ?? item.name), locale, primary) || item.name
+  return readLocaleText(
+    overlayLivePrimary(asLocalized(item.name_i18n ?? item.name), item.name, primary),
+    locale,
+    primary,
+  ) || item.name
 }
 
 export function menuItemDescription(item: MenuItem, locale: string, primary: string): string {
-  return readLocaleText(asLocalized(item.description_i18n ?? item.description), locale, primary)
+  return readLocaleText(
+    overlayLivePrimary(asLocalized(item.description_i18n ?? item.description), item.description, primary),
+    locale,
+    primary,
+  )
 }
 
 export function variantGroupName(group: VariantGroup, locale: string, primary: string): string {
-  return readLocaleText(asLocalized(group.name_i18n ?? group.name), locale, primary) || group.name
+  return readLocaleText(
+    overlayLivePrimary(asLocalized(group.name_i18n ?? group.name), group.name, primary),
+    locale,
+    primary,
+  ) || group.name
 }
 
 export function variantOptionLabel(option: VariantOption, locale: string, primary: string): string {
-  return readLocaleText(asLocalized(option.label_i18n ?? option.label), locale, primary) || option.label
+  return readLocaleText(
+    overlayLivePrimary(asLocalized(option.label_i18n ?? option.label), option.label, primary),
+    locale,
+    primary,
+  ) || option.label
 }
 
 export function normalizeVariantGroup(row: Record<string, unknown>): VariantGroup {

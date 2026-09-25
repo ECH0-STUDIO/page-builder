@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { StableInput, StableNumberInput, StableTextarea } from '../stable-text-field'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
@@ -77,7 +77,7 @@ export function MenuGridSettings({
     { value: 'list', label: t('menuGridBlock.list') },
   ]
   function set<K extends keyof MenuGridConfig>(key: K, value: MenuGridConfig[K]) {
-    onChange({ ...config, [key]: value })
+    return onChange({ ...config, [key]: value })
   }
 
   function toggleCategory(id: string) {
@@ -112,9 +112,9 @@ export function MenuGridSettings({
         <>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.sectionHeading')}</Label>
-            <Input
+            <StableInput
               value={plainText(config.heading)}
-              onChange={e => set('heading', e.target.value)}
+              onValueChange={v => set('heading', v)}
               placeholder={t('menuGridBlock.headingPlaceholder')}
               className="h-8 text-sm"
             />
@@ -123,9 +123,9 @@ export function MenuGridSettings({
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('menuGridBlock.description')}</Label>
-            <Textarea
+            <StableTextarea
               value={plainText(config.description ?? '')}
-              onChange={e => set('description', e.target.value)}
+              onValueChange={v => set('description', v)}
               placeholder={t('menuGridBlock.descPlaceholder')}
               className="text-sm min-h-[60px]"
             />
@@ -415,13 +415,13 @@ export function MenuGridSettings({
           {config.pagination_enabled && (
             <div className="space-y-1.5 pl-1">
               <Label htmlFor="menu-items-per-page" className="text-xs">{t('menuGridBlock.itemsPerPage')}</Label>
-              <Input
+              <StableNumberInput
                 id="menu-items-per-page"
-                type="number"
                 min={1}
                 max={100}
+                fallback={12}
                 value={config.items_per_page ?? 12}
-                onChange={e => set('items_per_page', Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 12)))}
+                onValueChange={n => set('items_per_page', n == null ? 12 : Math.round(n))}
                 className="h-8 text-xs"
               />
             </div>

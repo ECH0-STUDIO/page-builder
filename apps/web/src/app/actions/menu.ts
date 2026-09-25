@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getBusinessPrimaryLocale } from '@/app/actions/business-locales'
+import { setPrimaryLocaleText, type LocalizedString } from '@/i18n/localized-content'
 import { revalidatePath } from 'next/cache'
 import { assertOwnerOrManager } from '@/lib/business-auth'
 import { normalizeMenuCategory, normalizeMenuItem } from '@/i18n/menu-content'
@@ -173,12 +175,30 @@ export async function updateCategoryAction(
     return { success: false, error: 'Forbidden' }
   }
 
-  const payload = { ...update }
+  const payload = { ...update } as Record<string, unknown>
+
+  if (typeof update.name === 'string') {
+    const { data: row } = await supabase
+      .from('menu_categories')
+      .select('business_id, name, name_i18n')
+      .eq('id', id)
+      .maybeSingle()
+    if (row?.business_id) {
+      const primary = await getBusinessPrimaryLocale(row.business_id)
+      const name = update.name.trim()
+      payload.name = name
+      payload.name_i18n = setPrimaryLocaleText(
+        (row.name_i18n ?? row.name) as LocalizedString,
+        name,
+        primary,
+      )
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_categories')
-    .update(payload)
+    .update(payload as any)
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }
@@ -295,6 +315,35 @@ export async function updateItemAction(
     payload.spicy_level = Math.min(3, Math.max(0, Math.floor(update.spicy_level)))
   }
 
+  if (typeof update.name === 'string' || 'description' in update) {
+    const { data: row } = await supabase
+      .from('menu_items')
+      .select('business_id, name, description, name_i18n, description_i18n')
+      .eq('id', id)
+      .maybeSingle()
+    if (row?.business_id) {
+      const primary = await getBusinessPrimaryLocale(row.business_id)
+      if (typeof update.name === 'string') {
+        const name = update.name.trim()
+        payload.name = name
+        payload.name_i18n = setPrimaryLocaleText(
+          (row.name_i18n ?? row.name) as LocalizedString,
+          name,
+          primary,
+        )
+      }
+      if ('description' in update) {
+        const description = update.description?.trim() || ''
+        payload.description = description || null
+        payload.description_i18n = setPrimaryLocaleText(
+          (row.description_i18n ?? row.description ?? '') as LocalizedString,
+          description,
+          primary,
+        )
+      }
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_items')
@@ -398,10 +447,36 @@ export async function updateVariantGroupAction(
     return { success: false, error: 'Forbidden' }
   }
 
+  const payload = { ...update } as Record<string, unknown>
+  if (typeof update.name === 'string') {
+    const { data: row } = await (supabase as any)
+      .from('menu_item_variant_groups')
+      .select('name, name_i18n, item_id')
+      .eq('id', id)
+      .maybeSingle()
+    if (row?.item_id) {
+      const { data: item } = await supabase
+        .from('menu_items')
+        .select('business_id')
+        .eq('id', row.item_id)
+        .maybeSingle()
+      if (item?.business_id) {
+        const primary = await getBusinessPrimaryLocale(item.business_id)
+        const name = update.name.trim()
+        payload.name = name
+        payload.name_i18n = setPrimaryLocaleText(
+          (row.name_i18n ?? row.name) as LocalizedString,
+          name,
+          primary,
+        )
+      }
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase
     .from('menu_item_variant_groups')
-    .update(update)
+    .update(payload as any)
     .eq('id', id)
   if (error) return { success: false, error: error.message }
   return { success: true, data: undefined }

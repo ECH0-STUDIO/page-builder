@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { ImageIcon, Loader2, X } from 'lucide-react'
 import { FooterConfig } from '../types'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { StableInput } from '../stable-text-field'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -109,9 +109,9 @@ export function FooterSettings({
 
         <div className="space-y-1.5">
           <Label className="text-xs">{t('footerBlock.copyrightText')}</Label>
-          <Input
+          <StableInput
             value={plainText(config.copyright_text)}
-            onChange={e => set('copyright_text', e.target.value)}
+            onValueChange={v => set('copyright_text', v)}
             className="h-8 text-xs"
           />
         </div>

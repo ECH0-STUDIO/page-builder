@@ -50,6 +50,7 @@ export function TranslationEditor({
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialFields.map(f => [f.id, f.translatedText])),
   )
+  const [resets, setResets] = useState<Set<string>>(() => new Set())
   const [pending, startTransition] = useTransition()
   const [activeSection, setActiveSection] = useState<TranslationSectionId | 'all'>('all')
   const [quoting, setQuoting] = useState(false)
@@ -62,10 +63,10 @@ export function TranslationEditor({
     const out: Record<string, string> = {}
     for (const f of fields) {
       const next = drafts[f.id] ?? ''
-      if (next !== f.translatedText) out[f.id] = next
+      if (resets.has(f.id) || next !== f.translatedText) out[f.id] = next
     }
     return out
-  }, [drafts, fields])
+  }, [drafts, fields, resets])
 
   const dirtyCount = Object.keys(dirty).length
   const busy = pending || quoting || applying
@@ -90,7 +91,22 @@ export function TranslationEditor({
   }).length
 
   function setDraft(id: string, value: string) {
+    setResets(prev => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
     setDrafts(prev => ({ ...prev, [id]: value }))
+  }
+
+  function resetField(field: TranslationField) {
+    setDrafts(prev => ({ ...prev, [field.id]: field.primaryText }))
+    setResets(prev => {
+      const next = new Set(prev)
+      next.add(field.id)
+      return next
+    })
   }
 
   function applyAiResult(next: TranslationField[]) {
@@ -110,9 +126,13 @@ export function TranslationEditor({
   }
 
   function save(ids?: string[]) {
-    const payload = ids
+    const source = ids
       ? Object.fromEntries(Object.entries(dirty).filter(([id]) => ids.includes(id)))
       : dirty
+    const payload: Record<string, string | null> = {}
+    for (const [id, text] of Object.entries(source)) {
+      payload[id] = resets.has(id) ? null : text
+    }
     if (!Object.keys(payload).length) {
       toast.message(t('translations.nothingToSave'))
       return
@@ -125,12 +145,20 @@ export function TranslationEditor({
       }
       setFields(prev => prev.map(f => {
         if (payload[f.id] === undefined) return f
+        if (payload[f.id] === null) {
+          return { ...f, translatedText: f.primaryText, customized: false }
+        }
         return {
           ...f,
-          translatedText: payload[f.id],
+          translatedText: payload[f.id] as string,
           customized: true,
         }
       }))
+      setResets(prev => {
+        const next = new Set(prev)
+        for (const id of Object.keys(payload)) next.delete(id)
+        return next
+      })
       toast.success(t('translations.savedFields').replace('{{count}}', String(res.data.saved)))
     })
   }
@@ -331,9 +359,20 @@ export function TranslationEditor({
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                                {storeLocaleLabel(locale)}
-                              </p>
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  {storeLocaleLabel(locale)}
+                                </p>
+                                {field.customized && !resets.has(field.id) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => resetField(field)}
+                                    className="text-[10px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                                  >
+                                    {t('translations.resetToOriginal')}
+                                  </button>
+                                )}
+                              </div>
                               {field.multiline ? (
                                 <Textarea
                                   value={value}
