@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { Button } from '@/components/ui/button'
@@ -94,19 +94,18 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [anyDirty])
 
+  const dirtyNow = anyDirty()
+
   useEffect(() => {
-    if (anyDirty()) {
-      if (!sentinel.current) {
-        history.pushState({ eateryUnsaved: true }, '')
-        sentinel.current = true
-      }
+    if (!dirtyNow) {
+      sentinel.current = false
       return
     }
-    if (sentinel.current && history.state?.eateryUnsaved) {
-      history.replaceState(null, '')
-    }
-    sentinel.current = false
-  })
+    if (sentinel.current) return
+    // Keep Next.js history fields (__NA) by going through the patched pushState.
+    history.pushState({ ...(history.state ?? {}), eateryUnsaved: true }, '')
+    sentinel.current = true
+  }, [anyDirty, dirtyNow])
 
   useEffect(() => {
     const onPop = () => {
@@ -119,7 +118,7 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
         sentinel.current = false
         return
       }
-      history.pushState({ eateryUnsaved: true }, '')
+      history.pushState({ ...(history.state ?? {}), eateryUnsaved: true }, '')
       sentinel.current = true
       pending.current = () => {
         skipPop.current = true
@@ -192,8 +191,13 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
     setOpen(false)
   }
 
+  const api = useMemo(
+    () => ({ register, bump, confirmLeave }),
+    [register, bump, confirmLeave],
+  )
+
   return (
-    <UnsavedChangesContext.Provider value={{ register, bump, confirmLeave }}>
+    <UnsavedChangesContext.Provider value={api}>
       {children}
       {open && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4">

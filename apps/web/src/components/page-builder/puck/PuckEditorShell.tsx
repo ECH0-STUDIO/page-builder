@@ -284,7 +284,6 @@ export function PuckEditorShell({
             refreshEditorDirty()
           })
         }, 1000)
-        setEditorDirty(true)
 
         return next
       })
