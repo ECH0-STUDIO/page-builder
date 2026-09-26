@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +28,12 @@ function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t } = useTranslation()
+  const [legalQuery, setLegalQuery] = useState('')
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )NEXT_LOCALE=([^;]*)/)
+    if (decodeURIComponent(match?.[1] ?? '') === 'en') setLegalQuery('?lang=en')
+  }, [])
   const nextUrl = searchParams.get('next') || '/dashboard'
 
   const [fullName, setFullName] = useState('')
@@ -184,6 +190,18 @@ function SignupContent() {
           <GoogleIcon />
           {googleLoading ? t('auth.signup.redirecting') : t('auth.signup.continueGoogle')}
         </Button>
+
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          {t('auth.signup.legalLead')}{' '}
+          <a href={`/terms${legalQuery}`} className="underline underline-offset-2 hover:text-foreground">
+            {t('auth.signup.termsLink')}
+          </a>
+          {' '}{t('auth.signup.legalAnd')}{' '}
+          <a href={`/privacy${legalQuery}`} className="underline underline-offset-2 hover:text-foreground">
+            {t('auth.signup.privacyLink')}
+          </a>
+          .
+        </p>
       </CardContent>
 
       <CardFooter className="justify-center">

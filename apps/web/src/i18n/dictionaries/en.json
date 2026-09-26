@@ -1342,7 +1342,11 @@
       "successDescription": "We sent a verification link to",
       "successHint": "Click it to activate your account.",
       "wrongEmail": "Wrong email?",
-      "tryAgain": "Try again"
+      "tryAgain": "Try again",
+      "legalLead": "By creating an account, you agree to the",
+      "legalAnd": "and",
+      "termsLink": "Terms of use",
+      "privacyLink": "Privacy policy"
     },
     "forgot": {
       "title": "Reset password",

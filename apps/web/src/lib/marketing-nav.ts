@@ -43,6 +43,11 @@ const INSTAGRAM_ICON_PATH =
 /** App path the "Get started" buttons open. Same destination on every page. */
 export const MARKETING_CTA_PATH = '/'
 
+export const MARKETING_LEGAL_LINKS = [
+  { href: '/privacy', labels: { vi: 'Chính sách bảo mật', en: 'Privacy' } },
+  { href: '/terms', labels: { vi: 'Điều khoản', en: 'Terms' } },
+] as const
+
 const FALLBACK_NAV_CLASS = 'nav_links w-nav-link'
 
 export function isMarketingNavItemActive(pathname: string, href: string): boolean {
@@ -179,7 +184,38 @@ export function rewriteMarketingFooterContact(
     )
   }
 
+  const legalLinks = MARKETING_LEGAL_LINKS.map((item) => {
+    const href = marketingPathForLocale(item.href, locale)
+    return `<a href="${escapeHtml(href)}" class="text-color-on-primary">${escapeHtml(item.labels[locale])}</a>`
+  }).join('')
+  const legalHtml = `<div class="footer_legal" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.75rem">${legalLinks}</div>`
+  out = out.replace(/<div class="footer_legal"[\s\S]*?<\/div>/gi, '')
+  out = insertAfterElement(out, 'footer_copy', legalHtml)
+
   return out
+}
+
+/** Insert HTML after the element whose class is exactly `className`, including nested divs. */
+function insertAfterElement(html: string, className: string, insertion: string): string {
+  const start = html.search(new RegExp(`<div class="${className}">`, 'i'))
+  if (start < 0) return html
+  const open = html.slice(start).match(new RegExp(`^<div class="${className}">`, 'i'))
+  if (!open) return html
+  let index = start + open[0].length
+  let depth = 1
+  while (index < html.length && depth > 0) {
+    const nextOpen = html.indexOf('<div', index)
+    const nextClose = html.indexOf('</div>', index)
+    if (nextClose < 0) return html
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth += 1
+      index = nextOpen + 4
+    } else {
+      depth -= 1
+      index = nextClose + 6
+    }
+  }
+  return html.slice(0, index) + `\n${insertion}` + html.slice(index)
 }
 
 export function rewriteMarketingNotFoundCopy(html: string, locale: SupportedLocale): string {

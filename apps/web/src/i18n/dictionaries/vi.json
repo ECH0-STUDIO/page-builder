@@ -1342,7 +1342,11 @@
       "successDescription": "Chúng tôi đã gửi liên kết xác minh đến",
       "successHint": "Nhấp vào liên kết để kích hoạt tài khoản.",
       "wrongEmail": "Sai email?",
-      "tryAgain": "Thử lại"
+      "tryAgain": "Thử lại",
+      "legalLead": "Khi tạo tài khoản, bạn đồng ý với",
+      "legalAnd": "và",
+      "termsLink": "Điều khoản sử dụng",
+      "privacyLink": "Chính sách bảo mật"
     },
     "forgot": {
       "title": "Đặt lại mật khẩu",

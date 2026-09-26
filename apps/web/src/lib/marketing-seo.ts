@@ -66,6 +66,28 @@ const MARKETING_PAGE_SEO: Record<string, PageSeo> = {
     },
     schema: 'page',
   },
+  privacy: {
+    title: {
+      vi: 'Chính sách bảo mật — Eatery VN',
+      en: 'Privacy policy — Eatery',
+    },
+    description: {
+      vi: 'Eatery thu thập gì, dùng thông tin ra sao, và cách liên hệ ECH0 STUDIO nếu bạn muốn xem hoặc xóa dữ liệu.',
+      en: 'What Eatery collects, how that information is used, and how to ask ECH0 STUDIO to see or delete it.',
+    },
+    schema: 'page',
+  },
+  terms: {
+    title: {
+      vi: 'Điều khoản sử dụng — Eatery VN',
+      en: 'Terms of use — Eatery',
+    },
+    description: {
+      vi: 'Điều khoản khi dùng Eatery: tài khoản, nội dung cửa hàng, đơn hàng, credit, và trách nhiệm của chủ cửa hàng.',
+      en: 'The terms for using Eatery: accounts, store content, orders, credits, and what store owners are responsible for.',
+    },
+    schema: 'page',
+  },
   contact: {
     title: {
       vi: 'Liên hệ — Eatery VN',
