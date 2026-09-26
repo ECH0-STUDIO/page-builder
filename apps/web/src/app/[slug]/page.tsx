@@ -174,20 +174,28 @@ export default async function SlugPage({
 
     if (menuItems.length > 0) {
       const itemIds = menuItems.map((i: MenuItem) => i.id)
-      variantGroups = []
-      for (let i = 0; i < itemIds.length; i += 50) {
-        const chunk = itemIds.slice(i, i + 50)
-        const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
-        if (vGroups) variantGroups.push(...normalizeVariantGroups(vGroups as Record<string, unknown>[]))
-      }
+      const itemChunks: string[][] = []
+      for (let i = 0; i < itemIds.length; i += 50) itemChunks.push(itemIds.slice(i, i + 50))
+      const groupRows = await Promise.all(
+        itemChunks.map((chunk) =>
+          db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order'),
+        ),
+      )
+      variantGroups = groupRows.flatMap((res) =>
+        normalizeVariantGroups((res.data ?? []) as Record<string, unknown>[]),
+      )
       if (variantGroups.length > 0) {
         const groupIds = variantGroups.map((g: VariantGroup) => g.id)
-        variantOptions = []
-        for (let i = 0; i < groupIds.length; i += 50) {
-          const chunk = groupIds.slice(i, i + 50)
-          const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
-          if (vOpts) variantOptions.push(...normalizeVariantOptions(vOpts as Record<string, unknown>[]))
-        }
+        const groupChunks: string[][] = []
+        for (let i = 0; i < groupIds.length; i += 50) groupChunks.push(groupIds.slice(i, i + 50))
+        const optionRows = await Promise.all(
+          groupChunks.map((chunk) =>
+            db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order'),
+          ),
+        )
+        variantOptions = optionRows.flatMap((res) =>
+          normalizeVariantOptions((res.data ?? []) as Record<string, unknown>[]),
+        )
       }
     }
   }
@@ -266,7 +274,20 @@ export default async function SlugPage({
       />
 
       {/* Google Fonts & Typography */}
-      {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
+      {googleFontUrl && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="stylesheet" href={googleFontUrl} />
+        </>
+      )}
+      {(() => {
+        const hero = pageBlocks.find((block) => block.type === 'hero')
+        const src = (hero?.config as HeroConfig | undefined)?.image_url
+        return typeof src === 'string' && src.trim()
+          ? <link rel="preload" as="image" href={src.trim()} />
+          : null
+      })()}
       <style dangerouslySetInnerHTML={{ __html: `
         body { font-family: '${bodyFont}', sans-serif !important; }
         h1, h2, h3, h4, h5, h6 { font-family: '${headingFontRaw}', sans-serif !important; }

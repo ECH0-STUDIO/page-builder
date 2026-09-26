@@ -12,9 +12,19 @@ import { applyMarketingI18n } from '@/lib/marketing-i18n'
 import { applyMarketingSeo, resolveMarketingPageSlug, type MarketingSeoOverrides } from '@/lib/marketing-seo'
 import { loadMarketingHtmlDocument, marketingPageExists } from '@/lib/marketing-webflow'
 
-const HTML_HEADERS = {
+const HTML_NO_STORE = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',
+} as const
+
+/**
+ * Language is the URL (`?lang=en` or the clean Vietnamese path), so a short
+ * private cache is the same page for that visitor. Not-found stays uncached
+ * so a page that starts existing is not stuck as a 404.
+ */
+export const MARKETING_HTML_HEADERS = {
+  'Content-Type': 'text/html; charset=utf-8',
+  'Cache-Control': 'private, max-age=120, stale-while-revalidate=600',
 } as const
 
 function pathnameFromRequest(request: Request): string {
@@ -50,7 +60,7 @@ export function marketingNotFoundHtmlResponse(request: Request): Response {
   const locale = getMarketingLocaleFromRequest(request)
   const html = loadMarketingHtmlDocument('404')
   if (!html) {
-    return new Response('Not found', { status: 404, headers: HTML_HEADERS })
+    return new Response('Not found', { status: 404, headers: HTML_NO_STORE })
   }
   const rendered = finalizeMarketingHtml(html, request, locale, {
     pageSlug: '404',
@@ -59,7 +69,7 @@ export function marketingNotFoundHtmlResponse(request: Request): Response {
       robots: 'noindex, follow',
     },
   })
-  return new Response(rendered, { status: 404, headers: HTML_HEADERS })
+  return new Response(rendered, { status: 404, headers: HTML_NO_STORE })
 }
 
 export function marketingHtmlResponse(slug: string, request: Request): Response {
@@ -68,7 +78,7 @@ export function marketingHtmlResponse(slug: string, request: Request): Response 
   if (!html) {
     return new Response('Not found', { status: 404 })
   }
-  return new Response(finalizeMarketingHtml(html, request, locale), { headers: HTML_HEADERS })
+  return new Response(finalizeMarketingHtml(html, request, locale), { headers: MARKETING_HTML_HEADERS })
 }
 
 export async function marketingIndexHtmlResponse(request: Request): Promise<Response> {
@@ -79,7 +89,7 @@ export async function marketingIndexHtmlResponse(request: Request): Promise<Resp
   }
   const posts = await getBlogPosts(locale)
   const rendered = renderMarketingIndexHtml(html, posts, locale)
-  return new Response(finalizeMarketingHtml(rendered, request, locale), { headers: HTML_HEADERS })
+  return new Response(finalizeMarketingHtml(rendered, request, locale), { headers: MARKETING_HTML_HEADERS })
 }
 
 export async function marketingBlogListHtmlResponse(request: Request): Promise<Response> {
@@ -90,7 +100,7 @@ export async function marketingBlogListHtmlResponse(request: Request): Promise<R
   }
   const posts = await getBlogPosts(locale)
   const rendered = renderBlogListHtml(html, posts, locale)
-  return new Response(finalizeMarketingHtml(rendered, request, locale), { headers: HTML_HEADERS })
+  return new Response(finalizeMarketingHtml(rendered, request, locale), { headers: MARKETING_HTML_HEADERS })
 }
 
 export async function marketingBlogDetailHtmlResponse(
@@ -145,7 +155,7 @@ export async function marketingBlogDetailHtmlResponse(
         canonicalPath: marketingPathForLocale(`/blog/${post.slug}`, locale),
       },
     }),
-    { headers: HTML_HEADERS },
+    { headers: MARKETING_HTML_HEADERS },
   )
 }
 

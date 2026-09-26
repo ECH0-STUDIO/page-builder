@@ -4,6 +4,7 @@ import { STORE_LOCALE_CODES } from "./src/i18n/store-locales";
 const localeSegment = STORE_LOCALE_CODES.join("|");
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   async rewrites() {
     return {
       beforeFiles: [
@@ -18,7 +19,25 @@ const nextConfig: NextConfig = {
     };
   },
   async headers() {
+    const security = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    ]
     return [
+      {
+        source: '/:path*',
+        headers: security,
+      },
+      {
+        // Webflow CSS, JS, and images. Filenames change only on deploy.
+        source: '/marketing/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+        ],
+      },
       {
         source: '/sw-push.js',
         headers: [

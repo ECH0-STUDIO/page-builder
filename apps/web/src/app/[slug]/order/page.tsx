@@ -136,18 +136,28 @@ export default async function OrderPage({
 
   if (menuItemsRaw.length > 0) {
     const itemIds = menuItemsRaw.map((i: MenuItem) => i.id)
-    for (let i = 0; i < itemIds.length; i += 50) {
-      const chunk = itemIds.slice(i, i + 50)
-      const { data: vGroups } = await db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order')
-      if (vGroups) variantGroupsRaw.push(...normalizeVariantGroups(vGroups as Record<string, unknown>[]))
-    }
+    const itemChunks: string[][] = []
+    for (let i = 0; i < itemIds.length; i += 50) itemChunks.push(itemIds.slice(i, i + 50))
+    const groupRows = await Promise.all(
+      itemChunks.map((chunk) =>
+        db.from('menu_item_variant_groups').select('*').in('item_id', chunk).order('sort_order'),
+      ),
+    )
+    variantGroupsRaw = groupRows.flatMap((res) =>
+      normalizeVariantGroups((res.data ?? []) as Record<string, unknown>[]),
+    )
     if (variantGroupsRaw.length > 0) {
       const groupIds = variantGroupsRaw.map((g: VariantGroup) => g.id)
-      for (let i = 0; i < groupIds.length; i += 50) {
-        const chunk = groupIds.slice(i, i + 50)
-        const { data: vOpts } = await db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order')
-        if (vOpts) variantOptionsRaw.push(...normalizeVariantOptions(vOpts as Record<string, unknown>[]))
-      }
+      const groupChunks: string[][] = []
+      for (let i = 0; i < groupIds.length; i += 50) groupChunks.push(groupIds.slice(i, i + 50))
+      const optionRows = await Promise.all(
+        groupChunks.map((chunk) =>
+          db.from('menu_item_variant_options').select('*').in('group_id', chunk).order('sort_order'),
+        ),
+      )
+      variantOptionsRaw = optionRows.flatMap((res) =>
+        normalizeVariantOptions((res.data ?? []) as Record<string, unknown>[]),
+      )
     }
   }
 
@@ -258,7 +268,13 @@ export default async function OrderPage({
             facebook_pixel_id={pubSettings?.facebook_pixel_id}
             tiktok_pixel_id={pubSettings?.tiktok_pixel_id}
           />
-          {googleFontUrl && <link rel="stylesheet" href={googleFontUrl} />}
+          {googleFontUrl && (
+            <>
+              <link rel="preconnect" href="https://fonts.googleapis.com" />
+              <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+              <link rel="stylesheet" href={googleFontUrl} />
+            </>
+          )}
           <style dangerouslySetInnerHTML={{ __html: `
             body { font-family: '${bodyFont}', sans-serif !important; }
             h1, h2, h3, h4, h5, h6 { font-family: '${headingFontRaw}', sans-serif !important; }
