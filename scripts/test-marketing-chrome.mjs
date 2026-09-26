@@ -37,6 +37,22 @@ function extractNavLinkClass(listHtml) {
   return classes.length > 0 ? classes.join(' ') : 'nav_links w-nav-link'
 }
 
+function rewriteLogoState(html, pathname) {
+  const isHome = isActive(pathname, '/')
+  return html.replace(
+    /<a\s+([^>]*class="[^"]*navbar_logo-link[^"]*"[^>]*)>/gi,
+    (_full, attrs) => {
+      const classes = (attrs.match(/class="([^"]*)"/i)?.[1] ?? '')
+        .split(/\s+/)
+        .filter((cls) => cls && cls !== 'w--current')
+      if (isHome) classes.push('w--current')
+      const href = attrs.match(/href="([^"]*)"/i)?.[1] ?? '/'
+      const current = isHome ? ' aria-current="page"' : ''
+      return `<a${current} href="${href}" class="${classes.join(' ')}">`
+    },
+  )
+}
+
 function rewriteNavbarList(html, pathname, locale) {
   return html.replace(/<div class="navbar_list">[\s\S]*?<\/div>/gi, (full) => {
     const inner = full.replace(/^<div class="navbar_list">/i, '').replace(/<\/div>$/i, '')
@@ -88,6 +104,13 @@ function sourceContainsCanonicalNav() {
   if (!src.includes("MARKETING_CONTACT_EMAIL = 'hello@ech0.work'")) {
     throw new Error('marketing-nav.ts missing contact email')
   }
+  const logoFn = src.slice(
+    src.indexOf('export function rewriteMarketingNavbarLogoState'),
+    src.indexOf('export function rewriteMarketingCtaLinks'),
+  )
+  if (logoFn.includes('`<a${next}>`')) {
+    throw new Error('logo rewrite must not glue attributes onto the <a tag name')
+  }
   if (chrome.includes('Soft-add Explore')) {
     throw new Error('legacy Explore soft-add is still in marketing-chrome.ts')
   }
@@ -120,6 +143,35 @@ check(
 )
 check('homepage Explore is not current', homeNav[0]?.label === 'Khám phá' && !homeNav[0]?.current)
 check('homepage keeps base (non-variant) nav classes', homeNav.every((l) => l.className === 'nav_links w-nav-link'))
+
+function assertLogoAnchor(name, html) {
+  const open = html.match(/<a[^>]*navbar_logo-link[^>]*>/i)?.[0] ?? ''
+  const logoClose = html.search(/navbar_logo-link[^>]*>[\s\S]*?<\/a>/i)
+  const listAt = html.indexOf('class="navbar_list"')
+  check(
+    `${name} logo is a real anchor with a space after <a`,
+    /^<a\s/.test(open) && open.includes('href="') && !html.includes('<ahref'),
+    open.slice(0, 120),
+  )
+  check(
+    `${name} logo closes before the nav list`,
+    logoClose >= 0 && listAt > logoClose,
+    `logoClose=${logoClose} listAt=${listAt}`,
+  )
+}
+
+assertLogoAnchor('homepage', rewriteLogoState(indexHtml, '/'))
+assertLogoAnchor('pricing', rewriteLogoState(pricingHtml, '/pricing'))
+assertLogoAnchor('blog article', rewriteLogoState(detailHtml, '/blog/how-to-start'))
+const homeLogo = rewriteLogoState(indexHtml, '/')
+check(
+  'homepage logo is current',
+  /<a aria-current="page" href="\/" class="[^"]*navbar_logo-link[^"]*w--current"/.test(homeLogo),
+)
+check(
+  'pricing logo is not current',
+  !/navbar_logo-link[^"]*w--current/.test(rewriteLogoState(pricingHtml, '/pricing').match(/<a[^>]*navbar_logo-link[^>]*>/i)?.[0] ?? ''),
+)
 
 const pricing = rewriteNavbarList(pricingHtml, '/pricing', 'en')
 const pricingNav = parseNav(pricing)

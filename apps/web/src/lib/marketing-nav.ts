@@ -96,20 +96,25 @@ export function rewriteMarketingNavbarList(
   )
 }
 
-/** Home logo is current only on `/`; inner pages must not keep a leftover current state. */
+/**
+ * Home logo is current only on `/`; inner pages must not keep a leftover current state.
+ * Rebuild the tag instead of splicing attributes. A missing space after `<a` produced
+ * `<ahref`, which browsers do not close with `</a>`, so the logo element swallowed
+ * the links and buttons and stacked the whole navbar into the logo column.
+ */
 export function rewriteMarketingNavbarLogoState(html: string, pathname: string): string {
   const isHome = isMarketingNavItemActive(pathname, '/')
   return html.replace(
     /<a\s+([^>]*class="[^"]*navbar_logo-link[^"]*"[^>]*)>/gi,
     (_full, attrs: string) => {
-      let next = String(attrs).replace(/\s*aria-current="[^"]*"/gi, '')
-      next = next.replace(/\s*class="([^"]*)"/i, (_m: string, cls: string) => {
-        const classes = cls.split(/\s+/).filter((c) => c && c !== 'w--current')
-        if (isHome) classes.push('w--current')
-        return ` class="${classes.join(' ')}"`
-      })
-      if (isHome) next = ` aria-current="page"${next}`
-      return `<a${next}>`
+      const raw = String(attrs)
+      const classes = (raw.match(/class="([^"]*)"/i)?.[1] ?? '')
+        .split(/\s+/)
+        .filter((cls) => cls && cls !== 'w--current')
+      if (isHome) classes.push('w--current')
+      const href = raw.match(/href="([^"]*)"/i)?.[1] ?? '/'
+      const current = isHome ? ' aria-current="page"' : ''
+      return `<a${current} href="${escapeHtml(href)}" class="${classes.join(' ')}">`
     },
   )
 }
