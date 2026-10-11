@@ -65,10 +65,17 @@
   min-height: 0;
 }
 
-.eatery-puck-header {
-  /* Sit above the canvas — Puck's canvas can otherwise intercept header taps */
+/* Puck's mobile canvas is laid out from y=0 over the header slot — keep chrome on top */
+.eatery-puck [class*='PuckLayout-header'] {
   position: relative;
-  z-index: 50;
+  z-index: 60;
+  background: var(--background, #fff);
+}
+
+.eatery-puck-header {
+  position: relative;
+  z-index: 60;
+  background: var(--background, #fff);
 }
 
 .eatery-puck-header--preview {
