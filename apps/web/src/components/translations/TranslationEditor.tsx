@@ -449,11 +449,12 @@ export function TranslationEditor({
               {t('translations.translating')}
             </p>
           )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="secondary" onClick={() => setQuote(null)} disabled={applying}>
+          <DialogFooter className="!flex-col-reverse gap-3 sm:!flex-row sm:gap-2">
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setQuote(null)} disabled={applying}>
               {t('translations.cancel')}
             </Button>
             <Button
+              className="w-full sm:w-auto"
               onClick={confirmAi}
               disabled={applying || !quote || quote.insufficient || !quote.configured}
             >
