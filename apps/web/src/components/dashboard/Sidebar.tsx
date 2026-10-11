@@ -246,8 +246,8 @@ export function Sidebar({ userEmail, userAvatar, userName, incomingInviteCount =
 
   return (
     <>
-      {/* Mobile Top Navigation */}
-      <div className="md:hidden flex items-center px-4 h-14 border-b bg-background sticky top-0 z-40 relative">
+      {/* Mobile Top Navigation — pinned by DashboardShell (outside scroll), keep high z-index */}
+      <div className="md:hidden flex items-center px-4 h-14 border-b bg-background z-50 relative shrink-0">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <button className="p-2 -ml-2 text-muted-foreground hover:text-foreground z-10">

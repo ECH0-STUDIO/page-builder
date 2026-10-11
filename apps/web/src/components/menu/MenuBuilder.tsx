@@ -1003,7 +1003,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
       {/* ── Items Area ── */}
       <main className="flex-1 overflow-y-auto relative flex flex-col">
         {/* Sticky Headers Wrapper */}
-        <div className="sticky top-0 z-20 flex flex-col bg-background/95 backdrop-blur shadow-sm">
+        <div className="sticky top-0 z-30 flex flex-col bg-background/95 backdrop-blur shadow-sm">
           {/* CSV import/export bar */}
           <div className="px-6 py-3 border-b border-border bg-muted/20">
             {!isStaff && (<MenuCsvActions businessId={businessId} categories={categories} items={items} onRefresh={handleCsvRefresh} />)}
@@ -1091,8 +1091,8 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                           isItemSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
                         )}
                       >
-                        {/* Checkbox — always visible so mobile can select without hover */}
-                        <div className="absolute top-2 left-2 z-20">
+                        {/* Checkbox — keep below sticky toolbars (z-30); only above card media */}
+                        <div className="absolute top-2 left-2 z-[1]">
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); toggleItemSelection(item.id) }}

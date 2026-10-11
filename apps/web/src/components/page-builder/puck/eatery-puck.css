@@ -71,6 +71,9 @@
  * More / publish stay visible and tappable.
  */
 @media (max-width: 639px) {
+  /* Beat Puck's mobilePanelHeight* rules that force the header track to 0 */
+  .eatery-puck [class*='PuckLayout'][class*='leftSideBarVisible'] [class*='PuckLayout-inner'],
+  .eatery-puck [class*='PuckLayout'][class*='rightSideBarVisible'] [class*='PuckLayout-inner'],
   .eatery-puck [class*='PuckLayout-inner'] {
     grid-template-rows: auto minmax(0, 1fr) auto auto auto !important;
   }

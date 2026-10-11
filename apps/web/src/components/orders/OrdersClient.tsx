@@ -535,25 +535,29 @@ export function OrdersClient({ businessId, role }: OrdersClientProps) {
             }
             return (
             <div key={order.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative group">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0 flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="bg-gray-900 text-white text-xs font-bold px-2 py-1 rounded-md inline-flex items-center gap-1.5 shadow-sm shrink-0">
                       <Table2 className="size-3" />
                       {order.table_number ? `${t('orders.table')} ${order.table_number}` : t('orders.takeaway')}
                     </span>
-                    <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                    <span className="text-[11px] text-gray-400 font-medium inline-flex items-center gap-1 shrink-0">
                       <Clock className="size-3" />
                       {formatTimeAgo(order.created_at)}
                     </span>
-                    <span className="text-[10px] text-gray-300 font-mono">
-                      #{order.id.slice(0, 8)}
-                    </span>
                   </div>
+                  <span className="text-[10px] text-gray-400 font-mono truncate">
+                    #{order.id.slice(0, 8)}
+                  </span>
                 </div>
-                <div className="text-right flex flex-col items-end">
-                  <p className="font-bold text-gray-900">{formatCurrency(order.total_amount)}</p>
-                  <button onClick={() => setEditingOrder(order)} className="mt-1 text-[10px] text-gray-500 hover:text-blue-600 font-bold uppercase tracking-wider transition-colors">
+                <div className="shrink-0 text-right flex flex-col items-end gap-0.5">
+                  <p className="font-bold text-gray-900 leading-none">{formatCurrency(order.total_amount)}</p>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOrder(order)}
+                    className="text-[10px] text-gray-500 hover:text-blue-600 font-bold uppercase tracking-wider transition-colors"
+                  >
                     {t('orders.edit')}
                   </button>
                 </div>

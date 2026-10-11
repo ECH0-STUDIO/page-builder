@@ -16,9 +16,10 @@ export function DashboardShell({ sidebar, children }: DashboardShellProps) {
     pathname?.startsWith('/dashboard/order-page')
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      <div className={cn(isFullScreen && 'hidden')}>{sidebar}</div>
-      <main className={cn('flex-1 min-w-0 overflow-y-auto', isFullScreen && 'w-full')}>
+    <div className="flex flex-col md:flex-row h-dvh max-h-dvh overflow-hidden bg-background">
+      {/* Mobile logo/burger stays outside the scrolling main so it never scrolls away */}
+      <div className={cn('shrink-0', isFullScreen && 'hidden')}>{sidebar}</div>
+      <main className={cn('flex-1 min-h-0 min-w-0 overflow-y-auto', isFullScreen && 'w-full')}>
         {children}
       </main>
     </div>

@@ -19,6 +19,7 @@ import {
   ImagePlus,
   Loader2,
   Monitor,
+  MoreHorizontal,
   Redo2,
   Smartphone,
   Trash2,
@@ -535,7 +536,7 @@ export function OrderPageEditor({
 
   return (
     <div className="flex flex-col h-dvh w-full overflow-hidden bg-background">
-      <header className="shrink-0 flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-x-auto">
+      <header className="shrink-0 flex items-center gap-1 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 border-b border-border bg-background z-20 overflow-hidden">
         <button
           type="button"
           onClick={() => confirmLeave(() => router.push('/dashboard'))}
@@ -549,7 +550,7 @@ export function OrderPageEditor({
 
         <div className="min-w-0 flex-1" />
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 min-w-0">
           <div className="hidden sm:flex items-center gap-0.5 mr-1">
             <button
               type="button"
@@ -571,7 +572,7 @@ export function OrderPageEditor({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 mr-1">
+          <div className="flex items-center gap-1.5 shrink-0 sm:mr-1">
             {saveStatus === 'idle' && (
               <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
@@ -581,7 +582,7 @@ export function OrderPageEditor({
             {saveStatus === 'saving' && (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Loader2 className="size-3 animate-spin" />
-                {t('pageBuilder.saving')}
+                <span className="hidden sm:inline">{t('pageBuilder.saving')}</span>
               </span>
             )}
             {saveStatus === 'saved' && (
@@ -592,7 +593,7 @@ export function OrderPageEditor({
             )}
           </div>
 
-          <div className="flex items-center rounded-lg border border-border p-0.5 mr-1">
+          <div className="hidden sm:flex items-center rounded-lg border border-border p-0.5 mr-1">
             <button
               type="button"
               onClick={() => setDevice('desktop')}
@@ -620,7 +621,7 @@ export function OrderPageEditor({
           <button
             type="button"
             onClick={() => setPreviewMode(true)}
-            className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground shrink-0"
             title={t('pageBuilder.preview')}
             aria-label={t('pageBuilder.preview')}
           >
@@ -630,7 +631,7 @@ export function OrderPageEditor({
           <button
             type="button"
             onClick={handleCopy}
-            className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
             title={t('orderPageAdmin.copyUrl')}
           >
             {copied ? <CheckCircle2 className="size-4 text-green-600" /> : <Copy className="size-4" />}
@@ -641,7 +642,7 @@ export function OrderPageEditor({
               href={orderPath}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="hidden sm:inline-flex items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
               title={t('orderPageAdmin.openLive')}
               aria-label={t('orderPageAdmin.openLive')}
             >
@@ -652,7 +653,7 @@ export function OrderPageEditor({
           <Badge
             variant="outline"
             className={cn(
-              'text-xs shrink-0 hidden sm:flex items-center gap-1.5 pl-2',
+              'text-xs shrink-0 hidden md:flex items-center gap-1.5 pl-2',
               published && orderHasUnpublishedChanges
                 ? 'border-yellow-500/40 bg-yellow-50 text-yellow-700'
                 : published
@@ -675,12 +676,52 @@ export function OrderPageEditor({
             )}
           </Badge>
 
+          {/* Mobile overflow — same pattern as landing Puck chrome */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="sm:hidden flex items-center justify-center size-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md shrink-0"
+                aria-label={t('pageBuilder.more')}
+                title={t('pageBuilder.more')}
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={undo} disabled={!canUndo}>
+                <Undo2 className="size-4" />
+                {t('pageBuilder.undo')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={redo} disabled={!canRedo}>
+                <Redo2 className="size-4" />
+                {t('pageBuilder.redo')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDevice(device === 'desktop' ? 'mobile' : 'desktop')}>
+                {device === 'desktop' ? <Smartphone className="size-4" /> : <Monitor className="size-4" />}
+                {device === 'desktop' ? t('pageBuilder.mobile') : t('pageBuilder.desktop')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopy}>
+                {copied ? <CheckCircle2 className="size-4" /> : <Copy className="size-4" />}
+                {t('orderPageAdmin.copyUrl')}
+              </DropdownMenuItem>
+              {published && (
+                <DropdownMenuItem asChild>
+                  <a href={orderPath} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-4" />
+                    {t('orderPageAdmin.openLive')}
+                  </a>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 type="button"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 text-xs px-2.5 sm:px-3 shrink-0"
                 disabled={publishingBusy}
               >
                 {publishingBusy ? (
