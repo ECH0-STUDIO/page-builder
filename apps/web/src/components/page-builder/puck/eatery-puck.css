@@ -74,8 +74,8 @@
   color: var(--primary-foreground, #fff) !important;
 }
 
-/* Hide any leftover default Puck header chrome if present */
-.eatery-puck [class*='PuckHeader']:not(.eatery-puck-header) {
+/* Hide leftover default Puck header chrome — never hide a wrapper that hosts ours */
+.eatery-puck [class*='PuckHeader']:not(.eatery-puck-header):not(:has(.eatery-puck-header)) {
   display: none;
 }
 

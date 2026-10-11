@@ -1097,10 +1097,10 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                             type="button"
                             onClick={e => { e.stopPropagation(); toggleItemSelection(item.id) }}
                             className={cn(
-                              'size-6 rounded border-2 flex items-center justify-center shadow-sm transition-all',
+                              'size-7 rounded-md border-2 flex items-center justify-center shadow-md transition-all',
                               isItemSelected
                                 ? 'bg-primary border-primary'
-                                : 'bg-white/95 border-white/90 hover:border-primary/60'
+                                : 'bg-white border-gray-300 hover:border-primary/60'
                             )}
                             aria-label={isItemSelected ? 'Deselect item' : 'Select item'}
                           >

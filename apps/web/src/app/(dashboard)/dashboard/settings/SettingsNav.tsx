@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Shield, Globe, Users, CreditCard, Languages } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,7 @@ export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?:
   const { t } = useTranslation()
   const { currentBusiness } = useBusiness()
   const role = currentBusiness?.role
+  const activeRef = useRef<HTMLAnchorElement | null>(null)
 
   const items = [
     {
@@ -42,6 +44,10 @@ export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?:
     },
   ].filter(item => canAccessSettingsHref(item.href, role))
 
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
+  }, [pathname])
+
   return (
     <nav className="w-full md:h-full">
       <div className="-mx-1 px-1 overflow-x-auto no-scrollbar md:overflow-visible">
@@ -52,6 +58,7 @@ export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?:
               <Link
                 key={item.href}
                 href={item.href}
+                ref={isActive ? activeRef : undefined}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap md:w-full md:px-3 md:py-2',
                   isActive

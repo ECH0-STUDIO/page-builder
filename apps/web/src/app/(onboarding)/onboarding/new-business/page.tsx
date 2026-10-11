@@ -141,13 +141,13 @@ export default function NewBusinessPage() {
                     </span>
                   )}
                 </Label>
-                <div className="flex items-center min-w-0">
-                  <span className="inline-flex h-10 items-center px-2 sm:px-3 bg-muted border border-r-0 border-input rounded-l-md text-xs sm:text-sm text-muted-foreground shrink-0 max-w-[40%] truncate">
+                <div className="flex h-10 w-full min-w-0 overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                  <span className="inline-flex h-full items-center px-2 sm:px-3 bg-muted border-r border-input text-xs sm:text-sm text-muted-foreground shrink-0 max-w-[40%] truncate">
                     eatery.app/
                   </span>
                   <Input
                     id="biz-slug"
-                    className="rounded-l-none min-w-0"
+                    className="h-full min-h-0 flex-1 rounded-none border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     placeholder="la-cafe"
                     value={slug}
                     onChange={e => handleSlugChange(e.target.value)}
