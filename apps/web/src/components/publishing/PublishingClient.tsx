@@ -601,19 +601,21 @@ export function PublishingClient({
 
       {/* ── Custom Domain ── */}
       <Card>
-        <div className="flex items-center gap-2 mb-5">
-          <Globe className="size-4 text-gray-600" />
-          <h2 className="font-semibold text-gray-900">{t('publishing.customDomain')}</h2>
-          <span className="text-[10px] font-bold tracking-widest text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full uppercase ml-1">{t('publishing.creditMo')}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <Globe className="size-4 text-gray-600 shrink-0" />
+          <h2 className="font-semibold text-gray-900 min-w-0">{t('publishing.customDomain')}</h2>
+          <span className="text-[10px] font-bold tracking-widest text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full uppercase shrink-0">
+            {t('publishing.creditMo')}
+          </span>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-700">{t('publishing.domainLabel')}</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input type="text" value={customDomain} onChange={e => setCustomDomain(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
                 placeholder="Enter custom domain"
-                className="flex-1 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
+                className="w-full min-w-0 h-10 px-3 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 font-mono" />
               <Button
                 onClick={handleSaveDomain}
                 disabled={
@@ -621,7 +623,7 @@ export function PublishingClient({
                   || !customDomain.trim()
                   || customDomain.trim().toLowerCase() === (publishing?.custom_domain ?? '').toLowerCase()
                 }
-                className="shrink-0 h-10"
+                className="shrink-0 h-10 w-full sm:w-auto"
               >
                 {savingDomain ? <Loader2 className="size-4 animate-spin" /> : t('publishing.save')}
               </Button>
@@ -629,27 +631,29 @@ export function PublishingClient({
           </div>
 
           {customDomain && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 space-y-3">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 sm:p-4 mt-4 space-y-3 overflow-hidden">
               {domainVerified ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-                    <CheckCircle2 className="size-4 shrink-0" />
-                    <span className="text-sm font-medium">{t('publishing.domainConnected')}</span>
+                  <div className="flex flex-col gap-2 text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="size-4 shrink-0" />
+                      <span className="text-sm font-medium">{t('publishing.domainConnected')}</span>
+                    </div>
                     <a
                       href={`https://${customDomain}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto text-xs underline"
+                      className="text-xs underline break-all"
                     >
                       https://{customDomain}
                     </a>
                   </div>
                   {dnsWarning ? (
-                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
                       {t('publishing.domainDnsWarning')}
                     </p>
                   ) : (
-                    <p className="text-xs text-blue-700/80 italic px-1">
+                    <p className="text-xs text-blue-700/80 italic px-1 leading-relaxed">
                       {t('publishing.domainConnectedDnsNote')}
                     </p>
                   )}
@@ -661,29 +665,29 @@ export function PublishingClient({
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
                     {t('publishing.domainPendingHint')}
                   </p>
                   <h3 className="font-semibold text-blue-900 text-sm">{t('publishing.dnsTitle')}</h3>
-                  <p className="text-xs text-blue-800">{t('publishing.dnsDesc')}</p>
-                  <p className="text-xs text-blue-800/90">{t('publishing.dnsCloudflareNote')}</p>
+                  <p className="text-xs text-blue-800 leading-relaxed">{t('publishing.dnsDesc')}</p>
+                  <p className="text-xs text-blue-800/90 leading-relaxed">{t('publishing.dnsCloudflareNote')}</p>
 
                   <div className="space-y-2">
                     {(dnsRecords.length > 0 ? dnsRecords : [{ type: 'CNAME', name: '@', value: t('publishing.dnsTarget') }]).map((record, i) => (
-                      <div key={i} className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 overflow-x-auto">
-                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Type:</span> {record.type}</div>
-                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Name:</span> {record.name}</div>
-                        <div className="flex items-center gap-2 min-w-fit"><span className="text-gray-400 select-none text-xs">Value:</span> {record.value}</div>
+                      <div key={i} className="bg-white p-3 rounded-lg border border-blue-100 text-sm font-mono text-gray-800 shadow-sm flex flex-col gap-1.5 min-w-0">
+                        <div className="flex items-start gap-2 min-w-0"><span className="text-gray-400 select-none text-xs shrink-0">Type:</span> <span className="break-all">{record.type}</span></div>
+                        <div className="flex items-start gap-2 min-w-0"><span className="text-gray-400 select-none text-xs shrink-0">Name:</span> <span className="break-all">{record.name}</span></div>
+                        <div className="flex items-start gap-2 min-w-0"><span className="text-gray-400 select-none text-xs shrink-0">Value:</span> <span className="break-all">{record.value}</span></div>
                       </div>
                     ))}
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-                    <p className="text-xs text-blue-700/80 italic">{t('publishing.dnsNote')}</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                  <div className="flex flex-col gap-3 pt-1">
+                    <p className="text-xs text-blue-700/80 italic leading-relaxed">{t('publishing.dnsNote')}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={handleRemoveDomain} disabled={savingDomain} className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 justify-center">
                         {t('publishing.cancelDomain')}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50">
+                      <Button size="sm" variant="outline" onClick={handleVerifyDns} disabled={verifyingDns} className="h-8 text-xs bg-white text-blue-700 border-blue-200 hover:bg-blue-50 justify-center">
                         {verifyingDns ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <Globe className="size-3 mr-1.5" />}
                         {t('publishing.verifyConnection')}
                       </Button>
@@ -693,7 +697,7 @@ export function PublishingClient({
               )}
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2 leading-relaxed">
             <strong>{t('publishing.billingNotePrefix')}</strong> {t('publishing.billingNoteText')} <em>{t('publishing.billingNoteTextAfter')}</em> {t('publishing.billingNoteTextEnd')}
           </p>
         </div>

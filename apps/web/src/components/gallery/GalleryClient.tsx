@@ -406,7 +406,7 @@ export function GalleryClient({ businessId }: { businessId: string }) {
   const selectionHasDeletable = selectedImages.some(img => !img.inUse)
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 max-w-6xl mx-auto px-4 md:px-8 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('gallery.title')}</h1>
@@ -591,56 +591,61 @@ export function GalleryClient({ businessId }: { businessId: string }) {
               </Button>
 
               {selectionCount > 0 && (
-                <>
+                <div className="w-full flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <span className="text-sm text-muted-foreground">
                     {t('gallery.selectedCount').replace('{{count}}', String(selectionCount))}
                   </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={Boolean(bulkBusy)}
-                    onClick={() => void handleDownloadMany(selectedImages)}
-                  >
-                    {bulkBusy === 'download' ? (
-                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Download className="size-3.5 mr-1.5" />
-                    )}
-                    {t('gallery.download')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={Boolean(bulkBusy) || !selectionHasCompressible}
-                    onClick={() => void handleCompressMany(selectedImages)}
-                  >
-                    {bulkBusy === 'compress' ? (
-                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Minimize2 className="size-3.5 mr-1.5" />
-                    )}
-                    {t('gallery.compressWebp')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={Boolean(bulkBusy) || !selectionHasDeletable}
-                    onClick={() => openDeleteConfirm(selectedImages)}
-                  >
-                    {bulkBusy === 'delete' ? (
-                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="size-3.5 mr-1.5" />
-                    )}
-                    {t('gallery.deleteImage')}
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                    {t('gallery.clearSelection')}
-                  </Button>
-                </>
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={Boolean(bulkBusy)}
+                      onClick={() => void handleDownloadMany(selectedImages)}
+                      className="justify-center"
+                    >
+                      {bulkBusy === 'download' ? (
+                        <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Download className="size-3.5 mr-1.5" />
+                      )}
+                      {t('gallery.download')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={Boolean(bulkBusy) || !selectionHasCompressible}
+                      onClick={() => void handleCompressMany(selectedImages)}
+                      className="justify-center"
+                    >
+                      {bulkBusy === 'compress' ? (
+                        <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Minimize2 className="size-3.5 mr-1.5" />
+                      )}
+                      {t('gallery.compressWebp')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={Boolean(bulkBusy) || !selectionHasDeletable}
+                      onClick={() => openDeleteConfirm(selectedImages)}
+                      className="justify-center"
+                    >
+                      {bulkBusy === 'delete' ? (
+                        <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5 mr-1.5" />
+                      )}
+                      {t('gallery.deleteImage')}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={clearSelection} className="justify-center">
+                      {t('gallery.clearSelection')}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -679,7 +684,7 @@ export function GalleryClient({ businessId }: { businessId: string }) {
                       loading="lazy"
                     />
 
-                    {/* Select checkbox — top left */}
+                    {/* Select checkbox — always visible (no hover on mobile) */}
                     <button
                       type="button"
                       aria-label={t('gallery.selectImage')}
@@ -688,10 +693,10 @@ export function GalleryClient({ businessId }: { businessId: string }) {
                         toggleSelect(key)
                       }}
                       className={cn(
-                        'absolute top-2 left-2 z-10 size-7 rounded-md border shadow-sm flex items-center justify-center transition-opacity',
+                        'absolute top-2 left-2 z-10 size-7 rounded-md border shadow-sm flex items-center justify-center',
                         isSelected
-                          ? 'bg-indigo-600 border-indigo-600 text-white opacity-100'
-                          : 'bg-white/90 border-gray-200 text-gray-700 opacity-0 group-hover:opacity-100',
+                          ? 'bg-indigo-600 border-indigo-600 text-white'
+                          : 'bg-white/95 border-gray-200 text-gray-700',
                       )}
                     >
                       {isSelected ? (
@@ -701,26 +706,14 @@ export function GalleryClient({ businessId }: { businessId: string }) {
                       )}
                     </button>
 
-                    {/* Status + more — top right */}
-                    <div className="absolute top-2 right-2 z-10 flex items-start gap-1">
-                      <span
-                        className={cn(
-                          'px-2 py-1 text-[10px] font-semibold rounded-full shadow-sm',
-                          img.inUse
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-gray-100 text-gray-600',
-                          'opacity-100 group-hover:opacity-0 transition-opacity',
-                        )}
-                      >
-                        {img.inUse ? t('gallery.inUse') : t('gallery.notInUse')}
-                      </span>
-
+                    {/* More actions — always visible on touch; hover-reveal still fine on desktop */}
+                    <div className="absolute top-2 right-2 z-10">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
                             aria-label={t('gallery.moreActions')}
-                            className="size-7 rounded-md bg-white/95 border border-gray-200 text-gray-700 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity"
+                            className="size-7 rounded-md bg-white/95 border border-gray-200 text-gray-700 shadow-sm flex items-center justify-center"
                             onClick={e => e.stopPropagation()}
                           >
                             {isBusy ? (
@@ -764,8 +757,18 @@ export function GalleryClient({ businessId }: { businessId: string }) {
                       </DropdownMenu>
                     </div>
 
-                    {/* Bottom meta on hover */}
-                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    {/* Usage badge + name — bottom, never overlaps checkbox */}
+                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/40 to-transparent pointer-events-none">
+                      <span
+                        className={cn(
+                          'inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded-full mb-1',
+                          img.inUse
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-white/90 text-gray-700',
+                        )}
+                      >
+                        {img.inUse ? t('gallery.inUse') : t('gallery.notInUse')}
+                      </span>
                       <p className="text-[11px] text-white truncate" title={img.name}>
                         {img.name}
                       </p>

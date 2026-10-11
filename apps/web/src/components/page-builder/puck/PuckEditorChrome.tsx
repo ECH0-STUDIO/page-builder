@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ExternalLink,
   Loader2,
+  MoreHorizontal,
   Monitor,
   PanelLeft,
   PanelRight,
@@ -166,14 +167,14 @@ export function PuckHeaderBack() {
   )
 }
 
-function PuckSidebarToggles() {
+function PuckSidebarToggles({ className }: { className?: string }) {
   const { dispatch, appState } = usePuck()
   const { t } = useTranslation()
   const leftVisible = appState.ui.leftSideBarVisible
   const rightVisible = appState.ui.rightSideBarVisible
 
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
+    <div className={cn('flex items-center gap-0.5 shrink-0', className)}>
       <button
         type="button"
         onClick={() => dispatch({ type: 'setUi', ui: { leftSideBarVisible: !leftVisible } })}
@@ -284,12 +285,12 @@ export function PuckCustomHeader({
   }
 
   return (
-    <header className="eatery-puck-header flex items-center gap-1.5 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-x-auto">
+    <header className="eatery-puck-header flex items-center gap-1 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-hidden">
       <PuckHeaderBack />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
-      <PuckSidebarToggles />
+      <PuckSidebarToggles className="hidden sm:flex" />
       <div className="flex-1 min-w-0" />
-      <div className="flex items-center gap-1 shrink-0 justify-end">{chrome}</div>
+      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 justify-end min-w-0">{chrome}</div>
     </header>
   )
 }
@@ -341,10 +342,14 @@ export function PuckHeaderActions({
   const showChanges = published && hasUnpublishedChanges
   const liveUrl = storeUrl || getPublicStoreUrl(slug)
 
+  const { history, dispatch, appState } = usePuck()
+  const leftVisible = appState.ui.leftSideBarVisible
+  const rightVisible = appState.ui.rightSideBarVisible
+
   return (
     <>
       <PuckHistoryButtons />
-      <div className="flex items-center gap-2 shrink-0 mr-1">
+      <div className="flex items-center gap-1.5 shrink-0 sm:mr-1">
         {saveStatus === 'idle' && (
           <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
@@ -354,7 +359,7 @@ export function PuckHeaderActions({
         {saveStatus === 'saving' && (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="size-3 animate-spin" />
-            {t('pageBuilder.saving')}
+            <span className="hidden sm:inline">{t('pageBuilder.saving')}</span>
           </span>
         )}
         {saveStatus === 'saved' && (
@@ -365,7 +370,7 @@ export function PuckHeaderActions({
         )}
       </div>
 
-      <div className="mr-1">
+      <div className="hidden sm:block sm:mr-1">
         <PuckViewportToggle viewMode={viewMode} onChange={onViewModeChange} />
       </div>
 
@@ -389,7 +394,7 @@ export function PuckHeaderActions({
           href={liveUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center size-8 text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md hover:bg-accent"
+          className="hidden sm:flex items-center justify-center size-8 text-muted-foreground hover:text-foreground transition-colors shrink-0 rounded-md hover:bg-accent"
           title={t('pageBuilder.viewLive')}
           aria-label={t('pageBuilder.viewLive')}
         >
@@ -423,13 +428,61 @@ export function PuckHeaderActions({
         )}
       </Badge>
 
+      {/* Mobile overflow — packs secondary controls so the bar never scrolls off-screen */}
       <DropdownMenu>
-        <div className="flex rounded-md shadow-sm overflow-hidden">
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="sm:hidden flex items-center justify-center size-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md shrink-0"
+            aria-label={t('pageBuilder.more')}
+            title={t('pageBuilder.more')}
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onClick={() => history.back()} disabled={!history.hasPast}>
+            <Undo2 className="size-4" />
+            {t('pageBuilder.undo')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => history.forward()} disabled={!history.hasFuture}>
+            <Redo2 className="size-4" />
+            {t('pageBuilder.redo')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onViewModeChange(viewMode === 'desktop' ? 'mobile' : 'desktop')}>
+            {viewMode === 'desktop' ? <Smartphone className="size-4" /> : <Monitor className="size-4" />}
+            {viewMode === 'desktop' ? t('pageBuilder.mobile') : t('pageBuilder.desktop')}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => dispatch({ type: 'setUi', ui: { leftSideBarVisible: !leftVisible } })}
+          >
+            <PanelLeft className="size-4" />
+            {t('puck.toggleBlocks')}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => dispatch({ type: 'setUi', ui: { rightSideBarVisible: !rightVisible } })}
+          >
+            <PanelRight className="size-4" />
+            {t('puck.toggleSettings')}
+          </DropdownMenuItem>
+          {published && (
+            <DropdownMenuItem asChild>
+              <a href={liveUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="size-4" />
+                {t('pageBuilder.viewLive')}
+              </a>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <div className="flex rounded-md shadow-sm overflow-hidden shrink-0">
           <button
             type="button"
             onClick={() => onPublish(true)}
             disabled={publishing}
-            className="h-8 px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-[70px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="h-8 px-2.5 sm:px-3 text-xs font-semibold transition-colors flex items-center justify-center min-w-0 sm:min-w-[70px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {publishing ? <Loader2 className="size-3.5 animate-spin" /> : t('pageBuilder.publish')}
           </button>

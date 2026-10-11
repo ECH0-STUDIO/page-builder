@@ -526,14 +526,29 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
       {/* Preview Area */}
       <div className="flex-1 relative min-h-0">
         <div className="absolute inset-0 overflow-auto bg-neutral-300 rounded-2xl p-6">
-          <div className="mx-auto" style={{
-            zoom: zoom,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 24,
-            width: 'max-content',
-            position: 'relative'
-          }}>
+          {/*
+            Scale the paper with transform — never CSS zoom. Zoom reflows text
+            and column widths; transform keeps A4/A5 layout pixel-identical.
+          */}
+          <div
+            className="mx-auto"
+            style={{
+              width: paper.w * zoom,
+              height: (paper.h * layoutPages.length + 24 * Math.max(0, layoutPages.length - 1)) * zoom,
+              position: 'relative',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 24,
+              width: paper.w,
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+            }}>
             {layoutPages.map((page, pageIdx) => {
               const isFirstPage = pageIdx === 0
               return (
@@ -608,6 +623,7 @@ export function PrintMenuPreview({ business, categories, items, settings, onClos
                 </div>
               )
             })}
+            </div>
           </div>
         </div>
         

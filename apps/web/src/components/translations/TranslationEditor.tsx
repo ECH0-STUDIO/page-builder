@@ -258,34 +258,36 @@ export function TranslationEditor({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => setActiveSection('all')}
-          className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
-            activeSection === 'all' ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
-          )}
-        >
-          {t('translations.all')} ({fields.length})
-        </button>
-        {SECTION_ORDER.map(section => {
-          const count = bySection.get(section)?.length ?? 0
-          if (!count) return null
-          return (
-            <button
-              key={section}
-              type="button"
-              onClick={() => setActiveSection(section)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
-                activeSection === section ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
-              )}
-            >
-              {sectionLabel(section)} ({count})
-            </button>
-          )
-        })}
+      <div className="-mx-1 px-1 overflow-x-auto no-scrollbar">
+        <div className="flex flex-nowrap items-center gap-1.5 min-w-0 w-max">
+          <button
+            type="button"
+            onClick={() => setActiveSection('all')}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap',
+              activeSection === 'all' ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
+            )}
+          >
+            {t('translations.all')} ({fields.length})
+          </button>
+          {SECTION_ORDER.map(section => {
+            const count = bySection.get(section)?.length ?? 0
+            if (!count) return null
+            return (
+              <button
+                key={section}
+                type="button"
+                onClick={() => setActiveSection(section)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors shrink-0 whitespace-nowrap',
+                  activeSection === section ? 'bg-foreground text-background border-foreground' : 'hover:border-foreground/40',
+                )}
+              >
+                {sectionLabel(section)} ({count})
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {visibleFields.length === 0 ? (
@@ -447,7 +449,7 @@ export function TranslationEditor({
               {t('translations.translating')}
             </p>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="secondary" onClick={() => setQuote(null)} disabled={applying}>
               {t('translations.cancel')}
             </Button>

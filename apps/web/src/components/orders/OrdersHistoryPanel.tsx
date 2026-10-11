@@ -242,24 +242,35 @@ export function OrdersHistoryPanel({ businessId }: OrdersHistoryPanelProps) {
         <div className="flex flex-wrap items-end gap-2 flex-1">
           <label className="flex flex-col gap-1 text-xs font-semibold text-gray-500">
             {t('orders.dateFrom')}
-            <input
-              type="date"
-              min={defaults.min}
-              max={to}
-              value={from}
-              onChange={(e) => setFrom(e.target.value < defaults.min ? defaults.min : e.target.value)}
-              className="h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
-            />
+            {/* Overlay DD/MM/YYYY — native date inputs ignore locale on iOS Safari */}
+            <span className="relative inline-flex h-10 w-[7.25rem]">
+              <span className="pointer-events-none absolute inset-0 z-[1] flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2 text-sm font-medium text-gray-900">
+                {from ? from.split('-').reverse().join('/') : 'DD/MM/YYYY'}
+              </span>
+              <input
+                type="date"
+                min={defaults.min}
+                max={to}
+                value={from}
+                onChange={(e) => setFrom(e.target.value < defaults.min ? defaults.min : e.target.value)}
+                className="absolute inset-0 z-[2] h-full w-full cursor-pointer opacity-0"
+              />
+            </span>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-gray-500">
             {t('orders.dateTo')}
-            <input
-              type="date"
-              min={from}
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
-            />
+            <span className="relative inline-flex h-10 w-[7.25rem]">
+              <span className="pointer-events-none absolute inset-0 z-[1] flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2 text-sm font-medium text-gray-900">
+                {to ? to.split('-').reverse().join('/') : 'DD/MM/YYYY'}
+              </span>
+              <input
+                type="date"
+                min={from}
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="absolute inset-0 z-[2] h-full w-full cursor-pointer opacity-0"
+              />
+            </span>
           </label>
           <button
             type="button"

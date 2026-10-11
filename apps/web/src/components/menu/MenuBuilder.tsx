@@ -926,10 +926,11 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
         {!isStaff && (<DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className={cn('size-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity', isSelected ? 'hover:bg-white/20' : 'hover:bg-accent-foreground/10')}
+              className={cn('size-6 rounded flex items-center justify-center', isSelected ? 'hover:bg-white/20' : 'hover:bg-accent-foreground/10')}
               onClick={e => e.stopPropagation()}
+              aria-label={t('menuBuilder.rename')}
             >
-              <MoreHorizontal className="size-3" />
+              <MoreHorizontal className="size-3.5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
@@ -1009,45 +1010,51 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
           </div>
 
           {selectedCat && (
-            <div className="border-b border-border px-6 py-4 flex items-center justify-between gap-3 bg-background">
-              <div className="min-w-0 shrink">
-                <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
-                <p className="text-xs text-muted-foreground">
-                  {visibleItems.length} {t('menuBuilder.items')}
-                  {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} {t('menuBuilder.selected')}</span>}
-                </p>
+            <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex flex-col gap-3 bg-background">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-base truncate">{selectedCat.name}</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {visibleItems.length} {t('menuBuilder.items')}
+                    {anySelected && <span className="text-primary font-medium"> · {selectedItems.size} {t('menuBuilder.selected')}</span>}
+                  </p>
+                </div>
+                {!isStaff && !anySelected && (
+                  <Button id="add-item-btn" size="sm" className="shrink-0" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
+                    <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
+                  </Button>
+                )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {anySelected && (
-                  <>
-                    <Button variant="secondary" size="sm" onClick={() => handleBulkSetAvailable(false)}>
-                      <EyeOff className="size-3.5 mr-1.5" /> Unavailable
+              {anySelected && (
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                  <Button variant="secondary" size="sm" onClick={() => handleBulkSetAvailable(false)} className="justify-center">
+                    <EyeOff className="size-3.5 mr-1.5" /> Unavailable
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => handleBulkSetAvailable(true)} className="justify-center">
+                    <Eye className="size-3.5 mr-1.5" /> Available
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-destructive hover:text-destructive justify-center"
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="size-3.5 mr-1.5" /> {t('menuBuilder.delete')}
+                  </Button>
+                  <button
+                    onClick={clearSelection}
+                    className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-md border border-border justify-center"
+                  >
+                    Clear
+                  </button>
+                  {!isStaff && (
+                    <Button id="add-item-btn" size="sm" className="col-span-2 sm:col-span-1 sm:ml-auto justify-center" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
+                      <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={() => handleBulkSetAvailable(true)}>
-                      <Eye className="size-3.5 mr-1.5" /> Available
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={handleBulkDelete}
-                    >
-                      <Trash2 className="size-3.5 mr-1.5" /> {t('menuBuilder.delete')}
-                    </Button>
-                    <button
-                      onClick={clearSelection}
-                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
-                    >
-                      Clear
-                    </button>
-                    <div className="hidden md:block h-4 w-px bg-border" />
-                  </>
-                )}
-                {!isStaff && (<Button id="add-item-btn" size="sm" onClick={() => setItemDialog({ open: true, catId: selectedCatId! })}>
-                  <Plus className="size-4 mr-2" /> {t('menuBuilder.addItem')}
-                </Button>)}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1084,27 +1091,20 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                           isItemSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
                         )}
                       >
-                        {/* Checkbox overlay — shows on hover, or always when any item is selected */}
-                        <div
-                          className={cn(
-                            'absolute top-2 left-2 z-20 transition-opacity',
-                            anySelected || isItemSelected
-                              ? 'opacity-100'
-                              : 'opacity-0 group-hover/card:opacity-100'
-                          )}
-                        >
+                        {/* Checkbox — always visible so mobile can select without hover */}
+                        <div className="absolute top-2 left-2 z-20">
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); toggleItemSelection(item.id) }}
                             className={cn(
-                              'size-5 rounded border-2 flex items-center justify-center shadow-sm transition-all',
+                              'size-6 rounded border-2 flex items-center justify-center shadow-sm transition-all',
                               isItemSelected
                                 ? 'bg-primary border-primary'
-                                : 'bg-white border-white/80 hover:border-primary/60'
+                                : 'bg-white/95 border-white/90 hover:border-primary/60'
                             )}
                             aria-label={isItemSelected ? 'Deselect item' : 'Select item'}
                           >
-                            {isItemSelected && <Check className="size-3 text-white" strokeWidth={3} />}
+                            {isItemSelected && <Check className="size-3.5 text-white" strokeWidth={3} />}
                           </button>
                         </div>
 
@@ -1130,7 +1130,7 @@ export function MenuBuilder({ businessId, initialCategories, initialItems }: Men
                             <h3 className="font-semibold text-sm line-clamp-1">{item.name}</h3>
                             {!isStaff && (<DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className="size-6 rounded flex items-center justify-center text-muted-foreground hover:bg-accent opacity-0 group-hover/card:opacity-100 transition-opacity shrink-0">
+                                <button className="size-7 rounded flex items-center justify-center text-muted-foreground hover:bg-accent shrink-0 border border-transparent hover:border-border">
                                   <MoreHorizontal className="size-4" />
                                 </button>
                               </DropdownMenuTrigger>

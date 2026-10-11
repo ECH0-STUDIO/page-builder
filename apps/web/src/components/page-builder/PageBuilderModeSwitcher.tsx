@@ -71,7 +71,7 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
           disabled={isPending}
           onClick={() => switchTo('landing')}
           className={cn(
-            'px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-60',
+            'px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium transition-colors disabled:opacity-60 whitespace-nowrap',
             mode === 'landing'
               ? 'bg-accent text-foreground'
               : 'text-muted-foreground hover:text-foreground',
@@ -86,7 +86,7 @@ export function PageBuilderModeSwitcher({ mode }: { mode: BuilderPageMode }) {
           disabled={isPending}
           onClick={() => switchTo('order')}
           className={cn(
-            'px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-60',
+            'px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium transition-colors disabled:opacity-60 whitespace-nowrap',
             mode === 'order'
               ? 'bg-accent text-foreground'
               : 'text-muted-foreground hover:text-foreground',

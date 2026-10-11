@@ -44,7 +44,10 @@ export async function getCreditBalanceAction(businessId: string) {
   }
 }
 
-export async function getCreditTransactionsAction(businessId: string) {
+export async function getCreditTransactionsAction(
+  businessId: string,
+  options?: { limit?: number; offset?: number },
+) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -53,15 +56,24 @@ export async function getCreditTransactionsAction(businessId: string) {
     const access = await assertOwnerOrManager(supabase, user.id, businessId)
     if (!access.ok) return { success: false, error: access.error }
 
-    const { data, error } = await supabase
+    const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100)
+    const offset = Math.max(options?.offset ?? 0, 0)
+
+    const { data, error, count } = await supabase
       .from('credit_transactions')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) throw error
 
-    return { success: true, data }
+    return {
+      success: true,
+      data,
+      total: count ?? data?.length ?? 0,
+      hasMore: offset + (data?.length ?? 0) < (count ?? 0),
+    }
   } catch (error: any) {
     console.error('getCreditTransactionsAction error:', error)
     return { success: false, error: error.message }

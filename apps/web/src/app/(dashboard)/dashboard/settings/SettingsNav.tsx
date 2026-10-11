@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Shield, Globe, Users, CreditCard, LogOut, Languages } from 'lucide-react'
+import { Shield, Globe, Users, CreditCard, Languages } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useBusiness } from '@/context/BusinessContext'
 import { canAccessSettingsHref } from '@/lib/dashboard-access'
-import { signOutTo } from '@/lib/sign-out'
 
 export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?: number }) {
   const pathname = usePathname()
@@ -43,43 +42,32 @@ export function SettingsNav({ incomingInviteCount = 0 }: { incomingInviteCount?:
     },
   ].filter(item => canAccessSettingsHref(item.href, role))
 
-  async function handleSignOut() {
-    await signOutTo('/login')
-  }
-
   return (
-    <nav className="flex space-x-2 overflow-x-auto no-scrollbar md:overflow-visible md:flex-col md:space-x-0 md:space-y-1 h-full">
-      <div className="flex-1 flex space-x-2 md:flex-col md:space-x-0 md:space-y-1">
-        {items.map((item) => {
-          const isActive = pathname === item.href || (item.href === '/dashboard/settings/security' && pathname === '/dashboard/settings')
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors shrink-0',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.title}
-              {item.href === '/dashboard/settings/team' && incomingInviteCount > 0 && (
-                <span className="ml-auto size-2 rounded-full bg-red-500" aria-hidden />
-              )}
-            </Link>
-          )
-        })}
-      </div>
-      <div className="pt-4 mt-4 border-t">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-destructive shrink-0"
-        >
-          <LogOut className="h-4 w-4" />
-          {t('sidebar.signOut')}
-        </button>
+    <nav className="w-full md:h-full">
+      <div className="-mx-1 px-1 overflow-x-auto no-scrollbar md:overflow-visible">
+        <div className="flex flex-nowrap items-center gap-1.5 md:flex-col md:items-stretch md:gap-1 w-max md:w-full">
+          {items.map((item) => {
+            const isActive = pathname === item.href || (item.href === '/dashboard/settings/security' && pathname === '/dashboard/settings')
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap md:w-full md:px-3 md:py-2',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="truncate">{item.title}</span>
+                {item.href === '/dashboard/settings/team' && incomingInviteCount > 0 && (
+                  <span className="ml-auto size-2 rounded-full bg-red-500 shrink-0" aria-hidden />
+                )}
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )

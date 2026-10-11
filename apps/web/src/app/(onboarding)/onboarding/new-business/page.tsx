@@ -142,7 +142,7 @@ export default function NewBusinessPage() {
                   )}
                 </Label>
                 <div className="flex items-center min-w-0">
-                  <span className="px-2 sm:px-3 py-2 bg-muted border border-r-0 border-input rounded-l-md text-xs sm:text-sm text-muted-foreground shrink-0 max-w-[40%] truncate">
+                  <span className="inline-flex h-10 items-center px-2 sm:px-3 bg-muted border border-r-0 border-input rounded-l-md text-xs sm:text-sm text-muted-foreground shrink-0 max-w-[40%] truncate">
                     eatery.app/
                   </span>
                   <Input

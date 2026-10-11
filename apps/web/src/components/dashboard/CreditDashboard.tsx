@@ -22,11 +22,15 @@ interface Transaction {
   created_at: string
 }
 
+const TX_PAGE_SIZE = 20
+
 export function CreditDashboard({ businessId }: { businessId: string }) {
   const { t } = useTranslation()
   const [balance, setBalance] = useState<number | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPackage, setSelectedPackage] = useState<{amount: number, price: number} | null>(null)
@@ -38,12 +42,29 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
     setLoading(true)
     const [balRes, txRes] = await Promise.all([
       getCreditBalanceAction(businessId),
-      getCreditTransactionsAction(businessId)
+      getCreditTransactionsAction(businessId, { limit: TX_PAGE_SIZE, offset: 0 }),
     ])
 
     if (balRes.success) setBalance(balRes.data ?? 0)
-    if (txRes.success && txRes.data) setTransactions(txRes.data as Transaction[])
+    if (txRes.success && txRes.data) {
+      setTransactions(txRes.data as Transaction[])
+      setHasMore(Boolean(txRes.hasMore))
+    }
     setLoading(false)
+  }
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const txRes = await getCreditTransactionsAction(businessId, {
+      limit: TX_PAGE_SIZE,
+      offset: transactions.length,
+    })
+    if (txRes.success && txRes.data) {
+      setTransactions((prev) => [...prev, ...(txRes.data as Transaction[])])
+      setHasMore(Boolean(txRes.hasMore))
+    }
+    setLoadingMore(false)
   }
 
   useEffect(() => {
@@ -152,19 +173,27 @@ export function CreditDashboard({ businessId }: { businessId: string }) {
           ) : (
             <div className="divide-y divide-border/60">
               {transactions.map((tx) => (
-                <div key={tx.id} className="py-3 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{tx.description}</p>
+                <div key={tx.id} className="py-3 flex items-start justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-sm font-medium break-words">{tx.description}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(tx.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <div className={`flex items-center gap-1 font-bold ${tx.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <div className={`flex items-center gap-1 font-bold shrink-0 ${tx.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {tx.amount > 0 ? <ArrowUpRight className="size-4" /> : <ArrowDownRight className="size-4" />}
                     {Math.abs(tx.amount)}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {hasMore && (
+            <div className="pt-4 flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
+                {loadingMore ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                {t('credits.loadMore')}
+              </Button>
             </div>
           )}
         </CardContent>
