@@ -65,11 +65,24 @@
   min-height: 0;
 }
 
-/* Puck's mobile canvas is laid out from y=0 over the header slot — keep chrome on top */
-.eatery-puck [class*='PuckLayout-header'] {
-  position: relative;
-  z-index: 60;
-  background: var(--background, #fff);
+/*
+ * Puck's mobile layout sets the header grid row to 0px and lets the canvas
+ * start at y=0. Force the header row to size to our chrome so mode switcher /
+ * More / publish stay visible and tappable.
+ */
+@media (max-width: 639px) {
+  .eatery-puck [class*='PuckLayout-inner'] {
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto !important;
+  }
+
+  .eatery-puck [class*='PuckLayout-header'] {
+    position: relative;
+    z-index: 60;
+    min-height: 3rem;
+    height: auto !important;
+    overflow: visible !important;
+    background: var(--background, #fff);
+  }
 }
 
 .eatery-puck-header {
