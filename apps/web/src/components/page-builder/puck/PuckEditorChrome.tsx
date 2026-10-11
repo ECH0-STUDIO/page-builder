@@ -285,7 +285,7 @@ export function PuckCustomHeader({
   }
 
   return (
-    <header className="eatery-puck-header flex items-center gap-1 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-hidden">
+    <header className="eatery-puck-header relative z-50 flex items-center gap-1 sm:gap-2 min-h-12 py-1.5 px-2 sm:px-3 shrink-0 w-full min-w-0 border-b border-border bg-background overflow-hidden">
       <PuckHeaderBack />
       {builderMode && <PageBuilderModeSwitcher mode={builderMode} />}
       <PuckSidebarToggles className="hidden sm:flex" />
